@@ -37698,10 +37698,10 @@ system/scripts/run launch.py agent ${what}`;
     const n4 = r4.approved || 0, left = (r4.waiting || []).length;
     return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} still to check` : ""}`;
   }
-  async function exportMinutes(format) {
+  async function exportMinutes(format, version = "internal") {
     const v5 = minutesView.value;
     if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true, version: version === "distributed" ? "distributed" : "internal" }) || { ok: false, message: "Not exported." };
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
@@ -65300,7 +65300,7 @@ ${d5.text}`);
       attendees: r4.attendees || [],
       lead: "",
       summary: r4.summary || "",
-      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
+      note: version === "distributed" ? `From the Shareable version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
       picked: /* @__PURE__ */ new Set(),
       includeUpdate: false,
       replyBy: "",
@@ -65316,7 +65316,7 @@ ${d5.text}`);
     const owners = new Set(ok2.map((i5) => i5.o));
     de2.lead = (de2.attendees.find((a5) => owners.has(a5.name)) || {}).name || "";
     de2.picked = new Set(ok2.filter((i5) => !i5.sens).map((i5) => i5.k + ":" + i5.id));
-    deShow(`${version === "distributed" ? "Distributed" : "Internal"} follow-up: ${r4.title}`);
+    deShow(`${version === "distributed" ? "Shareable" : "Internal"} follow-up: ${r4.title}`);
   }
   async function deFollowFacts(de2, m5) {
     const r4 = await api("/api/email/followup", { key: m5.key, eid: m5.eid || "", day: m5.day, start: m5.start, title: m5.title, files: [...m5.files || [], ...m5.draft ? [m5.draft] : []] });
@@ -71665,14 +71665,23 @@ ${d5.text}`);
 
   // components/minutes/MinutesView.jsx
   var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
-  var MN_EXPORTS = [
-    { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
-    { id: "pdf", name: "PDF", line: "Printed from the page" },
-    { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
-    { id: "sep", sep: true },
-    { id: "followup", name: "Draft the follow-up email", line: "For sending: no Internal-only or Sensitive items; copied, never sent" },
-    { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
-  ];
+  var mnExports = (draft) => {
+    const hold = draft ? "Approve the minutes first" : void 0;
+    return [
+      { head: "Shareable: for sending" },
+      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      // The email's summary is free text from the Shareable version (minutes_record.py followup_facts), so it has the same #329 gap as the Updates text.
+      { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent", tip: draft ? "Draft: check before sending" : void 0 },
+      { id: "sep", sep: true },
+      { head: "Internal: colleagues only" },
+      { id: "docx:internal", name: "Word (Internal)", line: "Everything, marked Internal; an export only, edits never come back" },
+      { id: "pdf:internal", name: "PDF (Internal)", line: "Everything, marked Internal" },
+      { id: "html:internal", name: "HTML (Internal)", line: "Everything, marked Internal; filed beside the minutes" },
+      { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
+    ];
+  };
   var dirty = false;
   var approving = y3(false);
   var reAsk = y3(false), reBusy = y3(false), reStep = y3("");
@@ -71706,8 +71715,9 @@ ${d5.text}`);
       openMinutesFollowup(v5 && v5.path, "internal");
       return;
     }
-    const r4 = await exportMinutes(id2);
-    snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+    const [fmt, ver] = id2.split(":");
+    const r4 = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
+    snack(r4.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").replace(/^Distributed minutes/, "Shareable minutes").split("\n")[0]);
   }
   async function readAgain() {
     const v5 = minutesView.value;
@@ -71943,7 +71953,7 @@ ${d5.text}`);
             data: { mnexport: "" },
             items: (
               /** @type {any} */
-              MN_EXPORTS
+              mnExports(draft)
             ),
             onPick: exportAs
           }

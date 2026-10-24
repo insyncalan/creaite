@@ -1473,7 +1473,7 @@ def _without_items(out, gone_refs, version):
 
 def distributed_export(rel, doc, fmt, file_beside=True):
     """Export the distributed version of the minutes at `rel`: the distributed record is built (distributed_of), written as a
-    working copy in system/staging/drafts/ (`<name> (distributed).html`), exported through creaite_doc.export into the minutes'
+    working copy in system/staging/drafts/ (`<name> (shareable).html`), exported through creaite_doc.export into the minutes'
     own folder (a create: never over a file, a taken name gets a number; Alan, 15-10-2026, option (c)), then the working copy goes.
     creaite_doc refuses it until the internal minutes are approved."""
     if (doc.get("audience") or "internal") != "internal":
@@ -1481,7 +1481,7 @@ def distributed_export(rel, doc, fmt, file_beside=True):
     dist = actions_wording(distributed_of(doc))
     dist["based_on"] = {"path": rel, "version": doc.get("version")}
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
-    work = paths.free_path(paths.DRAFTS, f"{creaite_doc.real(rel).stem} (distributed)", ".html")
+    work = paths.free_path(paths.DRAFTS, f"{creaite_doc.real(rel).stem} (shareable)", ".html")
     work.write_text(creaite_doc.dumps(dist), encoding="utf-8")
     try:
         folder = str(Path(rel).parent) if file_beside else None
