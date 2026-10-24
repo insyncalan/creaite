@@ -4247,7 +4247,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
 #v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
-#v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
+#v-intake-review .icchg{font-size:var(--fs-md);line-height:var(--lh-22);font-weight:600;   /* #341 item 2 (Alan, 24-10-2026): 14 px like the title; emphasis by weight, not size */ color:var(--ink);margin:2px 0}
 #v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
 #v-intake-review .icchg .icsrc{font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
 #v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);padding-left:10px;margin:4px 0}
