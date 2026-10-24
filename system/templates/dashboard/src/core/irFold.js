@@ -199,6 +199,21 @@ export const irEsc = st => (st.peek != null ? { ...st, peek: null } : { ...st, o
 
 /** The three views and their names; the first is the default. */
 export const IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
+
+/** #356: when Intake has nothing to decide (nothing ready to process and nothing to approve), the one next job, chosen from state so
+    advice never loops: refresh the calendar when it was last read before today or never; else check mail and Teams when that is due;
+    else look at tomorrow when the saved calendar has one; else just the sentence. Null while there is something to do.
+    @param {{ready?: number, to_approve?: number}} counts @param {string|null|undefined} fetched calendar.json's `fetched`
+    @param {string} today YYYY-MM-DD @param {boolean} mailDue @param {boolean} hasTomorrow
+    @returns {{job: "refresh"|"mail"|"tomorrow"|"none", text: string, button?: string}|null} */
+export function irNextJob(counts, fetched, today, mailDue, hasTomorrow) {
+  if (!counts || counts.ready || counts.to_approve) return null;
+  const f = String(fetched || ""), none = "Nothing is ready to process or approve.";
+  if (!/^\d{4}-\d{2}-\d{2}/.test(f) || f.slice(0, 10) < today) return { job: "refresh", text: `${none} Next: refresh the calendar.`, button: "Refresh calendar" };
+  if (mailDue) return { job: "mail", text: `${none} Next: check mail and Teams.`, button: "Check now" };
+  if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: look at tomorrow.`, button: "Look at tomorrow" };
+  return { job: "none", text: none };
+}
 /** A remembered view made safe. @param {any} v */
 export const irViewNorm = v => (IR_VIEWS.some(x => x[0] === v) ? v : "list");
 

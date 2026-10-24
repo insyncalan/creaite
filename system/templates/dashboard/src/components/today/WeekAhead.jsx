@@ -26,7 +26,8 @@ import { PrepPeek, usePeek } from "../prep/PrepPopup.jsx";
     `type`: a RAID item's type (Risk, Issue, Assumption, Dependency); `dot`: "u" (Urgent) or "h" (High); `time`: a meeting's start; `chip`: a meeting's Prep chip (`made`: the saved page's, which goes to it). */
 /** @typedef {{key: string, title: string, note?: string, rows: WkRow[], cap: number, open: boolean}} WkGroup */
 /** @typedef {{groups: WkGroup[], empty: string, others?: {n: number, nav: string}, onAct: (row: WkRow, act: WkAct, btn: HTMLElement) => void,
-    blocked: (why: string) => void, openFile: (path: string) => void}} WeekAheadProps
+    blocked: (why: string) => void, openFile: (path: string) => void, tomorrow?: (() => void) | null}} WeekAheadProps
+    `tomorrow` (#356): when there is nothing to show and the saved calendar has a tomorrow, a button that shows it.
     `others`: the quiet line's count of overdue items owned by others and the Work address it opens. */
 
 /** @param {Record<string, string> | undefined} o @returns {Record<string, string>} */
@@ -89,12 +90,12 @@ function WkLine({ r, hidden, p }) {
 
 /** The days. @param {WeekAheadProps} props */
 export function WeekAhead(props) {
-  const { groups, empty, others } = props;
+  const { groups, empty, others, tomorrow } = props;
   return (
     <>
       {others && others.n ? <p class="wkpoint">{others.n === 1 ? "1 action owned by others is overdue." : `${others.n} actions owned by others are overdue.`}{" "}
         <a href="#" class="cntl" data-nav={others.nav}>See them in Work</a></p> : null}
-      {!groups.length ? <p class="none">{empty}</p> : groups.map(g => {
+      {!groups.length ? <p class="none">{empty}{tomorrow ? <> Next: look at tomorrow. <button type="button" class="btn sm" data-wknext="1" onClick={tomorrow}>Show tomorrow</button></> : null}</p> : groups.map(g => {
         const more = g.rows.length - g.cap;
         return (
           <div class="wkday" key={g.key} data-day={g.key}>

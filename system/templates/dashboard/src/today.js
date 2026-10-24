@@ -815,7 +815,8 @@ export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) ret
   const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
   const above=groups.above||0;   /* #313: the rows left out because they are listed above are counted, not dropped silently */
   $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}${above?` · ${above} more listed above`:""}`:"";   /* #105: the quiet count and the end date, as Resolved's */
-  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:above?`The rest of what is due until ${W?longDay(W.to):"next Monday"} is listed above.`:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const nextDay=!above&&dayShown()===TODAY&&S.srcCalendar!==false?dayList().find(d=>d.date>TODAY):null;   /* #356 */
+  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),tomorrow:nextDay?()=>goDay(nextDay.date):null,empty:above?`The rest of what is due until ${W?longDay(W.to):"next Monday"} is listed above.`:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

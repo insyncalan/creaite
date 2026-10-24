@@ -4371,6 +4371,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
 #pkId .cv svg{width:12px;height:12px}
 /* ===== end NEW (#241) ===== */
+
+/* #356: the one line and button when Intake has nothing to decide */
+.irnext{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -6144,6 +6147,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
     irNameOk: () => irNameOk,
+    irNextJob: () => irNextJob,
     irNotNeeded: () => irNotNeeded,
     irNote: () => irNote,
     irNotes: () => irNotes,
@@ -9764,6 +9768,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
   var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
+  function irNextJob(counts, fetched, today, mailDue, hasTomorrow) {
+    if (!counts || counts.ready || counts.to_approve) return null;
+    const f5 = String(fetched || ""), none = "Nothing is ready to process or approve.";
+    if (!/^\d{4}-\d{2}-\d{2}/.test(f5) || f5.slice(0, 10) < today) return { job: "refresh", text: `${none} Next: refresh the calendar.`, button: "Refresh calendar" };
+    if (mailDue) return { job: "mail", text: `${none} Next: check mail and Teams.`, button: "Check now" };
+    if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: look at tomorrow.`, button: "Look at tomorrow" };
+    return { job: "none", text: none };
+  }
   var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
   var irQueryWords = (q5) => String(q5 || "").toLowerCase().split(/\s+/).filter(Boolean);
   function irMatches(q5, fields) {
@@ -56017,14 +56029,20 @@ ${pre}**Current state title:** ${title}`);
     ] });
   }
   function WeekAhead(props) {
-    const { groups, empty, others } = props;
+    const { groups, empty, others, tomorrow } = props;
     return /* @__PURE__ */ u4(S2, { children: [
       others && others.n ? /* @__PURE__ */ u4("p", { class: "wkpoint", children: [
         others.n === 1 ? "1 action owned by others is overdue." : `${others.n} actions owned by others are overdue.`,
         " ",
         /* @__PURE__ */ u4("a", { href: "#", class: "cntl", "data-nav": others.nav, children: "See them in Work" })
       ] }) : null,
-      !groups.length ? /* @__PURE__ */ u4("p", { class: "none", children: empty }) : groups.map((g5) => {
+      !groups.length ? /* @__PURE__ */ u4("p", { class: "none", children: [
+        empty,
+        tomorrow ? /* @__PURE__ */ u4(S2, { children: [
+          " Next: look at tomorrow. ",
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", "data-wknext": "1", onClick: tomorrow, children: "Show tomorrow" })
+        ] }) : null
+      ] }) : groups.map((g5) => {
         const more = g5.rows.length - g5.cap;
         return /* @__PURE__ */ u4("div", { class: "wkday", "data-day": g5.key, children: [
           /* @__PURE__ */ u4("h3", { class: "wkdh", id: `wkd-${g5.key}`, children: [
@@ -57739,12 +57757,14 @@ ${pre}**Current state title:** ${title}`);
     const groups = weekGroups(), n4 = groups.reduce((t47, g5) => t47 + g5.rows.length, 0);
     const above = groups.above || 0;
     $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}${above ? ` · ${above} more listed above` : ""}` : "";
+    const nextDay = !above && dayShown() === TODAY && S.srcCalendar !== false ? dayList().find((d5) => d5.date > TODAY) : null;
     drawWeekAhead(host2, {
       groups,
       openFile: (p6) => {
         prepOpen(p6);
       },
       others: othersOverdue(),
+      tomorrow: nextDay ? () => goDay(nextDay.date) : null,
       empty: above ? `The rest of what is due until ${W3 ? longDay(W3.to) : "next Monday"} is listed above.` : `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
       onAct: (r4, a5, btn) => {
         if (a5.data && a5.data.id) workAct(a5.data.k, a5.data.id, a5.id, btn);
@@ -78924,6 +78944,34 @@ ${d5.text}`);
       /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "clearticks", onClick: () => irClearTicks(), children: "Clear" })
     ] });
   }
+  function NextJob({ c: c5 }) {
+    const tomorrow = (dayList() || []).find((d5) => d5.date > TODAY);
+    const j5 = irNextJob(c5, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
+    if (!j5) return null;
+    const live = viaServer(), busy2 = irBlocked() || irRefreshing.value;
+    const why = j5.job === "tomorrow" ? "" : !live ? "creaite isn’t running" : busy2 ? "ask creaite is busy; try again when it’s finished" : "";
+    const act = () => {
+      if (j5.job === "refresh") irRefreshCalendar();
+      else if (j5.job === "mail") {
+        if (shared.BUSY) {
+          snack("ask creaite is busy; try again when it’s finished");
+          return;
+        }
+        openChat();
+        send("sweep");
+      } else if (tomorrow) {
+        go2("today");
+        goDay(tomorrow.date);
+      }
+    };
+    return /* @__PURE__ */ u4("p", { class: "irnext", "data-irnext": j5.job, children: [
+      /* @__PURE__ */ u4("span", { children: j5.text }),
+      j5.button ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-ira": "nextjob", disabled: !!why, title: why || void 0, onClick: act, children: j5.button })
+      ] }) : null
+    ] });
+  }
   function IntakeReviewView() {
     const tick2 = irTick.value;
     const c5 = irLiveCounts(), view = irView.value, q5 = irQuery.value;
@@ -78940,6 +78988,7 @@ ${d5.text}`);
         " to approve · ",
         /* @__PURE__ */ u4(CalendarRead, { text: irCalendarRead(D.meetings && D.meetings.fetched, TODAY) })
       ] }),
+      /* @__PURE__ */ u4(NextJob, { c: c5 }),
       /* @__PURE__ */ u4("div", { class: "toolbar rvtools", children: [
         /* @__PURE__ */ u4(
           "input",
@@ -78994,7 +79043,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4(StagePipe, { c: c5 }),
         /* @__PURE__ */ u4(ListView, { model, list })
       ] }),
-      /* @__PURE__ */ u4(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
+      model.later.length ? /* @__PURE__ */ u4(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
         x5.title,
         x5.day ? /* @__PURE__ */ u4("span", { class: "sub", children: [
           " · ",
@@ -79003,8 +79052,8 @@ ${d5.text}`);
         ] }) : null,
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
-      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }),
-      /* @__PURE__ */ u4(FoldSection, { sec: "not_needed", title: "Not needed", n: model.not_needed.length, children: model.not_needed.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.not_needed.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
+      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }) : null,
+      model.not_needed.length ? /* @__PURE__ */ u4(FoldSection, { sec: "not_needed", title: "Not needed", n: model.not_needed.length, children: model.not_needed.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.not_needed.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
         x5.title,
         x5.day ? /* @__PURE__ */ u4("span", { class: "sub", children: [
           " · ",
@@ -79021,7 +79070,7 @@ ${d5.text}`);
         ] }) : null,
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
-      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing marked Not needed." }) }),
+      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing marked Not needed." }) }) : null,
       /* @__PURE__ */ u4(AsideMenu, {}),
       /* @__PURE__ */ u4(DropOverlay, {})
     ] });

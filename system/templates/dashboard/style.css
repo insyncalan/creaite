@@ -4361,3 +4361,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
 #pkId .cv svg{width:12px;height:12px}
 /* ===== end NEW (#241) ===== */
+
+/* #356: the one line and button when Intake has nothing to decide */
+.irnext{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
