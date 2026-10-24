@@ -710,6 +710,7 @@
    "pdGroup",
    "pdKey",
    "pdNormalise",
+   "pdPrune",
    "pdReset",
    "pdSave",
    "pdSort",

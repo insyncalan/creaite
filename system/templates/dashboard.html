@@ -36501,7 +36501,7 @@ system/scripts/run launch.py agent ${what}`;
     const ord = shown2.map((c5) => c5[0]);
     return [...shown2, ...rest].map((c5) => {
       const on2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]), l6 = esc(c5[1]);
-      return `<label><input type="checkbox" data-prop id="${prefix}-${c5[0]}" value="${c5[0]}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 && !(pinFirst && i5 === 0) ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 || pinFirst && i5 === 1 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+      return `<label><input type="checkbox" data-prop id="${esc(prefix)}-${esc(c5[0])}" value="${esc(c5[0])}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 && !(pinFirst && i5 === 0) ? `<span class="colmv"><button type="button" data-mv="${esc(c5[0])}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 || pinFirst && i5 === 1 ? "disabled" : ""}>↑</button><button type="button" data-mv="${esc(c5[0])}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
     }).join("");
   }
   var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
@@ -36576,7 +36576,7 @@ system/scripts/run launch.py agent ${what}`;
     return { group, sub, cols, collapsed };
   }
   function pdSort(s5) {
-    return s5 && PD_SORTS[s5.col] && (s5.dir === "asc" || s5.dir === "desc") ? { col: s5.col, dir: s5.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
+    return s5 && typeof s5.col === "string" && Object.prototype.hasOwnProperty.call(PD_SORTS, s5.col) && (s5.dir === "asc" || s5.dir === "desc") ? { col: s5.col, dir: s5.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
   }
   function pdGroupsOf(x5, g5, projectName) {
     if (g5 === "org") return [[x5.org || "", x5.org || "No organisation"]];
@@ -36602,6 +36602,20 @@ system/scripts/run launch.py agent ${what}`;
     }
     const fixed = FIXED[g5];
     return [...by2.values()].sort((a5, b5) => fixed ? fixed.indexOf(a5.key) - fixed.indexOf(b5.key) : (!a5.key ? 1 : 0) - (!b5.key ? 1 : 0) || a5.label.localeCompare(b5.label));
+  }
+  function pdPrune(st2, everyone, projectName) {
+    if (st2.group === "none") return 0;
+    const live = /* @__PURE__ */ new Set();
+    for (const g5 of pdGroup(everyone, st2.group, projectName)) {
+      live.add(pdKey(st2.group, g5.key));
+      if (st2.sub !== "none") for (const g22 of pdGroup(g5.items, st2.sub, projectName)) live.add(pdKey(st2.group, g5.key, st2.sub, g22.key));
+    }
+    let n4 = 0;
+    for (const k5 of Object.keys(st2.collapsed)) if (!live.has(k5)) {
+      delete st2.collapsed[k5];
+      n4++;
+    }
+    return n4;
   }
   var pdKey = (g5, v5, sub, sv) => `${g5}|${v5}${sub ? `|${sub}|${sv}` : ""}`;
   var pdColumns = (st2) => st2.cols.filter((k5) => PD_KEYS.includes(k5));
@@ -36947,7 +36961,9 @@ system/scripts/run launch.py agent ${what}`;
   function PeoplePage(_props) {
     pdSyncSort();
     const s5 = PLST.s, tab = ptabOf(shared.PTAB), st2 = pdState(), cols = pdColumns(st2);
-    const all = registerRows(), F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
+    const all = registerRows();
+    if (pdPrune(st2, all, pName)) pdSave();
+    const F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
     const so2 = sortOf(), f5 = SORTS[so2.col], dir = so2.dir === "asc" ? 1 : -1;
     const L3 = hit2.filter(IN_TAB[tab]).sort((a5, b5) => (a5.me ? -1 : b5.me ? 1 : 0) || (() => {
       const x5 = f5(a5), y5 = f5(b5);
@@ -82382,6 +82398,7 @@ Next: `;
         "pdGroup",
         "pdKey",
         "pdNormalise",
+        "pdPrune",
         "pdReset",
         "pdSave",
         "pdSort",
