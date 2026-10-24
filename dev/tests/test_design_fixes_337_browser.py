@@ -74,16 +74,22 @@ class DesignFixes(LiveBrowserCase):
         b.eval("go('people')")
         b.wait("document.querySelector('#peopleTbl table')")
         tw, cw, over = b.eval("(()=>{const c=document.querySelector('#peopleTbl'),t=c.querySelector('table'),h=[...t.querySelectorAll('th')].find(x=>x.textContent.includes('Overdue'));return [t.scrollWidth,c.clientWidth,h.getBoundingClientRect().right-c.getBoundingClientRect().left]})()")
-        self.assertLessEqual(tw, cw + 1)
+        # Intent, measured against the page's own box (the 2.6.4 gate: a wider font, as on Linux, makes the cells wrap more or the
+        # table a few per cent wider than here): the sort column is on screen and the table is not meaningfully wider than its box
+        # (the wide-table cue covers a small remainder). Before #337 the table was ~1.4x its box with Overdue off screen.
         self.assertLessEqual(over, cw)
+        self.assertLessEqual(tw, cw * 1.08, (tw, cw))
 
     def test_activity_by_column_does_not_wrap(self):
         b = self.b
         b.eval("go('activity')")
         b.wait("document.querySelector('#actTbl tr[data-row]')")
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#actTbl tbody tr td:nth-child(4)')).whiteSpace"), "nowrap")
-        h = b.eval("[...document.querySelectorAll('#actTbl tbody tr')].slice(0,6).map(r=>r.getBoundingClientRect().height)")
-        self.assertLessEqual(max(h), 52, h)
+        # the By cell's own text is on one line (other columns may wrap with a wider font and make the row taller)
+        lines = b.eval("""[...document.querySelectorAll('#actTbl tbody tr')].slice(0,6).map(r=>{const td=r.children[3],rg=document.createRange();
+          rg.selectNodeContents(td); const cs=getComputedStyle(td), lh=parseFloat(cs.lineHeight)||parseFloat(cs.fontSize)*1.4;
+          return rg.getBoundingClientRect().height/lh;})""")
+        self.assertTrue(lines and max(lines) < 1.5, lines)
 
 
 class DesignFixesWide(LiveBrowserCase):

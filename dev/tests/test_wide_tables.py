@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_wide_tables.py   (needs Google Chrome; skipped otherwise)
 
-A table wider than its frame (Projects at 700px, the People page at 900px; Settings › People until the Settings line) shows the edge fade and "more columns →";
+A table wider than its frame (Projects at 700px, the People page at 700px (it fits at 900 since #337); Settings › People until the Settings line) shows the edge fade and "more columns →";
 BL-176: the peek and ask creaite are over the page, so with them open at 1100px nothing narrows and a table that fits shows no cue; the cue goes once scrolled to the
 end; the button scrolls; the first column (the ID or name) stays put while the rest scrolls, unless it is over half the frame.
 """
@@ -14,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
 PAGES = {"projects": "go('projects')", "work": "go('work')", "people": "go('settings','people')"}   # the Settings line: the old address opens the People page
+# #337 made the People table fit its box at 900 px (cells wrap, Email hides at 1100), so it no longer scrolls sideways there; the
+# cue, scroll and fixed-column tests run it at a width where it still must (700 px: well under what it needs, whatever the font).
+PEOPLE_W = 700
 FRAME = {"projects": "#projTbl", "work": "#workWrap", "people": "#v-people .tbl"}
 CUE = """(()=>{ const f=document.querySelector(%r), c=f&&f.querySelector(':scope>.xcue'), m=c&&c.querySelector('.xmore');
   const vis=e=>!!e&&getComputedStyle(e).display!=='none'&&e.getBoundingClientRect().width>0;
@@ -50,7 +53,7 @@ class WideTables(LiveBrowserCase):
             self.assertEqual(self.state(page), alone, page)
 
     def test_each_table_shows_the_cue_when_wider_than_its_frame(self):
-        for page, width in (("projects", 700), ("people", 900)):
+        for page, width in (("projects", 700), ("people", PEOPLE_W)):
             self.setup_page(page, width, panel=page == "projects")
             s = self.state(page)
             self.assertTrue(s["over"], page)
@@ -66,7 +69,7 @@ class WideTables(LiveBrowserCase):
 
     def test_the_cue_goes_at_the_end_and_the_button_scrolls(self):
         b = self.b
-        self.setup_page("people", 900)
+        self.setup_page("people", PEOPLE_W)
         b.click("#v-people .tbl .xmore")
         b.wait("document.querySelector('#v-people .tbl').scrollLeft>0", 5)
         b.eval("(()=>{ const f=document.querySelector('#v-people .tbl'); f.scrollLeft=f.scrollWidth; })()")
@@ -80,15 +83,17 @@ class WideTables(LiveBrowserCase):
 
     def test_the_first_column_stays_fixed(self):
         b = self.b
-        self.setup_page("people", 900)
+        self.setup_page("people", PEOPLE_W)
         self.assertTrue(self.state("people")["stick"])
         first = "document.querySelector('#v-people .tbl tbody tr td:first-child').getBoundingClientRect().left"
-        second = "document.querySelector('#v-people .tbl tbody tr td:nth-child(2)').getBoundingClientRect().left"
+        second = "document.querySelector('#v-people .tbl tbody tr td:nth-child(3)').getBoundingClientRect().left"   # the 2nd (Email) is hidden under 1100 px
         x1, x2 = b.eval(first), b.eval(second)
-        b.eval("document.querySelector('#v-people .tbl').scrollLeft=120")
+        room = b.eval("(()=>{ const f=document.querySelector('#v-people .tbl'); return f.scrollWidth-f.clientWidth; })()")
+        self.assertGreater(room, 8)                                                        # it scrolls by some amount, whatever the font
+        b.eval("document.querySelector('#v-people .tbl').scrollLeft=%d" % room)
         b.pump(0.3)
         self.assertAlmostEqual(b.eval(first), x1, delta=1)                                # the name stays
-        self.assertLess(b.eval(second), x2 - 60)                                          # the rest moves
+        self.assertLess(b.eval(second), x2 - room / 2)                                    # the rest moves
         hit = b.eval("""(()=>{ const td=document.querySelector('#v-people .tbl tbody tr td:first-child'), r=td.getBoundingClientRect();
           return td.contains(document.elementFromPoint(r.left+8, r.top+r.height/2)); })()""")
         self.assertTrue(hit)                                                              # drawn over the scrolled columns

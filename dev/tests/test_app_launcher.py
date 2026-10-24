@@ -106,7 +106,8 @@ class RoutesTests(unittest.TestCase):
         self.assertIn('<link rel="manifest" href="/manifest.webmanifest">', self.html)
         self.assertRegex(self.html, r'<meta name="theme-color" content="#[0-9A-Fa-f]{6}">')
         self.assertIn('register("/sw.js")', self.html)
-        self.assertIn("install the app again and reconnect the vault", self.html)             # the port note in Settings
+        # the port note in Settings: changing the port means installing the app again and reconnecting (the wording has moved on, so the meaning is checked)
+        self.assertRegex(self.html, r"(?i)if you change it, install the app again and reconnect\b")
 
     def test_the_service_worker_and_the_offline_page(self):
         status, headers, body = get(self.base + "/sw.js")
