@@ -1144,7 +1144,7 @@ export function bl185Row(){ const row=$("#v-cockpit .evrow"); if(!row) return;
   row.querySelectorAll(".evbox").forEach(b=>{ const l=b.querySelector(".l"), v=b.querySelector(".v"); if(!l||!v) return; const t=l.textContent.trim();
     if(t==="No due date"){ b.remove(); return; }
     const m=/^Due in (\d+) days?$/.exec(t); if(m) l.textContent=`Due ${m[1]}d`;
-    if(t==="Milestone slip"){ v.textContent=v.textContent.replace(/^(\d+) days?$/,"$1d");
+    if(t==="Late milestones"){ v.textContent=v.textContent.replace(/^(\d+) days?$/,"$1d");
       if(!b.classList.contains("click")){ b.classList.add("click"); b.setAttribute("data-msjump",""); b.setAttribute("role","link"); b.tabIndex=0; b.title="Show the milestones"; } }
     if(v.classList.contains("bad")&&!l.querySelector(".evi")){ b.classList.add("alert"); addHTML(l,"afterbegin",raw(ic("alert",{cls:"evi",bare:true}))); } }); }
 /* ===== end BL-185 ===== */

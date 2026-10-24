@@ -6,7 +6,7 @@
 
 /** The columns, in their starting order: [key, label, title]. Name is locked on. */
 export const PD_COLS = /** @type {[string, string, string?][]} */ ([["name", "Name"], ["email", "Email"], ["org", "Organisation"], ["role", "Role"], ["proj", "Projects"],
-  ["oa", "Actions", "Open actions"], ["or", "RAID", "Open risks and issues"], ["dw", "Decisions", "Decisions waiting on them"], ["late", "Overdue"]]);
+  ["oa", "Actions", "Open actions"], ["or", "Risks and issues", "Open risks and issues"], ["dw", "Decisions", "Decisions waiting on them"], ["late", "Overdue"]]);
 export const PD_KEYS = PD_COLS.map(c => c[0]);
 export const PD_LOCKED = "name";
 /** What a heading or Order by can sort on, with the direction it starts in. */
