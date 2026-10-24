@@ -1,0 +1,34 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e..4009462 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1659,6 +1659,12 @@ class Handler(BaseHTTPRequestHandler):
+                 return self.send(409, {"ok": False, "busy": True, "run": busy.summary(),
+                                        "message": "ask creaite is still working on the last request."})
+             try:
++                import calendar_refresh                          # #339 A: a typed "refresh calendar" is the small calendar run
++                if panel_calendar(message, images, req.get("confirmed")) and not calendar_refresh.precheck() \
++                        and not sweep_running():
++                    run = Run(run_id, calendar_refresh.build_prompt(), None, None, None, kind="calendar",
++                              label=calendar_refresh.label(), closer=calendar_refresh.closer(), lines=calendar_refresh.lines())
++                    return self.follow(run, numbered=self.numbered())
+                 sweep = panel_sweep(message, images, req.get("confirmed"))      # BL-309: the server decides, from the words
+                 run = Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images, sweep=sweep,
+                           fresh=fresh_session(req))
+@@ -2334,6 +2340,16 @@ def panel_sweep_code_ok(code):
+     return len(code) <= 3 and code.lower() not in PANEL_SWEEP_COMMON
+ 
+ 
++PANEL_CALENDAR_WORDS = re.compile(r"(?:please )?refresh (?:the |my )?calendar(?: now)?(?: please)?[.!]?", re.I)
++
++
++def panel_calendar(message, images=(), confirmed=None):
++    """#339 A: True when a panel request is only "refresh calendar" (the sweep's own words for it): it runs as the small
++    "calendar" kind (#265), not as a sweep. Words only, never the model; an image or a confirmed request is never one."""
++    text = " ".join(str(message or "").split())
++    return not (images or confirmed) and len(text) <= 60 and bool(PANEL_CALENDAR_WORDS.fullmatch(text))
++
++
+ def panel_sweep(message, images=(), confirmed=None):
+     """True when a panel request is a plain sweep (BL-309): cx-sweep's own words and nothing more. A thread's subject may not
+     carry another instruction ("and", "then", apply, approve…); an image or a confirmed request is never a sweep."""
