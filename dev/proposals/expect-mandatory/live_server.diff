@@ -1,0 +1,30 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 2fe6b85f..f587951c 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1432,6 +1432,9 @@ class Handler(BaseHTTPRequestHandler):
+             if n is None:
+                 return self.send(200, {"ok": False, "message": "That proposal is no longer pending."})
+             if self.expect_args(req) is None:                           # 2.6.2 (#314, Cap's note): say what is wrong
++                if req.get("expect") is None:                           # 2.6.3: the page always sends it, so a missing one is a stale page
++                    return self.send(200, {"ok": False, "message": "This page didn't say which item it meant, so nothing was decided. "
++                                                                   "Reload the page and try again."})
+                 return self.send(200, {"ok": False, "message": "Review can't check which item that is, so nothing was decided. Look at the list again."})
+             args = self.review_args(req, n)
+             if args is None:
+@@ -1466,11 +1469,12 @@ class Handler(BaseHTTPRequestHandler):
+ 
+     @staticmethod
+     def expect_args(req):
+-        """2.6.2 (#314): ["--expect=<fp>"] when the page sent the item's fingerprint (review.py refuses if item n is not it), [] when it
+-        sent none, None when it sent something that is not 12 hex digits (refused, nothing decided)."""
++        """2.6.2 (#314), mandatory from 2.6.3: ["--expect=<fp>"] when the page sent the item's fingerprint (review.py refuses if item n
++        is not it); None when it sent none or something that is not 12 hex digits (refused, nothing decided). Every page path sends it;
++        review.py's own commands (ask creaite, the Excel import) don't use this route."""
+         expect = req.get("expect")
+         if expect is None:
+-            return []
++            return None
+         return [f"--expect={expect}"] if isinstance(expect, str) and re.fullmatch(r"[0-9a-f]{12}", expect) else None
+ 
+     def refresh(self, req):

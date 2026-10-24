@@ -150,10 +150,13 @@ class LiveServerTests(unittest.TestCase):
 
     def test_review_runs_review_py_checks(self):
         fname = "proposed-pending.json"
-        res = self.post("/api/review", {"file": fname, "ref": "meeting", "decision": "approved"})[1]
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import build_dashboard
+        fp = build_dashboard.block_fp(json.loads((self.v.root / "system/staging" / fname).read_text())["meeting"])     # 2.6.3: expect is required
+        res = self.post("/api/review", {"file": fname, "ref": "meeting", "decision": "approved", "expect": fp})[1]
         self.assertNotIn("labelled", res["message"])                    # BL-121: no label check
         res = self.post("/api/review", {"file": fname, "ref": "meeting", "decision": "approved",
-                                        "modes": ["as-staged", "unlabelled"]})[1]      # an old page's "unlabelled" mode is ignored
+                                        "modes": ["as-staged", "unlabelled"], "expect": fp})[1]      # an old page's "unlabelled" mode is ignored
         self.assertTrue(res["ok"], res)
         data = json.loads((self.v.root / "system/staging" / fname).read_text())
         self.assertEqual(data["meeting"]["minutes_decision"], "approved")

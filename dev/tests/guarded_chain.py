@@ -4,15 +4,15 @@ The convention (dev/proposals/GUARDED-2.6.1.md, GUARDED-2.6.2.md): each approved
 exactly that chain's marker. That commit is allowed to change guarded scripts only if, with the diffs listed in the chain file (read from
 that commit's PARENT) reverse-applied to the guarded files, every guarded file equals its parent's content. A marked commit with anything
 extra, a missing or unreadable chain file, a pin mismatch, a listed diff that is missing or does not reverse, or a guarded file the
-diffs don't explain, fails closed: its guarded files are reported as changed. Two chains are known (2.6.1, then 2.6.2); a range may hold
-either or both, in order. Plain code, no network."""
+diffs don't explain, fails closed: its guarded files are reported as changed. Three chains are known (2.6.1, 2.6.2, then 2.6.3); a range may
+hold any of them, in order. Plain code, no network."""
 import hashlib
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
-GUARDED = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py", "live_server.py", "client_leak.py", "edit_ai.py")
+GUARDED = ("tracker.py", "filechange.py", "reach.py", "permissions.py", "backup.py", "update.py", "live_server.py", "client_leak.py", "edit_ai.py", "draft_delivery.py")
 CHAIN_MARKER = "Guarded 2.6.1 chain:"
 CHAIN_FILE = "dev/proposals/GUARDED-2.6.1.chain"
 # The releases the check starts from are BASE_261 and BASE below, as commits (a branch name can move). Alan's say to change.
@@ -25,14 +25,25 @@ CHAIN_SHA256 = "a598a48e87c29f40227e21f2233329bd816e0c5154c1037e12f96a9b14cb3c8f
 CHAIN2_MARKER = "Guarded 2.6.2 chain:"
 CHAIN2_FILE = "dev/proposals/GUARDED-2.6.2.chain"
 CHAIN2_SHA256 = "d6441d5568bc7680a2e7f051e6fe3e91f1d14af079220743edf9910e09637c8d"
-# BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE2 (also BASE, the default) is the 2.6.1 release commit, published:
+# BASE_261 is the 2.6.0 release the 2.6.1 chain was checked from. BASE2 is the 2.6.1 release commit, published:
 # the full sha of 5bf7da29 (Jarvis, 23-10-2026; main's merge commit 256fdcc2 changes no content). CHAIN2_SHA256 is the value
 # `python3 dev/tests/guarded_chain.py` prints; change it only with the chain list.
 BASE_261 = "9501f2cdc850618e2ae34419bf2c6cb1c0d94ba0"
 BASE2 = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
-BASE = BASE2
+# The 2.6.3 chain (dev/proposals/draft-delivery-guarded/README.md): its own marker, list and pin. draft_delivery.py joined GUARDED with it
+# (it holds the hook that checks the Outlook create-draft call; the 2.6.2 blocker was found there). BASE3 is the published 2.6.2 release
+# commit, main's merge 39c1060a: draft_delivery.py was written in the 2.6.2 range by unmarked commits, so the check now starts from the
+# release (BASE below) and a range from BASE2 would report the whole file as new. CHAIN3_SHA256 is "" until the 2.6.3 chain list is cut
+# (a "" pin matches nothing, so a marked 2.6.3 commit fails closed until it is set, on Alan's say); then
+# `python3 dev/tests/guarded_chain.py` prints the value.
+CHAIN3_MARKER = "Guarded 2.6.3 chain:"
+CHAIN3_FILE = "dev/proposals/GUARDED-2.6.3.chain"
+CHAIN3_SHA256 = ""
+BASE3 = "39c1060aaeffa0c47a03a3c8e0e48208d3cb9ed6"
+BASE = BASE3
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
+SPEC3 = (CHAIN3_MARKER, CHAIN3_FILE, "CHAIN3_SHA256")
 
 
 class HistoryMissing(AssertionError):
@@ -106,13 +117,13 @@ def chain_explains(repo, sha, files, pin=None, spec=SPEC1):
     return back is not None and all(back[f] == _blob(repo, sha + "^", f) for f in files)
 
 
-def _marked_chains(repo, base, head, pin, pin2):
+def _marked_chains(repo, base, head, pin, pin2, pin3=None):
     """(peel, carried): per chain, latest first, (spec, pin, marked commit, guarded files its marked commits changed), and the union of
     those files. (None, set()) when a marked commit is not exactly its chain."""
     log = _git(repo, "log", "--no-merges", "--format=%H%x09%s", f"{base}..{head}")
     subjects = [l.split("\t", 1) for l in log.stdout.splitlines()]
     peel, carried = [], set()
-    for spec, p in ((SPEC2, pin2), (SPEC1, pin)):
+    for spec, p in ((SPEC3, pin3), (SPEC2, pin2), (SPEC1, pin)):
         marked = [h for h, subj in subjects if subj.startswith(spec[0])]
         if not marked:
             continue
@@ -137,9 +148,9 @@ def _peel_back(repo, head, peel, cur):
     return True
 
 
-def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None):
+def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None, pin3=None):
     """Guarded script paths whose content differs between base and head (the net change), except what the approved chain commits
-    explain: for each chain (2.6.1, 2.6.2) a commit in the range whose subject starts with its marker and which passes chain_explains.
+    explain: for each chain (2.6.1, 2.6.2, 2.6.3) a commit in the range whose subject starts with its marker and which passes chain_explains.
     Every net change must be carried by a marked commit, and the chains' diffs, reversed latest chain first, each only on the files its
     own marked commit changed, must give base's content. None when git history for base isn't available."""
     d = _git(repo, "diff", "--name-only", "--no-renames", base, head)
@@ -150,7 +161,7 @@ def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None):
     net = [f for f in d.stdout.splitlines() if _is_guarded(f)]
     if not net:
         return []
-    peel, carried = _marked_chains(repo, base, head, pin, pin2)
+    peel, carried = _marked_chains(repo, base, head, pin, pin2, pin3)
     if peel is None or not peel or not set(net) <= carried:     # a net change no marked commit made itself is somebody else's edit
         return net
     cur = {f: _blob(repo, head, f) for f in net}
@@ -163,3 +174,4 @@ if __name__ == "__main__":
     here = Path(__file__).resolve().parents[2]
     print("CHAIN_SHA256 ", chain_digest(here, "HEAD", SPEC1))
     print("CHAIN2_SHA256", chain_digest(here, "HEAD", SPEC2))
+    print("CHAIN3_SHA256", chain_digest(here, "HEAD", SPEC3))
