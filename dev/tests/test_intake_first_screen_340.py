@@ -144,6 +144,63 @@ class FirstScreen(IntakeBase):
         self.assertEqual(b.eval("JSON.stringify(D.intake_review.later)"), before)
         self.assertTrue(b.eval("D.intake_review.meetings.some(m=>m.id===%r)" % wid))
 
+    def tick_found_waiting(self, v):
+        """Search for a waiting meeting (the search opens the folded tail), tick it: returns its id."""
+        b = self.b
+        self.fold()
+        self.view(v)
+        wid = b.eval("(D.intake_review.meetings.find(m=>m.stage==='arrived'&&m.state==='waiting')||{}).id")
+        title = b.eval("D.intake_review.meetings.find(m=>m.id===%r).title" % wid)
+        b.eval("irQuery.value=%r; 0" % title)
+        b.wait("!!document.querySelector('#v-intake-review [data-irm=%s] input.irtick')" % wid)
+        b.eval("document.querySelector('#v-intake-review [data-irm=%s] input.irtick').click()" % wid)
+        b.wait("irTicked.value.includes(%r)" % wid)
+        self.assertIn("1 selected", b.eval("document.querySelector('[data-irtickbar]').textContent"))
+        return wid
+
+    def test_escape_in_the_search_box_clears_the_ticks_and_later_moves_nothing_hidden(self):
+        b = self.b
+        for v in ("list", "board", "two"):
+            wid = self.tick_found_waiting(v)
+            b.eval("document.getElementById('irQ').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); 0")
+            b.wait("!irQuery.value")
+            b.wait("!document.querySelector('#v-intake-review [data-irm=%s]')" % wid)
+            self.assertEqual(b.eval("irTicked.value.length"), 0, v)
+            self.assertFalse(b.eval("!!document.querySelector('[data-irtickbar]')"), v)
+            before = b.eval("JSON.stringify(D.intake_review.later)")
+            b.eval("var t=document.querySelector('[data-irtickbar] [data-ira=laterall]'); if (t) t.click(); 0")
+            b.pump(0.4)
+            self.assertEqual(b.eval("JSON.stringify(D.intake_review.later)"), before, v)
+            self.assertTrue(b.eval("D.intake_review.meetings.some(m=>m.id===%r)" % wid), v)
+
+    def test_later_acts_on_the_page_at_the_click_even_if_the_search_ends_behind_the_bar(self):
+        """The search is cleared without the ticks being cleared (no redraw of the bar): Later still moves nothing hidden."""
+        b = self.b
+        for v in ("list", "board", "two"):
+            wid = self.tick_found_waiting(v)
+            b.eval("irQuery.value=''; 0")                                                        # the tail folds; the tick stays
+            b.wait("!document.querySelector('#v-intake-review [data-irm=%s]')" % wid)
+            before = b.eval("JSON.stringify(D.intake_review.later)")
+            b.eval("var t=document.querySelector('[data-irtickbar] [data-ira=laterall]'); if (t) t.click(); 0")
+            b.pump(0.4)
+            self.assertEqual(b.eval("JSON.stringify(D.intake_review.later)"), before, v)
+            self.assertTrue(b.eval("D.intake_review.meetings.some(m=>m.id===%r)" % wid), v)
+            b.eval("irClearTicks(); 0")
+
+    def test_group_by_none_after_ticking_under_day_leaves_no_selection(self):
+        b = self.b
+        self.fold()
+        self.view("list")
+        b.eval("irSetGroup('day'); 0")
+        b.eval("irSetStateFilter('waiting'); 0")
+        b.wait("!!document.querySelector('#v-intake-review [data-irm] input.irtick')")
+        b.eval("document.querySelector('#v-intake-review [data-irm] input.irtick').click()")
+        b.wait("irTicked.value.length===1")
+        b.eval("irSetStateFilter('all'); irSetGroup('none'); 0")
+        b.wait("irTicked.value.length===0")
+        self.assertFalse(b.eval("!!document.querySelector('[data-irtickbar]')"))
+        b.eval("irSetGroup('none'); 0")
+
     def test_two_panes_moves_off_a_meeting_that_is_folded_away(self):
         b = self.b
         self.fold()

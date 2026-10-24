@@ -63,7 +63,7 @@ export function irToggleKids(id) { irKidsFold.value = { ...irKidsFold.value, [id
 export const IR_GROUP_KEY = "creaite-ir-group";
 export const irGroup = signal(irGroupNorm((() => { try { return store.get(IR_GROUP_KEY, "none"); } catch (x) { return "none"; } })()));
 /** @param {string} v */
-export function irSetGroup(v) { irGroup.value = irGroupNorm(v); try { store.set(IR_GROUP_KEY, irGroup.value); } catch (x) { /* storage blocked: this page only */ } }
+export function irSetGroup(v) { irGroup.value = irGroupNorm(v); irClearTicks(); try { store.set(IR_GROUP_KEY, irGroup.value); } catch (x) { /* storage blocked: this page only */ } }
 /** Show only meetings in one state (All meetings, Waiting for the transcript, ...): for this visit only (#323). */
 export const irStateFilter = signal("all");
 /** @param {string} v */

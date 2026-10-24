@@ -9882,6 +9882,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   })()));
   function irSetGroup(v5) {
     irGroup.value = irGroupNorm(v5);
+    irClearTicks();
     try {
       store.set(IR_GROUP_KEY, irGroup.value);
     } catch (x5) {
@@ -79421,6 +79422,7 @@ ${d5.text}`);
                 e4.preventDefault();
                 e4.stopPropagation();
                 irQuery.value = "";
+                irClearTicks();
               }
             }
           }

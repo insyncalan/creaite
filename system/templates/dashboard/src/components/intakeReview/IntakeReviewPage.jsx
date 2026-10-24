@@ -195,7 +195,7 @@ function IntakeReviewView() {
       <div class="toolbar rvtools">
         <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
           onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; irClearTicks(); }}
-          onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; } }} />
+          onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; irClearTicks(); } }} />
         <GroupControls view={view} />
         <span class="sp"></span>
         <ProcessAll n={irReady().length} left={irLeftOut().length} />
