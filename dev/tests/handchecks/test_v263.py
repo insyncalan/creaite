@@ -60,6 +60,11 @@ def needs(key):
     return wrap
 
 
+KIND = {n: "scriptable" for n in range(1, 7)}
+LIVE_ONLY = {}
+NOTES = {}
+
+
 class Present263(unittest.TestCase):
     @needs("fresh")
     def test_c01_fresh_sessions(self):
