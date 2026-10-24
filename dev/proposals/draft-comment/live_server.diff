@@ -7,7 +7,7 @@ index 2fe6b85f..d89ada72 100644
  # then. "copied" (Copy email with the setting on) keeps the references only, for the sweep's Sent Items match.
  # POST /api/email/outlook-access {}: Settings' Check, a run whose only Microsoft 365 tool is the reading tool get_granted_scopes.
 -# Never in the development repository; never from ask creaite (draft_delivery.py is not in reach.SCRIPT_COMMANDS: fails closed).
-+# Never in the development repository. Ask creaite's plain chats and held runs don't run it: draft_delivery.py is not in
++# Never in the development repository. ask creaite's plain chats and held runs don't run it: draft_delivery.py is not in
 +# reach.SCRIPT_COMMANDS, so reach.command_kind gives "unknown" and both refuse every command of it. A request Alan has confirmed
 +# (BL-267) isn't held to that, so there `created`, `hook` and the other commands can run; ask creaite still has no Microsoft 365
 +# create-draft tool (actions stay off), so it cannot make a draft itself.

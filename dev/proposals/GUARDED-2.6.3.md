@@ -14,8 +14,8 @@ Change the chain list or any listed diff, and `CHAIN3_SHA256` must be re-set (Al
 ## Pins
 | List | CHAIN3_SHA256 |
 |------|---------------|
-| `GUARDED-2.6.3.chain` (327b, 324, draft-delivery-guarded, expect-mandatory, draft-comment), set in guarded_chain.py | `6208c3068e72f16b154a3360ac09586c7cecb3a8602679af9882a3984e99b14a` |
-| `GUARDED-2.6.3.with-338.chain` (the five above, then 338 after-chain) | `618b5fc27e15ea16914a3618d6f18caaa3e1d21691b0b7796359978f966a4c6a` |
+| `GUARDED-2.6.3.chain` (327b, 324, draft-delivery-guarded, expect-mandatory, draft-comment), set in guarded_chain.py | `e0670db88b51a179f8cacc97018859ac374c35b7a4a035f7b498b6d6b3878d99` |
+| `GUARDED-2.6.3.with-338.chain` (the five above, then 338 after-chain) | `37ea9d75e3524bd0df7af40b5dfc0be018682420ba29b2a423bf45e8da07f1cc` |
 The with-338 pin was computed with the 338 diff's bytes from `origin/v263-338` 74e56de3 (path plus bytes, the same way `chain_digest` does). To use it, copy the variant over the main list, add `dev/proposals/338/` to the tree, and set the pin.
 
 ## Which 338 diff
