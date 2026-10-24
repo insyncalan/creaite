@@ -33,7 +33,7 @@ export function irRowMenu(e, m) {
   const el = /** @type {HTMLElement} */ (e.currentTarget);
   if (/** @type {Element} */ (e.target).closest("a,input,select,textarea")) return;
   e.preventDefault();
-  if (Date.now() - irKbAt < 400) return;
+  if (performance.now() - irKbAt < 400) return;
   const r = el.getBoundingClientRect();
   openContextMenu(irMenuItems(irTargets(m.id)), e.clientX || r.left + 24, e.clientY || r.bottom, { label: "Intake actions", from: el });
 }
@@ -41,6 +41,6 @@ export function irRowMenu(e, m) {
 export function irRowKey(e, m) {
   if (e.target !== e.currentTarget || !(e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey))) return;
   const el = /** @type {HTMLElement} */ (e.currentTarget), r = el.getBoundingClientRect();
-  e.preventDefault(); irKbAt = Date.now();
+  e.preventDefault(); irKbAt = performance.now();
   openContextMenu(irMenuItems(irTargets(m.id)), r.left + 24, r.bottom, { label: "Intake actions", from: el });
 }

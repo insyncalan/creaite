@@ -77731,7 +77731,7 @@ ${d5.text}`);
       e4.target.closest("a,input,select,textarea")
     ) return;
     e4.preventDefault();
-    if (Date.now() - irKbAt < 400) return;
+    if (performance.now() - irKbAt < 400) return;
     const r4 = el2.getBoundingClientRect();
     openContextMenu(irMenuItems(irTargets(m5.id)), e4.clientX || r4.left + 24, e4.clientY || r4.bottom, { label: "Intake actions", from: el2 });
   }
@@ -77742,7 +77742,7 @@ ${d5.text}`);
       e4.currentTarget
     ), r4 = el2.getBoundingClientRect();
     e4.preventDefault();
-    irKbAt = Date.now();
+    irKbAt = performance.now();
     openContextMenu(irMenuItems(irTargets(m5.id)), r4.left + 24, r4.bottom, { label: "Intake actions", from: el2 });
   }
 
