@@ -55,7 +55,10 @@ out.found = f.mcFound(rows, "2026-10-25T09:04:10", "2026-10-25T09:10:59"); out.f
 const two = f.mcStep(f.mcStep(f.mcNew(), "Searching mail"), "Reading Teams channels");
 out.ends = [f.mcEnd("done", two, {n: 7, need: 4}), f.mcEnd("done", two, {n: 1, need: 1}), f.mcEnd("done", two, {n: 0, need: 0}), f.mcEnd("done", two, null),
   f.mcEnd("stopped", two, {n: 2, need: 1}), f.mcEnd("early", two, {n: 2, need: 2}), f.mcEnd("stopped", two, {n: 0, need: 0}), f.mcEnd("early", f.mcNew(), {n: 0, need: 0}),
-  f.mcEnd("stopped", two, null)];
+  f.mcEnd("stopped", two, null),
+  f.mcEnd("done", two, {n: 0, need: 0, upd: 3}), f.mcEnd("done", two, {n: 0, need: 0, upd: 1}), f.mcEnd("done", two, {n: 2, need: 1, upd: 3}),
+  f.mcEnd("done", two, {n: 2, need: 1, upd: 0}), f.mcEnd("done", two, {n: 0, need: 0, upd: 0}), f.mcEnd("stopped", two, {n: 0, need: 0, upd: 2}),
+  f.mcEnd("early", two, {n: 1, need: 0, upd: 1}), f.mcEnd("stopped", two, {n: 0, need: 0, upd: 0})];
 out.stepText = ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail", "Running sweep.py followed --subject Q3", "Write followed-x.json", "Running tracker.py x", "ToolSearch", "Microsoft 365: nonsense"].map(f.mcStepText);
 out.marker = f.MC_MARKER;
 console.log(JSON.stringify(out));
@@ -128,8 +131,8 @@ class Classifier(unittest.TestCase):
 
     def test_found_n_counts_only_the_checks_own_files_inside_the_window(self):
         self.assertEqual(self.o["stamp"], ["2026-10-25T09:05", "2026-10-25T09:05", None, "2026-10-25T09:05", None, None])
-        self.assertEqual(self.o["found"], {"n": 3, "need": 2})    # not the dashboard row, not 08:50 or 09:20, not a docx, and no update items
-        self.assertEqual(self.o["foundNone"], {"n": 0, "need": 0})
+        self.assertEqual(self.o["found"], {"n": 3, "need": 2, "upd": 2})    # not the dashboard row, not 08:50 or 09:20, not a docx, and no update items
+        self.assertEqual(self.o["foundNone"], {"n": 0, "need": 0, "upd": 0})
 
     def test_the_closing_lines(self):
         e = self.o["ends"]
@@ -142,6 +145,15 @@ class Classifier(unittest.TestCase):
         self.assertEqual(e[6], "Stopped. Looked in Outlook mail, Teams. Nothing saved yet.")
         self.assertEqual(e[7], "Stopped early. Nothing saved yet.")
         self.assertEqual(e[8], "Stopped. Looked in Outlook mail, Teams.")
+        # updates are never "nothing": update-only, mixed, new-only, neither
+        self.assertEqual(e[9], "Finished. Looked in Outlook mail, Teams. No new items; 3 updates to existing items.")
+        self.assertEqual(e[10], "Finished. Looked in Outlook mail, Teams. No new items; 1 update to an existing item.")
+        self.assertEqual(e[11], "Finished. Looked in Outlook mail, Teams. Found 2 new, 1 needs a project, and 3 updates to existing items.")
+        self.assertEqual(e[12], "Finished. Looked in Outlook mail, Teams. Found 2 new, 1 needs a project.")
+        self.assertEqual(e[13], "Finished. Nothing new to review.")
+        self.assertEqual(e[14], "Stopped. Looked in Outlook mail, Teams. No new items; 2 updates to existing items so far.")
+        self.assertEqual(e[15], "Stopped early. Looked in Outlook mail, Teams. Found 1 new so far, none need a project, and 1 update to an existing item.")
+        self.assertEqual(e[16], "Stopped. Looked in Outlook mail, Teams. Nothing saved yet.")
 
     def test_the_steps_list_shows_fixed_phrases_only(self):
         self.assertEqual(self.o["stepText"], ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail",
@@ -160,8 +172,8 @@ class Classifier(unittest.TestCase):
         broke("if (tool === READ_CHAT) return { kind: \"read\" };", "if (tool === READ_CHAT) return { kind: \"search\", place: \"mail\" };",
               lambda o: o["readOnly"][0]["places"] != [])
         # a total
-        broke("return `Looked in so far: ${placeList(s, PLACE_NAMES)} · ${plural(s.searches, \"search\", \"searches\")}",
-              "return `Looked in so far: ${placeList(s, PLACE_NAMES)} · 1 of 4 · ${plural(s.searches, \"search\", \"searches\")}", lambda o: o["line"] != self.o["line"])
+        broke("return `Looked in so far: ${placeList(s, PLACE_NAMES)} · ${mcPlural(s.searches, \"search\", \"searches\")}",
+              "return `Looked in so far: ${placeList(s, PLACE_NAMES)} · 1 of 4 · ${mcPlural(s.searches, \"search\", \"searches\")}", lambda o: o["line"] != self.o["line"])
         # a counter on the badge
         broke("`Mail check: ${placeList(s, PLACE_SHORT)}`", "`Mail check: ${placeList(s, PLACE_SHORT)} ${s.searches}`", lambda o: o["badge"] != self.o["badge"])
         # a dashboard row counted
@@ -169,9 +181,13 @@ class Classifier(unittest.TestCase):
         # the raw label in the steps list
         broke("return c ? String(label) : \"A creaite step\";", "return String(label);", lambda o: o["stepText"] != self.o["stepText"])
         # update items counted as new
-        broke("|| !r || r.op !== \"new\") continue;", ") continue;", lambda o: o["found"] != self.o["found"])
+        broke("if (r.op === \"new\") { n++;", "if (r.op === \"new\" || r.op === \"update\") { n++;", lambda o: o["found"] != self.o["found"])
+        # an update-only check described as nothing new
+        broke("if (upd) return", "if (false) return", lambda o: o["ends"][9] != self.o["ends"][9])
+        # updates dropped from a mixed check
+        broke("${upd ? `, and ${updText}` : \"\"}", "", lambda o: o["ends"][11] != self.o["ends"][11])
         # "Found 0"
-        broke("found.n ? `Finished.${looked}", "true ? `Finished.${looked}", lambda o: o["ends"][2] != self.o["ends"][2])
+        broke("if (found.n) return `${head}${looked} Found", "if (true) return `${head}${looked} Found", lambda o: o["ends"][2] != self.o["ends"][2])
 
 
 ROWS = REPO / "system/templates/dashboard/src/core/closeDayRows.js"
@@ -321,192 +337,183 @@ FIXED_STEPS = {"Sweeping (stages proposals only)", "A creaite step", "Microsoft 
                "Microsoft 365: sharepoint search"}
 
 
-def _live_cls():
-    from live_browser import LiveBrowserCase
-
-    class MailCheckBrowser(LiveBrowserCase):
-        width, height = 1400, 900
-
-        @classmethod
-        def load(cls, v):
-            from test_dashboard import populate
-            populate(v)
-            fake = v.root / "fake_claude.py"
-            fake.write_text(FAKE)
-            fake.chmod(0o755)
-
-        @classmethod
-        def server_env(cls):
-            return {"CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")}
-
-        def begin(self, message, chat_open=True):
-            b = self.b
-            b.eval("openChat()" if chat_open else "closeChat()")
-            b.eval(f"window.P=askLive({message!r},null).catch(()=>{{}}); 0")
-            if not chat_open:
-                b.eval("closeChat()")
-            b.wait("RB.state==='running'", 20)
-
-        def finish(self, timeout=90):
-            self.b.wait("window.P&&RB.state!=='running'", timeout)
-            self.b.pump(0.6)
-
-        def text_of(self, sel):
-            return self.b.eval(f"[...document.querySelectorAll({sel!r})].map(e=>e.textContent).join(' | ')")
-
-        def everything(self):
-            return self.b.eval("""document.body.innerText+' '+[...document.querySelectorAll('[title],[aria-label]')].map(e=>(e.title||'')+' '+(e.getAttribute('aria-label')||'')).join(' ')+' '+
-              [...document.querySelectorAll('#chLog details li')].map(e=>e.textContent).join(' ')""")
-
-        def test_the_true_line_replaces_the_quip_and_ends_with_found_n(self):
-            b = self.b
-            self.begin("sweep")
-            b.wait("!!document.querySelector('#chLog .mcline')&&/Looked in so far: Outlook mail/.test(document.querySelector('#chLog .mcline').textContent)", 40)
-            self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.working .quip').length"), 0)       # the quip is replaced for a mail check
-            seen = []
-            for _ in range(120):
-                seen.append(b.eval("(document.querySelector('#chLog .mcline')||{}).textContent||''"))
-                if b.eval("RB.state")!="running":
-                    break
-                b.pump(0.25)
-            line = [x for x in seen if x][-1]
-            self.assertRegex(line, r"^Looked in so far: Outlook mail, Teams, calendar · \d+ searches, \d+ items read$")
-            self.assertNotRegex(" ".join(seen), r"\bof \d|%|Finished|Done")
-            self.finish()
-            end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-            self.assertEqual(end, "Finished. Looked in Outlook mail, Teams, calendar. Found 2 new, 1 needs a project.")
-            # the permanent leak gate: nothing from the labels reaches the page
-            every = self.everything()
-            for bad in ("SECRETSUBJECT", "Zebra", "followed"):
-                self.assertNotIn(bad, every)
-            steps = b.eval("[...document.querySelectorAll('#chLog .step.steps li')].map(e=>e.textContent)")
-            self.assertTrue(steps and set(steps) <= FIXED_STEPS, steps)
-
-        def test_only_a_mail_check_loses_the_quip(self):
-            b = self.b
-            self.begin("hello")
-            self.assertEqual(b.eval("document.querySelectorAll('#chLog .mcline').length"), 0)
-            self.finish()
-            self.assertEqual(b.eval("document.querySelectorAll('#chLog .msg.runend').length"), 0)
-
-        def test_refresh_calendar_ends_with_nothing_new(self):
-            self.begin("refresh calendar")
-            self.finish()
-            end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-            self.assertEqual(end, "Finished. Nothing new to review.")
-
-        def test_the_badge_with_the_chat_closed_shows_places_only_and_fits(self):
-            b = self.b
-            b.eval("window.AN=[]; for (const [id,n] of [['rbL','badge'],['askLive','live'],['mcLive','node'],['chLog','log']]) { let last=document.getElementById(id).textContent; "
-                   "new MutationObserver(()=>{ const t=document.getElementById(id).textContent; if(t!==last){ last=t; AN.push([n,t]); } }).observe(document.getElementById(id),{childList:true,characterData:true,subtree:true}); } 0")
-            self.begin("sweep", chat_open=False)
-            b.wait("/Mail check: mail/.test(document.getElementById('rbL').textContent)", 40)
-            o = b.eval("(()=>{ const l=document.getElementById('rbL'), r=document.getElementById('runBadge').getBoundingClientRect(); return {text:l.textContent, title:l.title, clipped:l.scrollWidth>l.clientWidth, inside:r.left>=0&&r.right<=innerWidth}; })()")
-            self.assertFalse(re.search(r"\d", o["text"]))                       # never a counter in the badge
-            self.assertTrue(o["inside"])
-            self.finish()
-            an = b.eval("AN")
-            places = [t for n, t in an if n == "badge" and t.startswith("Mail check")]
-            self.assertLessEqual(len(places), 3, places)                                # at most three place changes on the badge
-            self.assertLessEqual(len([1 for n, t in an if n == "node" and t]), 3)
-            self.assertEqual(self.b.eval("document.getElementById('mcLive').textContent"), "")
-            live = [t for n, t in an if n == "live"]
-            self.assertEqual(len(live), 1)                                      # one end announcement, with Found N once
-            self.assertIn("Found 2 new, 1 needs a project", live[0])
-            self.assertEqual(len([1 for n, t in an if n == "badge" and t.startswith("took")]), 1)
-
-        def test_with_the_chat_open_the_closing_line_is_readable_and_the_node_is_not_the_log(self):
-            b = self.b
-            self.assertEqual(b.eval("(()=>{ const n=document.getElementById('mcLive'); return n.closest('#chat')!==null && !n.closest('#chLog'); })()"), True)
-            self.begin("sweep")
-            self.finish()
-            self.assertEqual(b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().closest('[aria-hidden=true]')"), None)
-            self.assertEqual(b.eval("document.getElementById('askLive').textContent"), "")
-
-        def test_a_reload_mid_run_rebuilds_the_line_from_the_run_record(self):
-            b = self.b
-            (self.v.root / "slow-sweep").write_text("")
-            self.begin("sweep")
-            b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
-            want = "Looked in so far: Outlook mail, Teams · 3 searches, 1 item read"     # the failed search is not counted
-            b.wait(f"document.querySelector('#chLog .mcline').textContent==={want!r}", 40)
-            b.reload("typeof go==='function' && LIVE")
-            b.eval("openChat()")
-            b.wait(f"(document.querySelector('#chLog .mcline')||{{}}).textContent==={want!r}", 40)
-            after = b.eval("document.querySelector('#chLog .mcline').textContent")
-            self.assertEqual(after, want)                                       # the same places and counts, replayed from the start
-            self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.working .quip').length"), 0)
-            b.eval("stopAsk()")
-            b.pump(1.0)
-            (self.v.root / "slow-sweep").unlink()
-
-        def test_the_abort_path_still_writes_a_stopped_line(self):
-            """The Stop route could not reach the server: the page cancels its own read. The closing line is still drawn."""
-            b = self.b
-            (self.v.root / "slow-sweep").write_text("")
-            self.begin("sweep")
-            b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
-            b.eval("RUN.ctl.abort(); 0")
-            self.finish(30)
-            end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-            self.assertRegex(end, r"^Stopped\. Looked in Outlook mail, Teams\.")
-            (self.v.root / "slow-sweep").unlink()
-            b.pump(1.0)
-
-        def test_a_reload_with_no_saved_reply_still_ends_with_a_line(self):
-            """Reload mid-run, let the check finish while the chat is closed, then a finished run is attached again from its record."""
-            b = self.b
-            self.begin("sweep")
-            b.reload("typeof go==='function' && LIVE")
-            b.wait("RB.state==='running'||RB.state==='done'", 40)
-            b.wait("RB.state!=='running'", 90)
-            b.pump(1.0)
-            b.eval("openChat()")
-            b.pump(1.0)
-            last = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].map(m=>m.textContent).pop()||''")
-            live = b.eval("document.getElementById('askLive').textContent")
-            self.assertTrue(last.startswith("Finished.") or "Found 2 new, 1 needs a project" in live or "Finished." in live, (last, live))
-
-        def test_stopped_and_failed_endings(self):
-            b = self.b
-            (self.v.root / "slow-sweep").write_text("")
-            self.begin("sweep")
-            b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
-            b.eval("stopAsk()")
-            self.finish(60)
-            end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-            self.assertRegex(end, r"^Stopped\. Looked in Outlook mail, Teams\. Nothing saved yet\.$")
-            (self.v.root / "slow-sweep").unlink()
-            for _ in range(40):
-                if b.eval("api('/api/ask/running').then(r=>!(r.ok&&r.run&&!r.run.done))"):
-                    break
-                b.pump(0.25)
-            (self.v.root / "fail-sweep").write_text("")
-            self.begin("sweep")
-            self.finish()
-            end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-            self.assertRegex(end, r"^Stopped early\. Looked in Outlook mail, Teams\. ")
-            (self.v.root / "fail-sweep").unlink()
-
-    return MailCheckBrowser
-
-
 try:
-    import live_browser  # noqa: F401
-    _have = True
-except Exception:
-    _have = False
+    from live_browser import LiveBrowserCase as _Live
+except Exception:                                   # no Chrome helper here: the browser tests are not collected
+    _Live = object
 
-if _have:
-    _Base = _live_cls()
 
-    class MailCheck1400(_Base):
+class MailCheckBrowser(_Live):
+    width, height = 1400, 900
+
+    @classmethod
+    def load(cls, v):
+        from test_dashboard import populate
+        populate(v)
+        fake = v.root / "fake_claude.py"
+        fake.write_text(FAKE)
+        fake.chmod(0o755)
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")}
+
+    def begin(self, message, chat_open=True):
+        b = self.b
+        b.eval("openChat()" if chat_open else "closeChat()")
+        b.eval(f"window.P=askLive({message!r},null).catch(()=>{{}}); 0")
+        if not chat_open:
+            b.eval("closeChat()")
+        b.wait("RB.state==='running'", 20)
+
+    def finish(self, timeout=90):
+        self.b.wait("window.P&&RB.state!=='running'", timeout)
+        self.b.pump(0.6)
+
+    def text_of(self, sel):
+        return self.b.eval(f"[...document.querySelectorAll({sel!r})].map(e=>e.textContent).join(' | ')")
+
+    def everything(self):
+        return self.b.eval("""document.body.innerText+' '+[...document.querySelectorAll('[title],[aria-label]')].map(e=>(e.title||'')+' '+(e.getAttribute('aria-label')||'')).join(' ')+' '+
+          [...document.querySelectorAll('#chLog details li')].map(e=>e.textContent).join(' ')""")
+
+    def test_the_true_line_replaces_the_quip_and_ends_with_found_n(self):
+        b = self.b
+        self.begin("sweep")
+        b.wait("!!document.querySelector('#chLog .mcline')&&/Looked in so far: Outlook mail/.test(document.querySelector('#chLog .mcline').textContent)", 40)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.working .quip').length"), 0)       # the quip is replaced for a mail check
+        seen = []
+        for _ in range(120):
+            seen.append(b.eval("(document.querySelector('#chLog .mcline')||{}).textContent||''"))
+            if b.eval("RB.state")!="running":
+                break
+            b.pump(0.25)
+        line = [x for x in seen if x][-1]
+        self.assertRegex(line, r"^Looked in so far: Outlook mail, Teams, calendar · \d+ searches, \d+ items read$")
+        self.assertNotRegex(" ".join(seen), r"\bof \d|%|Finished|Done")
+        self.finish()
+        end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+        self.assertEqual(end, "Finished. Looked in Outlook mail, Teams, calendar. Found 2 new, 1 needs a project.")
+        # the permanent leak gate: nothing from the labels reaches the page
+        every = self.everything()
+        for bad in ("SECRETSUBJECT", "Zebra", "followed"):
+            self.assertNotIn(bad, every)
+        steps = b.eval("[...document.querySelectorAll('#chLog .step.steps li')].map(e=>e.textContent)")
+        self.assertTrue(steps and set(steps) <= FIXED_STEPS, steps)
+
+    def test_only_a_mail_check_loses_the_quip(self):
+        b = self.b
+        self.begin("hello")
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .mcline').length"), 0)
+        self.finish()
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .msg.runend').length"), 0)
+
+    def test_refresh_calendar_ends_with_nothing_new(self):
+        self.begin("refresh calendar")
+        self.finish()
+        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+        self.assertEqual(end, "Finished. Nothing new to review.")
+
+    def test_the_badge_with_the_chat_closed_shows_places_only_and_fits(self):
+        b = self.b
+        b.eval("window.AN=[]; for (const [id,n] of [['rbL','badge'],['askLive','live'],['mcLive','node'],['chLog','log']]) { let last=document.getElementById(id).textContent; "
+               "new MutationObserver(()=>{ const t=document.getElementById(id).textContent; if(t!==last){ last=t; AN.push([n,t]); } }).observe(document.getElementById(id),{childList:true,characterData:true,subtree:true}); } 0")
+        self.begin("sweep", chat_open=False)
+        b.wait("/Mail check: mail/.test(document.getElementById('rbL').textContent)", 40)
+        o = b.eval("(()=>{ const l=document.getElementById('rbL'), r=document.getElementById('runBadge').getBoundingClientRect(); return {text:l.textContent, title:l.title, clipped:l.scrollWidth>l.clientWidth, inside:r.left>=0&&r.right<=innerWidth}; })()")
+        self.assertFalse(re.search(r"\d", o["text"]))                       # never a counter in the badge
+        self.assertTrue(o["inside"])
+        self.finish()
+        an = b.eval("AN")
+        places = [t for n, t in an if n == "badge" and t.startswith("Mail check")]
+        self.assertLessEqual(len(places), 3, places)                                # at most three place changes on the badge
+        self.assertLessEqual(len([1 for n, t in an if n == "node" and t]), 3)
+        self.assertEqual(self.b.eval("document.getElementById('mcLive').textContent"), "")
+        live = [t for n, t in an if n == "live"]
+        self.assertEqual(len(live), 1)                                      # one end announcement, with Found N once
+        self.assertIn("Found 2 new, 1 needs a project", live[0])
+        self.assertEqual(len([1 for n, t in an if n == "badge" and t.startswith("took")]), 1)
+
+    def test_with_the_chat_open_the_closing_line_is_readable_and_the_node_is_not_the_log(self):
+        b = self.b
+        self.assertEqual(b.eval("(()=>{ const n=document.getElementById('mcLive'); return n.closest('#chat')!==null && !n.closest('#chLog'); })()"), True)
+        self.begin("sweep")
+        self.finish()
+        self.assertEqual(b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().closest('[aria-hidden=true]')"), None)
+        self.assertEqual(b.eval("document.getElementById('askLive').textContent"), "")
+
+    def test_a_reload_mid_run_rebuilds_the_line_from_the_run_record(self):
+        b = self.b
+        (self.v.root / "slow-sweep").write_text("")
+        self.begin("sweep")
+        b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
+        want = "Looked in so far: Outlook mail, Teams · 3 searches, 1 item read"     # the failed search is not counted
+        b.wait(f"document.querySelector('#chLog .mcline').textContent==={want!r}", 40)
+        b.reload("typeof go==='function' && LIVE")
+        b.eval("openChat()")
+        b.wait(f"(document.querySelector('#chLog .mcline')||{{}}).textContent==={want!r}", 40)
+        after = b.eval("document.querySelector('#chLog .mcline').textContent")
+        self.assertEqual(after, want)                                       # the same places and counts, replayed from the start
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.working .quip').length"), 0)
+        b.eval("stopAsk()")
+        b.pump(1.0)
+        (self.v.root / "slow-sweep").unlink()
+
+    def test_the_abort_path_still_writes_a_stopped_line(self):
+        """The Stop route could not reach the server: the page cancels its own read. The closing line is still drawn."""
+        b = self.b
+        (self.v.root / "slow-sweep").write_text("")
+        self.begin("sweep")
+        b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
+        b.eval("RUN.ctl.abort(); 0")
+        self.finish(30)
+        end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+        self.assertRegex(end, r"^Stopped\. Looked in Outlook mail, Teams\.")
+        (self.v.root / "slow-sweep").unlink()
+        b.pump(1.0)
+
+    def test_a_reload_with_no_saved_reply_still_ends_with_a_line(self):
+        """Reload mid-run, let the check finish while the chat is closed, then a finished run is attached again from its record."""
+        b = self.b
+        self.begin("sweep")
+        b.reload("typeof go==='function' && LIVE")
+        b.wait("RB.state==='running'||RB.state==='done'", 40)
+        b.wait("RB.state!=='running'", 90)
+        b.pump(1.0)
+        b.eval("openChat()")
+        b.pump(1.0)
+        last = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].map(m=>m.textContent).pop()||''")
+        live = b.eval("document.getElementById('askLive').textContent")
+        self.assertTrue(last.startswith("Finished.") or "Found 2 new, 1 needs a project" in live or "Finished." in live, (last, live))
+
+    def test_stopped_and_failed_endings(self):
+        b = self.b
+        (self.v.root / "slow-sweep").write_text("")
+        self.begin("sweep")
+        b.wait("/Looked in so far: Outlook mail, Teams/.test(document.querySelector('#chLog .mcline')?.textContent||'')", 40)
+        b.eval("stopAsk()")
+        self.finish(60)
+        end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+        self.assertRegex(end, r"^Stopped\. Looked in Outlook mail, Teams\. Nothing saved yet\.$")
+        (self.v.root / "slow-sweep").unlink()
+        for _ in range(40):
+            if b.eval("api('/api/ask/running').then(r=>!(r.ok&&r.run&&!r.run.done))"):
+                break
+            b.pump(0.25)
+        (self.v.root / "fail-sweep").write_text("")
+        self.begin("sweep")
+        self.finish()
+        end = b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+        self.assertRegex(end, r"^Stopped early\. Looked in Outlook mail, Teams\. ")
+        (self.v.root / "fail-sweep").unlink()
+
+
+if _Live is not object:
+    class MailCheck1400(MailCheckBrowser):
         width, height = 1400, 900
 
-    class MailCheck900(_Base):
+    class MailCheck900(MailCheckBrowser):
         width, height = 900, 800
-
-    del _Base
 
 if __name__ == "__main__":
     unittest.main()

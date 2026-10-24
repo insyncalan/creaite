@@ -73981,10 +73981,10 @@ ${d5.text}`);
     return { places, searches: s5.searches + 1, reads: s5.reads };
   }
   var placeList = (s5, names) => s5.places.map((p6) => names[p6]).join(", ");
-  var plural2 = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
+  var mcPlural = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
   function mcLine(s5) {
     if (!s5.places.length) return "Starting";
-    return `Looked in so far: ${placeList(s5, PLACE_NAMES)} · ${plural2(s5.searches, "search", "searches")}, ${plural2(s5.reads, "item", "items")} read`;
+    return `Looked in so far: ${placeList(s5, PLACE_NAMES)} · ${mcPlural(s5.searches, "search", "searches")}, ${mcPlural(s5.reads, "item", "items")} read`;
   }
   var mcBadge = (s5) => s5.places.length ? `Mail check: ${placeList(s5, PLACE_SHORT)}` : "Mail check: starting";
   var mcPlaces = (s5) => s5.places.length ? `Looked in so far: ${placeList(s5, PLACE_NAMES)}` : "";
@@ -73996,25 +73996,30 @@ ${d5.text}`);
   var minute = (iso2) => String(iso2 || "").slice(0, 16);
   function mcFound(rows2, startedIso, endedIso) {
     const a5 = minute(startedIso), b5 = minute(endedIso);
-    let n4 = 0, need = 0;
+    let n4 = 0, need = 0, upd = 0;
     for (const r4 of rows2 || []) {
       const st2 = mcFileStamp(r4 && r4.file);
-      if (!st2 || !a5 || !b5 || st2 < a5 || st2 > b5 || !r4 || r4.op !== "new") continue;
-      n4++;
-      if (!r4.p) need++;
+      if (!st2 || !a5 || !b5 || st2 < a5 || st2 > b5 || !r4) continue;
+      if (r4.op === "new") {
+        n4++;
+        if (!r4.p) need++;
+      } else if (r4.op === "update") upd++;
     }
-    return { n: n4, need };
+    return { n: n4, need, upd };
   }
   function mcEnd(outcome, s5, found) {
     const looked = s5.places.length ? ` Looked in ${placeList(s5, PLACE_NAMES)}.` : "";
-    const need = (n4) => n4 === 1 ? "1 needs a project" : `${n4} need a project`;
-    if (outcome === "done") {
-      if (!found) return "Finished. Open Review to see what it found.";
-      return found.n ? `Finished.${looked} Found ${found.n} new, ${need(found.need)}.` : "Finished. Nothing new to review.";
-    }
-    const head = outcome === "early" ? "Stopped early." : "Stopped.";
-    if (!found) return `${head}${looked}`;
-    return found.n ? `${head}${looked} Found ${found.n} new so far, ${need(found.need)}.` : `${head}${looked} Nothing saved yet.`;
+    const need = (n4) => n4 === 0 ? "none need a project" : n4 === 1 ? "1 needs a project" : `${n4} need a project`;
+    const upd = found && found.upd ? found.upd : 0;
+    const updText = upd === 1 ? "1 update to an existing item" : `${upd} updates to existing items`;
+    const done = outcome === "done";
+    if (done && !found) return "Finished. Open Review to see what it found.";
+    if (!done && !found) return `${outcome === "early" ? "Stopped early." : "Stopped."}${looked}`;
+    const head = done ? "Finished." : outcome === "early" ? "Stopped early." : "Stopped.";
+    const so2 = done ? "" : " so far";
+    if (found.n) return `${head}${looked} Found ${found.n} new${so2}, ${need(found.need)}${upd ? `, and ${updText}` : ""}.`;
+    if (upd) return `${head}${looked} No new items; ${updText}${so2}.`;
+    return done ? "Finished. Nothing new to review." : `${head}${looked} Nothing saved yet.`;
   }
   function mcStepText(label) {
     if (label === MC_MARKER) return MC_MARKER;
