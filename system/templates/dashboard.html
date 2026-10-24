@@ -4773,6 +4773,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IR_KINDS: () => IR_KINDS,
     IR_KIND_KEY: () => IR_KIND_KEY,
     IR_LEFT_WHY: () => IR_LEFT_WHY,
+    IR_MAIL_CAP: () => IR_MAIL_CAP,
     IR_REASONS: () => IR_REASONS,
     IR_SECTIONS: () => IR_SECTIONS,
     IR_STAGES: () => IR_STAGES,
@@ -6109,6 +6110,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irCanProcess: () => irCanProcess,
     irCanSetAside: () => irCanSetAside,
     irCanStop: () => irCanStop,
+    irCapGroups: () => irCapGroups,
     irChange: () => irChange,
     irCheck: () => irCheck,
     irChecking: () => irChecking,
@@ -6148,6 +6150,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irLeftOut: () => irLeftOut,
     irLive: () => irLive,
     irLiveCounts: () => irLiveCounts,
+    irMailAll: () => irMailAll,
     irMatches: () => irMatches,
     irMeetingFields: () => irMeetingFields,
     irMeetingOf: () => irMeetingOf,
@@ -6197,6 +6200,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetStateFilter: () => irSetStateFilter,
     irSetTick: () => irSetTick,
     irSetView: () => irSetView,
+    irSplitTail: () => irSplitTail,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
     irStale: () => irStale,
@@ -9634,7 +9638,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   // core/irFold.js
   var IR_STAGES = ["arrived", "drafted", "approved"];
   var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
-  var IR_FOLDED = ["later", "not_needed"];
+  var IR_FOLDED = ["later", "not_needed", "waiting"];
   var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
   function irToggle(cur, id2, model) {
     if (cur === id2) return null;
@@ -9676,6 +9680,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
   var irLeadWithWork = (list) => ["drafted", "approved", "arrived"].flatMap((g5) => list.filter((m5) => m5.stage === g5)).concat(list.filter((m5) => !["drafted", "approved", "arrived"].includes(m5.stage)));
+  function irSplitTail(list) {
+    const tail = list.filter((m5) => m5.stage === "arrived" && m5.state === "waiting");
+    return { work: irLeadWithWork(list.filter((m5) => !tail.includes(m5))), tail };
+  }
+  var IR_MAIL_CAP = 5;
+  function irCapGroups(g5, done, held, cap) {
+    const l6 = irLive(g5, done, held || void 0), total = l6.needs.length + l6.routine.length;
+    if (total <= cap) return { groups: g5, total };
+    const needs = l6.needs.slice(0, cap);
+    return { groups: { needs, routine: l6.routine.slice(0, cap - needs.length) }, total };
+  }
   var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
   function irFoldClick(folded, sec) {
     return { ...folded, [sec]: !irIsFolded(folded, sec) };
@@ -9908,6 +9923,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     null
   );
   var irStage = y3("all");
+  var irMailAll = y3(false);
   var irFolded = y3(
     /** @type {Record<string, boolean>} */
     {}
@@ -78900,6 +78916,7 @@ ${d5.text}`);
   bootIrReviewKeys();
 
   // components/intakeReview/views.jsx
+  var IR_BOARD = ["drafted", "approved", "arrived"];
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
   var IR_EMPTY = "Nothing here. Meetings appear when they end.";
   var irNone = () => irQuery.value.trim() ? "Nothing matches your search." : IR_EMPTY;
@@ -78913,9 +78930,20 @@ ${d5.text}`);
     " ",
     /* @__PURE__ */ u4("span", { class: "sub", children: g5.items.length })
   ] }) });
+  var irTailFolded = () => irGroup.value === "none" && irIsFolded(irFolded.value, "waiting") && irStage.value !== "arrived" && irStateFilter.value !== "waiting" && !irQuery.value.trim();
+  function TailHead({ n: n4 }) {
+    const folded = irTailFolded();
+    return /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "waiting", children: /* @__PURE__ */ u4("h2", { children: [
+      "Waiting for the transcript ",
+      /* @__PURE__ */ u4("span", { class: "sub rgc", children: n4 }),
+      " ",
+      /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-irfold": "waiting", "aria-expanded": !folded, onClick: () => irClickFold("waiting"), children: folded ? "Show" : "Hide" })
+    ] }) });
+  }
   function MailSections({ model }) {
     const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
     const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
+    const cap = irCapGroups(model.mail, irDone, irHeld, IR_MAIL_CAP), all = irMailAll.value || cap.total <= IR_MAIL_CAP;
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "mail", children: /* @__PURE__ */ u4("h2", { children: [
         "From mail and Teams ",
@@ -78925,7 +78953,12 @@ ${d5.text}`);
           nm3 === 1 ? "" : "s"
         ] })
       ] }) }),
-      nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: model.mail }) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve." }),
+      nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: [
+        /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: all ? model.mail : cap.groups }) }) }),
+        cap.total > IR_MAIL_CAP ? /* @__PURE__ */ u4("p", { class: "sub irmore", children: /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "mailall", onClick: () => {
+          irMailAll.value = !irMailAll.value;
+        }, children: all ? `Show the first ${IR_MAIL_CAP}` : `Show all ${cap.total}` }) }) : null
+      ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve." }),
       no2 ? /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "other", children: /* @__PURE__ */ u4("h2", { children: [
           "Other suggestions ",
@@ -78943,29 +78976,66 @@ ${d5.text}`);
     ] });
   }
   function ListView({ model, list }) {
-    const lead = irLeadWithWork(list), grouped = irGroup.value !== "none";
+    const { work, tail } = irSplitTail(list), grouped = irGroup.value !== "none", folded = irTailFolded();
     const table = (rows2, part) => rows2.length ? /* @__PURE__ */ u4("div", { class: "tbl", "data-irpart": part, children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(rows2).map((g5) => /* @__PURE__ */ u4(S2, { children: [
       grouped ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
       g5.items.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 }, m5.id))
     ] })) }) }) }) : null;
+    const tailRows = tail.length && !grouped ? /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(TailHead, { n: tail.length }),
+      folded ? null : table(tail, "arrived")
+    ] }) : null;
     if (!list.length) return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
       /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
     return /* @__PURE__ */ u4("div", { "data-irv": "list", children: grouped ? /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4(MailSections, { model }),
-      table(lead, "all")
+      table([...work, ...tail], "all")
     ] }) : /* @__PURE__ */ u4(S2, { children: [
-      table(lead.filter((m5) => m5.stage !== "arrived"), "work"),
+      table(work, "work"),
       /* @__PURE__ */ u4(MailSections, { model }),
-      table(lead.filter((m5) => m5.stage === "arrived"), "arrived")
+      tailRows
     ] }) });
   }
+  function BoardCard({ m: m5 }) {
+    return /* @__PURE__ */ u4(
+      "div",
+      {
+        class: "card iccard click",
+        "data-irm": m5.id,
+        "data-stage": m5.stage,
+        "data-state": irBusy.value.includes(m5.id) ? "running" : m5.state,
+        tabindex: 0,
+        onClick: (e4) => {
+          if (!/** @type {Element} */
+          e4.target.closest("button,a,input")) irClickMeeting(m5.id);
+        },
+        onContextMenu: (e4) => irRowMenu(e4, m5),
+        onKeyDown: (e4) => irRowKey(e4, m5),
+        children: [
+          /* @__PURE__ */ u4("div", { class: "t", children: [
+            /* @__PURE__ */ u4(IrTick, { m: m5 }),
+            " ",
+            m5.title
+          ] }),
+          m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
+            /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
+          ] }),
+          irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
+          /* @__PURE__ */ u4(IrNote, { m: m5 }),
+          /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: m5 }) })
+        ]
+      }
+    );
+  }
   function BoardView({ model }) {
-    const open2 = model.meetings.find((m5) => m5.id === irOpen.value);
+    const open2 = model.meetings.find((m5) => m5.id === irOpen.value), folded = irTailFolded();
     return /* @__PURE__ */ u4("div", { "data-irv": "board", children: [
-      /* @__PURE__ */ u4("div", { class: "icboard", children: IR_STAGES.map((g5) => {
-        const l6 = model.meetings.filter((m5) => m5.stage === g5);
+      open2 ? /* @__PURE__ */ u4("div", { class: "tbl", "data-irpart": "open", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true, meetId: open2.id }) }) }) }) : null,
+      /* @__PURE__ */ u4("div", { class: "icboard", children: IR_BOARD.map((g5) => {
+        const l6 = model.meetings.filter((m5) => m5.stage === g5), { work, tail } = irSplitTail(l6), shown2 = folded ? work : [...work, ...tail];
         return /* @__PURE__ */ u4("div", { class: "iccol", "data-ircol": g5, children: [
           /* @__PURE__ */ u4("h2", { children: [
             IR_STAGE_NAMES[
@@ -78975,50 +79045,57 @@ ${d5.text}`);
             " ",
             /* @__PURE__ */ u4("span", { class: "sub rgc", children: l6.length })
           ] }),
-          l6.length ? l6.map((m5) => /* @__PURE__ */ u4(
-            "div",
-            {
-              class: "card iccard click",
-              "data-irm": m5.id,
-              "data-stage": m5.stage,
-              "data-state": irBusy.value.includes(m5.id) ? "running" : m5.state,
-              tabindex: 0,
-              onClick: (e4) => {
-                if (!/** @type {Element} */
-                e4.target.closest("button,a,input")) irClickMeeting(m5.id);
-              },
-              onContextMenu: (e4) => irRowMenu(e4, m5),
-              onKeyDown: (e4) => irRowKey(e4, m5),
-              children: [
-                /* @__PURE__ */ u4("div", { class: "t", children: [
-                  /* @__PURE__ */ u4(IrTick, { m: m5 }),
-                  " ",
-                  m5.title
-                ] }),
-                m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
-                  /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
-                  /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
-                ] }),
-                irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
-                /* @__PURE__ */ u4(IrNote, { m: m5 }),
-                /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: m5 }) })
-              ]
-            },
-            m5.id
-          )) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing here." })
+          l6.length ? /* @__PURE__ */ u4(S2, { children: [
+            (g5 === "arrived" ? shown2 : l6).map((m5) => /* @__PURE__ */ u4(BoardCard, { m: m5 }, m5.id)),
+            g5 === "arrived" && tail.length ? /* @__PURE__ */ u4(TailHead, { n: tail.length }) : null
+          ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing here." })
         ] });
       }) }),
-      open2 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true, meetId: open2.id }) }) }) }) : null,
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
   }
   function TwoPanes({ model, list }) {
-    const sel = list.find((m5) => m5.id === irSel.value) || list[0], c5 = irLiveCounts();
+    const { work, tail } = irSplitTail(list), folded = irTailFolded(), ordered = [...work, ...tail];
+    const sel = ordered.find((m5) => m5.id === irSel.value) || ordered[0], c5 = irLiveCounts();
     const hidden = (m5) => m5.private || m5.confidential;
     const right = (m5) => {
       const n4 = liveN(m5);
       return n4 ? `${n4} suggestion${n4 === 1 ? "" : "s"}` : m5.stage === "arrived" && m5.state === "ready" ? "ready" : "";
     };
+    const paneRows = (rs2) => rs2.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(rs2).map((g5) => /* @__PURE__ */ u4(S2, { children: [
+      irGroup.value !== "none" ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
+      g5.items.map((m5) => /* @__PURE__ */ u4(
+        "tr",
+        {
+          class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
+          "data-irm": m5.id,
+          tabindex: 0,
+          onClick: (e4) => {
+            if (!/** @type {Element} */
+            e4.target.closest("input")) irSel.value = m5.id;
+          },
+          onContextMenu: (e4) => irRowMenu(e4, m5),
+          onKeyDown: (e4) => irRowKey(e4, m5),
+          children: [
+            /* @__PURE__ */ u4("td", { class: "title", children: [
+              /* @__PURE__ */ u4(IrTick, { m: m5 }),
+              " ",
+              m5.title,
+              /* @__PURE__ */ u4("div", { class: "why", children: [
+                IR_STAGE_NAMES[
+                  /** @type {keyof IR_STAGE_NAMES} */
+                  m5.stage
+                ],
+                " · ",
+                irWhen(m5)
+              ] })
+            ] }),
+            /* @__PURE__ */ u4("td", { class: "icsub irright", children: right(m5) })
+          ]
+        },
+        m5.id
+      ))
+    ] })) }) }) }) : null;
     return /* @__PURE__ */ u4("div", { "data-irv": "two", children: [
       /* @__PURE__ */ u4("div", { class: "icsplit", children: [
         /* @__PURE__ */ u4("div", { children: [
@@ -79030,40 +79107,11 @@ ${d5.text}`);
             " → Approved ",
             c5.approved
           ] }) }),
-          list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(list).map((g5) => /* @__PURE__ */ u4(S2, { children: [
-            irGroup.value !== "none" ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
-            g5.items.map((m5) => /* @__PURE__ */ u4(
-              "tr",
-              {
-                class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
-                "data-irm": m5.id,
-                tabindex: 0,
-                onClick: (e4) => {
-                  if (!/** @type {Element} */
-                  e4.target.closest("input")) irSel.value = m5.id;
-                },
-                onContextMenu: (e4) => irRowMenu(e4, m5),
-                onKeyDown: (e4) => irRowKey(e4, m5),
-                children: [
-                  /* @__PURE__ */ u4("td", { class: "title", children: [
-                    /* @__PURE__ */ u4(IrTick, { m: m5 }),
-                    " ",
-                    m5.title,
-                    /* @__PURE__ */ u4("div", { class: "why", children: [
-                      IR_STAGE_NAMES[
-                        /** @type {keyof IR_STAGE_NAMES} */
-                        m5.stage
-                      ],
-                      " · ",
-                      irWhen(m5)
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ u4("td", { class: "icsub irright", children: right(m5) })
-                ]
-              },
-              m5.id
-            ))
-          ] })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() })
+          list.length ? /* @__PURE__ */ u4(S2, { children: [
+            paneRows(work),
+            tail.length && irGroup.value === "none" ? /* @__PURE__ */ u4(TailHead, { n: tail.length }) : null,
+            folded ? null : paneRows(tail)
+          ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() })
         ] }),
         /* @__PURE__ */ u4("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h2", { style: { margin: "0 0 4px" }, children: sel.title }),
@@ -79338,7 +79386,8 @@ ${d5.text}`);
     const found = irFilterModel(irModel(), q5);
     const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };
     const list = irFiltered(model, irStage.value);
-    irSetShown((view === "list" ? list : model.meetings).map((m5) => m5.id));
+    const seen = view === "list" ? list : model.meetings, hiddenTail = irTailFolded() ? irSplitTail(seen).tail : [];
+    irSetShown(seen.filter((m5) => !hiddenTail.includes(m5)).map((m5) => m5.id));
     return /* @__PURE__ */ u4("div", { class: "wrapmax irpage", "data-irtick": tick2, children: [
       /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake" }),
       /* @__PURE__ */ u4("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
@@ -81467,6 +81516,7 @@ Next: `;
         "Health",
         "ICONS",
         "ID_RE",
+        "IR_MAIL_CAP",
         "IR_STATE_CHIP",
         "Icon",
         "IconButton",
@@ -81847,6 +81897,7 @@ Next: `;
         "irAskAbout",
         "irBulk",
         "irBusy",
+        "irCapGroups",
         "irChanged",
         "irChecking",
         "irChooseKind",
@@ -81873,6 +81924,7 @@ Next: `;
         "irLineParts",
         "irLive",
         "irLiveCounts",
+        "irMailAll",
         "irMeetingOf",
         "irMeetingState",
         "irMergeEdits",
@@ -81905,6 +81957,7 @@ Next: `;
         "irSetGroup",
         "irSetStateFilter",
         "irSetView",
+        "irSplitTail",
         "irStage",
         "irStageClick",
         "irStateCounts",

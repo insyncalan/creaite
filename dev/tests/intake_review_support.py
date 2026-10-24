@@ -62,5 +62,5 @@ def open_meeting(b):
 
 def open_page(b):
     """The page with the mail and Teams section drawn."""
-    b.eval("go('intake-review')")
+    b.eval("irMailAll.value=true; irFolded.value={waiting:false}; go('intake-review')")      # #340: these tests are about the rows, so none is capped or folded
     b.wait("!!document.querySelector('#v-intake-review [data-irsec=mail]') && !!document.querySelector('#v-intake-review [data-irsec=mail]').parentElement.querySelector('tr.irprop')")

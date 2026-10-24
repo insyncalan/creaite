@@ -23,7 +23,7 @@
 export const IR_STAGES = ["arrived", "drafted", "approved"];
 export const IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
 /** Sections folded when the page opens. */
-export const IR_FOLDED = ["later", "not_needed"];
+export const IR_FOLDED = ["later", "not_needed", "waiting"];
 
 /** Whether a meeting can open in place (it has proposals to check). @param {IrMeeting} m */
 export const irOpenable = m => !!m && m.stage === "drafted";
@@ -90,6 +90,25 @@ export const irStageClick = (cur, g) => (g === "all" || cur === g ? "all" : IR_S
 /** #340: the list leads with the work to decide. Drafted first (suggestions to check), then Approved, then Arrived; rows keep their order
     inside a step. @param {any[]} list */
 export const irLeadWithWork = list => ["drafted", "approved", "arrived"].flatMap(g => list.filter(m => m.stage === g)).concat(list.filter(m => !["drafted", "approved", "arrived"].includes(m.stage)));
+
+/** #340: the meetings still waiting for their transcript are the tail of the page: folded, like Later and Not needed. A meeting whose
+    transcript is here, drafted or approved is work and stays up. @param {any[]} list @returns {{work: any[], tail: any[]}} */
+export function irSplitTail(list) {
+  const tail = list.filter(m => m.stage === "arrived" && m.state === "waiting");
+  return { work: irLeadWithWork(list.filter(m => !tail.includes(m))), tail };
+}
+
+/** #340: how many mail and Teams suggestions show before "Show all". */
+export const IR_MAIL_CAP = 5;
+/** The first `cap` suggestions still waiting (needs your decision first), as groups the proposal rows can draw; `total` is how many are
+    waiting. @param {IrGroups} g @param {(n:number)=>boolean} done @param {((n:number)=>boolean)|null} held @param {number} cap
+    @returns {{groups: IrGroups, total: number}} */
+export function irCapGroups(g, done, held, cap) {
+  const l = irLive(g, done, held || undefined), total = l.needs.length + l.routine.length;
+  if (total <= cap) return { groups: g, total };
+  const needs = l.needs.slice(0, cap);
+  return { groups: { needs, routine: l.routine.slice(0, cap - needs.length) }, total };
+}
 
 /** The meetings the list shows under a stage filter. @param {IrModel} model @param {string} stage */
 export const irFiltered = (model, stage) => (model.meetings || []).filter(m => stage === "all" || m.stage === stage);

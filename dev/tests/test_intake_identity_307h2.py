@@ -174,7 +174,7 @@ class Identity307(LiveBrowserCase):
         self.addCleanup(b2.close)
         b2.goto(self.base + "/")
         b2.wait("typeof go==='function' && LIVE")
-        b2.eval("go('intake-review')")
+        b2.eval("irMailAll.value=true; go('intake-review')")
         b2.wait("!!document.querySelector('#v-intake-review [data-irsec=mail]')")
         b2.eval("[...document.querySelectorAll('#v-intake-review tr.irprop')].find(t=>t.textContent.includes('Bravo anchor')).querySelector('[data-ira=approve]').click()")
         self.settle("Bravo anchor")

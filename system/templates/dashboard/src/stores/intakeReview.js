@@ -93,6 +93,8 @@ export function irClearTicks() { irTicked.value = []; irTickFrom = null; }
 
 export const irOpen = signal(/** @type {string|null} */ (null));
 export const irStage = signal("all");
+/** #340: mail and Teams shows its first five suggestions until Show all. */
+export const irMailAll = signal(false);
 export const irFolded = signal(/** @type {Record<string, boolean>} */ ({}));
 export const irPeek = signal(/** @type {number|null} */ (null));
 export const irSel = signal(/** @type {string|null} */ (null));   /* Two panes: the meeting on the right */
