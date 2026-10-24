@@ -748,7 +748,7 @@ td.ce{position:relative;cursor:pointer} td.ce:hover{background:color-mix(in srgb
 tr:hover .cebtn,tr.hl .cebtn,tr.cur .cebtn,.cebtn:focus-visible,td.ce:hover .cebtn{opacity:1} .cebtn:hover,.cebtn:focus-visible{color:var(--ink);outline:1px solid var(--faint)}
 td.editing .ceedit,td.editing select,td.editing input{font:inherit;max-width:100%;min-width:0} td.editing .ceset{display:inline-flex;gap:4px;flex-wrap:wrap}
 td.editing select.celist{position:fixed;z-index:var(--z-pop);height:auto;padding:4px;box-shadow:var(--shadow-md);overflow-y:auto} td.editing select.celist option{padding:4px 8px;border-radius:var(--r-sm)} /* BL-178 */ td.editing select{height:28px;border:1px solid var(--accent);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 4px} td.editing .dwrap input{width:112px}
-a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underline dotted} a.rowid:hover,a.rowid:focus-visible{color:var(--accent);text-decoration:underline}
+/* #343: a link in small text still has a 24px target */ a.rowid,.ev a.cntl,.srclink{display:inline-block;padding:4px 2px;margin:-4px -2px} a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underline dotted} a.rowid:hover,a.rowid:focus-visible{color:var(--accent);text-decoration:underline}
 .health{display:inline-flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap} .health svg{width:16px;height:16px}
 .h-ok{color:var(--ok)} .h-warn{color:var(--warn)} .h-bad{color:var(--bad)}.h-none{color:var(--muted)}
 #liveAlert.found{background:var(--ok-soft);color:var(--ok)}#liveAlert.found a{color:inherit;font-weight:600}
@@ -821,7 +821,7 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .spark:not(.mini) i:last-child::after,.spk-kdot{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
 .spark i.cur{outline:1.5px solid var(--ink);outline-offset:1.5px}
 .spark.mini{height:18px;padding:0;margin:0;gap:0}
-.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn::after{content:"";position:absolute;inset:-3px}   /* #337: 12px glyph, a 24px target */ .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:2px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"}   /* #337: 12px glyph; #343: the button itself is 24px */ .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sparkTip,.spk-key{position:fixed;z-index:var(--z-tip,200);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:10px 12px;font-size:var(--fs-sm,13px);line-height:var(--lh-snug);pointer-events:none}
 #sparkTip{width:260px} #sparkTip[hidden]{display:none} .spk-key{width:250px;pointer-events:auto} .spk-key:focus{outline:none}
 .spk-wk{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em} .spk-h{display:flex;align-items:center;gap:7px;font-weight:700;margin:2px 0} .spk-dot{width:9px;height:9px;border-radius:50%}
@@ -1300,7 +1300,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hp-wrap b.ui{font-weight:600}
 .hp-eyebrow{font:500 var(--fs-xs)/1 var(--hp-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hp-teal)}
 .hp-lede{color:var(--hp-soft);font-size:var(--fs-xl);max-width:62ch} .hp-howto .hp-lede{font-size:var(--fs-xl);max-width:64ch}
-.hp-say{font-family:var(--hp-mono);font-size:.85em;background:var(--hp-teal-soft);color:var(--hp-ink);padding:2px 8px;border-radius:var(--r-sm);white-space:nowrap} .hp-howto .hp-say{font-size:.85em;white-space:normal}
+.hp-say{font-family:var(--hp-mono);font-size:.9em;background:var(--hp-teal-soft);color:var(--hp-ink);padding:2px 8px;border-radius:var(--r-sm);white-space:nowrap} .hp-howto .hp-say{font-size:.9em;white-space:normal}
 .hp-wrap code{font-family:var(--hp-mono);font-size:.85em;background:var(--hp-ground);color:var(--hp-ink);padding:2px 6px;border-radius:var(--r-sm);word-break:break-word} .hp-howto code{font-size:.85em}
 .hp-wrap kbd{font:500 var(--fs-sm) var(--hp-mono);border:1px solid var(--hp-hair);border-bottom-width:2px;border-radius:var(--r-sm);padding:0 4px;background:var(--hp-paper);color:var(--hp-ink)}
 .hp-hero{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
@@ -1841,7 +1841,7 @@ body.keys-seen #whintList,body.keys-seen #whintBoard,body.keys-seen #rvHint{disp
 /* BL-325: .ib has one size (.ib.sm was 28px); .sm keeps only its 16px icon */ .ib.sm svg.i{width:16px;height:16px}
 .ib.no:hover{color:var(--bad);background:var(--bad-soft)}
 .ib[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
-.ib .fcount{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font:700 var(--fs-2xs)/16px var(--font);text-align:center;padding:0 4px;pointer-events:none}
+.ib .fcount{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font:700 var(--fs-xs)/16px var(--font);text-align:center;padding:0 4px;pointer-events:none}
 .btn svg.i{width:15px;height:15px} .mini svg.i{width:14px;height:14px;vertical-align:-2px}
 .mini:has(svg.i){display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
 #tip{position:fixed;z-index:var(--z-tip);left:0;top:0;background:var(--inverse);color:var(--inverse-ink);font:400 var(--fs-xs)/1.3 var(--font);padding:4px 8px;border-radius:var(--r-md);max-width:280px;display:flex;gap:8px;align-items:center;opacity:0;visibility:hidden;transition:opacity var(--d1) var(--out);box-shadow:var(--shadow-sm)}
@@ -3178,7 +3178,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 /* Your commitments holds You owe and Waiting on (BL-125 A) */
 #tBrief .tsub[hidden]{display:none}
 /* Resolved, folded to one line: the heading is the summary; the list opens under it */
-.tres>details>summary{list-style:none;cursor:pointer;border-radius:var(--r-sm)}
+.tres>details>summary{list-style:none;cursor:pointer;border-radius:var(--r-sm);min-height:24px}
 .tres>details>summary::-webkit-details-marker{display:none}
 .tres>details>summary .th{margin:0}
 .tres>details>summary .th::before{content:"›";display:inline-block;width:10px;color:var(--day-muted);transition:transform var(--d1)}
