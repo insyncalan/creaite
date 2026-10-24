@@ -37105,8 +37105,8 @@ system/scripts/run launch.py agent ${what}`;
     return t47;
   }
   function rejectedAgainWords(replies, count) {
-    const bad = (replies || []).find((r4) => !r4 || !r4.ok);
-    return bad ? `Not rejected again: ${plainSay(bad && bad.message || "nothing was changed")}` : `Rejected again: ${count}`;
+    const list = replies || [], i5 = list.findIndex((r4) => !r4 || !r4.ok);
+    return i5 >= 0 ? `Not rejected again: ${plainSay(list[i5] && list[i5].message || "nothing was changed")}` : `Rejected again: ${count}`;
   }
   var needsConnection = (what) => `${what} needs creaite to be connected. Reopen it and try again.`;
   function savedNoun(r4) {

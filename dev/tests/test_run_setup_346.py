@@ -171,7 +171,7 @@ class SetupFails(Case):
         self.assertIsNone(self.reach.guard_run())
 
     def test_another_run_in_the_table_is_left_alone(self):
-        runs = {"r-keep": object()}
+        runs = {"r-keep": types.SimpleNamespace(done=False)}
         with mock.patch.object(live_server, "end_process", lambda p: None), mock.patch.object(live_server, "RUNS", runs), \
                 mock.patch.object(live_server.threading, "Thread", side_effect=RuntimeError("no thread")):
             with self.assertRaises(RuntimeError):

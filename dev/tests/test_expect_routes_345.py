@@ -421,11 +421,11 @@ class UndoWords(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "needs node")
     def test_mutant_that_ignores_the_replies_says_rejected_again(self):
         src = self.SAY.read_text(encoding="utf-8")
-        old = "const bad = (replies || []).find(r => !r || !r.ok);"
+        old = "i = list.findIndex(r => !r || !r.ok);"
         self.assertIn(old, src)
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "say.mjs"
-            f.write_text(src.replace(old, "const bad = null;"), encoding="utf-8")
+            f.write_text(src.replace(old, "i = -1;"), encoding="utf-8")
             self.assertEqual(self.words(f, [{"ok": False, "message": "no"}], 1), "Rejected again: 1")
 
     def test_the_page_reads_the_replies_and_only_marks_the_rows_rejected_when_all_were(self):
