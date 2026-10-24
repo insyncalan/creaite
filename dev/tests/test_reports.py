@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_dashboard import png  # noqa: E402
 from test_tracker import ABC, Vault  # noqa: E402
+import vault_clone  # noqa: E402
 
 NOW = "2026-10-09 13:00"
 CLIENT_MSG = ("What it is: The signed statement of work.\nWhat it means for you: Work can start on phase two.\n"
@@ -78,6 +79,11 @@ class ReportVault(Vault):
 
 
 def populate(v):
+    """The fictional portfolio, from a clone of one built once per process (vault_clone.populated)."""
+    vault_clone.populated(v, "reports", _populate)
+
+
+def _populate(v):
     v.run("init")
     (v.root / ABC / "images").mkdir(exist_ok=True)
     (v.root / ABC / "images/plan.png").write_bytes(png(300, 150, (11, 110, 127)))

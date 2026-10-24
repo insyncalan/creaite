@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from cdp import chrome_path  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
+import vault_clone  # noqa: E402
 
 CHROME = Path(chrome_path() or "/nonexistent/chrome")      # CREAITE_CHROME, the PATH, then the macOS app (dev/tools/cdp.py)
 
@@ -85,7 +86,7 @@ def populate(v):
     Its dates count from CREAITE_NOW's day when that is set at the call (else TODAY, which also follows CREAITE_NOW at import), and its applies are stamped with STAMP_DAY (unless the
     caller already set CREAITE_STAMP_DAY), so what it builds does not change with the real date."""
     with mock.patch.dict(os.environ, {"CREAITE_STAMP_DAY": os.environ.get("CREAITE_STAMP_DAY") or STAMP_DAY}):
-        _populate(v)
+        vault_clone.populated(v, "dashboard", _populate)
 
 
 def _populate(v):
