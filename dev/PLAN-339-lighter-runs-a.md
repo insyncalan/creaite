@@ -7,29 +7,29 @@ Status: plan only. Review tier Full. Everything that touches the run engine is g
 - Purpose-built kinds already exist for buttons: "calendar" (#265, `calendar_refresh.build_prompt`), "process" (#264), "reextract" (#283), "search" (#7), tool-less kinds (#126). #327 B (fresh session, `fresh_session`/`fresh_plan`) is in.
 - A typed "refresh calendar" is recognised by `PANEL_SWEEP_WORDS` but runs as the heavy sweep, not as the "calendar" kind.
 
-## Plan (steps, smallest first)
-1. Request-kind table in `live_server.py`: `panel_kind(message, images, confirmed)` returns "sweep", "calendar", "process" (typed "process the <meeting>", later), "lookup" (later) or None. Words only, never the model; same exclusions as `panel_sweep` (image, confirmed, over 120 characters, another instruction). `panel_sweep` stays as the sweep branch.
-2. Typed "refresh calendar" starts `Run(..., kind="calendar", ...)` with `calendar_refresh.build_prompt()` (its own two-tool allow list, `run_dirs` empty): about 33k start tokens instead of the sweep's.
-3. Typed sweep: keep policy "sweep" and its prompt; drop the home-folder `--add-dir` (`run_dirs`: "sweep" only needs the vault and projects folder) and keep `ToolSearch` only for the Microsoft 365 reads. Measure with `usage_report.py --days 7` before and after.
-4. Status question and simple lookup: route to the existing "search" kind (Read, Grep, Glob; no Bash, no MCP) when `panel_kind` returns "lookup" (question words, no action verbs); "Continue in ask creaite" stays a chat. Needs Alan's word list: not clearly specified, so held.
-5. Budget gate, confirmation, guard modes, outside-content marks: unchanged. Each new kind keeps a `KIND_ARGS` entry (fail closed), a guard mode in `reach.py` only if it needs one (calendar and sweep already have theirs).
+## Decisions folded in (Jarvis, answers to Cap's H1 to H3 and M1 to M4, Cap's review of 01:52 on #339)
+1. `panel_sweep` KEEPS "refresh calendar" in its words, so the budget gate (`budget_gate`) and the queue exemption stay as they are. `panel_kind` is added for routing only ("calendar", "sweep" or None, with panel_sweep's own exclusions: image, confirmed, over 120 characters, another instruction; a kind or mode in the request is never read). Call sites: `ask()` and `queue_start()` (the second one Cap found).
+2. A typed calendar run is the button's own run: `Run(id, calendar_refresh.build_prompt(), None, None, None, kind="calendar", ...)`: no session, no chat, so nothing is carried (`carry_over`) and no outside-content mark is inherited. A run already going is the existing 409. A sweep running: 409 "A mail check is running; try again when it ends." A precheck failure (development repository, calendar source off): 400 with the precheck's own reason. In the queue it falls back to the old typed-sweep run.
+3. It is recorded in chat history like any plain run (BL-326: the fixed label and the fixed closure line, in the day's "Runs creaite started" chat), so the page draws it normally. Page side (not guarded, in this build): `ask.js` `typedCalendar()` passes `plain` to `askStream`, so only steps, the closure and done are drawn, and the 409 and 400 sentences are said as they come. Nothing from an invite reaches chat history: the calendar run's prompt forbids quoting it, its reply is not recorded, and the closure line is counts only.
+4. Re-baseline after #327 B (fresh session, already in) before judging the 260k to 352k figures. Dropping the home `--add-dir` is a security narrowing, not a token fix (Cap M1): what shrinks the load is the start context itself (CLAUDE.md and the rules, auto-memory, skills, the Microsoft 365 tool list). Part A promises the calendar run's small start (about 33k); the sweep's 60k target is measured, not promised.
+5. Followed-people rule (BL-288, `VIP_PRIVATE_RULE`) added to both sweep prompts (Close the day's and the typed one): `sweep-followed-rule.diff`, one pin test per prompt kind.
+6. Step 4 (status question and lookup to the "search" kind) is OUT of part A: held; needs Alan's word list and a security note (the search kind runs without the guard hook, #60). The plain-ask target (under 150k start tokens) belongs to part B (#327), not A.
+7. Measuring: per run, `start_tokens` and `cost_usd` for label "chat", kind "sweep" (a typed sweep): `system/scripts/run usage_report.py --days 7 --label chat --kind sweep` (the new `--label` and `--kind` flags, counts only; the per-day table cannot show it, as tokens are cumulative over turns). Before and after.
+
+## Plan (steps)
+1. `panel_kind`, `calendar_run`, the `ask()` and `queue_start()` routes: `calendar-route.diff` (guarded). Typed "refresh calendar" starts the small calendar run.
+2. Typed sweep: kind stays "ask" (chat history kept, pinned); `--add-dir` drops the home folder (`sweep-no-home.diff`, guarded). This also narrows Close the day's and the catch-up sweep (run_dirs is keyed on policy "sweep"), by design.
+3. Both sweep prompts end with the followed-people rule (`sweep-followed-rule.diff`, guarded).
+4. Page: `typedCalendar` and the two sentences in `ask.js`; `dashboard.html` rebuilt (not guarded, committed).
+5. `usage_report.py --label/--kind` (not guarded, committed).
+
+## Pinned tests the chain rewrites on purpose (`dev/proposals/339/tests-pins.diff`, applies after the live_server diffs)
+- `test_panel_sweep` test_2 (lines 185-189): "refresh calendar" now runs `--mode calendar` with the fixed prompt, no add-dir, no resume; "sweep mail for ABC" still `--mode sweep`. Why: the route changes the kind.
+- `test_calendar_refresh` test_5 (lines 577-593): the typed refresh is the calendar run (was "BL-309, unchanged"); the ordinary-message and model-supplied kind or mode checks above it are untouched and stay.
+- `test_ai_budget_gate_334` lines 144-145: a typed "refresh calendar" must not be held (not 429) but may stop at the calendar run's own checks (the test vault fails the precheck before a Run starts). The exemption itself and the exact `if panel_sweep(...)` line pin (SKIP_ASK) are unchanged.
+- Checked and left alone (they stay green with the patches): `test_panel_sweep` line 83 (the recogniser: panel_sweep keeps the words), `test_calendar_refresh` line 284 (mode sweep's guard decisions: the mode still exists), `test_run_badge` line 108 (the page's label for the typed words: unchanged). With all patches and the pin diff applied temporarily, test_panel_sweep, test_calendar_refresh, test_ai_budget_gate_334, test_run_badge and test_run_tools_explicit pass; then reverted.
 
 ## Files
-- `system/scripts/live_server.py` (guarded): `panel_kind`, `Run._start` routing, `run_dirs`, usage kind mapping `USAGE_KIND`.
-- `system/scripts/calendar_refresh.py`: reuse only (precheck for a typed request).
-- `system/scripts/reach.py`, `.claude/settings*`, `creaite-rules.md` (guarded): none expected; rules line to describe the routing goes as a diff.
-- `dev/tests/test_lighter_runs_339.py` (new): word recognition table (each kind, near-misses fall to chat), no routing with image or confirmed, calendar kind has no add-dir and no Bash write outside drafts, sweep run has no home folder.
-- Existing tests to keep green: test_panel_sweep, test_chat_and_sweep, test_run_usage, test_plain_words, test_no_real_names, test_ask_creaite_name.
-
-## Targets (from the issue)
-Typed sweep under 60k tokens and $1.50; plain ask under 150k start tokens (500k red line, with part B).
-
-## Pinned tests (checked against the plan)
-- `test_panel_sweep` test_2 pins a typed "refresh calendar" as a sweep (guard `--mode sweep`, the sweep's tools). Step 2 (route it to the "calendar" kind, guard mode "calendar") contradicts it. Not loosened: `dev/proposals/339/calendar-route.diff` is HELD until Alan decides; if he agrees, test_2 changes in the same chain.
-- `test_panel_sweep` test_1 pins a typed sweep as kind "ask" (chat history kept). Step 3 keeps that: only `--add-dir` changes. No pinned test names the sweep's --add-dir.
-- Step 4 (status question and lookup to "search") is unchanged and still held for a word list.
-
-## Patches (dev/proposals/339/, guarded, each `git apply --check` clean alone and together)
-- `sweep-no-home.diff`: a sweep's --add-dir drops the home folder.
-- `sweep-followed-rule.diff`: both sweep prompts (Close the day's and the typed one) end with the followed-people rule (`VIP_PRIVATE_RULE`).
-- `calendar-route.diff` (HELD, above): no chat, 409 while a sweep runs (the existing busy check answers 409 for any other run), 400 if the calendar precheck fails.
+- Guarded patches, not applied: `calendar-route.diff`, `sweep-no-home.diff`, `sweep-followed-rule.diff` (all `system/scripts/live_server.py`), plus `tests-pins.diff` (three test files).
+- Committed: `system/templates/dashboard/src/ask.js`, `system/templates/dashboard.html`, `system/scripts/usage_report.py`, `dev/tests/test_lighter_runs_339.py`.
+- Tests to add when the chain lands (Cap): the calendar kind via /api/ask and via queue_start with args showing `--mode calendar`, exact tool list and no add-dir; 409 while a sweep runs; the precheck message; mutants for each routing line, the 409 guard, chat=None and the home removal. Today's structure tests read the patched text; the behavioural ones need the chain.
