@@ -132,8 +132,15 @@ export function FileKind({ m }) {
 
 /** An uploaded file's lines, the same in the List, the Board's card and the Two panes' detail: when it was added and its likely
     project, its state, and what kind it is while it waits. @param {{m: any, n: number}} props */
-export function FileFacts({ m, n }) {
+export function FileFacts({ m, n, compact }) {
   const waiting = m.stage === "arrived" && m.state === "ready" && !irBusy.value.includes(m.id);
+  if (compact) {   /* #341 item 8: in the List a file is one line of facts; what the kind means is in the Two panes' detail, and shows here only when the file needs a choice */
+    const chip = IrStateChip({ m, n }), d = chip ? stateDetail(m, n) : "";
+    return <>
+      <div class={`why${chip ? " irstate" : ""}`}>{irAdded(m)} · Likely project: {m.p ? pName(m.p) : "Not sure"} · {chip || irStateWords(m, n)}{d ? ` ${d}` : ""}</div>
+      {waiting && (irBadName(m) || !irFileKind(m)) ? <FileKind m={m} /> : null}
+    </>;
+  }
   return <>
     <div class="why">{irAdded(m)} · Likely project: {m.p ? pName(m.p) : "Not sure"}</div>
     <IrStateLine m={m} n={n} />
@@ -182,7 +189,7 @@ export function MeetingRow({ m, live }) {
         <span class="ki" aria-hidden="true" data-irki={m.src === "upload" ? "file" : "meeting"}><IrIcon name={m.src === "upload" ? "file" : "meeting"} /></span>
         <b class="icmeethd">{m.title}</b>
         {m.stale ? <> <span class="tag stale">Stale · {ageWords(m.age)}</span></> : null}
-        {m.src === "upload" ? <FileFacts m={m} n={n} /> : <>
+        {m.src === "upload" ? <FileFacts m={m} n={n} compact /> : <>
           <div class="why">{m.day ? fd(m.day) : ""}{m.start ? ` ${m.start}${m.end ? `–${m.end}` : ""}` : ""}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div>
           <IrStateLine m={m} n={n} />
         </>}

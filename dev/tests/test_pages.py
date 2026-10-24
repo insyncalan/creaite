@@ -287,7 +287,7 @@ class FilesLiveTests(FilesLiveBase):
         touch(self.v.root / DEFAULT_REPORTS / "Steerco" / "Board pack (no date in the name).pptx")
         touch(self.v.root / DEFAULT_REPORTS / "Ad hoc milestone note.docx")
         self.open_files()
-        self.b.click('#fquick [data-q="latest"]')
+        self.b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=latest]').click(); })()")
         names = self.rows()
         self.assertEqual(sum(1 for n in names if "Steerco" in n or "SteerCo" in n or "Board pack" in n), 1)   # one per folder
         self.assertIn("2026-10-09 Client report.docx", names)                                    # the newest weekly-folder file by date
@@ -301,7 +301,7 @@ class FilesLiveTests(FilesLiveBase):
         self.assertNotIn("documents", self.b.eval("[...document.querySelectorAll('#tree .l2')].map(b=>b.textContent.replace(/\\d+$/,''))"))
         self.b.click('#tree .l3[data-s="Steerco"]')                                               # #192: the folder is in the tree
         self.assertEqual(self.rows(), ["Steerco pack.pptx"])
-        self.b.click('#fquick [data-q="all"]')                                                    # the All files pill: back to all files
+        self.b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=all]').click(); })()")                                                    # the All files pill: back to all files
         self.assertGreater(len(self.rows()), 1)
 
     def test_the_documents_switch_in_settings_brings_them_back(self):

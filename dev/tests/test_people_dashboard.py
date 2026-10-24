@@ -734,7 +734,7 @@ class PeopleTabsTests(LiveBrowserCase):
         self.assertNotIn("Jane Doe", self.names())                                                # a made decision alone does not
         self.assertNotIn("Lee Closed", self.names())
         heads = b.eval("[...document.querySelectorAll('#peopleTbl thead th')].map(t=>t.textContent.replace(/[▲▼]/g,'').trim())")
-        self.assertEqual(heads, ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "RAID", "Decisions", "Overdue", "Actions on the person"])   # #248: the register's columns
+        self.assertEqual(heads, ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "Risks and issues", "Decisions", "Overdue", "Actions on the person"])   # #248: the register's columns
         n_work = len(self.rows())
         self.tab("none")
         none = {r[0].replace(" needs details", ""): r[1:] for r in self.rows()}

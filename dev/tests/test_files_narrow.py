@@ -46,8 +46,8 @@ class FilesNarrow(LiveBrowserCase):
         b.resize(width, 700)
         b.wait(f"innerWidth==={width}")
         b.eval("go('files')")
-        b.wait("document.querySelector('#fquick [data-q=\"archived\"]')")
-        b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
+        b.wait("document.querySelector('#fmBtn')")
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=archived]').click(); })()")
         b.wait("document.querySelector('#filesTbl [data-moveback]')")
 
     def test_at_320_the_folder_list_never_draws_over_the_archived_table(self):
@@ -83,7 +83,7 @@ class FilesNarrow(LiveBrowserCase):
         locs = b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp] td.x:first-of-type, #filesTbl tr[data-fp] td:nth-child(2)')].map(t=>t.textContent)")
         self.assertIn("Portfolio › minutes", locs)
         for chip in ("all", "week"):
-            b.eval(f"document.querySelector('#fquick [data-q=\"{chip}\"]').click()")
+            b.eval(f"(()=>{{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value={chip}]').click(); }})()")
             self.assertNotIn("_portfolio", b.eval("document.getElementById('v-files').innerText"), chip)
         b.eval("document.querySelector('#tree [data-p=\"_portfolio\"]').click()")
         self.assertEqual(b.eval("document.querySelector('#tree [data-p=\"_portfolio\"]').firstChild.textContent"), "Portfolio")

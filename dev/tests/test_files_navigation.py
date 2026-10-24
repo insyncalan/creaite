@@ -38,39 +38,46 @@ class FilesNavigation(LiveBrowserCase):
         b.resize(width, 800)
         b.wait(f"innerWidth==={width}")
         b.eval("go('files')")
-        b.wait("document.querySelector('#fquick [data-q]') && document.querySelector('#filesTbl tr[data-fp]')")
+        b.wait("document.querySelector('#fmBtn') && document.querySelector('#filesTbl tr[data-fp]')")
         return b
 
     def rows(self):
         return self.b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(t=>t.dataset.fp)")
 
+    def view(self, q):
+        """#341 item 13: the view is chosen in Filter (View radios), not by pills."""
+        self.b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=" + q + "]').click(); })()")
+
     def pressed(self):
-        return self.b.eval("[...document.querySelectorAll('#fquick [aria-pressed=true]')].map(x=>x.dataset.q)")
+        return self.b.eval("(q=>q==='all'?(shared.FSEL.p==='All'&&shared.FSEL.f==='All'&&!shared.FSEL.sub?['all']:[]):[q])(shared.FSEL.quick)")
 
     def test_four_pills_exclusive_and_archived_is_a_view(self):
         for width in (1400, 900):
             b = self.open(width)
-            self.assertEqual(b.eval("[...document.querySelectorAll('#fquick .vchip')].map(x=>x.textContent)"),
+            self.assertEqual(b.eval("document.querySelectorAll('#fquick').length"), 0)       # the pills are gone
+            b.click("#fmBtn")
+            self.assertEqual(b.eval("[...document.querySelectorAll('#fmenu input[name=fsView]')].map(x=>x.parentElement.textContent.trim())"),
                              ["All files", "Latest reports", "This week's meetings", "Archived"], width)
-            self.assertEqual(b.eval("document.querySelectorAll('#fquick [data-rep], #fquick [data-q=inbox]').length"), 0)
+            self.assertEqual(b.eval("document.querySelectorAll('#fmenu [data-rep], #fmenu input[value=inbox]').length"), 0)
+            b.key("Escape")
             for q in ("latest", "week", "archived", "all"):
-                b.click(f'#fquick [data-q="{q}"]')
+                self.view(q)
                 self.assertEqual(self.pressed(), [q], (width, q))
-            b.click('#fquick [data-q="archived"]')
+            self.view("archived")
             self.assertTrue(b.eval("!!document.querySelector('#filesTbl [data-moveback]')"))
             rows = b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(t=>!!t.querySelector('[data-moveback]'))")
             self.assertEqual(len(rows), b.eval("D.files_archived.length"), width)       # exactly the archive's files
             self.assertTrue(rows and all(rows), width)                                   # every row is an archived one (Move back)
-            b.click('#fquick [data-q="all"]')
+            self.view("all")
             self.assertFalse(b.eval("!!document.querySelector('#filesTbl [data-moveback]')"), width)   # no archived row in All files
 
     def test_tree_shows_intake_once_and_a_folder_clears_the_pill(self):
         b = self.open()
         self.assertEqual(b.eval("[...document.querySelectorAll('#v-files button, #v-files a')].filter(x=>x.textContent.trim().startsWith('Intake')).length"), 1)
-        b.click('#fquick [data-q="latest"]')
+        self.view("latest")
         b.click('#tree [data-p="inbox"]')
         self.assertEqual(self.pressed(), [])        # a folder clears the pill
-        b.click('#fquick [data-q="week"]')
+        self.view("week")
         self.assertEqual(b.eval("[...document.querySelectorAll('#tree [aria-pressed=true]')].map(x=>x.dataset.p)"), ["All"])   # a pill clears the folder
 
     def test_one_search_bar_with_the_ask_button(self):
@@ -85,8 +92,8 @@ class FilesNavigation(LiveBrowserCase):
             b = self.open(width)
             self.assertTrue(b.eval("document.getElementById('fmBtn').matches('.ib.bd.fbtn')"))
             self.assertEqual(b.eval("!!document.querySelector('#fmBtn svg')"), True)
-            pill = b.box('#fquick [data-q="all"]'); btn = b.box("#fmBtn")
-            self.assertLess(abs(pill["y"] - btn["y"]), 6, width)
+            rf = b.box("#filesRefresh"); btn = b.box("#fmBtn")
+            self.assertLess(abs(rf["y"] - btn["y"]), 6, width)
             self.assertFalse(b.eval("!!document.querySelector('#fmBtn .fcount')"))
             self.assertEqual(b.eval("document.getElementById('fchips').hidden"), True)
 
@@ -123,7 +130,7 @@ class FilesNavigation(LiveBrowserCase):
         b.click('#fchips [data-fclr="type"]')
         self.assertEqual(b.eval("document.querySelector('#fmBtn .fcount').textContent"), "1")
         self.assertTrue(b.eval("!!document.getElementById('filesRefresh') && /files/.test(document.getElementById('filesCount').textContent)"))
-        pill = b.box('#fquick [data-q="all"]'); rf = b.box("#filesRefresh")
+        pill = b.box("#fmBtn"); rf = b.box("#filesRefresh")
         self.assertLess(abs(pill["y"] - rf["y"]), 6)
         b.click("#fmBtn")
         b.click("#fmClear")
@@ -153,19 +160,19 @@ class FilesNavigation(LiveBrowserCase):
         b = self.open()
         b.pump(1)     # the page's own refresh on opening has landed
         b.eval("D.files_archived=[]; renderFiles()")
-        b.click('#fquick [data-q="archived"]')
+        self.view("archived")
         self.assertIn("Nothing has been archived.", b.eval("document.getElementById('filesTbl').innerText"))
         b.eval("FILES.splice(0,FILES.length); renderFiles()")
-        b.click('#fquick [data-q="latest"]')
+        self.view("latest")
         self.assertIn("No reports yet.", b.eval("document.getElementById('filesTbl').innerText"))
-        b.click('#fquick [data-q="week"]')
+        self.view("week")
         self.assertIn("No meetings this week.", b.eval("document.getElementById('filesTbl').innerText"))
-        b.click('#fquick [data-q="all"]')
+        self.view("all")
         self.assertIn("No files match.", b.eval("document.getElementById('filesTbl').innerText"))
 
     def test_combined_pill_folder_and_filter(self):
         b = self.open()
-        b.click('#fquick [data-q="week"]')
+        self.view("week")
         week = self.rows()
         b.click("#fmBtn")
         b.click("#fmenu input[name=fsType][value=vtt]")

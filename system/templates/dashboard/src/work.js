@@ -199,7 +199,8 @@ export function densPaint(){ const w=$("#workWrap"), d=densOf(); if(w){ w.classL
   const seg=$("#wdens"); if(!seg) return; seg.hidden=layoutOf(shared.WT)==="board"; $$("#wdens [data-dens]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.dens===d))); wkPlaceSoon(); }
 export function setDensity(d){ if(d!=="cmp"&&d!=="cmf") return; shared.DENS=d; store.set("creaite-density",d); densPaint(); sizeList(); }
 export function wkMarksHtml(t,x){ const k=t==="all"?x.k:t, st=t==="all"?x.nst:x.st, pr=k==="decisions"?"":x.pr||"";
-  return `<span class="wkm">${peekMarkHtml({st})}${pr?peekMarkHtml({pr}):""}<span class="vh">${esc(st)}${pr?`, ${esc(pr)} priority`:""}: </span></span>`; }
+  /* #341 item 6: the status half-circle and priority bars before a title are gone; the status and priority stay for screen readers */
+  return `<span class="wkm"><span class="vh">${esc(st)}${pr?`, ${esc(pr)} priority`:""}: </span></span>`; }
 export const CVTAG=`<span class="tg" data-tg="cv" title="Client-visible: it can appear in client reports">${ic("eye")}Client</span>`;
 export function wkDecorate(){ const t=shared.WT;
   $$("#workTbl tr[data-row]").forEach(tr=>{ const td=tr.querySelector("td.title"), x=t==="all"?allRows().find(y=>y.id===tr.dataset.row):REC(t,tr.dataset.row); if(!td||!x||td.querySelector(".wkm")) return;

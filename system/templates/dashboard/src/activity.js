@@ -98,13 +98,14 @@ export function renderActivity(){ if(ACTTAB==="u") usageDraw(); actTools(); [...
   const LA=shared.ACT.map((a,i)=>[a,i]).filter(([a])=>actMatch(a)), on=actOn(), L=on?LA:LA.slice(0,ACTSHOW);   /* tidy-up (sprint-milestones): search looks through every line read; the list shows the newest 300 until then */
   $("#actCount").textContent=on?`${L.length} of ${shared.ACT.length}`:`${L.length} of ${shared.ACT.length}`; $("#actClear").hidden=!on;
   const what=[(shared.ACTF.q||"").trim()?`“${shared.ACTF.q.trim()}”`:"",(shared.ACTF.types||[]).map(t=>(actKindOf(t)||[,t])[1]).join(" or "),shared.ACTF.from?`from ${fd(shared.ACTF.from)}`:"",shared.ACTF.to?`to ${fd(shared.ACTF.to)}`:""].filter(Boolean).join(", ");
-  putHTML($("#actTbl"),html`${L.length?html`<table><thead><tr><th class="actck"><span class="actvh">Select</span></th><th>When</th><th>Change</th><th>By</th><th></th></tr></thead><tbody>${L.map(([a,i])=>actRow(a,i))}</tbody></table>`
+  putHTML($("#actTbl"),html`${L.length?html`<table><thead><tr><th class="actck"><input type="checkbox" id="actAll" aria-label="Select all changes that can be undone"></th><th>When</th><th>Change</th><th>By</th><th></th></tr></thead><tbody>${L.map(([a,i])=>actRow(a,i))}</tbody></table>`
       :html`<div class="empty">Nothing matches ${what||"these filters"} in the changes shown here. <button type="button" class="btn" data-actclear>Clear</button></div>`}${!on&&LA.length>L.length&&html`<p class="sub" id="actMore" style="margin:10px 14px">The newest ${L.length} of ${LA.length} changes. Search or filter to look through all of them.</p>`}<p class="sub" id="actCap" ${raw(D.activity_capped?"":"hidden")} style="margin:10px 14px">These are the newest 2,000 changes (search and filters look at these). Older ones are kept in the tracker's change log.</p>`);
   const vis=new Set($$("#actTbl tr[data-row]").map(t=>t.dataset.row)); [...HL.keys()].forEach(id=>{ if(!vis.has(id)) HL.delete(id); }); if(shared.HLA!=null&&!vis.has(shared.HLA)) shared.HLA=null; if(shared.HLC!=null&&!vis.has(shared.HLC)) shared.HLC=null;
   actPaint(); renderAskChanges();
   if(!shared.LOADING&&!shared.ACT.length) putHTML($("#actTbl"),html`<div class="empty">Nothing has changed yet. What you approve, edit or save shows here, newest first, with Undo. <a href="#" data-go="review">Open Intake</a></div>`); }
 export const actSel=()=>[...HL].filter(([,k])=>k==="act").map(([id])=>+id.slice(1));
 export function actPaint(){ $$("#actTbl tr[data-row]").forEach(tr=>{ const on=HL.has(tr.dataset.row); tr.classList.toggle("hl",on); tr.classList.toggle("cur",tr.dataset.row===shared.HLC); const cb=tr.querySelector("input[type=checkbox]"); if(cb) cb.checked=on; });
+  const all=$("#actAll"); if(all){ const tot=$$("#actTbl tr[data-row]").length, got=actSel().length; all.checked=tot>0&&got>=tot; all.indeterminate=got>0&&got<tot; all.disabled=!tot; }   /* #341 item 15 */
   const n=actSel().length, bar=$("#actBar"); if(!bar) return; bar.hidden=!n;
   putHTML(bar,html`${n>0&&html`<span class="bkn" aria-live="polite">${n} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer()&&html`disabled title="Undoing needs creaite to be running"`}>${raw(ic("undo"))}Undo ${n}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`); }
    /* Shift-click picks a range, not text */
@@ -144,7 +145,9 @@ document.addEventListener("click",e=>{ const t=e.target;
   if(t.closest&&t.closest("[data-actclear]")){ e.preventDefault(); shared.ACTF={}; renderActivity(); try{ navWrite(false); }catch(x){} $("#actQ")?.focus(); return; }
   if(t.closest&&t.closest("[data-actselclear]")){ hlClear(); actPaint(); return; }
   if(t.closest&&t.closest("#actUndoSel")){ actUndoSelected(); return; } });
-$("#actTbl").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-row]"); if(!tr) return;
+$("#actTbl").addEventListener("click",e=>{
+  if(e.target.id==="actAll"){ if(e.target.checked) $$("#actTbl tr[data-row]").forEach(r=>HL.set(r.dataset.row,"act")); else [...HL.keys()].forEach(id=>{ if(HL.get(id)==="act") HL.delete(id); }); actPaint(); return; }   /* #341 item 15: select all in the tick-box header */
+  const tr=e.target.closest("tr[data-row]"); if(!tr) return;
   if(e.target.matches("input[type=checkbox]")){ hlToggle("act",tr.dataset.row); actPaint(); return; }
   if(e.target.closest("a,button,input,select,textarea,label,[data-proj],[role=link]")) return;   /* a link or a button does its own job */
   hlPick(e,"act",tr.dataset.row); actPaint(); });

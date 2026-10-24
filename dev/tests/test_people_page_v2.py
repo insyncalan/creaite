@@ -18,7 +18,7 @@ from test_dashboard import new
 from test_project_settings_v2 import Base, seed
 
 TABS = ["Everyone", "With work", "Nothing assigned", "Needs attention"]
-COLS = ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "RAID", "Decisions", "Overdue"]
+COLS = ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "Risks and issues", "Decisions", "Overdue"]
 
 
 class PeoplePage(Base):

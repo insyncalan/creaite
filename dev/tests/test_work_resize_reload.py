@@ -93,7 +93,7 @@ class ResizeAndReload(LiveBrowserCase):
         self.open_tab("actions")
         ids = b.eval("[...document.querySelectorAll('#workTbl tbody tr[data-row]')].map(r=>r.dataset.row)")
         row = f'#workTbl tr[data-row="{ids[0]}"]'
-        b.click(row + " td.title .wkm")
+        b.click(row + " td.title")
         b.eval("document.activeElement&&document.activeElement.blur()")
         b.key("o")
         b.wait(f"document.querySelector('{row} td.editing[data-f=\"o\"]')")                # the row keys work
