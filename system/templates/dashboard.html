@@ -1031,6 +1031,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .step.refused .rfwarn{color:var(--warn,#B54708)} .step.refused .rfraw summary{cursor:pointer;color:var(--faint);font-size:var(--fs-xs)} .step.refused .rfraw code{display:block;margin-top:4px;padding:6px 8px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-xs);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
 /* ===== BL-314 (v1.9.1) ===== */ .msg.a.cant p{margin:0 0 6px} .msg.a.cant{border-left:3px solid var(--warn,#B54708)} .step.checked{color:var(--faint);font-size:var(--fs-xs)}
 .step.working .quip{font-style:italic}
+.step.working .mcline{color:var(--muted)} .rbl{min-width:0}   /* #358: the mail check's true line, in place of the quip */
 .step.steps details summary{cursor:pointer;list-style:none;display:inline-flex;gap:4px;align-items:center} .step.steps details summary::-webkit-details-marker{display:none}
 .step.steps details summary::after{content:"›";transition:transform .15s} .step.steps details[open] summary::after{transform:rotate(90deg)}
 .step.steps ul{margin:4px 0 2px;padding-left:16px;font:var(--fs-xs)/1.5 ui-monospace,Menlo,monospace;color:var(--faint)}
@@ -4498,6 +4499,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   <div class="chs" id="chSub"></div>
   <label class="chcont" id="chContL" hidden><input type="checkbox" id="chCont"> Continue this chat (keeps the whole thread: slower and costs more)</label>
   <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
+  <div class="vh" id="mcLive" role="status" aria-live="polite"></div><!-- #358: the mail check's places, read when they change; inside #chat, outside #chLog -->
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
   <div class="chlong" id="chLong" role="region" aria-label="Long chat" hidden><span id="chLongText"></span><span class="chlongact"><button type="button" class="mini" id="chLongGo">Continue fresh with a summary</button><button type="button" class="mini" id="chLongNo">Not now</button></span></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
@@ -5443,6 +5445,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     cardProps: () => cardProps,
     catName: () => catName,
     catOf: () => catOf,
+    cdNow: () => cdNow,
     cdOpen: () => cdOpen,
     cdOpenPlaces: () => cdOpenPlaces,
     cdSourceOf: () => cdSourceOf,
@@ -73485,11 +73488,100 @@ ${d5.text}`);
     window.setInterval(helpScreenSync, 300);
   }
 
+  // core/mailCheck.js
+  var MC_MARKER = "Sweeping (stages proposals only)";
+  var PLACE_NAMES = { mail: "Outlook mail", teams: "Teams", calendar: "calendar" };
+  var PLACE_SHORT = { mail: "mail", teams: "Teams", calendar: "calendar" };
+  var PLACE_ORDER = ["mail", "teams", "calendar"];
+  var CHAT = {
+    "outlook email search": "mail",
+    "chat message search": "teams",
+    "teams list chats": "teams",
+    "teams list channels": "teams",
+    "teams list channel messages": "teams",
+    "teams list teams": "teams",
+    "outlook calendar search": "calendar",
+    "find meeting availability": "calendar",
+    "sharepoint search": null,
+    "sharepoint folder search": null
+  };
+  var PLAIN = {
+    "Searching mail": "mail",
+    "Searching Teams chats": "teams",
+    "Reading Teams chats": "teams",
+    "Reading Teams channels": "teams",
+    "Reading Teams": "teams",
+    "Reading the calendar": "calendar",
+    "Searching SharePoint and OneDrive": null
+  };
+  var READ_CHAT = "read resource", READ_PLAIN = "Reading a meeting, a message or a chat";
+  var CHAT_PREFIX = "Microsoft 365: ";
+  function mcClassify(label) {
+    if (typeof label !== "string") return null;
+    let tool = "";
+    if (label.startsWith(CHAT_PREFIX)) tool = label.slice(CHAT_PREFIX.length);
+    if (tool) {
+      if (tool === READ_CHAT) return { kind: "read" };
+      return Object.prototype.hasOwnProperty.call(CHAT, tool) ? { kind: "search", place: CHAT[tool] } : null;
+    }
+    if (label === READ_PLAIN) return { kind: "read" };
+    return Object.prototype.hasOwnProperty.call(PLAIN, label) ? { kind: "search", place: PLAIN[label] } : null;
+  }
+  var mcNew = () => ({ places: [], searches: 0, reads: 0 });
+  function mcStep(s5, label) {
+    const c5 = mcClassify(label);
+    if (!c5) return s5;
+    if (c5.kind === "read") return { ...s5, reads: s5.reads + 1 };
+    const places = c5.place && !s5.places.includes(c5.place) ? PLACE_ORDER.filter((p6) => p6 === c5.place || s5.places.includes(p6)) : s5.places;
+    return { places, searches: s5.searches + 1, reads: s5.reads };
+  }
+  var placeList = (s5, names) => s5.places.map((p6) => names[p6]).join(", ");
+  var plural2 = (n4, one, many) => `${n4} ${n4 === 1 ? one : many}`;
+  function mcLine(s5) {
+    if (!s5.places.length) return "Starting";
+    return `Looked in so far: ${placeList(s5, PLACE_NAMES)} · ${plural2(s5.searches, "search", "searches")}, ${plural2(s5.reads, "item", "items")} read`;
+  }
+  var mcBadge = (s5) => s5.places.length ? `Mail check: ${placeList(s5, PLACE_SHORT)}` : "Mail check: starting";
+  var mcPlaces = (s5) => s5.places.length ? `Looked in so far: ${placeList(s5, PLACE_NAMES)}` : "";
+  var mcIsRun = (run) => !!run && (run.sweep === true || run.kind === "sweep");
+  function mcFileStamp(file) {
+    const m5 = /^proposed-(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})-sweep(?:-\d+)?\.json$/.exec(String(file || "").split("/").pop() || "");
+    return m5 ? `${m5[1]}T${m5[2]}:${m5[3]}` : null;
+  }
+  var minute = (iso2) => String(iso2 || "").slice(0, 16);
+  function mcFound(rows2, startedIso, endedIso) {
+    const a5 = minute(startedIso), b5 = minute(endedIso);
+    let n4 = 0, need = 0;
+    for (const r4 of rows2 || []) {
+      const st2 = mcFileStamp(r4 && r4.file);
+      if (!st2 || !a5 || !b5 || st2 < a5 || st2 > b5) continue;
+      n4++;
+      if (!r4.p) need++;
+    }
+    return { n: n4, need };
+  }
+  function mcEnd(outcome, s5, found) {
+    const looked = s5.places.length ? ` Looked in ${placeList(s5, PLACE_NAMES)}.` : "";
+    const need = (n4) => n4 === 1 ? "1 needs a project" : `${n4} need a project`;
+    if (outcome === "done") {
+      if (!found) return "Finished. Open Review to see what it found.";
+      return found.n ? `Finished.${looked} Found ${found.n} new, ${need(found.need)}.` : "Finished. Nothing new to review.";
+    }
+    const head = outcome === "early" ? "Stopped early." : "Stopped.";
+    if (!found) return `${head}${looked}`;
+    return found.n ? `${head}${looked} Found ${found.n} new so far, ${need(found.need)}.` : `${head}${looked} Nothing saved yet.`;
+  }
+  function mcStepText(label) {
+    if (label === MC_MARKER) return MC_MARKER;
+    const c5 = mcClassify(label);
+    return c5 ? String(label) : "A creaite step";
+  }
+
   // components/closeday/CloseDay.jsx
   var CD_STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"];
   var PLACES = [["review", "Review now"], ["first", "First thing tomorrow"], ["leave", "Leave"]];
   var SOURCES = ["Mail", "Teams chats", "Teams channels", "Matching to projects"];
-  var READING = ["Reading mail", "Reading Teams chats", "Reading Teams channels", "Matching to projects"];
+  var WORKING = "Working through the sources";
   var SHOWN = 8;
   var POLL = 1500;
   var cdOpen = y3(false);
@@ -73506,15 +73598,15 @@ ${d5.text}`);
     }
     cdOpen.value = true;
   }
+  var CD_LABELS = [
+    ["Searching mail", "Microsoft 365: outlook email search"],
+    ["Searching Teams chats", "Reading Teams chats", "Microsoft 365: chat message search", "Microsoft 365: teams list chats"],
+    ["Reading Teams channels", "Microsoft 365: teams list channels", "Microsoft 365: teams list channel messages"]
+  ];
   function cdSourceOf(label) {
-    const l6 = String(label || "").toLowerCase();
-    if (/calendar|read resource|a meeting, a message or a chat/.test(l6)) return -1;
-    if (/channel/.test(l6)) return 2;
-    if (/teams|chat message|list chats/.test(l6)) return 1;
-    if (/email|outlook|mail/.test(l6)) return 0;
-    if (/sweep\.py stage|people map|propose\.py|staging what the sweep found|mapping names/.test(l6)) return 3;
-    return -1;
+    return CD_LABELS.findIndex((l6) => l6.includes(label));
   }
+  var cdNow = (cu2) => cu2.steps > 0 ? [0, 1, 2].find((i5) => !cu2.done.includes(i5)) ?? -1 : -1;
   var cdTyping = (t47) => t47 instanceof HTMLElement && !!t47.closest("input,textarea,select,[contenteditable]");
   function Tick() {
     return /* @__PURE__ */ u4(
@@ -73547,7 +73639,7 @@ ${d5.text}`);
           running ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-cdstop": "1", onClick: onStop, children: "Stop" }) : null,
           /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-cdskip": "1", onClick: onSkip, children: "Skip" })
         ] }),
-        running ? /* @__PURE__ */ u4("ol", { class: "cdsrc", "aria-label": "Sources", children: SOURCES.map((s5, i5) => /* @__PURE__ */ u4("li", { class: i5 < cu2.reached ? "done" : i5 === cu2.reached ? "now" : "", children: s5 })) }) : null,
+        running ? /* @__PURE__ */ u4("ol", { class: "cdsrc", "aria-label": "Sources", children: SOURCES.map((s5, i5) => /* @__PURE__ */ u4("li", { class: cu2.done.includes(i5) ? "done" : i5 === cdNow(cu2) ? "now" : "", children: s5 })) }) : null,
         /* @__PURE__ */ u4("p", { class: "sub", children: "It runs while you read on. It only adds suggestions to Review; nothing is saved, and nothing changes in Microsoft 365." })
       ] });
     }
@@ -73813,7 +73905,7 @@ ${d5.text}`);
     );
     const [cu2, setCu] = d2(
       /** @type {Catchup} */
-      { status: "", message: "", state: null, run: null, label: "", reached: 0, found: [] }
+      { status: "", message: "", state: null, run: null, label: "", done: [], steps: 0, found: [] }
     );
     const [closed, setClosed] = d2(
       /** @type {Closed | null} */
@@ -73881,7 +73973,12 @@ ${d5.text}`);
           }
           if (ev.type === "step") {
             const s5 = cdSourceOf(ev.label);
-            if (s5 >= 0) setCu((u5) => ({ ...u5, reached: Math.max(u5.reached, s5), label: READING[Math.max(u5.reached, s5)] }));
+            setCu((u5) => ({
+              ...u5,
+              steps: u5.steps + 1,
+              done: s5 >= 0 && !u5.done.includes(s5) ? [...u5.done, s5] : u5.done,
+              label: s5 >= 0 ? WORKING : u5.label
+            }));
           }
         }
       }
@@ -73912,7 +74009,8 @@ ${d5.text}`);
         state: pub.state || null,
         run,
         ended: pub.ended,
-        reached: force ? 0 : u5.reached,
+        done: force ? [] : u5.done,
+        steps: force ? 0 : u5.steps,
         label: force ? "" : u5.label,
         found: force ? [] : u5.found
       }));
@@ -75546,8 +75644,10 @@ ${d5.text}`);
     setRunning(!run.done);
     ATTACHED = run.id;
     const after = await attachDraw(run);
+    const mcRun = mcIsRun(run);
+    shared.RUN.mailCheck = mcRun;
     try {
-      await askStream("/api/ask/attach", { run: run.id, after }, run.confirmed, ctl, run.done, !!run.plain);
+      await askStream("/api/ask/attach", { run: run.id, after: mcRun ? 0 : after }, run.confirmed, ctl, run.done, !!run.plain, mcRun ? { skip: after, started: run.started } : void 0);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -75722,7 +75822,7 @@ ${d5.text}`);
   }
   function rbGuess(q5) {
     q5 = String(q5 || "");
-    return /weekly report/i.test(q5) ? "Drafting the weekly report" : /client report/i.test(q5) ? "Drafting the client report" : /steerco|one-pager/i.test(q5) ? "Drafting the one-pager" : /refresh calendar/i.test(q5) ? "Refreshing the calendar" : /^sweep/i.test(q5) ? "Checking mail and Teams" : /prep/i.test(q5) ? "Making the prep page" : /^process/i.test(q5) ? "Processing a meeting" : "";
+    return /weekly report/i.test(q5) ? "Drafting the weekly report" : /client report/i.test(q5) ? "Drafting the client report" : /steerco|one-pager/i.test(q5) ? "Drafting the one-pager" : /refresh calendar/i.test(q5) ? "Refreshing the calendar" : /^(please\s+)?sweep|^check (my )?mail/i.test(q5) ? "Checking mail and Teams" : /prep/i.test(q5) ? "Making the prep page" : /^process/i.test(q5) ? "Processing a meeting" : "";
   }
   function rbUnmark() {
     if (shared.RBMARKED) {
@@ -75842,7 +75942,8 @@ ${d5.text}`);
   function askMarkShow(st2) {
     if (!ASKMARK[st2]) return;
     askMarkClear();
-    askMarkSet(st2);
+    askMarkSet(st2, shared.MCEND ? `${ASKMARK[st2][1]}. ${shared.MCEND}` : void 0);
+    shared.MCEND = "";
     if (st2 !== "failed") ASKDONE.t = setTimeout(askMarkClear, ASKDONE.ms);
   }
   function bootAsk0105() {
@@ -76070,9 +76171,29 @@ ${d5.text}`);
     } catch (e4) {
     }
   }
-  async function askStream(url, body2, confirmed, ctl, ended, plain) {
+  async function askStream(url, body2, confirmed, ctl, ended, plain, opts) {
     let res, outcome = "done";
     const live = !ended;
+    shared.MCEND = "";
+    const startIso = nowIso();
+    let mc2 = opts ? { s: mcNew(), started: opts.started || startIso, pl: "" } : null, timedOut = false, doneAt = "";
+    const mcFinish = async (o5) => {
+      if (!mc2) return;
+      const m5 = mc2;
+      mc2 = null;
+      $("#mcLive").textContent = "";
+      let found = null;
+      try {
+        if (SERVED) {
+          await reloadData();
+          found = mcFound(REV, m5.started, doneAt || nowIso());
+        }
+      } catch (e4) {
+      }
+      const line = mcEnd(o5, m5.s, found);
+      addEl("msg a runend", line);
+      shared.MCEND = line;
+    };
     askWorking(live);
     if (live) rbStart(shared.RUNLABEL || rbGuess(body2 && body2.message));
     try {
@@ -76115,7 +76236,17 @@ ${d5.text}`);
       retryOffer("failed", body2);
       return;
     }
-    const work = () => live ? working() : document.createElement("div");
+    const work = () => {
+      const d5 = live ? working() : document.createElement("div");
+      if (mc2 && live) {
+        const q5 = d5.querySelector(".quip");
+        if (q5) {
+          q5.className = "mcline";
+          q5.textContent = mcLine(mc2.s);
+        }
+      }
+      return d5;
+    };
     let next = null;
     const rd2 = res.body.getReader(), dec = new TextDecoder(), t02 = performance.now();
     let buf = "", conf = null, perm = null, chg = null, ecard = null, fcard = null, prep = null, runId2 = body2.run, replies = [], grp = null, spin = work();
@@ -76126,6 +76257,7 @@ ${d5.text}`);
       } catch (e4) {
         spin.remove();
         askWorking(false);
+        if (mc2) await mcFinish(shared.RUN && shared.RUN.stopping ? "stopped" : "early");
         rbEnd(shared.RUN && shared.RUN.stopping ? "stopped" : "failed");
         if (shared.RUN && shared.RUN.stopping) addEl("step stopped", "Stopped");
         retryOffer(shared.RUN && shared.RUN.stopping ? "stopped" : "failed", body2);
@@ -76146,7 +76278,8 @@ ${d5.text}`);
         } catch (e4) {
           continue;
         }
-        if (ev.seq && runId2) shared.SHOWN = { run: runId2, seq: ev.seq };
+        if (ev.seq && runId2 && !(opts && ev.seq <= opts.skip)) shared.SHOWN = { run: runId2, seq: ev.seq };
+        if (opts && opts.skip && ev.seq && ev.seq <= opts.skip && ev.type !== "step") continue;
         if (plain && !PLAINEV.includes(ev.type)) {
           if (ev.type === "stopped") outcome = "stopped";
           else if (ev.type === "error") outcome = "failed";
@@ -76159,9 +76292,33 @@ ${d5.text}`);
           replies.push(runClosure(ev));
           spin = work();
         } else if (ev.type === "step") {
-          spin.remove();
-          grp = stepGroup(grp, ev.label);
-          spin = work();
+          if (!mc2 && !plain && ev.label === MC_MARKER) {
+            mc2 = { s: mcNew(), started: startIso, pl: "" };
+            if (shared.RUN) shared.RUN.mailCheck = true;
+          }
+          if (mc2) {
+            mc2.s = mcStep(mc2.s, ev.label);
+            const q5 = spin.querySelector && spin.querySelector(".mcline");
+            if (q5) q5.textContent = mcLine(mc2.s);
+            if (live && mc2.s.places.length) {
+              const bl2 = mcBadge(mc2.s);
+              if (RB.state === "running" && RB.label !== bl2) {
+                RB.label = bl2;
+                rbDraw();
+              }
+              const l6 = $("#rbL");
+              if (l6) l6.title = mcLine(mc2.s);
+              if (mcPlaces(mc2.s) !== mc2.pl) {
+                mc2.pl = mcPlaces(mc2.s);
+                $("#mcLive").textContent = mc2.pl;
+              }
+            }
+          }
+          if (!(mc2 && opts && opts.skip && ev.seq && ev.seq <= opts.skip)) {
+            spin.remove();
+            grp = stepGroup(grp, mc2 ? mcStepText(ev.label) : ev.label);
+            spin = work();
+          }
         } else if (ev.type === "text") {
           spin.remove();
           grp = null;
@@ -76199,12 +76356,14 @@ ${d5.text}`);
         } else if (ev.type === "stopped") {
           spin.remove();
           outcome = "stopped";
+          timedOut = !!ev.timed_out;
           conf = null;
           spin = addEl("step stopped", ev.timed_out ? "Stopped: nobody was watching for too long" : ev.after_step ? "Stopped after the current step finished" : "Stopped");
         } else if (ev.type === "done") {
           runId2 = ev.run || runId2;
           next = ev.next || null;
           setChat(ev.chat || shared.ASKCHAT, ev.session || shared.ASKSESSION);
+          doneAt = ev.done_at || doneAt;
           replies.forEach((b5) => stampMsg(b5, ev.done_at || nowIso()));
           replies = [];
         }
@@ -76212,6 +76371,7 @@ ${d5.text}`);
     }
     replies.forEach((b5) => stampMsg(b5, nowIso()));
     if (!spin.classList.contains("stopped")) spin.remove();
+    if (mc2) await mcFinish(outcome === "done" ? "done" : outcome === "stopped" && !timedOut ? "stopped" : "early");
     askWorking(false);
     setRunning(false);
     if (runId2) api("/api/ask/ack", { run: runId2 });
