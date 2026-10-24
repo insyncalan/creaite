@@ -178,6 +178,30 @@ class SetupFails(Case):
                 self.start(None, "r-thread346")
         self.assertEqual(list(runs), ["r-keep"])
 
+    def busy_after_a_failed_start(self, ls):
+        """current_run() once a set-up has failed after the run was registered (a thread that would not start), with the real run table."""
+        before = dict(ls.RUNS)
+        ls.RUNS.clear()                                          # earlier tests in this process leave stand-in runs that never finish
+        try:
+            with mock.patch.object(ls, "end_process", lambda p: None), mock.patch.object(ls, "run_usage", lambda *a, **k: None), \
+                    mock.patch.object(ls.threading, "Thread", side_effect=RuntimeError("no thread")):
+                with self.assertRaises(RuntimeError):
+                    self.start(None, "r-busy346", ls)
+            run = ls.current_run()
+            return bool(run and not run.done)
+        finally:
+            ls.RUNS.clear()
+            ls.RUNS.update(before)
+
+    def test_a_failed_set_up_does_not_leave_the_server_busy(self):
+        """The 'busy' LOW: every later ask would be answered 'still working' until a restart."""
+        self.assertFalse(self.busy_after_a_failed_start(live_server))
+
+    def test_mutant_without_the_run_table_clean_up_the_server_stays_busy(self):
+        ls = mutated("                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends",
+                     "                    if False:")
+        self.assertTrue(self.busy_after_a_failed_start(ls))
+
     def test_an_end_process_that_raises_still_leaves_no_run_in_the_table(self):
         runs = {}
         with mock.patch.object(live_server, "end_process", side_effect=OSError("gone")), mock.patch.object(live_server, "RUNS", runs), \

@@ -1123,8 +1123,10 @@ class MinutesBase(V210Case):
         want = {"decision": "New decision: " + self.W[2], "needed": self.W[3], "risk": "New risk", "close": "Closes FAL-A-004"}
         ns = [i["n"] for i in view["plan"]["items"] if i["group"] == "own" and any(want[k] in i["label"] for k in own)]
         import build_dashboard
-        fp = build_dashboard.block_fp(json.loads((self.vault / "system/staging" / name).read_text(encoding="utf-8"))["meeting"])
-        r = self.api("/api/minutes/approve", {"file": name, "group": True, "own": ns, "expect": fp})      # 2.6.4 (#345)
+        staged = json.loads((self.vault / "system/staging" / name).read_text(encoding="utf-8"))
+        fps = {str(i["n"]): build_dashboard.item_fp(i) for i in staged["items"]}
+        r = self.api("/api/minutes/approve", {"file": name, "group": True, "own": ns, "expect": build_dashboard.block_fp(staged["meeting"]),
+                                              "expects": fps})      # 2.6.4 (#345)
         self.assertTrue(r.get("ok"), r)
         return r
 

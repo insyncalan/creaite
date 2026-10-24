@@ -38073,7 +38073,15 @@ system/scripts/run launch.py agent ${what}`;
     if (how.approve === false) return { ok: true, made, done };
     if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
     const meeting = REV.find((x5) => x5.kind === "draft" && x5.file === v5.proposal && x5.ref === "meeting");
-    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });
+    const own = how.mine ? args.own.filter(how.mine) : args.own, expects = (
+      /** @type {Record<string, string>} */
+      {}
+    );
+    for (const n4 of own) {
+      const row2 = REV.find((x5) => x5.file === v5.proposal && x5.ref === n4);
+      if (row2 && row2.fp) expects[String(n4)] = row2.fp;
+    }
+    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own, expects, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });
     if (r4 && !r4.ok && REVIEW_CHANGED.test(r4.message || "")) {
       await reloadData();
       return { ok: false, message: STALE_ROW_MSG, made };

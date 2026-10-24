@@ -175,7 +175,7 @@ class SweepsAreNeverHeld(unittest.TestCase):
         self.assertTrue(q["held"])
 
     def test_mutant_without_the_message_the_queue_path_holds_a_sweep(self):
-        ls = mutated(', "message": first.get("text"), "images": first.get("images")})', "})")
+        ls = mutated('"message": first.get("text"), "images": first.get("images")}', "}")
         self.assertFalse(self.queued("sweep", status(500, at_limit="stop"), ls)[1])
 
 

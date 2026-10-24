@@ -344,8 +344,10 @@ class Routes(Dest):
                 "reg = sorted(k for k in ls.REVIEW_WORK_ROUTES if k.startswith('/api/minutes/destination'))\n"
                 "v = call('/api/minutes/destination', {'file': name})\n"
                 "import build_dashboard\n"
-                "fp = build_dashboard.block_fp(json.load(open(ls.paths.STAGING / name))['meeting'])\n"       # 2.6.4 (#345)
-                "a = call('/api/minutes/approve', {'file': name, 'group': True, 'own': [], 'expect': fp})\n"
+                "staged = json.load(open(ls.paths.STAGING / name))\n"                                          # 2.6.4 (#345)
+                "fp = build_dashboard.block_fp(staged['meeting'])\n"
+                "fps = {str(i['n']): build_dashboard.item_fp(i) for i in staged['items']}\n"
+                "a = call('/api/minutes/approve', {'file': name, 'group': True, 'own': [], 'expect': fp, 'expects': fps})\n"
                 "print(json.dumps({'reg': reg, 'view': v, 'approve': {k: a.get(k) for k in ('ok', 'numbered')}}))")
         return self.js(code)
 

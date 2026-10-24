@@ -43,8 +43,9 @@ MUTANTS = {          # the line each route runs, and what stands in for it
                "        why = None\n"),
     "retarget": ('        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345); an undo',
                  "        why = None  # 2.6.4 (#345); an undo"),
-    "minutes": ('why = expect_refusal([(req.get("file"), "meeting", req.get("expect"))]) if pending_file(req.get("file")) else None',
-                "why = None"),
+    "minutes": ('why = minutes_refusal(req, own) if pending_file(req.get("file")) else None', "why = None"),
+    "minutes-items": ('[(req.get("file"), n, expects.get(str(n))) for n in ns]', "[]"),
+    "assign": ("why = assign_refusal(req)", "why = None"),
     "minutes-skip": ('if pending_file(req.get("file")) else None', 'if current_fp(req.get("file"), "meeting") else None'),
 }
 
@@ -283,19 +284,61 @@ class Routes(unittest.TestCase, Decline):
         name = s.stage_minutes()
         before = s.path(name).read_bytes()
         self.check(s.post("/api/minutes/approve", file=name, group=True, own=[]), MISSING)
-        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect="x"), BAD)
-        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, 1)), CHANGED)   # an item's, not the minutes'
+        ok_items = {"1": s.fp(name, 1)}
+        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect="x", expects=ok_items), BAD)
+        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, 1), expects=ok_items), CHANGED)   # an item's, not the minutes'
         self.assertEqual(s.path(name).read_bytes(), before)
-        r = s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, "meeting"))
+        r = s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, "meeting"), expects={"1": s.fp(name, 1)})
         for words in (MISSING, CHANGED, BAD):
             self.assertNotIn(words, r.get("message", ""))                         # the minutes' own checks answer (no draft here)
+
+    def test_approve_minutes_needs_a_fingerprint_for_every_item_it_will_approve(self):
+        s = self.s
+        name = s.stage_minutes()
+        before = s.path(name).read_bytes()
+        meeting = s.fp(name, "meeting")
+        for kw in ({"group": True, "own": []}, {"group": False, "own": [1]}):         # the group's item, or the ticked one
+            self.check(s.post("/api/minutes/approve", file=name, expect=meeting, **kw), MISSING)
+            self.check(s.post("/api/minutes/approve", file=name, expect=meeting, expects={"1": "zz"}, **kw), BAD)
+            self.check(s.post("/api/minutes/approve", file=name, expect=meeting, expects={"1": meeting}, **kw), CHANGED)
+        self.assertEqual(s.path(name).read_bytes(), before)
+        r = s.post("/api/minutes/approve", file=name, group=False, own=[], expect=meeting)      # nothing ticked: nothing to name
+        for words in (MISSING, CHANGED, BAD):
+            self.assertNotIn(words, r.get("message", ""))
+
+    def test_a_re_extract_that_keeps_the_minutes_but_changes_an_item_is_declined(self):
+        s = self.s
+        name = s.stage_minutes()
+        meeting, was = s.fp(name, "meeting"), s.fp(name, 1)
+        d = s.data(name)
+        d["items"][0]["values"]["description"] = "Alpha item, reworded by a re-extract"      # the block is untouched
+        s.path(name).write_text(json.dumps(d))
+        self.assertEqual(s.fp(name, "meeting"), meeting)
+        before = s.path(name).read_bytes()
+        for kw in ({"group": True, "own": []}, {"group": False, "own": [1]}):
+            self.check(s.post("/api/minutes/approve", file=name, expect=meeting, expects={"1": was}, **kw), CHANGED)
+        self.assertEqual(s.path(name).read_bytes(), before)
+
+    def test_assign_needs_the_items_expect_unless_it_is_only_a_preview(self):
+        s = self.s
+        name = s.stage()
+        before = s.path(name).read_bytes()
+        self.check(s.post("/api/review/assign", file=name, ref=2, code="XYZ"), MISSING)
+        self.check(s.post("/api/review/assign", file=name, ref=2, code="XYZ", expect="zz"), BAD)
+        self.check(s.post("/api/review/assign", file=name, ref=2, code="XYZ", expect=s.fp(name, 1)), CHANGED)
+        self.assertEqual(s.path(name).read_bytes(), before)
+        for kw in ({"expect": s.fp(name, 2)}, {"dry_run": True}):                       # a right one, or a preview, reaches review.py
+            r = s.post("/api/review/assign", file=name, ref=2, code="XYZ", **kw)
+            for words in (MISSING, CHANGED, BAD):
+                self.assertNotIn(words, r.get("message", ""), kw)
+        self.assertEqual(s.path(name).read_bytes(), before)                            # (XYZ is no project: review.py changed nothing)
 
     def test_approve_minutes_on_a_file_without_a_minutes_block_still_needs_the_fingerprint(self):
         s = self.s
         name = s.stage()                                    # waiting, but holds items only: the old check skipped it
         before = s.path(name).read_bytes()
         self.check(s.post("/api/minutes/approve", file=name, group=True, own=[]), MISSING)
-        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, 1)), CHANGED)
+        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, 1), expects={str(k): s.fp(name, k) for k in (1, 2, 3)}), CHANGED)
         self.assertEqual(s.path(name).read_bytes(), before)
 
     def test_approve_minutes_for_a_file_that_is_gone_says_so(self):
@@ -362,6 +405,26 @@ class Mutants(unittest.TestCase, Decline):
         s, _, mins = self.run_mutant("minutes")
         try:
             r = s.post("/api/minutes/approve", file=mins, group=True, own=[])
+            self.assertNotIn(MISSING, r.get("message", ""))
+        finally:
+            s.close()
+
+    def test_approve_minutes_that_does_not_check_its_items_takes_a_changed_one(self):
+        s, _, mins = self.run_mutant("minutes-items")
+        try:
+            d = s.data(mins)
+            meeting, was = s.fp(mins, "meeting"), s.fp(mins, 1)
+            d["items"][0]["values"]["description"] = "reworded"
+            s.path(mins).write_text(json.dumps(d))
+            r = s.post("/api/minutes/approve", file=mins, group=False, own=[1], expect=meeting, expects={"1": was})
+            self.assertNotIn(CHANGED, r.get("message", ""))
+        finally:
+            s.close()
+
+    def test_assign_without_its_check_moves_without_a_fingerprint(self):
+        s, name, _ = self.run_mutant("assign")
+        try:
+            r = s.post("/api/review/assign", file=name, ref=2, code="XYZ")
             self.assertNotIn(MISSING, r.get("message", ""))
         finally:
             s.close()
@@ -465,6 +528,7 @@ class Page(unittest.TestCase):
         self.assertEqual(len(re.findall(r'api\("/api/review/(?:repeat|retarget|reject)"', src)), 5)       # no call outside these five (undo of a retarget is one)
         mins = (ROOT / "system/templates/dashboard/src/stores/minutes.js").read_text(encoding="utf-8")
         self.assertIn('...(meeting && meeting.fp ? { expect: meeting.fp } : {})', mins)
+        self.assertIn("for (const n of own) { const row = REV.find(x => x.file === v.proposal && x.ref === n); if (row && row.fp) expects[String(n)] = row.fp; }", mins)
         self.assertIn('REVIEW_CHANGED.test(r.message || "")) { await reloadData();', mins)
 
     def test_the_recent_rejects_carry_their_fingerprint(self):

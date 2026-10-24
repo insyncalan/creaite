@@ -90,8 +90,9 @@ class StaleMinutesView(LiveBrowserCase):
         # approved elsewhere (Claude Code, another tab): the record leaves the drafts
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
         import build_dashboard
-        fp = build_dashboard.block_fp(json.loads((self.v.root / "system/staging" / self.proposal).read_text(encoding="utf-8"))["meeting"])
-        b.eval(f"api('/api/minutes/approve',{{file:{json.dumps(self.proposal)},group:true,own:[],expect:{json.dumps(fp)}}}).then(r=>{{window.ELSEWHERE=r}})")   # 2.6.4 (#345)
+        staged = json.loads((self.v.root / "system/staging" / self.proposal).read_text(encoding="utf-8"))
+        fp, fps = build_dashboard.block_fp(staged["meeting"]), {str(i["n"]): build_dashboard.item_fp(i) for i in staged["items"]}
+        b.eval(f"api('/api/minutes/approve',{{file:{json.dumps(self.proposal)},group:true,own:[],expect:{json.dumps(fp)},expects:{json.dumps(fps)}}}).then(r=>{{window.ELSEWHERE=r}})")   # 2.6.4 (#345)
         b.wait("window.ELSEWHERE", 25)
         b.eval("document.getElementById('mnApproveBtn').click()")
         b.pump(0.5)
