@@ -2136,6 +2136,8 @@ body:has(#chat.on) .pkstage{left:calc((100vw - var(--chatw,420px))/2);max-width:
 .pkbtn.go{background:var(--accent);color:var(--accent-ink)} .pkbtn.go:hover{filter:brightness(1.08)} .pkbtn .pkk{opacity:.75;margin-left:4px}
 .pkbtn:disabled{opacity:.5;cursor:default}
 body.pkstaged .snack{bottom:68px}
+/* #357: the calm confirmation of a save, in the ok tint, kept for as long as Undo is there; it has no motion of its own */
+.snack.ok{background:var(--ok-soft);color:var(--ok);border-radius:var(--r-pill);padding-left:16px} .snack.ok button{color:var(--ok);font-weight:600} .snack.ok.mtimer::after{background:var(--ok)}
 .pkdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:1px}
 .pkdot.saving{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)}   /* BL-304: a change still saving */
 /* ===== end BL-176 (CSS, staging) ===== */
@@ -6022,6 +6024,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     helpSearchDraw: () => helpSearchDraw,
     hhmm: () => hhmm,
     hiddenCount: () => hiddenCount,
+    hideSavedSnack: () => hideSavedSnack,
     hideSection: () => hideSection,
     hideSnack: () => hideSnack,
     histClose: () => histClose,
@@ -63745,6 +63748,7 @@ ${d5.text}`);
     const st2 = $("#pkStage"), n4 = shared.PKS.length, m5 = new Set(shared.PKS.map((s5) => s5.id)).size;
     st2.hidden = !n4;
     document.body.classList.toggle("pkstaged", !!n4);
+    if (n4) hideSavedSnack();
     if (n4) $("#pkStN").textContent = `${n4} change${n4 === 1 ? "" : "s"} waiting to be saved on ${m5} item${m5 === 1 ? "" : "s"}`;
   }
   function pkLast(x5, k5) {
@@ -63853,7 +63857,7 @@ ${d5.text}`);
       }
       const done = n4 - shared.PKS.length;
       if (shared.CUR && pkOn()) pkDraw();
-      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}. A backup was taken first` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null);
+      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null, void 0, done ? { tone: "ok", note: "A backup was taken first" } : void 0);
       return done;
     } finally {
       $("#pkApply").disabled = false;
@@ -79190,7 +79194,9 @@ ${d5.text}`);
     actionId = "snackU",
     ms: ms2 = TOAST_MS,
     actionMs = TOAST_ACTION_MS,
-    layers = TOAST_LAYERS
+    layers = TOAST_LAYERS,
+    tone,
+    note
   }) {
     const box = A2(
       /** @type {HTMLDivElement | null} */
@@ -79262,7 +79268,7 @@ ${d5.text}`);
       document.addEventListener("keydown", key2, true);
       return () => document.removeEventListener("keydown", key2, true);
     }, []);
-    const cls = ["snack", open2 ? "on" : "", action ? "mtimer" : "", held && open2 ? "held" : ""].filter(Boolean).join(" ");
+    const cls = ["snack", tone === "ok" ? "ok" : "", open2 ? "on" : "", action ? "mtimer" : "", held && open2 ? "held" : ""].filter(Boolean).join(" ");
     return /* @__PURE__ */ u4(
       "div",
       {
@@ -79271,6 +79277,8 @@ ${d5.text}`);
         role: "status",
         "aria-live": "polite",
         ref: box,
+        title: note || void 0,
+        "aria-description": note || void 0,
         onMouseEnter: () => {
           overRef.current = true;
           setOver(true);
@@ -80372,7 +80380,10 @@ ${d5.text}`);
   shared.HELD = [];
   shared.DATA_AT = D.data_at || "";
   shared.UNDO = null;
-  var TOAST = { open: false, text: "", action: "", run: 0 };
+  var TOAST = { open: false, text: "", action: "", run: 0, tone: (
+    /** @type {"ok"|undefined} */
+    void 0
+  ), note: "" };
   function drawPageToast() {
     const host2 = document.getElementById("toastHost");
     if (!host2) return;
@@ -80380,11 +80391,14 @@ ${d5.text}`);
       if (shared.UNDO) shared.UNDO();
     }, onHide: hideSnack });
   }
-  var snack = function(msg, undo, label) {
+  var snack = function(msg, undo, label, opts) {
     shared.UNDO = undo || null;
-    Object.assign(TOAST, { open: true, text: msg, action: undo ? label || "Undo" : "", run: TOAST.run + 1 });
+    Object.assign(TOAST, { open: true, text: msg, action: undo ? label || "Undo" : "", run: TOAST.run + 1, tone: opts && opts.tone, note: opts && opts.note || "" });
     drawPageToast();
   };
+  function hideSavedSnack() {
+    if (TOAST.open && TOAST.tone === "ok") hideSnack();
+  }
   function hideSnack() {
     if (!TOAST.open) return;
     TOAST.open = false;
@@ -81502,6 +81516,7 @@ Next: `;
         "irModel",
         "irModelBehind",
         "irNameOk",
+        "irNextJob",
         "irNotNeeded",
         "irNote",
         "irNoteText",

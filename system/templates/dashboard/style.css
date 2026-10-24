@@ -2126,6 +2126,8 @@ body:has(#chat.on) .pkstage{left:calc((100vw - var(--chatw,420px))/2);max-width:
 .pkbtn.go{background:var(--accent);color:var(--accent-ink)} .pkbtn.go:hover{filter:brightness(1.08)} .pkbtn .pkk{opacity:.75;margin-left:4px}
 .pkbtn:disabled{opacity:.5;cursor:default}
 body.pkstaged .snack{bottom:68px}
+/* #357: the calm confirmation of a save, in the ok tint, kept for as long as Undo is there; it has no motion of its own */
+.snack.ok{background:var(--ok-soft);color:var(--ok);border-radius:var(--r-pill);padding-left:16px} .snack.ok button{color:var(--ok);font-weight:600} .snack.ok.mtimer::after{background:var(--ok)}
 .pkdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:1px}
 .pkdot.saving{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)}   /* BL-304: a change still saving */
 /* ===== end BL-176 (CSS, staging) ===== */

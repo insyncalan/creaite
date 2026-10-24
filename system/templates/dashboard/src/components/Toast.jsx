@@ -16,16 +16,17 @@ export const TOAST_ACTION_MS = 10000, TOAST_MS = 5000;
 export const TOAST_LAYERS = "dialog[open],#panel.on,#chat.on,.ddmenu.on,[role=menu]:not([hidden]),.combo.open,#mvPeek:not([hidden]),.cal";
 
 /** @typedef {{open: boolean, text: string, action?: string, onAction?: () => void, onHide: () => void, run?: number,
-    id?: string, textId?: string, actionId?: string, ms?: number, actionMs?: number, layers?: string}} ToastProps
+    id?: string, textId?: string, actionId?: string, ms?: number, actionMs?: number, layers?: string, tone?: "ok", note?: string}} ToastProps
     `action` is the button's words (none: no button, the shorter time); `onAction` runs on its click, and the message then
     hides. `onHide` is told when the message should go (its time is up, Esc, the action): the owner draws it again closed.
     `run` changes with each new message, so its time and its bar start again. `id`, `textId` and `actionId` default to the
-    page's (#snack, #snackT, #snackU); `layers` is what Esc closes first. */
+    page's (#snack, #snackT, #snackU); `layers` is what Esc closes first. `tone` "ok" (#357) is the calm confirmation of a save: the ok tint,
+    no motion of its own; `note` is a quieter line kept as the hover text and the screen-reader description ("A backup was taken first"). */
 
 /** The toast.
     @param {ToastProps} props */
 export function Toast({ open, text, action, onAction, onHide, run = 0, id = "snack", textId = "snackT", actionId = "snackU",
-  ms = TOAST_MS, actionMs = TOAST_ACTION_MS, layers = TOAST_LAYERS }) {
+  ms = TOAST_MS, actionMs = TOAST_ACTION_MS, layers = TOAST_LAYERS, tone, note }) {
   const box = useRef(/** @type {HTMLDivElement | null} */ (null));
   const [over, setOver] = useState(false), [inside, setInside] = useState(false);
   const overRef = useRef(false), inRef = useRef(false), from = useRef(/** @type {HTMLElement | null} */ (null));
@@ -71,9 +72,9 @@ export function Toast({ open, text, action, onAction, onHide, run = 0, id = "sna
     return () => document.removeEventListener("keydown", key, true);
   }, []);
 
-  const cls = ["snack", open ? "on" : "", action ? "mtimer" : "", held && open ? "held" : ""].filter(Boolean).join(" ");
+  const cls = ["snack", tone === "ok" ? "ok" : "", open ? "on" : "", action ? "mtimer" : "", held && open ? "held" : ""].filter(Boolean).join(" ");
   return (
-    <div class={cls} id={id} role="status" aria-live="polite" ref={box}
+    <div class={cls} id={id} role="status" aria-live="polite" ref={box} title={note || undefined} aria-description={note || undefined}
       onMouseEnter={() => { overRef.current = true; setOver(true); }}
       onMouseLeave={() => { overRef.current = false; setOver(false); }}
       onFocusIn={/** @param {FocusEvent} e */ e => {

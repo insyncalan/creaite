@@ -27,7 +27,7 @@ import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
 import { openProjectWs } from "./stores/projectSettings.js";   /* v2.6: a workstream is added in its project's settings */
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
-import { api, applyNow, applySoon, applyWords, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
+import { api, applyNow, applySoon, applyWords, DIAG, editProposal, FIELD, memPath, needVault, oneLine, hideSavedSnack, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
 import { hsAsk, hsCardHtml, hsSparkHtml, hsStat, hsUse } from "./healthSuggest.js";
@@ -674,7 +674,7 @@ export function pkFile(){ const d=new Date(); return `proposed-${stampFile()}-${
 export const pkStagedOf=id=>shared.PKS.filter(s=>s.id===id);
 export function pkSaving(state,msg){ const el=$("#pkSave"); if(!el) return; el.classList.toggle("fail",state==="fail");
   putHTML(el,state==="busy"?msg||"Saving…":state==="fail"?msg||"Not saved":state==="ok"?html`${raw(ic("check"))}${(msg||"Saved for Review")}`:""); }
-export function pkStageDraw(){ const st=$("#pkStage"), n=shared.PKS.length, m=new Set(shared.PKS.map(s=>s.id)).size; st.hidden=!n; document.body.classList.toggle("pkstaged",!!n);
+export function pkStageDraw(){ const st=$("#pkStage"), n=shared.PKS.length, m=new Set(shared.PKS.map(s=>s.id)).size; st.hidden=!n; document.body.classList.toggle("pkstaged",!!n); if(n) hideSavedSnack();
   if(n) $("#pkStN").textContent=`${n} change${n===1?"":"s"} waiting to be saved on ${m} item${m===1?"":"s"}`; }
 export function pkLast(x,k){ let el=$("#pkLast"); if(!el){ addHTML($("#pkAfter"),"afterbegin",html`<div class="pk-last" id="pkLast"></div>`); el=$("#pkLast"); }
   if(shared.CUR.mode!=="record"){ el.textContent=""; pkSaving(""); return; }
@@ -705,7 +705,7 @@ export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.P
   try{ const r=await applyNow({peek:true}); await pkReconcile();
     if(!r.ok){ pkSaving("fail","Not saved"); snack(oneLine(applyWords(r.message))); return -1; }
     const done=n-shared.PKS.length; if(shared.CUR&&pkOn()) pkDraw();
-    snack(done?`Saved ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)`:""}. A backup was taken first`:"Nothing saved: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
+    snack(done?`Saved ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)`:""}`:"Nothing saved: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null,undefined,done?{tone:"ok",note:"A backup was taken first"}:undefined);   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }
 export async function pkUndoLast(only){ await shared.PKQ; const s=only||shared.PKS[shared.PKS.length-1];   /* only: undo exactly this staged entry (#153), not the last one */
   if(only&&!shared.PKS.includes(only)){ snack("Already saved or undone"); return; }
