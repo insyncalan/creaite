@@ -2513,12 +2513,29 @@ def project_hits(text, projects):
     return hits
 
 
+def title_codes(title, projects):
+    """#362: the active project codes a meeting title names: a [TAG] holding exactly a code, in any case ("[def]" is DEF), or a
+    code written as a whole upper-case token. Codes are matched whole (ORX is not ORX2C); a tag with other words is no code."""
+    codes = {p["code"] for p in projects}
+    found = {t.strip().upper() for t in re.findall(r"\[([^\]]*)\]", title or "")} & codes
+    return found | {c for c in codes if re.search(rf"(?<![A-Za-z0-9]){c}(?![A-Za-z0-9])", title or "")}
+
+
 def prep_match(title, projects, remembered):
-    """(code, how) for a meeting: remembered for its series, matched by a code, name, alias or keyword in the title,
-    the portfolio when it says so or names several projects, else (None, "unsure")."""
+    """(code, how) for a meeting. The rule for a code in the title (#362, a client-leak guard): one project code in the title
+    always wins, over the series Alan chose before, and is "matched"; two different codes win nothing, and the answer is
+    (None, "unsure"), whatever was remembered. Otherwise: the remembered series ("_portfolio", Alan's no-project choice, stands
+    even against a code); a name, alias or keyword in the title; the portfolio when it says so or names several projects; else
+    (None, "unsure")."""
     s = series_of(title)
-    if remembered.get(s):
-        return remembered[s], "remembered"
+    coded = title_codes(title, projects)
+    if len(coded) > 1:
+        return None, "unsure"
+    mem = remembered.get(s)
+    if coded and mem != "_portfolio":
+        return next(iter(coded)), ("remembered" if mem in coded else "matched")
+    if mem:
+        return mem, "remembered"
     hits = project_hits(title, projects)
     if "portfolio" in (title or "").lower() or len(hits) > 1:
         return "_portfolio", "portfolio"
