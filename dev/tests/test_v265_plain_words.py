@@ -55,6 +55,16 @@ class Guarded(unittest.TestCase):
         self.assertIn("Saving n approved items", body)
         self.assertIn("only as the whole message", body)
 
+    def test_every_skill_that_accepts_save_has_the_same_limit(self):
+        """Cap's M3: the three skills that take "save" as apply (cx-review, cx-edit, cx-weekly-report) each say it counts only as the
+        whole message, only after a shown list, never for a note, a setting or a draft, and echo the items before the apply."""
+        if '"undo last save"' not in frontmatter_description(".claude/skills/cx-review/SKILL.md"):
+            self.skipTest("GUARDED: needs dev/proposals/347/skills.diff")
+        for skill in ("cx-review", "cx-edit", "cx-weekly-report"):
+            body = read(f".claude/skills/{skill}/SKILL.md")
+            for must in ("whole message", "a note, a setting or a draft", "Saving n approved items"):
+                self.assertIn(must, body, f"{skill}: {must}")
+
     def test_rules_table_lists_the_new_words(self):
         r = read("system/creaite-rules.md")
         if '"check my mail"' not in r:

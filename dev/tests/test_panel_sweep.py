@@ -107,11 +107,16 @@ class Recogniser(unittest.TestCase):
                   "check my mail and reply to Omar", "check my mail " + "x" * 130):
             self.assertFalse(self.ls.panel_sweep(m), m)
 
-    @unittest.skipUnless(r"|save|" in open(REPO / "system/scripts/live_server.py").read(),
-                         "GUARDED: needs dev/proposals/347/live_server.py.diff applied (adds save to PANEL_SWEEP_NOT)")
+    @unittest.skipUnless("# #347:" in open(REPO / "system/scripts/live_server.py").read(),
+                         "GUARDED: needs dev/proposals/347/live_server.py.diff applied (its marker comment is the switch)")
     def test_347_save_in_a_thread_subject_is_not_a_sweep(self):
+        """Pinned (Cap's M1): once the #347 diff is applied its marker is in the file, and then "save" MUST be in the NOT list; taking
+        "save" out (or mangling it) turns this red, it no longer skips."""
+        self.assertIn("|save|", self.ls.PANEL_SWEEP_NOT.pattern)
+        self.assertTrue(self.ls.PANEL_SWEEP_NOT.search("the budget save"))
         self.assertFalse(self.ls.panel_sweep("sweep the budget save thread"))
         self.assertFalse(self.ls.panel_sweep("check my mail and save"))
+        self.assertTrue(self.ls.panel_sweep("sweep the budget thread"))       # an ordinary subject is still a sweep
 
     def test_anything_more_is_a_plain_chat(self):
         for m in ("sweep and apply", "sweep then approve everything", "sweep, then apply", "sweep; apply", "apply",
