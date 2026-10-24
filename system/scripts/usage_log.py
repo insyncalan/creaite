@@ -31,6 +31,7 @@ Calls the guarded hooks make:
     usage_log.record(kind, result_event_or_None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, skills=None)
     (skills: the names collected from the run; the line gets "skills": [...], empty when none. Only known skill names are kept,
     anything else typed becomes "other"; at most 20 entries a line: record() cleans them again)
+    (resumed, #327 B: True or False for an ask run, None for the rest; the line gets "resumed" only when it is a boolean)
 A stopped or failed run passes result_event=None (or what it has) and still records. record() never raises.
 """
 import json
@@ -163,7 +164,8 @@ def skills_of(event, skills_dir=None) -> list:
     return clean_skills(raw, skills_dir)
 
 
-def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, at=None, skills=None) -> dict:
+def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, at=None, skills=None,
+             resumed=None) -> dict:
     """The counts-only line. Reads only numbers (and the model id) from the result event."""
     r = result if isinstance(result, dict) else {}
     u = r.get("usage") if isinstance(r.get("usage"), dict) else {}
@@ -172,7 +174,7 @@ def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0,
         model = next(iter(mu), "") if isinstance(mu, dict) else ""
     cost = round(_money(r.get("total_cost_usd") or 0), 6)
     secs = seconds or (_int(r.get("duration_ms")) / 1000.0)
-    return {"at": (at or _now()).strftime("%Y-%m-%dT%H:%M:%S"),
+    line = {"at": (at or _now()).strftime("%Y-%m-%dT%H:%M:%S"),
             "kind": kind if kind in KINDS else "ask",
             "label": str(label or "")[:40],
             "model": str(model or "")[:80],
@@ -186,15 +188,19 @@ def line_for(kind, result=None, label="", model="", seconds=0.0, start_tokens=0,
             "start_tokens": _int(start_tokens),
             "stopped": bool(stopped),
             "skills": clean_skills(s for s in (skills or []) if isinstance(s, str))}
+    if isinstance(resumed, bool):          # #327 B: an ask run only: true when it resumed an earlier session, false when fresh
+        line["resumed"] = resumed
+    return line
 
 
-def record(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, root=None, skills=None):
+def record(kind, result=None, label="", model="", seconds=0.0, start_tokens=0, stopped=False, root=None, skills=None,
+           resumed=None):
     """Append one line. Returns it, or None when nothing was written (development repository, or any failure)."""
     try:
         base = Path(root) if root else paths.ROOT
         if (base / ".creaite-dev").exists():
             return None
-        line = line_for(kind, result, label, model, seconds, start_tokens, stopped, skills=skills)
+        line = line_for(kind, result, label, model, seconds, start_tokens, stopped, skills=skills, resumed=resumed)
         f = base / "system" / "staging" / "run-usage.jsonl" if root else paths.RUN_USAGE
         f.parent.mkdir(parents=True, exist_ok=True)
         with open(f, "a", encoding="utf-8") as fh:
