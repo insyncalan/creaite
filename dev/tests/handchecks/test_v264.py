@@ -39,6 +39,8 @@ diff, and is to be confirmed against the plain notes.
   30  #352  Today shows no stale-updates line and no Draft updates button, at 1400 and 900 px; the draft stays in Work
   31  #351  A past day on Today shows no follow-up chips and no Check or Process links under its meetings; today's Prep peek and
             Intake's Check and Process are unchanged                                                         (own vault, Chrome)
+  32  #338  The rules file every run reads is at most 60% of its 2.6.3 size, the reference file is there and the rules point to it, and
+            every never clause survives; a mutant that drops one turns the check red                          (own vault, no browser)
 
 How a check is wired (every class that changes data has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Design264, Words264, Figures264, Today264  the shared hand-check vault and Chrome; nothing is changed (Today264 sets the page's own data and puts it back)
@@ -46,7 +48,7 @@ How a check is wired (every class that changes data has a vault of its own, made
                                    PastDay264: a fictional calendar of the past day and today, with every transcript state)
   Routes264, Budget264             a vault of its own and its live server (the page's own token), no browser; Budget264's Claude is a stand-in
                                    (the budget is OFF by default: its checks switch it on the way Settings does; check 28 leaves it off)
-  Commands264, Extraction264, Runs264  a vault of its own and the engine's own code run in it (Runs264: a stand-in for the thread and the process)
+  Commands264, Extraction264, Runs264, Rules264  a vault of its own and the engine's own code run in it (Runs264: a stand-in for the thread and the process)
 
 The guarded parts (#345, #346, #334 and the reach.py entries) are the 2.6.4 chain: dev/proposals/GUARDED-2.6.4.chain is empty on the
 line until the list is cut, so the checks that need a guarded change read the repository's own files for it. A check that needs a change
@@ -92,7 +94,7 @@ REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 DASH = REPO / "system/templates/dashboard/src"
 
-KIND = {n: "scriptable" for n in range(1, 32)}
+KIND = {n: "scriptable" for n in range(1, 33)}
 LIVE_ONLY = {}        # check 24 runs on the stand-in; a real model over a real week's use is Alan's own
 
 
@@ -1397,6 +1399,62 @@ class PastDay264(HandcheckCase):
         self.assertGreaterEqual(intake["check"], 1, f"Intake offers Check again for a meeting still waiting for its transcript: {intake}")
         self.note(31, f"past day {past} at 1400 and 900 px: {seen[1400]['n']} meetings, no chip, no Check or Process, no sideways scroll; "
                       f"today's title opens the Prep peek; Intake shows {intake['process']} Process and {intake['check']} Check again")
+
+
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# #338: the lighter rules file (check 32)
+# ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+RULES_SHARE = 0.6            # the shipped rules may be at most this share of their 2.6.3 size (they are about half)
+RULES_2_6_3 = 66315          # bytes of system/creaite-rules.md in 2.6.3 (dev/proposals/338/README.md)
+
+
+def rules_problems(slim, ref, orig, chain):
+    """What is wrong with a slimmed rules file, as plain sentences (an empty list is clean). `slim` and `ref` are the shipped rules and
+    reference text, `orig` the 2.6.3 rules. Reuses the retained-rules test's own helpers (dev/tests/test_rules_retained_338.py)."""
+    import test_rules_retained_338 as keep
+    out = []
+    if len(slim.encode()) > RULES_SHARE * len(orig.encode()):
+        out.append(f"the rules are {len(slim.encode())} bytes: more than {int(RULES_SHARE * 100)}% of {len(orig.encode())}")
+    if not ref.strip():
+        out.append("the reference file is missing or empty")
+    if keep.REF_PATH not in slim:
+        out.append("the rules do not point to the reference file")
+    out += ["lost: " + s[:90] for s in keep.missing(slim, ref, orig, chain)]
+    out += ["never clause lost: " + c[:90] for c in keep.unaccounted(orig, slim, chain)]
+    return out
+
+
+class Rules264(Engine264):
+    """Check 32. The vault's own copy of the rules and the reference file (the release zip's), against the 2.6.3 rules."""
+
+    def test_c32_the_rules_are_half_the_size_the_reference_is_there_and_every_never_survives(self):
+        """32. (#338) system/creaite-rules.md in the release is at most 60% of its 2.6.3 size (66,315 bytes); system/templates/
+        creaite-reference.md is in the release and the rules point to it; the Non-negotiables (the never list and the approval rules)
+        are unchanged and every other "never" clause of the 2.6.3 rules is in the short file or, word for word, in the reference. Four
+        mutants (a never clause dropped, the `.git` clause changed, the reference gone, the pointer gone) each turn the check red."""
+        import test_rules_retained_338 as keep
+        orig, _slim = keep.states()
+        chain = keep.CHAIN_MARK in orig
+        self.assertEqual(len(orig.encode()), RULES_2_6_3, "the 2.6.3 baseline moved: update RULES_2_6_3 with the README of #338")
+        slim = (self.vault / "system/creaite-rules.md").read_text(encoding="utf-8")
+        ref_file = self.vault / "system/templates/creaite-reference.md"
+        self.assertTrue(ref_file.is_file(), "the release has no system/templates/creaite-reference.md")
+        ref = ref_file.read_text(encoding="utf-8")
+        self.assertEqual(rules_problems(slim, ref, orig, chain), [], "the shipped rules lost something")
+        # mutants: each must be seen
+        never_edit = "Never edit `system/tracker.db` with ad-hoc SQL"
+        git_clause = "(shell start-up files, LaunchAgents, `.git`)"
+        for what, s, r in (("a never clause dropped", slim.replace(never_edit, "Edit `system/tracker.db` with ad-hoc SQL", 1), ref),
+                           ("the .git clause changed", slim.replace(git_clause, "(shell start-up files, LaunchAgents)", 1), ref),
+                           ("the reference file gone", slim, ""),
+                           ("the pointer to the reference gone", slim.replace(keep.REF_PATH, "system/templates/other.md"), ref),
+                           ("the rules back at full size", slim + "x" * (len(orig.encode()) - len(slim.encode())), ref)):
+            if s == slim and r == ref:
+                self.fail("the mutant does not apply: " + what)
+            self.assertTrue(rules_problems(s, r, orig, chain), "the check stays green when: " + what)
+        self.note(32, f"rules {len(slim.encode())} bytes against {len(orig.encode())} in 2.6.3 ({len(slim.encode()) * 100 // len(orig.encode())}%); "
+                      f"reference {len(ref.encode())} bytes; no never clause lost; 5 mutants turn it red")
 
 
 # ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
