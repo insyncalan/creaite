@@ -6940,6 +6940,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     regSave: () => regSave,
     regSetHidden: () => regSetHidden,
     rejectMinutes: () => rejectMinutes,
+    rejectedAgainWords: () => rejectedAgainWords,
     rel: () => rel,
     relaxHtml: () => relaxHtml,
     reloadData: () => reloadData,
@@ -37103,6 +37104,10 @@ system/scripts/run launch.py agent ${what}`;
     });
     return t47;
   }
+  function rejectedAgainWords(replies, count) {
+    const bad = (replies || []).find((r4) => !r4 || !r4.ok);
+    return bad ? `Not rejected again: ${plainSay(bad && bad.message || "nothing was changed")}` : `Rejected again: ${count}`;
+  }
   var needsConnection = (what) => `${what} needs creaite to be connected. Reopen it and try again.`;
   function savedNoun(r4) {
     if (!r4) return ["change", "changes"];
@@ -39237,6 +39242,7 @@ system/scripts/run launch.py agent ${what}`;
     if (shared.VIEW === "activity") rjLoadRecent();
     const n4 = was.length, text = [n4 ? `Approved instead: ${n4}` : "", open2.length ? `${open2.length} need${open2.length === 1 ? "s" : ""} approving on ${open2.length === 1 ? "its" : "their"} own` : "", ap2 && !ap2.ok ? `not saved: ${saidPlain(ap2.message)}` : ""].filter(Boolean).join(" · ");
     const undo = n4 ? async () => {
+      const replies = [];
       const fpOf = new Map(rows2.map((r4) => [r4.key || rjKey(r4), r4.fp]));
       const back2 = was.map((d5) => ({ ...rjRef(d5.key), key: d5.key, fp: fpOf.get(d5.key), was: d5.was || {} }));
       if (ap2 && ap2.ok && ap2.apply_id) {
@@ -39246,7 +39252,7 @@ system/scripts/run launch.py agent ${what}`;
           return;
         }
         await reloadData();
-        for (const { body: b5, L: L3 } of rjBy(back2, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) await api("/api/review/reject", { rows: L3.map((x5) => ({ file: x5.file, ref: x5.ref, ...rvExp(x5) })), ...b5 });
+        for (const { body: b5, L: L3 } of rjBy(back2, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) replies.push(await api("/api/review/reject", { rows: L3.map((x5) => ({ file: x5.file, ref: x5.ref, ...rvExp(x5) })), ...b5 }));
       } else {
         for (const x5 of back2) {
           try {
@@ -39265,11 +39271,11 @@ system/scripts/run launch.py agent ${what}`;
           }
         }
       }
-      rjAddGone(ghosts.filter((g5) => back2.some((x5) => x5.key === g5.key)));
+      if (replies.every((r4) => r4 && r4.ok)) rjAddGone(ghosts.filter((g5) => back2.some((x5) => x5.key === g5.key)));
       if (S.autoApply) await applyNow();
       else await reloadData();
       if (shared.VIEW === "activity") rjLoadRecent();
-      snack(`Rejected again: ${back2.length}`);
+      snack(rejectedAgainWords(replies, back2.length));
     } : null;
     rjSay(text || "Nothing changed", undo);
     if (open2.length) {

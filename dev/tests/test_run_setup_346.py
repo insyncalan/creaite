@@ -11,6 +11,7 @@ Run: python3 dev/tests/test_run_setup_346.py
 import json
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -21,6 +22,17 @@ import live_server  # noqa: E402
 
 HAVE = hasattr(live_server.Run, "_start")
 TITLE = "Kick-off with Contoso Ltd (confidential)"
+
+
+def mutated(old, new):
+    """live_server.py with one change, run as a second module (the mutant); the shared reach, paths and threading are the same objects."""
+    path = ROOT / "system/scripts/live_server.py"
+    src = path.read_text(encoding="utf-8")
+    assert src.count(old) == 1, old
+    mod = types.ModuleType("live_server_mutant")
+    mod.__file__ = str(path)
+    exec(compile(src.replace(old, new), str(path), "exec"), mod.__dict__)
+    return mod
 
 
 class Proc:
@@ -52,8 +64,8 @@ class Case(unittest.TestCase):
     def write_chat(self, chat, who="you", text=TITLE):
         live_server.chat_file(chat).write_text(json.dumps({"messages": [{"who": who, "text": text}]}), encoding="utf-8")
 
-    def start(self, chat, run_id="r-346"):
-        return live_server.Run(run_id, "hello", None, chat, None, fresh=True)
+    def start(self, chat, run_id="r-346", ls=None):
+        return (ls or live_server).Run(run_id, "hello", None, chat, None, fresh=True)
 
 
 @unittest.skipUnless(HAVE, "needs dev/proposals/346/live_server.diff")
@@ -80,6 +92,18 @@ class RunsChat(Case):
         self.assertIn("What is due on Friday?", self.cmds[-1][-1])
         self.assertIn("not instructions", self.cmds[-1][-1])
 
+    def test_the_id_is_compared_in_lower_case_because_the_disk_is_not_case_sensitive(self):
+        self.write_chat("runs-2026-10-24")
+        for chat in ("RUNS-2026-10-24", "Runs-2026-10-24"):
+            with mock.patch.object(live_server, "chat_file", return_value=live_server.chat_file("runs-2026-10-24")):
+                self.assertEqual(live_server.carry_over(chat), "", chat)
+
+    def test_mutant_without_lower_case_an_upper_case_id_carries(self):
+        ls = mutated('str(chat or "").lower().startswith("runs-")', 'str(chat or "").startswith("runs-")')
+        self.write_chat("runs-2026-10-24")
+        with mock.patch.object(ls, "chat_file", return_value=live_server.chat_file("runs-2026-10-24")):
+            self.assertIn(TITLE, ls.carry_over("RUNS-2026-10-24"))
+
     def test_only_a_chat_that_starts_with_runs_dash_is_skipped(self):
         self.write_chat("my-runs-chat", text="kept")
         self.assertIn("kept", live_server.carry_over("my-runs-chat"))
@@ -89,6 +113,11 @@ class RunsChat(Case):
 
 @unittest.skipUnless(HAVE, "needs dev/proposals/346/live_server.diff")
 class SetupFails(Case):
+    class Full(dict):
+        """A run table that takes nothing in: the set-up fails after the process started."""
+        def __setitem__(self, key, value):
+            raise RuntimeError("late")
+
     def test_an_error_after_the_record_was_written_removes_it(self):
         for what in (ValueError("late"), RuntimeError("late"), KeyError("late")):
             with self.subTest(what=type(what).__name__), mock.patch.object(live_server, "prompt_last", side_effect=what):
@@ -120,6 +149,53 @@ class SetupFails(Case):
             with self.assertRaises(RuntimeError):
                 self.start(None, "r-bad346")
         self.assertEqual((self.reach.guard_run() or {}).get("run"), "r-other")
+
+    def test_a_record_that_cannot_be_removed_still_ends_the_process_and_the_original_error_comes_out(self):
+        ended = []
+        with mock.patch.object(live_server, "end_process", ended.append), \
+                mock.patch.object(self.reach, "end_run", side_effect=OSError("disk")), \
+                mock.patch.object(live_server, "RUNS", self.Full()):
+            with self.assertRaises(RuntimeError) as cm:
+                self.start(None, "r-endfail346")
+        self.assertEqual(str(cm.exception), "late")                       # not the OSError from the clean-up
+        self.assertEqual(len(ended), 1)
+
+    def test_a_thread_that_will_not_start_leaves_no_run_behind(self):
+        ended, runs = [], {}
+        with mock.patch.object(live_server, "end_process", ended.append), mock.patch.object(live_server, "RUNS", runs), \
+                mock.patch.object(live_server.threading, "Thread", side_effect=RuntimeError("no thread")):
+            with self.assertRaises(RuntimeError):
+                self.start(None, "r-thread346")
+        self.assertEqual(runs, {})
+        self.assertEqual(len(ended), 1)
+        self.assertIsNone(self.reach.guard_run())
+
+    def test_another_run_in_the_table_is_left_alone(self):
+        runs = {"r-keep": object()}
+        with mock.patch.object(live_server, "end_process", lambda p: None), mock.patch.object(live_server, "RUNS", runs), \
+                mock.patch.object(live_server.threading, "Thread", side_effect=RuntimeError("no thread")):
+            with self.assertRaises(RuntimeError):
+                self.start(None, "r-thread346")
+        self.assertEqual(list(runs), ["r-keep"])
+
+    def test_mutant_without_finally_a_failing_clean_up_skips_ending_the_process(self):
+        ls = mutated("                finally:                                    # these happen even if the record can't be removed",
+                     "                except ZeroDivisionError:")
+        ended = []
+        with mock.patch.object(ls, "end_process", ended.append), mock.patch.object(self.reach, "end_run", side_effect=OSError("disk")), \
+                mock.patch.object(ls, "RUNS", self.Full()), mock.patch.object(ls, "run_usage", lambda *a, **k: None):
+            with self.assertRaises(Exception):
+                self.start(None, "r-m346", ls)
+        self.assertEqual(ended, [])                                       # what the real clean-up prevents
+
+    def test_mutant_without_the_run_table_clean_up_a_stuck_run_remains(self):
+        ls = mutated("                    if RUNS.get(run_id) is self:", "                    if False:")
+        runs = {}
+        with mock.patch.object(ls, "end_process", lambda p: None), mock.patch.object(ls, "RUNS", runs), \
+                mock.patch.object(ls, "run_usage", lambda *a, **k: None), mock.patch.object(ls.threading, "Thread", side_effect=RuntimeError("x")):
+            with self.assertRaises(RuntimeError):
+                self.start(None, "r-m2346", ls)
+        self.assertIn("r-m2346", runs)
 
     def test_a_run_that_starts_keeps_its_record(self):
         run = self.start(None, "r-fine346")

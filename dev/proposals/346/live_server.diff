@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 1d77cd8a..5c735e3b 100644
+index dc07c4dd..f4fbced7 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -2606,7 +2606,11 @@ def fresh_session(req):
@@ -10,12 +10,12 @@ index 1d77cd8a..5c735e3b 100644
 +    "" if the chat has none. Taken from the chat's own history, so no more than this chat already holds. 2.6.4 (#346): never from
 +    the day's "runs creaite started" chat (runs-YYYY-MM-DD): it is never marked as having read outside content, and its lines hold a
 +    calendar title, so carrying them would hand that text to a fresh run as Alan's words, unmarked."""
-+    if str(chat or "").startswith("runs-"):
++    if str(chat or "").lower().startswith("runs-"):          # a case-insensitive disk reaches the same chat by RUNS-…
 +        return ""
      p = chat_file(chat)
      try:
          msgs = json.loads(p.read_text(encoding="utf-8")).get("messages") if p and p.is_file() else None
-@@ -2654,8 +2658,20 @@ def fresh_plan(fresh, sweep, kind, session, chat):
+@@ -2654,8 +2658,27 @@ def fresh_plan(fresh, sweep, kind, session, chat):
  class Run:
      """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
  
@@ -28,9 +28,16 @@ index 1d77cd8a..5c735e3b 100644
 +        try:
 +            self._start(run_id, *args, **kwargs)
 +        except BaseException:
-+            reach.end_run(run_id)
-+            if getattr(self, "proc", None) is not None:
-+                end_process(self.proc)
++            try:
++                try:
++                    reach.end_run(run_id)
++                finally:                                    # these happen even if the record can't be removed
++                    if getattr(self, "proc", None) is not None:
++                        end_process(self.proc)
++                    if RUNS.get(run_id) is self:            # a thread that would not start leaves no run that never ends
++                        RUNS.pop(run_id, None)
++            except Exception:                               # the error that stopped the set-up matters more
++                pass
 +            raise
 +
 +    def _start(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,

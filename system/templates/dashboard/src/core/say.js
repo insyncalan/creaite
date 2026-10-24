@@ -46,6 +46,13 @@ export function plainSay(msg) {
   return t;
 }
 
+/** 2.6.4 (#345): what Approve instead's Undo says once it has asked to reject the items again: the count, or why the server declined
+    (it names the item it means, so a changed item is declined, not rejected). @param {{ok?: boolean, message?: string}[]} replies @param {number} count */
+export function rejectedAgainWords(replies, count) {
+  const bad = (replies || []).find(r => !r || !r.ok);
+  return bad ? `Not rejected again: ${plainSay((bad && bad.message) || "nothing was changed")}` : `Rejected again: ${count}`;
+}
+
 /** "X needs creaite": what a button says when the page is not connected to creaite. @param {string} what */
 export const needsConnection = what => `${what} needs creaite to be connected. Reopen it and try again.`;
 

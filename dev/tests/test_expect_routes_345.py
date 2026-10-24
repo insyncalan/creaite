@@ -43,8 +43,9 @@ MUTANTS = {          # the line each route runs, and what stands in for it
                "        why = None\n"),
     "retarget": ('        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345); an undo',
                  "        why = None  # 2.6.4 (#345); an undo"),
-    "minutes": ('why = expect_refusal([(req.get("file"), "meeting", req.get("expect"))]) if current_fp(req.get("file"), "meeting") else None',
+    "minutes": ('why = expect_refusal([(req.get("file"), "meeting", req.get("expect"))]) if pending_file(req.get("file")) else None',
                 "why = None"),
+    "minutes-skip": ('if pending_file(req.get("file")) else None', 'if current_fp(req.get("file"), "meeting") else None'),
 }
 
 
@@ -289,6 +290,14 @@ class Routes(unittest.TestCase, Decline):
         for words in (MISSING, CHANGED, BAD):
             self.assertNotIn(words, r.get("message", ""))                         # the minutes' own checks answer (no draft here)
 
+    def test_approve_minutes_on_a_file_without_a_minutes_block_still_needs_the_fingerprint(self):
+        s = self.s
+        name = s.stage()                                    # waiting, but holds items only: the old check skipped it
+        before = s.path(name).read_bytes()
+        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[]), MISSING)
+        self.check(s.post("/api/minutes/approve", file=name, group=True, own=[], expect=s.fp(name, 1)), CHANGED)
+        self.assertEqual(s.path(name).read_bytes(), before)
+
     def test_approve_minutes_for_a_file_that_is_gone_says_so(self):
         r = self.s.post("/api/minutes/approve", file="proposed-nope.json", group=True, own=[])
         self.assertIn("no longer pending", r.get("message", ""))
@@ -357,6 +366,14 @@ class Mutants(unittest.TestCase, Decline):
         finally:
             s.close()
 
+    def test_approve_minutes_that_skips_a_file_with_no_minutes_block_decides_without_a_fingerprint(self):
+        s, name, _ = self.run_mutant("minutes-skip")
+        try:
+            r = s.post("/api/minutes/approve", file=name, group=True, own=[])
+            self.assertNotIn(MISSING, r.get("message", ""))
+        finally:
+            s.close()
+
     def test_a_shared_check_that_always_passes_lets_a_changed_item_through(self):
         s, name, _ = self.run_mutant(helper=True)
         try:
@@ -378,6 +395,45 @@ class Wording(unittest.TestCase):
             self.assertTrue(plain(m), m)
         js = (ROOT / "system/templates/dashboard/src/core/server.js").read_text(encoding="utf-8")
         self.assertIn("has changed since you looked at it", js)               # REVIEW_CHANGED: the page's answer to the changed message
+
+
+class UndoWords(unittest.TestCase):
+    """review.js:440 (Approve instead's Undo) reads the re-reject reply: a declined one is said as declined, not as "Rejected again"."""
+    SAY = ROOT / "system/templates/dashboard/src/core/say.js"
+
+    def words(self, say_js, replies, count):
+        code = ("import { rejectedAgainWords as w } from 'file://%s';\n"
+                "const m = JSON.parse(process.argv[1]); process.stdout.write(w(m[0], m[1]));") % say_js
+        r = subprocess.run(["node", "--input-type=module", "-e", code, json.dumps([replies, count])], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_the_words(self):
+        self.assertEqual(self.words(self.SAY, [{"ok": True}, {"ok": True}], 3), "Rejected again: 3")
+        self.assertEqual(self.words(self.SAY, [], 2), "Rejected again: 2")                       # the in-place path made no calls
+        declined = self.words(self.SAY, [{"ok": True}, {"ok": False, "message": "That item has changed since you looked at it, so nothing was changed. Look at the list again."}], 2)
+        self.assertTrue(declined.startswith("Not rejected again: That item has changed"), declined)
+        self.assertNotIn("Rejected again: 2", declined)
+        self.assertEqual(self.words(self.SAY, [None], 1), "Not rejected again: nothing was changed")
+        self.assertTrue(plain(declined))
+
+    @unittest.skipUnless(shutil.which("node"), "needs node")
+    def test_mutant_that_ignores_the_replies_says_rejected_again(self):
+        src = self.SAY.read_text(encoding="utf-8")
+        old = "const bad = (replies || []).find(r => !r || !r.ok);"
+        self.assertIn(old, src)
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "say.mjs"
+            f.write_text(src.replace(old, "const bad = null;"), encoding="utf-8")
+            self.assertEqual(self.words(f, [{"ok": False, "message": "no"}], 1), "Rejected again: 1")
+
+    def test_the_page_reads_the_replies_and_only_marks_the_rows_rejected_when_all_were(self):
+        js = (ROOT / "system/templates/dashboard/src/review.js").read_text(encoding="utf-8")
+        self.assertIn('replies.push(await api("/api/review/reject"', js)
+        self.assertIn("if(replies.every(r=>r&&r.ok)) rjAddGone(", js)
+        self.assertIn("snack(rejectedAgainWords(replies,back.length))", js)
+        self.assertNotIn("snack(`Rejected again: ${back.length}`)", js)
 
 
 class Page(unittest.TestCase):

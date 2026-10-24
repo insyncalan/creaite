@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 5c735e3b..a9d79ac1 100644
+index f4fbced7..31bb2836 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -1650,6 +1650,9 @@ class Handler(BaseHTTPRequestHandler):
@@ -31,7 +31,7 @@ index 5c735e3b..a9d79ac1 100644
  CARRY_TURNS, CARRY_CHARS = 4, 600       # #327 B: the last two exchanges, each message cut to this length, go into a fresh session
  
  
-@@ -3303,6 +3318,10 @@ def queue_start(q, prev=None):
+@@ -3310,6 +3325,10 @@ def queue_start(q, prev=None):
              q["held"] = True
              queue_save(q)
              return None

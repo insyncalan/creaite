@@ -9,7 +9,8 @@ itself (`runs-YYYY-MM-DD`, see `plain_chat_id`) is never marked as having read o
 calendar title of up to 160 characters (`prep_page.ask_line`). If Alan typed into that chat, the next fresh run carried those lines as
 his words, unmarked.
 
-Fix (`carry_over`, a docstring and 2 lines): a chat whose id starts with `runs-` carries nothing. Every other chat is as before. A fresh run in that chat
+Fix (`carry_over`, a docstring and 2 lines): a chat whose id starts with `runs-`, compared in lower case (the Mac's disk is not case
+sensitive, so `RUNS-2026-10-24` reaches the same chat), carries nothing. Every other chat is as before. A fresh run in that chat
 resumes no session either (#327 B), so it starts clean.
 
 ## 3. A failed set-up cannot leave a stale run record
@@ -19,7 +20,9 @@ Anything raised in between (or after) left it behind, and the next ask started w
 
 Fix: `Run.__init__` becomes a thin wrapper around the old body (renamed `_start`, signature and behaviour unchanged). Whatever the body
 raises, the wrapper calls `reach.end_run(run_id)` (which removes only the record of that very run and keeps any other run's) and ends a
-process that had already started, then re-raises the same error. The old handler stays, so the earlier test of its text still holds.
+process that had already started, and takes its own entry out of the run table (a thread that would not start would otherwise leave a run that
+never ends), then re-raises the same error. These steps sit in a `finally`, so a record that cannot be removed still lets them happen, and an
+error in the clean-up never hides the original one. The old handler stays, so the earlier test of its text still holds.
 
 ## 2. Open Review page after a new name (in the tree, not guarded)
 

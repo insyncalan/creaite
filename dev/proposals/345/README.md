@@ -18,14 +18,15 @@ fingerprint, so a page left open could decide an item that had changed or moved 
   - `/api/review/repeat` (merge or keep as new).
   - `/api/review/retarget` (make it an update to an item). Undoing a retarget works on the file and item and needs none.
   - `/api/minutes/approve`: the fingerprint of the minutes block (`meeting`). It is checked before `minutes_destination.settle`, so a
-    declined request never renames anything. The block's fingerprint does not change when the file is renamed.
+    declined request never renames anything. The block's fingerprint does not change when the file is renamed. A file that is gone gets
+    the route's own "no longer pending" answer; any file still waiting needs the fingerprint, even one with no minutes block.
 - Three plain messages, none of which names a file or a script: "This page didn't say which item it meant, so nothing was changed. Reload
   the page and try again." (missing), "Review can't check which item that is..." (malformed), "That item has changed since you looked at
   it, so nothing was changed. Look at the list again." (different; the page already treats this sentence as its stale-row answer).
 
 ## Page side (unguarded, in the tree)
 
-`review.js` sends `expect` on repeat, retarget, reject, Approve instead and the re-reject inside Approve instead's Undo; `stores/minutes.js`
+`review.js` sends `expect` on repeat, retarget, reject, Approve instead and the re-reject inside Approve instead's Undo, whose reply is now read (a declined one says "Not rejected again: ..." and marks nothing, via `rejectedAgainWords` in `core/say.js`); `stores/minutes.js`
 sends the minutes' fingerprint with Approve minutes and, on the "changed" answer, reloads the list and says so; Activity's recent rejects now
 carry `fp` (`quality.reject_row`), so Approve instead there names its item. Rebuilt `dashboard.html`.
 
@@ -33,6 +34,11 @@ carry `fp` (`quality.reject_row`), so Approve instead there names its item. Rebu
 
 ask creaite's `review.py approve|reject|merge|...` and the Excel import use the command line, not these routes, and still work without a
 fingerprint. `--expect` stays optional in `review.py` itself.
+
+## Known, for later
+
+- `/api/review/assign` (moving an item to another project) has no fingerprint yet.
+- Approve minutes' `own` item numbers still go by number; the fingerprint is the minutes block's, taken when the button was pressed.
 
 ## Risks (for the reviewer)
 

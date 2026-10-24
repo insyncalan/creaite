@@ -1,18 +1,18 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index a8fe10b6..963accab 100644
+index a8fe10b6..dc07c4dd 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -6213,6 +6213,9 @@ def minutes_approve_route(handler, req):
      import review
      own = [n for n in req.get("own") or [] if isinstance(n, int)]
      with LOCK:
-+        why = expect_refusal([(req.get("file"), "meeting", req.get("expect"))]) if current_fp(req.get("file"), "meeting") else None
++        why = expect_refusal([(req.get("file"), "meeting", req.get("expect"))]) if pending_file(req.get("file")) else None
 +        if why:                                                             # 2.6.4 (#345): before the name is settled, so nothing changes
 +            return handler.send(200, {"ok": False, "message": why})
          moved = minutes_destination.settle(str(req.get("file") or ""))      # #332: a name already used is numbered, never a stop
          out = review.approve_minutes(str(req.get("file") or ""), group=req.get("group", True) is not False, own=own)
      if moved and out.get("ok"):
-@@ -6277,6 +6280,67 @@ REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
+@@ -6277,6 +6280,73 @@ REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
  # ===== end BL-200 =====
  
  
@@ -44,6 +44,12 @@ index a8fe10b6..963accab 100644
 +        return build_dashboard.block_fp(block) if isinstance(block, dict) else None
 +    item = next((i for i in data.get("items") or [] if isinstance(i, dict) and i.get("n") == ref and ref is not True), None)
 +    return build_dashboard.item_fp(item) if item else None
++
++
++def pending_file(file):
++    """Whether a waiting file by this name is still there; a gone one is answered by the route's own "no longer pending" words."""
++    name = Path(str(file or "")).name
++    return bool(re.fullmatch(r"proposed-[\w.-]+\.json", name)) and (paths.STAGING / name).is_file()
 +
 +
 +def key_ref(key):
@@ -80,7 +86,7 @@ index a8fe10b6..963accab 100644
  # ===== BL-221 (sprint-drafts-extraction) ===== POST /api/review/repeat {file, ref, how: "merge" | "keep"}: Review's "Looks like" choices
  # for a pending new item marked as repeating an existing one, through review.py merge or keep-new (their checks: the same project,
  # an open item; nothing new to carry rejects it as a duplicate). Only the proposal changes; nothing reaches tracker.db before apply.
-@@ -6291,6 +6355,9 @@ def review_repeat_route(handler, req):
+@@ -6291,6 +6361,9 @@ def review_repeat_route(handler, req):
          n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
          if n is None:
              return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
@@ -90,7 +96,7 @@ index a8fe10b6..963accab 100644
          rc, out = run("review.py", how, str(n))
      return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
  
-@@ -6338,6 +6405,9 @@ def review_retarget_route(handler, req):
+@@ -6338,6 +6411,9 @@ def review_retarget_route(handler, req):
          n = review_number(req.get("file"), req.get("ref"))
          if n is None:
              return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
@@ -100,7 +106,7 @@ index a8fe10b6..963accab 100644
          rc, out = run("review.py", "retarget", str(n), target)
      return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
  
-@@ -6429,6 +6499,9 @@ def review_reject_route(handler, req):
+@@ -6429,6 +6505,9 @@ def review_reject_route(handler, req):
          gone = [{"file": r.get("file"), "ref": r.get("ref")} for r in rows if (r.get("file"), r.get("ref")) not in listed]
          if not found:
              return handler.send(200, {"ok": False, "message": "That proposal is no longer pending.", "rejected": [], "gone": gone})
@@ -110,7 +116,7 @@ index a8fe10b6..963accab 100644
          spec = ",".join(str(n) for _, n in found)
          rc, out = run("review.py", "reject", spec, *(["--guess"] if req.get("guess") else reject_args(req)))
      ok = rc == 0 and not out.startswith("Rejected 0.")
-@@ -6443,7 +6516,7 @@ def review_rejected_route(handler, req):
+@@ -6443,7 +6522,7 @@ def review_rejected_route(handler, req):
      if not cmd or not keys or not all(REJECT_KEY.fullmatch(k) for k in keys):
          return handler.send(400, {"ok": False, "message": "Choose a rejected item and what to do with it."})
      with LOCK:
