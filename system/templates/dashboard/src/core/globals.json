@@ -571,6 +571,7 @@
    "mdChat",
    "mdHtml",
    "mdInline",
+   "meNames",
    "meetingOfFile",
    "meetingRoute",
    "memLineEdit",
