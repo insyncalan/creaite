@@ -56291,16 +56291,6 @@ ${pre}**Current state title:** ${title}`);
       mDots("today");
       renderSetup();
       renderSweepDue();
-      {
-        $("#drStale")?.remove();
-        const host2 = $("#mineMore");
-        if (host2 && draftOn("update")) {
-          const st2 = A4.filter((x5) => isStale("actions", x5));
-          if (st2.length) {
-            addHTML(host2, "afterend", html`<div class="drstale" id="drStale"><span>${raw(plur(st2.length, "open action"))} ${st2.length === 1 ? "has" : "have"} had no update for ${raw(+S.staleDays || 7)} days.</span>${raw(draftBtn("update-bulk", "Draft updates", "Draft an update for each from what has happened since, as suggestions in Review", 'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`);
-          }
-        }
-      }
       dcIcon();
     }
   }
