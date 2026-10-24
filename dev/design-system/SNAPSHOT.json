@@ -1,9 +1,9 @@
 {
- "commit": "5e6770d0",
- "branch": "v252-no-reporting-card",
- "version_file": "2.5.2",
- "subject": "#254: cockpit golden without the Reporting card (run_tests.py --update-snapshots cockpit); two comme",
- "taken": "2026-10-20",
+ "commit": "29f3e692",
+ "branch": "pm-ds-snapshots-261",
+ "version_file": "2.6.1",
+ "subject": "Merge pull request #30 from insyncalan/ci-39shards",
+ "taken": "2026-10-24",
  "palette": "creaite",
  "mode": "light",
  "viewport": "1400x1000"
