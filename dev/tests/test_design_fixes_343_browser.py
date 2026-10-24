@@ -147,6 +147,20 @@ class WordingAndRepetition(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelectorAll('#dispMenu h3').length"), 0)
         self.assertGreaterEqual(b.eval("document.querySelectorAll('#dispMenu h2').length"), 3)
 
+    def test_files_types_are_said_in_words_but_still_filter_on_the_extension(self):
+        b = self.b
+        b.eval("go('files')")
+        b.wait("document.querySelector('#filesTbl .ftype')")
+        chips = b.eval("[...document.querySelectorAll('#filesTbl .ftype')].map(e=>e.textContent)")
+        self.assertTrue(chips)
+        for c in chips:
+            self.assertNotIn(c.lower(), ("docx", "vtt", "xlsx", "pdf_"))       # words, not extensions (PDF is already a word)
+        b.eval("document.getElementById('fmBtn').click()")
+        b.wait("document.querySelector('#fmenu input[name=fsType]')")
+        pairs = b.eval("[...document.querySelectorAll('#fmenu input[name=fsType]')].map(i=>[i.value,i.parentElement.textContent.trim()])")
+        self.assertIn(["docx", "Word"], pairs)                                   # the label changed, the value never
+        self.assertTrue(all(label != value for value, label in pairs if value in ("docx", "vtt")))
+
 
 if __name__ == "__main__":
     unittest.main()

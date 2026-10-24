@@ -4725,6 +4725,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     FOPEN: () => FOPEN,
     FPRANGES: () => FPRANGES,
     FSEEN: () => FSEEN,
+    FTLAB: () => FTLAB,
     FVW: () => FVW,
     FX: () => FX,
     FilterBar: () => FilterBar,
@@ -5940,6 +5941,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
+    ftLabel: () => ftLabel,
     fuApply: () => fuApply,
     fuConfirm: () => fuConfirm,
     fuEdit: () => fuEdit,
@@ -51765,15 +51767,17 @@ system/scripts/run launch.py agent ${what}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${ftLabel(f5.type)}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
   var FF = { type: "All", from: "", to: "" };
   var fmOpen = false;
+  var FTLAB = { docx: "Word", doc: "Word", xlsx: "Excel", xls: "Excel", pptx: "PowerPoint", pdf: "PDF", vtt: "Transcript", md: "Note", txt: "Text", html: "Web page", eml: "Email" };
+  var ftLabel = (t47) => FTLAB[String(t47).toLowerCase()] || t47;
   var FTYPES = () => ["All", .../* @__PURE__ */ new Set(["docx", "pdf", "vtt", "xlsx", ...FILES.map((f5) => f5.type).filter(Boolean)])];
   var ffCount = () => (FF.type !== "All" ? 1 : 0) + (FF.from ? 1 : 0) + (FF.to ? 1 : 0);
-  var ffChips = () => [...FF.type !== "All" ? [["type", `Type: ${FF.type}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
+  var ffChips = () => [...FF.type !== "All" ? [["type", `Type: ${ftLabel(FF.type)}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
   function filterChrome() {
     const n4 = ffCount(), c5 = ffChips(), btn = $("#fmBtn"), tip = n4 ? `Filter: ${n4} on` : "Filter";
     btn.setAttribute("aria-label", tip);
@@ -51786,7 +51790,7 @@ system/scripts/run launch.py agent ${what}`;
     putHTML(h5, html`${c5.map((x5) => html`<span class="fchip">${x5[1]}<button type="button" data-fclr="${x5[0]}" aria-label="Remove ${x5[1]}" data-tip="Remove ${x5[1]}">✕</button></span>`)}`);
   }
   function fmDraw() {
-    putHTML($("#fmenu"), html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map((t47) => html`<label><input type="radio" name="fsType" value="${t47}" ${raw(t47 === FF.type ? "checked" : "")}> ${t47 === "All" ? "All types" : t47}</label>`)}</fieldset>
+    putHTML($("#fmenu"), html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map((t47) => html`<label><input type="radio" name="fsType" value="${t47}" ${raw(t47 === FF.type ? "checked" : "")}> ${t47 === "All" ? "All types" : ftLabel(t47)}</label>`)}</fieldset>
     <div class="fmrow"><label class="fmlab" for="fsFrom">From</label><span class="dwrap"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.from ? fd(FF.from) : ""}"><button type="button" class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsFromErr" role="alert"></span></div>
     <div class="fmrow"><label class="fmlab" for="fsTo">To</label><span class="dwrap"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.to ? fd(FF.to) : ""}"><button type="button" class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsToErr" role="alert"></span></div>
     <div class="fmfoot"><button type="button" class="mini" id="fmClear">Clear</button><button type="button" class="btn primary" id="fmDone">Done</button></div>`);
@@ -81490,6 +81494,10 @@ Next: `;
         "P",
         "PARTNERS_MAX",
         "PARTNER_NAME_MAX",
+        "PD_COLS",
+        "PD_GROUPS",
+        "PD_KEYS",
+        "PD_ORDER",
         "PEOPLE",
         "PK",
         "PKPROP",
@@ -81719,8 +81727,12 @@ Next: `;
         "designation",
         "diagCardHtml",
         "diagHook",
+        "dispFoot",
         "dispOpen",
+        "dispOrder",
+        "dispProps",
         "dispReset",
+        "dispSelect",
         "dnBlock",
         "dnHtml",
         "dnList",
@@ -82064,7 +82076,13 @@ Next: `;
         "partnerProblem",
         "partners",
         "passes",
+        "pdDefault",
+        "pdGroup",
+        "pdKey",
+        "pdNormalise",
+        "pdReset",
         "pdSave",
+        "pdSort",
         "peekFrame",
         "peekPropNodes",
         "peeks",
