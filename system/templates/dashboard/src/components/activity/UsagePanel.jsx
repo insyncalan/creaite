@@ -19,7 +19,8 @@ import { api, OLDSERVER, snack } from "../../core/server.js";
 /** @typedef {{skill: string, runs: number, cost_usd: number, days_since: number | null, last: string | null}} Skill */
 /** @typedef {{file: string, date: string, bytes: number, tokens: number, since: string | null, change_bytes: number | null, change_tokens: number | null}} Ctx */
 /** @typedef {{date: string, saw: string, decided: string}} Review */
-/** @typedef {{as_of?: string, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[], reviews?: Review[], reviews_save?: boolean}} Usage */
+/** @typedef {{enabled: boolean, unit: string, limit: number, used: number, percent: number, state: string, at_limit: string, week_end: string, resets: string, counted: boolean, line: string}} Budget */
+/** @typedef {{as_of?: string, budget?: Budget, days?: number, empty?: boolean, error?: string, cards?: Record<string, Card>, by_day?: Day[], by_kind?: Kind[], skills?: Skill[], context?: Ctx[], reviews?: Review[], reviews_save?: boolean}} Usage */
 
 const KIND = { ask: "ask creaite", sweep: "Sweep", generate: "Generate current state", prep: "Prep page", draft: "Drafts",
   check: "Transcript check", load: "Transcript load", vip: "Alert check", process: "Intake processing",
@@ -67,6 +68,23 @@ function Chart({ days, fd }) {
   );
 }
 
+/** The week's AI budget (#334): used against the limit and when the week ends. Counts only; the figures come from the server.
+    @param {{b: Budget | undefined, fd: (s: string) => string}} p */
+function BudgetBar({ b, fd }) {
+  if (!b || !b.enabled) return b ? <p class="sub">The weekly AI budget is off. Turn it on in Settings, Advanced, creaite and ask creaite.</p> : null;
+  const fmt = (/** @type {number} */ n) => (b.unit === "dollars" ? usd(n) : `${num(n)} tokens`), pct = Math.min(100, Math.round(b.percent));
+  const word = b.state === "over" ? "Used up" : b.state === "warn" ? "Nearly used" : "Within budget";
+  return (
+    <div class={`ubudget ${b.state}`} role="group" aria-label="Weekly AI budget">
+      <h2>Weekly AI budget</h2>
+      <div class="ubar-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={`${pct}% of the weekly budget used`}>
+        <div class="ubar-fill" style={`width:${pct}%`} /></div>
+      <p class="sub">{`${fmt(b.used)} of ${fmt(b.limit)} (${Math.round(b.percent)}%). ${word}. The week ends on ${fd(b.week_end)}.`}
+        {b.counted ? "" : " The usage file could not be read, so nothing is held."}</p>
+    </div>
+  );
+}
+
 /** @param {{u: Usage, fd: (s: string) => string}} p */
 function Runs({ u, fd }) {
   const c = u.cards || {}, kinds = u.by_kind || [];
@@ -77,6 +95,7 @@ function Runs({ u, fd }) {
     ["avg", "Cost of an average run", usd(c.avg_cost?.now), c.avg_cost && delta(c.avg_cost, true)]];
   return (
     <>
+      <BudgetBar b={u.budget} fd={fd} />
       <div class="usum">
         {cards.map(([k, label, v, d]) => (
           <div class="ucard" key={k}><div class="v">{v}</div><div class="l">{label}</div><div class={`d ${d ? d[1] : ""}`}>{d ? d[0] : ""}</div></div>))}

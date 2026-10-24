@@ -2697,6 +2697,8 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0} .uchart h2{margin:0 0 6px!important} .uchart .sub{margin:6px 0 0}
 .uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
 .ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
+.ubudget{margin:0 0 14px} .ubar-track{height:10px;border-radius:5px;background:var(--bg-sunk,var(--accent-soft));overflow:hidden} .ubar-fill{height:100%;background:var(--ok)}
+.ubudget.warn .ubar-fill{background:var(--warn)} .ubudget.over .ubar-fill{background:var(--bad)}
 #actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
 #actUsage .urev .qtab td,#actUsage .urev .qtab th{white-space:normal;overflow-wrap:anywhere} #actUsage .urev .qtab td:first-child{white-space:nowrap;width:7.5em}   /* v2.5.3: Your reviews */
 .urevact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0} .urevact .sub{margin:0}
@@ -58343,11 +58345,16 @@ ${pre}**Current state title:** ${title}`);
     "search.ask_budget_chars": [1e3, 2e5],
     "review.spot_check_every": [0, 100],
     "logging.repeat_window_hours": [1, 168],
-    "live_mode.health_check_seconds": [5, 3600]
+    "live_mode.health_check_seconds": [5, 3600],
+    "ai_budget.weekly_dollars": [1, 1e4],
+    "ai_budget.weekly_tokens": [1e5, 1e10]
   };
   var CHOICES = {
     "dashboard.generate_days": [7, 14, 30],
     "logging.level": ["info", "debug"],
+    "ai_budget.unit": ["dollars", "tokens"],
+    "ai_budget.at_limit": ["confirm", "stop"],
+    /* #334 */
     "dashboard.rail_icon_size": ["small", "medium", "large"]
   };
   function settingShown(v5) {
@@ -67971,6 +67978,19 @@ ${d5.text}`);
       starts.length ? /* @__PURE__ */ u4("text", { class: "uax uaxl", x: W3 - 4, y: "12", "text-anchor": "end", children: `start load ${num(starts[0])} → ${num(starts[starts.length - 1])} tokens` }) : null
     ] });
   }
+  function BudgetBar({ b: b5, fd: fd3 }) {
+    if (!b5 || !b5.enabled) return b5 ? /* @__PURE__ */ u4("p", { class: "sub", children: "The weekly AI budget is off. Turn it on in Settings, Advanced, creaite and ask creaite." }) : null;
+    const fmt = (n4) => b5.unit === "dollars" ? usd(n4) : `${num(n4)} tokens`, pct = Math.min(100, Math.round(b5.percent));
+    const word = b5.state === "over" ? "Used up" : b5.state === "warn" ? "Nearly used" : "Within budget";
+    return /* @__PURE__ */ u4("div", { class: `ubudget ${b5.state}`, role: "group", "aria-label": "Weekly AI budget", children: [
+      /* @__PURE__ */ u4("h2", { children: "Weekly AI budget" }),
+      /* @__PURE__ */ u4("div", { class: "ubar-track", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct, "aria-label": `${pct}% of the weekly budget used`, children: /* @__PURE__ */ u4("div", { class: "ubar-fill", style: `width:${pct}%` }) }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: [
+        `${fmt(b5.used)} of ${fmt(b5.limit)} (${Math.round(b5.percent)}%). ${word}. The week ends on ${fd3(b5.week_end)}.`,
+        b5.counted ? "" : " The usage file could not be read, so nothing is held."
+      ] })
+    ] });
+  }
   function Runs({ u: u5, fd: fd3 }) {
     const c5 = u5.cards || {}, kinds = u5.by_kind || [];
     const cards = [
@@ -67980,6 +68000,7 @@ ${d5.text}`);
       ["avg", "Cost of an average run", usd(c5.avg_cost?.now), c5.avg_cost && delta(c5.avg_cost, true)]
     ];
     return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(BudgetBar, { b: u5.budget, fd: fd3 }),
       /* @__PURE__ */ u4("div", { class: "usum", children: cards.map(([k5, label, v5, d5]) => /* @__PURE__ */ u4("div", { class: "ucard", children: [
         /* @__PURE__ */ u4("div", { class: "v", children: v5 }),
         /* @__PURE__ */ u4("div", { class: "l", children: label }),
@@ -75515,6 +75536,15 @@ ${d5.text}`);
     const href = /^#[\w=%.|:&-]*$/.test(String(c5.href || "")) ? String(c5.href) : "";
     return addEl("msg a runend" + (c5.ok === false ? " info" : ""), html`${String(c5.line || "")}${href ? html` · <a href="${href}" class="hlink" data-runhref="${href}">${c5.link || "Open"}</a>` : ""}`);
   }
+  async function budgetNote() {
+    try {
+      const res = await fetch("/api/usage", { headers: { "X-Creaite-Token": D.token || "" } });
+      const r4 = res.ok ? await res.json() : null, b5 = r4 && r4.budget;
+      if (!b5 || !b5.enabled || b5.state !== "warn" && b5.state !== "over") return;
+      addEl("msg a info", html`${b5.state === "over" ? "Over this week's AI budget: " : "Heads-up: "}${b5.line}`);
+    } catch (e4) {
+    }
+  }
   async function askStream(url, body2, confirmed, ctl, ended, plain) {
     let res, outcome = "done";
     const live = !ended;
@@ -75542,6 +75572,15 @@ ${d5.text}`);
       const j5 = await res.json().catch(() => ({}));
       await say("ask creaite is still working on the last request. Stop it, or wait until it finishes.");
       if (j5.run && !shared.RUN) attachRun(j5.run);
+      return;
+    }
+    if (res.status === 429) {
+      askWorking(false);
+      rbCancel();
+      const j5 = await res.json().catch(() => ({}));
+      const b5 = j5.budget || {};
+      if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, plain);
+      await say(oneLine(j5.message || "This week's AI budget is used up."));
       return;
     }
     if (!res.ok || !res.body) {
@@ -75654,6 +75693,7 @@ ${d5.text}`);
     ATTACHED = null;
     askFinished(outcome);
     retryOffer(outcome, body2);
+    budgetNote();
     if (next) {
       setTimeout(() => attachRun(next), 0);
       return;
@@ -80146,6 +80186,7 @@ ${d5.text}`);
         "Menu",
         "MenuPanel",
         "MinutesView",
+        "MoreSettings",
         "NEG",
         "NOTE_OPEN",
         "NoteEditor",
