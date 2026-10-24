@@ -1,0 +1,408 @@
+{
+ "label": "v2.6.0",
+ "version": "2.6.0",
+ "captured": "24-10-2026 12:38",
+ "port": 55857,
+ "today": {
+  "todayDateText": "Earlier days SAT 24 OCTOBER · SUN 25 NEXT WEEK MON 26 · TUE 27 · WED 28 · THU 29 · FRI 30",
+  "tabs": [
+   {
+    "text": "SAT 24 OCTOBER",
+    "sel": "true"
+   },
+   {
+    "text": "SUN 25",
+    "sel": "false"
+   },
+   {
+    "text": "MON 26",
+    "sel": "false"
+   },
+   {
+    "text": "TUE 27",
+    "sel": "false"
+   },
+   {
+    "text": "WED 28",
+    "sel": "false"
+   },
+   {
+    "text": "THU 29",
+    "sel": "false"
+   },
+   {
+    "text": "FRI 30",
+    "sel": "false"
+   }
+  ],
+  "weekSeps": [
+   "NEXT WEEK"
+  ],
+  "head": "Ten meetings, Sam, with the late afternoon wide open.",
+  "earlierBtn": true,
+  "line": "",
+  "away": "",
+  "none": "",
+  "count": 10,
+  "meets": [
+   {
+    "time": "08:30 – 09:00",
+    "title": "Weekly sync",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Riley Stone",
+    "acts": "",
+    "cls": "dm past"
+   },
+   {
+    "time": "09:15 – 10:00",
+    "title": "Project kickoff",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Morgan Lee",
+    "acts": "",
+    "cls": "dm past"
+   },
+   {
+    "time": "10:00 – 10:45",
+    "title": "Budget review",
+    "hasTitleHover": true,
+    "where": "Boardroom 2 · You organise",
+    "acts": "",
+    "cls": "dm past"
+   },
+   {
+    "time": "10:45 – 11:30",
+    "title": "Demo day",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Jordan Park",
+    "acts": "",
+    "cls": "dm past"
+   },
+   {
+    "time": "11:30 – 12:00",
+    "title": "Retro",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Morgan Lee",
+    "acts": "",
+    "cls": "dm past"
+   },
+   {
+    "time": "12:15 – 12:45",
+    "title": "Steering committee",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Riley Stone",
+    "acts": "",
+    "cls": "dm now"
+   },
+   {
+    "time": "13:30 – 14:15",
+    "title": "Design review",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Casey Quinn",
+    "acts": "",
+    "cls": "dm "
+   },
+   {
+    "time": "14:15 – 15:00",
+    "title": "Vendor check-in",
+    "hasTitleHover": true,
+    "where": "Room 4 · Organised by Avery Shaw",
+    "acts": "",
+    "cls": "dm "
+   },
+   {
+    "time": "15:15 – 16:00",
+    "title": "Planning huddle",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · You organise",
+    "acts": "",
+    "cls": "dm "
+   },
+   {
+    "time": "16:15 – 16:45",
+    "title": "Wrap-up",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Jordan Park",
+    "acts": "",
+    "cls": "dm "
+   }
+  ],
+  "selDay": null,
+  "today": "2026-10-24",
+  "foot": ""
+ },
+ "today_hover": {
+  "opened": true,
+  "popup": {
+   "text": "Project kickoff Today 09:15 · Internal IN PLAY FAL-A-003: Provide masked sample datasets for domain 3 ORX-A-002: Approve payment-provider sandbox credentials ORX-A-001: Deliver UAT test data pack SINCE LAST TIME No earlier meeting on record; since 17-10-2026: 2 decisions, 1 action now overdue. Not shaped yet. Open the prep page to set your aim. Worth preparing: a steering or review meeting Open the prep page"
+  },
+  "hasDmti": true
+ },
+ "menu_items": [
+  "Files",
+  "Activity",
+  "Health0",
+  "Settings",
+  "Help",
+  "Customise sidebar…",
+  "Friday 23rd October",
+  "Thursday 22nd October",
+  "Wednesday 21st October",
+  "Tuesday 20th October",
+  "Monday 19th October"
+ ],
+ "went_to_friday": true,
+ "past": {
+  "todayDateText": "Earlier days FRIDAY 23RD OCTOBER · SAT 24 OCTOBER · SUN 25 NEXT WEEK MON 26 · TUE 27 · WED 28 · THU 29 · FRI 30",
+  "tabs": [
+   {
+    "text": "FRIDAY 23RD OCTOBER",
+    "sel": "true"
+   },
+   {
+    "text": "SAT 24 OCTOBER",
+    "sel": "false"
+   },
+   {
+    "text": "SUN 25",
+    "sel": "false"
+   },
+   {
+    "text": "MON 26",
+    "sel": "false"
+   },
+   {
+    "text": "TUE 27",
+    "sel": "false"
+   },
+   {
+    "text": "WED 28",
+    "sel": "false"
+   },
+   {
+    "text": "THU 29",
+    "sel": "false"
+   },
+   {
+    "text": "FRI 30",
+    "sel": "false"
+   }
+  ],
+  "weekSeps": [
+   "NEXT WEEK"
+  ],
+  "head": "Ten meetings, Sam, with the late afternoon wide open.",
+  "earlierBtn": true,
+  "line": "",
+  "away": "Showing Friday. Everything below is as of today.",
+  "none": "",
+  "count": 10,
+  "meets": [
+   {
+    "time": "09:00 – 09:30",
+    "title": "Weekly sync",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · Organised by Riley Stone",
+    "acts": "Transcript ready Process",
+    "cls": "dm past"
+   },
+   {
+    "time": "09:45 – 10:30",
+    "title": "Project kickoff",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · Organised by Morgan Lee",
+    "acts": "Minutes made",
+    "cls": "dm past"
+   },
+   {
+    "time": "10:30 – 11:15",
+    "title": "Budget review",
+    "hasTitleHover": false,
+    "where": "Boardroom 2 · You organise",
+    "acts": "No transcript",
+    "cls": "dm past"
+   },
+   {
+    "time": "11:30 – 12:15",
+    "title": "Demo day",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · Organised by Jordan Park",
+    "acts": "Not checked yet Check",
+    "cls": "dm past"
+   },
+   {
+    "time": "12:15 – 12:45",
+    "title": "Lunch and learn",
+    "hasTitleHover": false,
+    "where": "Cafe annex · Organised by Avery Shaw",
+    "acts": "No transcript",
+    "cls": "dm past"
+   },
+   {
+    "time": "13:00 – 14:00",
+    "title": "Steering committee",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · Organised by Riley Stone",
+    "acts": "Transcript ready Process",
+    "cls": "dm past"
+   },
+   {
+    "time": "14:00 – 14:30",
+    "title": "Retro",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · Organised by Morgan Lee",
+    "acts": "No transcript",
+    "cls": "dm past"
+   },
+   {
+    "time": "14:30 – 15:15",
+    "title": "Design review",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · Organised by Casey Quinn",
+    "acts": "No transcript",
+    "cls": "dm past"
+   },
+   {
+    "time": "15:30 – 16:00",
+    "title": "Vendor check-in",
+    "hasTitleHover": false,
+    "where": "Room 4 · Organised by Avery Shaw",
+    "acts": "No transcript",
+    "cls": "dm past"
+   },
+   {
+    "time": "16:00 – 16:30",
+    "title": "Planning huddle",
+    "hasTitleHover": false,
+    "where": "Microsoft Teams Meeting · You organise",
+    "acts": "Not checked yet Check",
+    "cls": "dm past"
+   }
+  ],
+  "selDay": null,
+  "today": "2026-10-24",
+  "foot": ""
+ },
+ "past_hover": {
+  "opened": false,
+  "popup": null,
+  "hasDmti": true
+ },
+ "unread_day_wed28": {
+  "todayDateText": "Earlier days SAT 24 OCTOBER · SUN 25 NEXT WEEK MON 26 · TUE 27 · WEDNESDAY 28TH OCTOBER · THU 29 · FRI 30",
+  "tabs": [
+   {
+    "text": "SAT 24 OCTOBER",
+    "sel": "false"
+   },
+   {
+    "text": "SUN 25",
+    "sel": "false"
+   },
+   {
+    "text": "MON 26",
+    "sel": "false"
+   },
+   {
+    "text": "TUE 27",
+    "sel": "false"
+   },
+   {
+    "text": "WEDNESDAY 28TH OCTOBER",
+    "sel": "true"
+   },
+   {
+    "text": "THU 29",
+    "sel": "false"
+   },
+   {
+    "text": "FRI 30",
+    "sel": "false"
+   }
+  ],
+  "weekSeps": [
+   "NEXT WEEK"
+  ],
+  "head": "No meetings on Wednesday, Sam. The day is yours.",
+  "earlierBtn": true,
+  "line": "",
+  "away": "Showing Wednesday. Everything below is as of today.",
+  "none": "",
+  "count": 0,
+  "meets": [],
+  "selDay": null,
+  "today": "2026-10-24",
+  "foot": ""
+ },
+ "future_day_mon26": {
+  "todayDateText": "Earlier days SAT 24 OCTOBER · SUN 25 NEXT WEEK MONDAY 26TH OCTOBER · TUE 27 · WED 28 · THU 29 · FRI 30",
+  "tabs": [
+   {
+    "text": "SAT 24 OCTOBER",
+    "sel": "false"
+   },
+   {
+    "text": "SUN 25",
+    "sel": "false"
+   },
+   {
+    "text": "MONDAY 26TH OCTOBER",
+    "sel": "true"
+   },
+   {
+    "text": "TUE 27",
+    "sel": "false"
+   },
+   {
+    "text": "WED 28",
+    "sel": "false"
+   },
+   {
+    "text": "THU 29",
+    "sel": "false"
+   },
+   {
+    "text": "FRI 30",
+    "sel": "false"
+   }
+  ],
+  "weekSeps": [
+   "NEXT WEEK"
+  ],
+  "head": "Three meetings, Sam, with the early afternoon wide open.",
+  "earlierBtn": true,
+  "line": "",
+  "away": "Showing Monday. Everything below is as of today.",
+  "none": "",
+  "count": 3,
+  "meets": [
+   {
+    "time": "09:00 – 09:30",
+    "title": "Weekly sync",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Riley Stone",
+    "acts": "",
+    "cls": "dm "
+   },
+   {
+    "time": "11:00 – 12:00",
+    "title": "Steering committee",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · Organised by Riley Stone",
+    "acts": "",
+    "cls": "dm "
+   },
+   {
+    "time": "15:00 – 15:45",
+    "title": "Planning huddle",
+    "hasTitleHover": true,
+    "where": "Microsoft Teams Meeting · You organise",
+    "acts": "",
+    "cls": "dm "
+   }
+  ],
+  "selDay": null,
+  "today": "2026-10-24",
+  "foot": ""
+ },
+ "console_errors": []
+}
