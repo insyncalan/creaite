@@ -987,6 +987,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .chgrip:hover::after,.chgrip:focus-visible::after,body.chresizing .chgrip::after{background:var(--faint)} body.chresizing{cursor:ew-resize;user-select:none}
 @media (max-width:600px){#chat{width:100vw} .chgrip{display:none}}
 .chh{display:flex;align-items:center;gap:8px;padding:14px 12px 6px 16px} .chh h2{flex:1}
+.chcont{display:block;padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chcont input{margin-right:6px}
 .chs{padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:4px} .chs .dot.off{background:var(--bad)}
 .chq{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px;border-bottom:1px solid var(--line)}
 .chbtn{color:var(--muted)} #askBtn.working{position:relative} #askBtn.working::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--ok);animation:askpulse 1.2s ease-in-out infinite}
@@ -998,6 +999,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
    theme's own primary button, so it reads in every theme and mode */
 .chlogbox{position:relative;flex:1;min-height:0;display:flex;flex-direction:column} .chlogbox .chlog{flex:1;min-height:0}
 /* ===== BL-257 (sprint-ask-flow) ===== the queued messages, under the log */
+.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:var(--fs-sm)} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
 .chqueue{border-top:1px solid var(--line);padding:6px 14px 4px;display:flex;flex-direction:column;gap:4px;max-height:30%;overflow:auto} .chqueue[hidden]{display:none}
 .chqhead{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .chqitem{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm)} .chqitem .chqtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1824,6 +1826,7 @@ body.keys-seen #whintList,body.keys-seen #whintBoard,body.keys-seen #rvHint{disp
 /* ===== end BL-155 (CSS) ===== */
 /* ===== BL-156 (sprint-ux) ===== the first-run checklist on Today */
 .setupsec .th{display:flex;align-items:baseline;gap:8px} .setupsec .setupx{margin-left:auto}
+.asq-slot{visibility:hidden}   /* #asQ's reserved slot: keeps the height until the autostart status answers */
 .setupbl li.done .t{color:var(--day-muted);text-decoration:line-through;text-decoration-color:var(--day-rule)}
 .setupbl li.done .n{color:var(--ok)}
 /* ===== end BL-156 (CSS) ===== */
@@ -3669,6 +3672,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnflag2{display:inline-block;font-size:var(--fs-xs);color:var(--warn);background:var(--warn-soft);border-radius:var(--r-pill);padding:1px 9px}
 .page tr.mi.nx td{background:var(--accent-soft)}
 .page tr.mi[hidden]{display:none}
+.page tr.mi.kc{outline:2px solid var(--accent);outline-offset:-2px}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -4196,6 +4200,19 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
+/* #325 Intake: a meeting's state chip, and the work items nested under their minutes */
+#v-intake-review .irchip{display:inline-flex;align-items:center;gap:6px;padding:1px 10px 1px 8px;border-left:3px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk);color:var(--ink);font-size:var(--fs-xs);font-weight:500;vertical-align:middle}
+#v-intake-review .irchip .i{width:14px;height:14px;flex:none}
+#v-intake-review .irchip.check{border-left-color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .irchip.done{border-left-color:var(--ok);background:var(--ok-soft)}
+#v-intake-review tr.mchild.irkid td.title{padding-left:48px} #v-intake-review tr.mchild.irkid td.title::before{left:32px}
+#v-intake-review tr.icsubhead.child.irkid td{padding-left:48px}
+#v-intake-review .irkidsbar{margin-top:4px;font-size:var(--fs-xs)} #v-intake-review .irkidscaret{display:inline-block;width:1em}
+/* #323 Intake: Group by and Show, headings, tick boxes and the bar for ticked rows */
+#v-intake-review .irsel{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}
+#v-intake-review tr.icgrouphd td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)} #v-intake-review tr.icgrouphd b{color:var(--ink);font-weight:600}
+#v-intake-review input.irtick{margin:0 8px 0 0;vertical-align:middle;accent-color:var(--accent)}
+#v-intake-review .irtickbar{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:8px 0;background:var(--accent-soft);border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
@@ -4464,8 +4481,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 <aside id="chat" aria-label="ask creaite"><div class="chgrip" id="chGrip" role="separator" aria-orientation="vertical" aria-label="Resize ask creaite" tabindex="0" title="Drag to resize; double-click to reset"></div>
   <div class="chh"><h2>ask creaite</h2><button class="iconbtn chbtn" id="chNew" title="New chat" aria-label="New chat"><svg data-ic="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button><span class="dd"><button class="iconbtn chbtn" id="chHist" title="History" aria-label="History" aria-haspopup="menu" aria-expanded="false"><svg data-ic="history" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button></span><button class="iconbtn" id="chatClose" aria-label="Close" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
   <div class="chs" id="chSub"></div>
+  <label class="chcont" id="chContL" hidden><input type="checkbox" id="chCont"> Continue this chat (keeps the whole thread: slower and costs more)</label>
   <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
+  <div class="chlong" id="chLong" role="region" aria-label="Long chat" hidden><span id="chLongText"></span><span class="chlongact"><button type="button" class="mini" id="chLongGo">Continue fresh with a summary</button><button type="button" class="mini" id="chLongNo">Not now</button></span></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
   <div class="chthumbs" id="chThumbs" hidden></div>
   <div class="chin"><div class="acmenu" id="acMenu" role="listbox" aria-label="Suggestions" hidden></div><button class="iconbtn chbtn" id="chAttach" type="button" title="Attach an image (or paste or drop one)" aria-label="Attach an image"><svg data-ic="clip" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg></button><input type="file" id="chFile" accept="image/png,image/jpeg" multiple hidden><textarea id="chIn" aria-autocomplete="list" aria-controls="acMenu" rows="1" placeholder="Ask a question or give an instruction…" aria-label="Message"></textarea><button type="button" class="sendb" id="chSend" aria-label="Send" data-tip="Send" data-key="Enter"><svg data-ic="arrowup" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
@@ -4530,6 +4549,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     APPLYT: () => APPLYT,
     AS: () => AS,
     ASKDONE: () => ASKDONE,
+    ASKED_ABOUT: () => ASKED_ABOUT,
     ASKED_KEY: () => ASKED_KEY,
     ASKMARK: () => ASKMARK,
     ASKTICK: () => ASKTICK,
@@ -4722,12 +4742,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IMG_SIDE: () => IMG_SIDE,
     INFLIGHT: () => INFLIGHT,
     IR_FOLDED: () => IR_FOLDED,
+    IR_GROUPS: () => IR_GROUPS,
+    IR_GROUP_KEY: () => IR_GROUP_KEY,
     IR_KINDS: () => IR_KINDS,
     IR_KIND_KEY: () => IR_KIND_KEY,
     IR_LEFT_WHY: () => IR_LEFT_WHY,
     IR_REASONS: () => IR_REASONS,
     IR_SECTIONS: () => IR_SECTIONS,
     IR_STAGES: () => IR_STAGES,
+    IR_STATE_CHIP: () => IR_STATE_CHIP,
+    IR_STATE_FILTERS: () => IR_STATE_FILTERS,
+    IR_STATE_STAGE: () => IR_STATE_STAGE,
     IR_UPLOAD_TYPES: () => IR_UPLOAD_TYPES,
     IR_VIEWS: () => IR_VIEWS,
     IR_VIEW_KEY: () => IR_VIEW_KEY,
@@ -4740,14 +4765,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     KINDL: () => KINDL,
     KL: () => KL,
     LASTVISIT: () => LASTVISIT,
+    LAST_TURNS: () => LAST_TURNS,
     LCOLL: () => LCOLL,
     LDEFG: () => LDEFG,
     LFOLD: () => LFOLD,
+    LINE_MAX: () => LINE_MAX,
     LINK_MAX: () => LINK_MAX,
     LINK_REFUSED: () => LINK_REFUSED,
     LINK_REL: () => LINK_REL,
     LLF: () => LLF,
     LOGO_KINDS: () => LOGO_KINDS,
+    LONG_TURNS: () => LONG_TURNS,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
     MDC: () => MDC,
@@ -4961,6 +4989,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     START_CMD: () => START_CMD,
     STOPI: () => STOPI,
     SU: () => SU,
+    SUMMARY_MAX: () => SUMMARY_MAX,
     SU_LAUNCH: () => SU_LAUNCH,
     SU_M365: () => SU_M365,
     SU_SETUP: () => SU_SETUP,
@@ -5169,6 +5198,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     asQuestionSync: () => asQuestionSync,
     asRedraw: () => asRedraw,
     asRefresh: () => asRefresh,
+    asReserved: () => asReserved,
     asSet: () => asSet,
     asStatus: () => asStatus,
     asUsable: () => asUsable,
@@ -5177,6 +5207,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     askClaude: () => askClaude,
     askDeleteNote: () => askDeleteNote,
     askDiscard: () => askDiscard,
+    askFiling: () => askFiling,
     askFinished: () => askFinished,
     askLive: () => askLive,
     askMarkClear: () => askMarkClear,
@@ -5244,6 +5275,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     bootAsk0208: () => bootAsk0208,
     bootAutostart: () => bootAutostart,
     bootCalendar: () => bootCalendar,
+    bootChatLength: () => bootChatLength,
     bootCmdEnter: () => bootCmdEnter,
     bootContextMenu: () => bootContextMenu,
     bootCopyCommand: () => bootCopyCommand,
@@ -5379,6 +5411,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     calendarLive: () => calendarLive,
     canHover: () => canHover,
     cancelCurEdit: () => cancelCurEdit,
+    cancelFiling: () => cancelFiling,
     cantCard: () => cantCard,
     cantGo: () => cantGo,
     capChips: () => capChips,
@@ -5428,7 +5461,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     chaseNote: () => chaseNote,
     chaseOpen: () => chaseOpen,
     chatClamp: () => chatClamp,
+    chatContinueFresh: () => chatContinueFresh,
     chatFromKey: () => chatFromKey,
+    chatLength: () => chatLength,
+    chatLengthSync: () => chatLengthSync,
     chatMdBlocks: () => chatMdBlocks,
     chatMdInline: () => chatMdInline,
     chatNear: () => chatNear,
@@ -5436,6 +5472,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     chatReturnTarget: () => chatReturnTarget,
     chatScroll: () => chatScroll,
     chatShown: () => chatShown,
+    chatTurns: () => chatTurns,
     checkLive: () => checkLive,
     checkMeeting: () => checkMeeting,
     checkSources: () => checkSources,
@@ -5518,6 +5555,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     commitRecord: () => commitRecord,
     confMark: () => confMark,
     confirmCard: () => confirmCard,
+    confirmFiling: () => confirmFiling,
     conflictChoice: () => conflictChoice,
     conflictHtml: () => conflictHtml,
     contentBox: () => contentBox,
@@ -5709,6 +5747,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     diagRedraw: () => diagRedraw,
     diagRefusals: () => diagRefusals,
     diagRepeats: () => diagRepeats,
+    dismissFiled: () => dismissFiled,
     dismissedF: () => dismissedF,
     dismissedS: () => dismissedS,
     dispChanged: () => dispChanged,
@@ -5850,8 +5889,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     figHtml: () => figHtml,
     figRefs: () => figRefs,
     fileWithoutTranscript: () => fileWithoutTranscript,
+    filedNote: () => filedNote,
+    filedProblem: () => filedProblem,
     filesOpened: () => filesOpened,
     filesStatus: () => filesStatus,
+    filingAsk: () => filingAsk,
+    filingError: () => filingError,
     fillThumbs: () => fillThumbs,
     filterBarOpen: () => filterBarOpen,
     filterChrome: () => filterChrome,
@@ -6022,6 +6065,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irApprove: () => irApprove,
     irApproveRoutine: () => irApproveRoutine,
     irAside: () => irAside,
+    irAsideMany: () => irAsideMany,
     irAsk: () => irAsk,
     irAskAbout: () => irAskAbout,
     irAskQ: () => irAskQ,
@@ -6030,6 +6074,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irBlocked: () => irBlocked,
     irBulk: () => irBulk,
     irBusy: () => irBusy,
+    irByState: () => irByState,
     irCalendarRead: () => irCalendarRead,
     irCanCheck: () => irCanCheck,
     irCanProcess: () => irCanProcess,
@@ -6039,6 +6084,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irCheck: () => irCheck,
     irChecking: () => irChecking,
     irChooseKind: () => irChooseKind,
+    irClearTicks: () => irClearTicks,
     irClickFold: () => irClickFold,
     irClickMeeting: () => irClickMeeting,
     irClickStage: () => irClickStage,
@@ -6055,13 +6101,20 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irFoldClick: () => irFoldClick,
     irFolded: () => irFolded,
     irFreshFiles: () => irFreshFiles,
+    irGroup: () => irGroup,
+    irGroupMeetings: () => irGroupMeetings,
+    irGroupNorm: () => irGroupNorm,
     irGroupsShown: () => irGroupsShown,
+    irHasTranscript: () => irHasTranscript,
     irHeld: () => irHeld,
     irHold: () => irHold,
     irIsFolded: () => irIsFolded,
+    irIsShown: () => irIsShown,
     irKeepOpen: () => irKeepOpen,
+    irKidsFold: () => irKidsFold,
     irKindOf: () => irKindOf,
     irLater: () => irLater,
+    irLeadWithWork: () => irLeadWithWork,
     irLeaveOut: () => irLeaveOut,
     irLeftOut: () => irLeftOut,
     irLive: () => irLive,
@@ -6069,6 +6122,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irMatches: () => irMatches,
     irMeetingFields: () => irMeetingFields,
     irMeetingOf: () => irMeetingOf,
+    irMeetingState: () => irMeetingState,
     irMissing: () => irMissing,
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
@@ -6077,6 +6131,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irNote: () => irNote,
     irNotes: () => irNotes,
     irOpen: () => irOpen,
+    irOpenFolder: () => irOpenFolder,
     irOpenPeek: () => irOpenPeek,
     irOpenable: () => irOpenable,
     irPeek: () => irPeek,
@@ -6107,15 +6162,26 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetBusy: () => irSetBusy,
     irSetChecking: () => irSetChecking,
     irSetFileKind: () => irSetFileKind,
+    irSetGroup: () => irSetGroup,
+    irSetShown: () => irSetShown,
+    irSetStateFilter: () => irSetStateFilter,
+    irSetTick: () => irSetTick,
     irSetView: () => irSetView,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
     irStale: () => irStale,
+    irStateCounts: () => irStateCounts,
+    irStateFilter: () => irStateFilter,
+    irStateFilterNorm: () => irStateFilterNorm,
+    irStateOf: () => irStateOf,
     irStep: () => irStep,
     irStop: () => irStop,
     irTarget: () => irTarget,
     irTick: () => irTick,
+    irTicked: () => irTicked,
+    irTickedShown: () => irTickedShown,
     irToggle: () => irToggle,
+    irToggleKids: () => irToggleKids,
     irUnsure: () => irUnsure,
     irView: () => irView,
     irViewNorm: () => irViewNorm,
@@ -6200,6 +6266,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     logoKindsOf: () => logoKindsOf,
     longDate: () => longDate,
     longDay: () => longDay,
+    longLimit: () => longLimit,
     longText: () => longText,
     mCells: () => mCells,
     mChipEls: () => mChipEls,
@@ -6446,6 +6513,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     noteMarks: () => noteMarks,
     noteMeta: () => noteMeta,
     noteMetaFor: () => noteMetaFor,
+    noteNumbered: () => noteNumbered,
     noteOpenFileVersion: () => noteOpenFileVersion,
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
@@ -6486,6 +6554,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     openDialog: () => openDialog,
     openDisp: () => openDisp,
     openDraftEmail: () => openDraftEmail,
+    openFiled: () => openFiled,
     openFilterBar: () => openFilterBar,
     openFollowup: () => openFollowup,
     openFound: () => openFound,
@@ -7159,6 +7228,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     startCurEdit: () => startCurEdit,
     status: () => status,
     statusDotNodes: () => statusDotNodes,
+    stemOf: () => stemOf,
     step: () => step,
     stepDay: () => stepDay,
     stepGroup: () => stepGroup,
@@ -7177,6 +7247,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     suText: () => suText,
     subName: () => subName,
     subOf: () => subOf,
+    summaryOf: () => summaryOf,
     sw: () => sw2,
     swapHTML: () => swapHTML,
     sweepDueShown: () => sweepDueShown,
@@ -7217,6 +7288,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     trkLeftOut: () => trkLeftOut,
     tx: () => tx2,
     txReady: () => txReady,
+    typeFiling: () => typeFiling,
     typeWord: () => typeWord,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
@@ -9565,6 +9637,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     return IR_EDITED_HOLDS.includes(r4.hold || "") ? "" : r4.hold || "";
   }
   var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
+  var irLeadWithWork = (list) => ["drafted", "approved", "arrived"].flatMap((g5) => list.filter((m5) => m5.stage === g5)).concat(list.filter((m5) => !["drafted", "approved", "arrived"].includes(m5.stage)));
   var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
   function irFoldClick(folded, sec) {
     return { ...folded, [sec]: !irIsFolded(folded, sec) };
@@ -9586,12 +9659,64 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     return true;
   }
   var irUnsure = (m5, kinds) => !!m5 && m5.src === "upload" && !irKindOf(m5, kinds);
-  function irCounts(model, done, kinds) {
-    const ms2 = model.meetings || [], left = (m5) => {
-      const l6 = irLive(m5.groups, done);
-      return l6.needs.length + l6.routine.length;
+  function irMeetingState(m5, left) {
+    if (m5.stage === "approved") return "done";
+    if (m5.stage === "drafted") return left > 0 ? "check" : "done";
+    return m5.state === "waiting" ? "waiting" : "ready";
+  }
+  var IR_STATE_CHIP = { waiting: "Waiting for the transcript", check: "Suggestions to check", done: "Done" };
+  var IR_STATE_STAGE = { waiting: "arrived", ready: "arrived", check: "drafted", done: "approved" };
+  function irStateOf(m5, done) {
+    const l6 = irLive(m5.groups, done);
+    return irMeetingState(m5, l6.needs.length + l6.routine.length);
+  }
+  function irStateCounts(model, done) {
+    const o5 = { waiting: 0, ready: 0, check: 0, done: 0 };
+    for (const m5 of model.meetings || []) o5[irStateOf(m5, done)]++;
+    return o5;
+  }
+  var IR_GROUPS = [["none", "None"], ["day", "Day"], ["project", "Project"], ["state", "Meeting state"], ["transcript", "Transcript"]];
+  var irGroupNorm = (v5) => IR_GROUPS.some((x5) => x5[0] === v5) ? v5 : "none";
+  var IR_STATE_FILTERS = [["all", "All meetings"], ["waiting", "Waiting for the transcript"], ["ready", "Transcript ready"], ["check", "Suggestions to check"], ["done", "Done"]];
+  var irStateFilterNorm = (v5) => IR_STATE_FILTERS.some((x5) => x5[0] === v5) ? v5 : "all";
+  var irByState = (list, st2, done) => st2 === "all" || !IR_STATE_FILTERS.some((x5) => x5[0] === st2) ? list : list.filter((m5) => irStateOf(m5, done) === st2);
+  var irHasTranscript = (m5, kinds) => m5.src === "upload" ? irKindOf(m5, kinds) === "transcript" : m5.state !== "waiting";
+  function irGroupMeetings(list, by2, o5) {
+    if (by2 === "none" || !IR_GROUPS.some((x5) => x5[0] === by2)) return [{ key: "", label: "", items: list }];
+    const heads = (
+      /** @type {Map<string, {key: string, label: string, items: any[]}>} */
+      /* @__PURE__ */ new Map()
+    );
+    const put2 = (key2, label, m5) => {
+      if (!heads.has(key2)) heads.set(key2, { key: key2, label, items: [] });
+      heads.get(key2).items.push(m5);
     };
-    const stage = (m5) => m5.stage === "drafted" && !left(m5) ? "approved" : m5.stage;
+    for (const m5 of list) {
+      if (by2 === "day") put2(m5.day || "", m5.day ? o5.day ? o5.day(m5.day) : m5.day : "No date", m5);
+      else if (by2 === "project") put2(m5.p || "", m5.p ? o5.project ? o5.project(m5.p) : m5.p : "No project", m5);
+      else if (by2 === "state") {
+        const st2 = irStateOf(m5, o5.done);
+        put2(st2, st2 === "ready" ? "Transcript ready" : IR_STATE_CHIP[
+          /** @type {"waiting"} */
+          st2
+        ], m5);
+      } else {
+        const has = irHasTranscript(m5, o5.kinds);
+        put2(has ? "has" : "no", has ? "Has a transcript" : "No transcript yet", m5);
+      }
+    }
+    const all = [...heads.values()];
+    if (by2 === "state") return ["waiting", "ready", "check", "done"].map((k5) => heads.get(k5)).filter(Boolean).map((x5) => (
+      /** @type {any} */
+      x5
+    ));
+    if (by2 === "transcript") return all.sort((a5, b5) => (a5.key === "has" ? 0 : 1) - (b5.key === "has" ? 0 : 1));
+    if (by2 === "project") return all.sort((a5, b5) => (a5.key ? 0 : 1) - (b5.key ? 0 : 1) || a5.label.localeCompare(b5.label));
+    return all;
+  }
+  function irCounts(model, done, kinds) {
+    const ms2 = model.meetings || [];
+    const stage = (m5) => IR_STATE_STAGE[irStateOf(m5, done)];
     const all = [
       ...ms2.flatMap((m5) => [...m5.groups.needs || [], ...m5.groups.routine || []]),
       ...["mail", "other"].flatMap((k5) => [.../** @type {any} */
@@ -9678,6 +9803,60 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     } catch (x5) {
     }
   }
+  var irKidsFold = y3(
+    /** @type {Record<string, boolean>} */
+    {}
+  );
+  function irToggleKids(id2) {
+    irKidsFold.value = { ...irKidsFold.value, [id2]: !irKidsFold.value[id2] };
+  }
+  var IR_GROUP_KEY = "creaite-ir-group";
+  var irGroup = y3(irGroupNorm((() => {
+    try {
+      return store.get(IR_GROUP_KEY, "none");
+    } catch (x5) {
+      return "none";
+    }
+  })()));
+  function irSetGroup(v5) {
+    irGroup.value = irGroupNorm(v5);
+    try {
+      store.set(IR_GROUP_KEY, irGroup.value);
+    } catch (x5) {
+    }
+  }
+  var irStateFilter = y3("all");
+  function irSetStateFilter(v5) {
+    irStateFilter.value = irStateFilterNorm(v5);
+    irClearTicks();
+  }
+  var irTicked = y3(
+    /** @type {string[]} */
+    []
+  );
+  var irTickFrom = (
+    /** @type {string|null} */
+    null
+  );
+  function irSetTick(id2, on2, order, range) {
+    const ids = range && order && irTickFrom && order.includes(irTickFrom) && order.includes(id2) ? order.slice(Math.min(order.indexOf(irTickFrom), order.indexOf(id2)), Math.max(order.indexOf(irTickFrom), order.indexOf(id2)) + 1) : [id2];
+    const cur = irTicked.value.filter((x5) => !ids.includes(x5));
+    irTicked.value = on2 ? [...cur, ...ids] : cur;
+    irTickFrom = id2;
+  }
+  var irShownSet = (
+    /** @type {Set<string>|null} */
+    null
+  );
+  function irSetShown(ids) {
+    irShownSet = ids ? new Set(ids) : null;
+  }
+  var irIsShown = (id2) => !irShownSet || irShownSet.has(id2);
+  var irTickedShown = () => irTicked.value.filter(irIsShown);
+  function irClearTicks() {
+    irTicked.value = [];
+    irTickFrom = null;
+  }
   var irOpen = y3(
     /** @type {string|null} */
     null
@@ -9705,12 +9884,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function irClickStage(g5) {
     irStage.value = irStageClick(irStage.value, g5);
+    irClearTicks();
   }
   function irClickFold(sec) {
     irFolded.value = irFoldClick(irFolded.value, sec);
   }
   function irAfterData() {
     irOpen.value = irKeepOpen(irOpen.value, irModel());
+    const have = new Set((irModel().meetings || []).filter((x5) => x5.stage === "arrived" && x5.src !== "draft" && !irBusy.value.includes(x5.id)).map((x5) => x5.id)), keep2 = irTicked.value.filter((x5) => have.has(x5));
+    if (keep2.length !== irTicked.value.length) irTicked.value = keep2;
     irPruneKinds();
     irTick.value++;
   }
@@ -9815,6 +9997,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   );
   function irSetBusy(id2, on2) {
     irBusy.value = on2 ? [...irBusy.value.filter((x5) => x5 !== id2), id2] : irBusy.value.filter((x5) => x5 !== id2);
+    if (on2) irTicked.value = irTicked.value.filter((x5) => x5 !== id2);
   }
   function irMeetingOf(n4) {
     const m5 = (irModel().meetings || []).find((x5) => x5.groups && [...x5.groups.needs || [], ...x5.groups.routine || []].includes(n4));
@@ -32764,7 +32947,9 @@ ${s5}`;
     ready: (
       /** @type {Promise<void>|null} */
       null
-    )
+    ),
+    /** the boot read has answered (or failed): the reserved slot is filled or released */
+    done: false
   };
   var AS_HELP_ID = "fix-a-stopped-server-and-other-problems";
   var ASKED_KEY = "creaite-autostart-asked";
@@ -32857,14 +33042,32 @@ system/scripts/run launch.py agent ${what}`;
     return `<div class="hp-signin" id="asHelp"><p><b>Start creaite when you sign in, from Terminal.</b> Open Terminal and paste the lines under the one you want. They use your own creaite folder. Settings › creaite and backups has the same switch.</p>
     <p class="sub">Turn it on</p>${cmd("install")}<p class="sub">Turn it off</p>${cmd("remove")}</div>`;
   }
+  function asReserved() {
+    if (AS.done || AS.status || !viaServer()) return false;
+    let asked2 = false;
+    try {
+      asked2 = !!store.get(ASKED_KEY, false);
+    } catch (e4) {
+    }
+    return !asked2 && /Mac/i.test(String(navigator.platform || navigator.userAgent));
+  }
   function asQuestionHtml() {
+    const body2 = asQuestionDueHtml();
+    return body2 ? body2 : asReserved() ? asQuestionDueHtml(true) : "";
+  }
+  function asQuestionDueHtml(slot) {
+    if (slot) return `<div class="tb asq-slot" id="asQ" data-slot="1" aria-hidden="true"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
+    <span class="rmgo"><button type="button" class="btn primary" tabindex="-1" disabled>Yes</button> <button type="button" class="btn" tabindex="-1" disabled>Not now</button></span></div>`;
     return asQuestionDue() ? `<div class="tb" id="asQ"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
     <span class="rmgo"><button type="button" class="btn primary" data-asq="yes">Yes</button> <button type="button" class="btn" data-asq="no">Not now</button></span></div>` : "";
   }
   function asQuestionSync() {
     const box = $("#setupList"), cur = $("#asQ"), q5 = asQuestionDue();
     if (!box) return;
-    if (q5 && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
+    if (q5 && cur && cur.dataset.slot) {
+      cur.remove();
+      addHTML(box, "beforeend", raw(asQuestionHtml()));
+    } else if (q5 && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
     else if (!q5 && cur) cur.remove();
   }
   function asRedraw() {
@@ -32875,7 +33078,11 @@ system/scripts/run launch.py agent ${what}`;
     }
   }
   async function asRefresh() {
-    await asStatus(true);
+    try {
+      await asStatus(true);
+    } finally {
+      AS.done = true;
+    }
     if (shared.VIEW === "settings") asRedraw();
     if (shared.VIEW === "today") asQuestionSync();
   }
@@ -37553,6 +37760,177 @@ system/scripts/run launch.py agent ${what}`;
     return out;
   }
 
+  // stores/minutesFiling.js
+  var filingAsk = y3(
+    /** @type {Ask|null} */
+    null
+  );
+  var filingError = y3("");
+  var filedNote = y3(
+    /** @type {{key: string|null, items: {code: string, project: string, folder_label: string, name: string}[], numbered?: string[]}|null} */
+    null
+  );
+  var filedProblem = y3("");
+  var stemOf = (name, ext) => ext && name.toLowerCase().endsWith(ext) ? name.slice(0, -ext.length) : name;
+  async function askFiling(proposal) {
+    const r4 = await api("/api/minutes/destination", { file: proposal });
+    if (!r4 || !r4.ok || !Array.isArray(r4.items) || !r4.items.length) return true;
+    filingError.value = "";
+    filedNote.value = null;
+    filedProblem.value = "";
+    return new Promise((resolve) => {
+      const typed2 = {};
+      for (const it2 of r4.items) typed2[it2.code] = stemOf(it2.will_be, it2.ext);
+      filingAsk.value = { file: proposal, key: r4.key || null, items: r4.items, typed: typed2, resolve };
+    });
+  }
+  function typeFiling(code, value) {
+    const a5 = filingAsk.value;
+    if (a5) filingAsk.value = { ...a5, typed: { ...a5.typed, [code]: value } };
+    filingError.value = "";
+  }
+  async function confirmFiling() {
+    const a5 = filingAsk.value;
+    if (!a5) return;
+    const names = {};
+    for (const it2 of a5.items) {
+      const stem = (a5.typed[it2.code] || "").trim();
+      if (stem !== stemOf(it2.will_be, it2.ext)) names[it2.code] = stem + it2.ext;
+    }
+    let used2 = {};
+    if (Object.keys(names).length) {
+      const r4 = await api("/api/minutes/destination/name", { file: a5.file, names });
+      if (!r4 || !r4.ok) {
+        filingError.value = oneLine(r4 && r4.message || "That name can't be used.");
+        return;
+      }
+      used2 = r4.names || {};
+    }
+    const shown2 = a5.items.map((it2) => ({ code: it2.code, project: it2.project, folder_label: it2.folder_label, name: used2[it2.code] || it2.will_be }));
+    filingAsk.value = null;
+    filedNote.value = { key: a5.key, items: shown2 };
+    a5.resolve(true);
+  }
+  function noteNumbered(moved2) {
+    const n4 = filedNote.value;
+    if (!n4 || !moved2 || !moved2.length) return;
+    const said2 = [];
+    const updated = n4.items.map((i5) => {
+      const m5 = moved2.find((x5) => x5.kind === "draft" && x5.code === i5.code);
+      if (m5 && m5.name !== i5.name) said2.push(m5.name);
+      return m5 ? { ...i5, name: m5.name } : i5;
+    });
+    filedNote.value = { ...n4, items: updated, numbered: said2 };
+  }
+  function cancelFiling() {
+    const a5 = filingAsk.value;
+    filingAsk.value = null;
+    filingError.value = "";
+    filedNote.value = null;
+    if (a5) a5.resolve(false);
+    for (const ms2 of [60, 300]) setTimeout(() => {
+      const b5 = typeof document === "undefined" ? null : document.getElementById("mnApproveBtn");
+      if (b5 && !b5.disabled && document.activeElement === document.body) b5.focus();
+    }, ms2);
+  }
+  function dismissFiled() {
+    filedNote.value = null;
+    filedProblem.value = "";
+  }
+  async function openFiled(what, where2) {
+    const r4 = await api("/api/minutes/destination/open", { what, key: where2.key || void 0, path: where2.path || void 0 });
+    const ok2 = !!(r4 && r4.ok);
+    return { ok: ok2, message: oneLine(r4 && r4.message || "") || (ok2 ? "" : "The minutes can't be opened.") };
+  }
+
+  // components/minutes/FilingDialog.jsx
+  function FilingDialog() {
+    const a5 = filingAsk.value;
+    const many = !!a5 && a5.items.length > 1;
+    return /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(Dialog, { open: !!a5, onClose: cancelFiling, labelledBy: "mnFilingH", id: "mnFiling", class: "mnapprove", focus: "#mnFilingName0", children: a5 ? /* @__PURE__ */ u4("form", { class: "mnap", onSubmit: (e4) => {
+        e4.preventDefault();
+        confirmFiling();
+      }, children: [
+        /* @__PURE__ */ u4("h2", { id: "mnFilingH", children: "File the minutes" }),
+        /* @__PURE__ */ u4("p", { class: "sub", children: [
+          many ? "The minutes are filed in each project's Minutes folder." : "Check where the minutes go and what they are called.",
+          " Cancel files nothing."
+        ] }),
+        a5.items.map((it2, i5) => /* @__PURE__ */ u4("div", { class: "mnap-one", "data-code": it2.code, style: "display:block", children: [
+          /* @__PURE__ */ u4("div", { children: [
+            /* @__PURE__ */ u4("b", { children: it2.project }),
+            " ",
+            /* @__PURE__ */ u4("span", { class: "sub", children: [
+              "in ",
+              it2.folder_label
+            ] })
+          ] }),
+          /* @__PURE__ */ u4("div", { style: "display:flex;gap:6px;align-items:center;margin-top:6px", children: [
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                class: "pkdt",
+                id: `mnFilingName${i5}`,
+                "aria-label": `File name in ${it2.project}`,
+                style: "flex:1;min-width:0",
+                value: a5.typed[it2.code],
+                maxLength: 140,
+                onInput: (e4) => typeFiling(
+                  it2.code,
+                  /** @type {HTMLInputElement} */
+                  e4.target.value
+                )
+              }
+            ),
+            /* @__PURE__ */ u4("span", { class: "sub", children: it2.ext })
+          ] }),
+          it2.taken && stemOf(it2.will_be, it2.ext) === a5.typed[it2.code] ? /* @__PURE__ */ u4("p", { class: "sub", "data-numbered": true, children: it2.filed_copy ? `A copy called “${it2.name}” already exists, so these are numbered: “${it2.will_be}”. If this meeting was filed before, cancel.` : `Another minutes called “${it2.name}” are waiting, so these are numbered: “${it2.will_be}”.` }) : null,
+          it2.transcript ? /* @__PURE__ */ u4("p", { class: "sub", children: [
+            "The transcript is filed beside it in ",
+            it2.transcript.folder_label,
+            " as “",
+            it2.transcript.will_be,
+            "”."
+          ] }) : null,
+          it2.local ? null : /* @__PURE__ */ u4("p", { class: "sub", children: "That file is online-only in OneDrive." })
+        ] }, it2.code)),
+        filingError.value ? /* @__PURE__ */ u4("p", { class: "sub", role: "alert", id: "mnFilingErr", style: "color:var(--bad, #b00020)", children: filingError.value }) : null,
+        /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnFilingNo", onClick: cancelFiling, children: "Cancel" }),
+          /* @__PURE__ */ u4("button", { type: "submit", class: "btn primary", id: "mnFilingGo", children: "File and approve" })
+        ] })
+      ] }) : null }),
+      /* @__PURE__ */ u4(FiledNote, {})
+    ] });
+  }
+  function FiledNote() {
+    const n4 = filedNote.value;
+    if (!n4 || filingAsk.value) return null;
+    const first = n4.items[0];
+    const go3 = async (what) => {
+      const r4 = await openFiled(what, { key: n4.key });
+      filedProblem.value = r4.ok ? "" : r4.message;
+    };
+    return /* @__PURE__ */ u4("div", { class: "snack on", role: "status", "data-minutes-filed": true, style: "bottom:64px", children: [
+      /* @__PURE__ */ u4("span", { children: [
+        n4.items.length > 1 ? `Filed in ${n4.items.length} projects.` : `Filed as ${first.name} in ${first.folder_label}.`,
+        n4.numbered && n4.numbered.length ? " The name you chose was taken meanwhile, so it was numbered." : "",
+        filedProblem.value ? ` ${filedProblem.value}` : ""
+      ] }),
+      /* @__PURE__ */ u4("button", { type: "button", "data-filed": "file", onClick: () => go3("file"), children: "Open file" }),
+      /* @__PURE__ */ u4("button", { type: "button", "data-filed": "folder", onClick: () => go3("folder"), children: "Open folder" }),
+      /* @__PURE__ */ u4("button", { type: "button", onClick: dismissFiled, children: "Close" })
+    ] });
+  }
+  function mountFiling() {
+    if (typeof document === "undefined" || document.getElementById("minutesFilingHost")) return;
+    const el2 = document.createElement("div");
+    el2.id = "minutesFilingHost";
+    document.body.appendChild(el2);
+    R(/* @__PURE__ */ u4(FilingDialog, {}), el2);
+  }
+
   // stores/minutes.js
   var minutesArg = y3(
     /** @type {{file?: string, path?: string}|null} */
@@ -37662,6 +38040,10 @@ system/scripts/run launch.py agent ${what}`;
     const doc = v5 && v5.ok ? v5.doc : null, plan = v5 && v5.plan ? v5.plan.items : null;
     if (!doc || !plan || !v5.path) return { ok: false, message: "These minutes have nothing pending.", made: 0 };
     const args = approveArgs(doc, plan);
+    if (how.approve !== false && v5.proposal) {
+      mountFiling();
+      if (!await askFiling(v5.proposal)) return { ok: false, message: "Cancelled: nothing was filed or approved.", made: 0 };
+    }
     let base = Number(doc.version) || void 0, made = 0;
     const done = [];
     const change2 = how.change || (async (op2) => {
@@ -37679,6 +38061,7 @@ system/scripts/run launch.py agent ${what}`;
     if (how.approve === false) return { ok: true, made, done };
     if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+    if (r4 && r4.ok) noteNumbered(r4.numbered);
     return { ...r4 || { ok: false, message: "Nothing was saved or changed." }, made };
   }
   async function trackPutBack(path, done) {
@@ -37698,10 +38081,10 @@ system/scripts/run launch.py agent ${what}`;
     const n4 = r4.approved || 0, left = (r4.waiting || []).length;
     return `Minutes approved · ${n4 ? `${n4} work item${n4 === 1 ? "" : "s"} registered` : "no work items registered"}${left ? ` · ${left} still to check` : ""}`;
   }
-  async function exportMinutes(format) {
+  async function exportMinutes(format, version = "internal") {
     const v5 = minutesView.value;
     if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
-    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true, version: version === "distributed" ? "distributed" : "internal" }) || { ok: false, message: "Not exported." };
   }
   var HELD_MINUTES_WORDS = "These minutes can't be filed yet: the transcript is no longer in your inbox. You can file the minutes without the transcript copy.";
   var MOVED_MINUTES_WORDS = "These minutes have moved or been filed. The list has been refreshed.";
@@ -46251,7 +46634,7 @@ system/scripts/run launch.py agent ${what}`;
     h2(() => {
       if (ed3.current) paintChecks(ed3.current, checks);
     }, [key2]);
-    const [active, setActive] = d2(false);
+    const [active2, setActive] = d2(false);
     const [spot, setSpot] = d2(
       /** @type {BarSpot} */
       "al"
@@ -46260,7 +46643,7 @@ system/scripts/run launch.py agent ${what}`;
       /** @type {HTMLDivElement|null} */
       null
     );
-    const showBar = active && editable && rich;
+    const showBar = active2 && editable && rich;
     _2(() => {
       const w6 = wrap.current, bar = w6 && /** @type {HTMLElement|null} */
       w6.querySelector(".sheet-rtebar");
@@ -52036,13 +52419,13 @@ system/scripts/run launch.py agent ${what}`;
     );
     return ok2 !== false;
   }
-  async function setProjectActive(code, active) {
+  async function setProjectActive(code, active2) {
     const p6 = psProject(code);
     if (!p6) return false;
-    const was = projectState(code), now = active ? "active" : "closed";
+    const was = projectState(code), now = active2 ? "active" : "closed";
     const ok2 = await save(
-      `${p6.name}: ${active ? "active again" : "closed"}`,
-      [{ op: "update", table: "projects", id: code, changes: { active: active ? 1 : 0 } }],
+      `${p6.name}: ${active2 ? "active again" : "closed"}`,
+      [{ op: "update", table: "projects", id: code, changes: { active: active2 ? 1 : 0 } }],
       null,
       () => {
         markState(code, now);
@@ -56757,9 +57140,13 @@ ${pre}**Current state title:** ${title}`);
         go2("settings", a5.dataset.setopen);
       }
     });
-    if (viaServer()) suStatus().then(() => {
-      if (shared.VIEW === "today") renderSetup();
-    });
+    if (viaServer()) {
+      const sig = () => JSON.stringify(setupSteps().map((x5) => [x5[2], x5[5]]));
+      const before = sig();
+      suStatus().then(() => {
+        if (shared.VIEW === "today" && sig() !== before) renderSetup();
+      });
+    }
   }
   function tib(icon, label, name, attrs = "", primary = false, why = "") {
     return `<button type="button" class="ib sm${primary ? " pri" : ""}" aria-label="${esc(name || label)}" data-tip="${esc(why || label)}"${why ? ' aria-disabled="true"' : ""} ${attrs}>${ic(icon)}</button>`;
@@ -58337,6 +58724,7 @@ ${pre}**Current state title:** ${title}`);
   // components/settings/MoreSettings.jsx
   var LIMITS = {
     "assistant.run_timeout_minutes": [1, 240],
+    "assistant.long_chat_turns": [5, 500],
     "logging.max_mb": [1, 500],
     "logging.keep_days": [1, 90],
     "search.debounce_ms": [0, 2e3],
@@ -61743,7 +62131,7 @@ ${d5.text}`);
     if (!dl2 || !MOREF[k5]) return;
     const mark = [...dl2.querySelectorAll(":scope>.fsec")].find((e4) => e4.textContent === MOREMARK);
     if (!mark) return;
-    const active = document.activeElement, key2 = `${shared.CUR.mode}:${k5}:${shared.CUR.id || shared.CUR.n || "new"}`, x5 = curObj();
+    const active2 = document.activeElement, key2 = `${shared.CUR.mode}:${k5}:${shared.CUR.id || shared.CUR.n || "new"}`, x5 = curObj();
     const det = document.createElement("details");
     det.className = "morefields";
     putHTML(det, html`<summary>More fields</summary>`);
@@ -61762,7 +62150,7 @@ ${d5.text}`);
     det.querySelector("summary").addEventListener("click", () => setTimeout(() => {
       MOREOPEN[key2] = det.open;
     }));
-    if (active && box.contains(active)) active.focus();
+    if (active2 && box.contains(active2)) active2.focus();
   }
   var msName = (id2) => {
     const m5 = (D.milestone_names || {})[id2];
@@ -65300,7 +65688,7 @@ ${d5.text}`);
       attendees: r4.attendees || [],
       lead: "",
       summary: r4.summary || "",
-      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
+      note: version === "distributed" ? `From the Shareable version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal, and Sensitive items start unticked.",
       picked: /* @__PURE__ */ new Set(),
       includeUpdate: false,
       replyBy: "",
@@ -65316,7 +65704,7 @@ ${d5.text}`);
     const owners = new Set(ok2.map((i5) => i5.o));
     de2.lead = (de2.attendees.find((a5) => owners.has(a5.name)) || {}).name || "";
     de2.picked = new Set(ok2.filter((i5) => !i5.sens).map((i5) => i5.k + ":" + i5.id));
-    deShow(`${version === "distributed" ? "Distributed" : "Internal"} follow-up: ${r4.title}`);
+    deShow(`${version === "distributed" ? "Shareable" : "Internal"} follow-up: ${r4.title}`);
   }
   async function deFollowFacts(de2, m5) {
     const r4 = await api("/api/email/followup", { key: m5.key, eid: m5.eid || "", day: m5.day, start: m5.start, title: m5.title, files: [...m5.files || [], ...m5.draft ? [m5.draft] : []] });
@@ -71290,6 +71678,96 @@ ${d5.text}`);
     );
   }
 
+  // components/minutes/rowKeys.js
+  var keyRow = y3(
+    /** @type {number|null} */
+    null
+  );
+  var UNDO = [];
+  var rememberTrack = (doc, n4) => {
+    UNDO.push({ n: n4, was: ((doc.layout || {}).track || {})[String(n4)] });
+  };
+  var rowKeysReset = () => {
+    keyRow.value = null;
+    UNDO.length = 0;
+  };
+  var shownRows = () => [...document.querySelectorAll("#v-minutes tr.mi:not([hidden])")].map((r4) => Number(
+    /** @type {HTMLElement} */
+    r4.dataset.n
+  ));
+  function moveRow(d5) {
+    const list = shownRows();
+    if (!list.length) return;
+    const at2 = keyRow.value == null ? -1 : list.indexOf(keyRow.value);
+    const n4 = at2 < 0 ? d5 === 1 ? list[0] : list[list.length - 1] : list[Math.max(0, Math.min(list.length - 1, at2 + d5))];
+    keyRow.value = n4;
+    requestAnimationFrame(() => {
+      const rowEl = (
+        /** @type {HTMLElement|null} */
+        document.querySelector(`#v-minutes tr.mi[data-n='${n4}']`)
+      );
+      if (rowEl) {
+        rowEl.focus({ preventScroll: true });
+        rowEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
+  }
+  var active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
+  function rowKey(e4, keyApi) {
+    if (e4.metaKey || e4.ctrlKey || e4.altKey || e4.shiftKey || e4.isComposing || !e4.key || e4.key.length !== 1 || !active()) return false;
+    const doc = keyApi.doc();
+    if (!doc || doc.state !== "draft") return false;
+    const k5 = e4.key.toLowerCase();
+    if (k5 === "j" || k5 === "k") {
+      moveRow(k5 === "j" ? 1 : -1);
+      return true;
+    }
+    const n4 = keyRow.value;
+    if (k5 === "z") {
+      const u5 = UNDO.pop();
+      if (!u5) return false;
+      const track = { ...(doc.layout || {}).track || {} };
+      if (u5.was === void 0) delete track[String(u5.n)];
+      else track[String(u5.n)] = u5.was;
+      keyApi.setDoc({ ...doc, layout: { ...doc.layout || {}, track } }, "Track");
+      keyRow.value = u5.n;
+      return true;
+    }
+    if (n4 == null || !"ymnes".includes(k5)) return false;
+    const r4 = trackRows(doc).find((x5) => x5.n === n4);
+    if (!r4) return false;
+    if (k5 === "e") {
+      const box = (
+        /** @type {HTMLElement|null} */
+        document.querySelector(`#v-minutes tr.mi[data-n='${n4}'] .mnit [contenteditable='true']`)
+      );
+      if (box) box.focus();
+      return true;
+    }
+    if (k5 === "s") {
+      const turn = r4.row && r4.row.at && r4.row.at.turn ? Number(r4.row.at.turn) : null;
+      if (turn) jumpTo(turn);
+      else snack("This line has no place in the transcript");
+      return true;
+    }
+    const want = k5 === "y" ? "y" : k5 === "n" ? "n" : "";
+    if (trackOf(doc, r4, keyApi.plan()) === want) return true;
+    rememberTrack(doc, n4);
+    keyApi.setDoc(setTrack(doc, n4, want), "Track");
+    return true;
+  }
+  var installed = false;
+  function installRowKeys(keyApi) {
+    if (installed) return;
+    installed = true;
+    document.addEventListener("keydown", (e4) => {
+      if (rowKey(e4, keyApi)) {
+        e4.preventDefault();
+        e4.stopPropagation();
+      }
+    }, true);
+  }
+
   // components/minutes/ItemTable.jsx
   var MAIN = { actions: "action", decisions: "decision", raid: "description" };
   var ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
@@ -71492,7 +71970,8 @@ ${d5.text}`);
     return /* @__PURE__ */ u4(
       "tr",
       {
-        class: `mi${lit ? " hl" : ""}${attnFocus.value === n4 ? " nx" : ""}`,
+        class: `mi${lit ? " hl" : ""}${attnFocus.value === n4 ? " nx" : ""}${keyRow.value === n4 ? " kc" : ""}`,
+        tabIndex: -1,
         hidden: hide || void 0,
         "data-n": n4,
         "data-trk": t47,
@@ -71505,7 +71984,10 @@ ${d5.text}`);
           if (hoverTurn.value && hoverTurn.value.from === "row") hoverTurn.value = null;
         },
         children: [
-          /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => ctx.setDoc(setTrack(ctx.doc, n4, w6 === "m" ? "" : nextTrack(t47, w6)), "Track") }) }),
+          /* @__PURE__ */ u4("td", { class: "mntc", children: /* @__PURE__ */ u4(TrackButtons, { t: t47, label, onPick: (w6) => {
+            rememberTrack(ctx.doc, n4);
+            ctx.setDoc(setTrack(ctx.doc, n4, w6 === "m" ? "" : nextTrack(t47, w6)), "Track");
+          } }) }),
           /* @__PURE__ */ u4("td", { class: "mnic", children: [
             isNew ? /* @__PURE__ */ u4(ItemText, { value: String(v5[ROW_FIELD[sid]] || ""), label: `${ctx.section.heading}: ${label}`, n: n4, onSave: (x5) => edit({ [ROW_FIELD[sid]]: x5 }) }) : /* @__PURE__ */ u4("div", { class: "mnit mnit-ro", children: /* @__PURE__ */ u4(Linked, { text: String(cells[MAIN[sid]] || "") }) }),
             turn || held || need || own || checks.length || isNew && item.looks_like || !isNew && !r4.kept && row2.does ? /* @__PURE__ */ u4("div", { class: "mnrow2", children: [
@@ -71665,14 +72147,23 @@ ${d5.text}`);
 
   // components/minutes/MinutesView.jsx
   var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
-  var MN_EXPORTS = [
-    { id: "docx", name: "Word", line: "The minutes template; an export only, edits to it never come back" },
-    { id: "pdf", name: "PDF", line: "Printed from the page" },
-    { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
-    { id: "sep", sep: true },
-    { id: "followup", name: "Draft the follow-up email", line: "For sending: no Internal-only or Sensitive items; copied, never sent" },
-    { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
-  ];
+  var mnExports = (draft) => {
+    const hold = draft ? "Approve the minutes first" : void 0;
+    return [
+      { head: "Shareable: for sending" },
+      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
+      // The email's summary is free text from the Shareable version (minutes_record.py followup_facts), so it has the same #329 gap as the Updates text.
+      { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent", tip: draft ? "Draft: check before sending" : void 0 },
+      { id: "sep", sep: true },
+      { head: "Internal: colleagues only" },
+      { id: "docx:internal", name: "Word (Internal)", line: "Everything, marked Internal; an export only, edits never come back" },
+      { id: "pdf:internal", name: "PDF (Internal)", line: "Everything, marked Internal" },
+      { id: "html:internal", name: "HTML (Internal)", line: "Everything, marked Internal; filed beside the minutes" },
+      { id: "followup-internal", name: "Draft an Internal follow-up email", line: "Marked Internal, for colleagues only; Sensitive items start unticked" }
+    ];
+  };
   var dirty = false;
   var approving = y3(false);
   var reAsk = y3(false), reBusy = y3(false), reStep = y3("");
@@ -71706,8 +72197,9 @@ ${d5.text}`);
       openMinutesFollowup(v5 && v5.path, "internal");
       return;
     }
-    const r4 = await exportMinutes(id2);
-    snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+    const [fmt, ver] = id2.split(":");
+    const r4 = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
+    snack(r4.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").replace(/^Distributed minutes/, "Shareable minutes").split("\n")[0]);
   }
   async function readAgain() {
     const v5 = minutesView.value;
@@ -71943,7 +72435,7 @@ ${d5.text}`);
             data: { mnexport: "" },
             items: (
               /** @type {any} */
-              MN_EXPORTS
+              mnExports(draft)
             ),
             onPick: exportAs
           }
@@ -72093,10 +72585,15 @@ ${d5.text}`);
     if (!mnMounted) {
       R(/* @__PURE__ */ u4(MinutesView, {}), el2);
       mnMounted = true;
+      installRowKeys({ doc: () => minutesDoc.value, plan: () => {
+        const v5 = minutesView.value;
+        return v5 && v5.plan ? v5.plan.items : null;
+      }, setDoc: onDoc });
     }
     const a5 = typeof arg === "string" ? { path: arg } : arg;
     if (a5 && (a5.file || a5.path)) {
       dirty = false;
+      rowKeysReset();
       keptChecks.value = [];
       approveOpen.value = false;
       paneRemembered();
@@ -74172,7 +74669,7 @@ ${d5.text}`);
     shared.RUN = { id: `r-${Date.now().toString(36)}-c`, ctl: new AbortController() };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: msg, session: shared.ASKSESSION, chat: shared.ASKCHAT, run: shared.RUN.id }, void 0, shared.RUN.ctl);
+      await askStream("/api/ask", { message: msg, session: shared.ASKSESSION, chat: shared.ASKCHAT, run: shared.RUN.id, continue: true }, void 0, shared.RUN.ctl);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -74831,6 +75328,8 @@ ${d5.text}`);
     shared.ASKSESSION = session;
     store.set(CHATK, chat);
     store.set(SESSK, session);
+    $("#chContL").hidden = !chat;
+    if (chat !== was) $("#chCont").checked = false;
     if (chat !== was) {
       if (was === null && $("#chIn").value) draftSave();
       else draftRestore();
@@ -74986,7 +75485,7 @@ ${d5.text}`);
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0 }, confirmed, ctl);
+      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -76937,19 +77436,19 @@ ${d5.text}`);
     if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
   }
   var asideItem = (m5, extra) => ({ key: m5.key || m5.path, day: m5.src === "upload" ? TODAY : m5.day, start: m5.start || "", title: m5.title, ...extra });
-  async function setAside(ms2, extra, what) {
+  async function setAside(ms2, extra, what, after = "") {
     if (!viaServer()) {
       snack(needsConnection("This"));
       return false;
     }
-    const r4 = await api("/api/intake/clear", { op: "clear", items: ms2.map((m5) => asideItem(m5, extra)) });
+    const r4 = await api("/api/intake/clear", { op: "clear", items: ms2.map((m5) => asideItem(m5, typeof extra === "function" ? extra(m5) : extra)) });
     if (!r4.ok) {
       snack(plainSay(oneLine(r4.message === OLDSERVER ? OLDSERVER : r4.message || "Couldn't do that")));
       return false;
     }
-    const keys = ms2.map((m5) => m5.key || m5.path);
+    const keys = ms2.map((m5) => m5.key || m5.path), count = Number(r4.count) || ms2.length;
     await reloadData();
-    snack(`${what}: ${ms2.length === 1 ? ms2[0].title : `${ms2.length} meetings`}`, () => irRestore(keys));
+    snack(`${what}: ${ms2.length === 1 ? ms2[0].title : `${count} meetings`}${after}`, () => irRestore(keys));
     return true;
   }
   function irLater(m5) {
@@ -76957,6 +77456,18 @@ ${d5.text}`);
   }
   function irNotNeeded(m5, reason, note) {
     return irCanSetAside(m5) && IR_REASONS.includes(reason) ? setAside([m5], { reason, note: note || "" }, "Not needed") : Promise.resolve(false);
+  }
+  async function irAsideMany(ms2, how) {
+    const able = ms2.filter(irCanSetAside), ok2 = able.slice(0, 200), left = ms2.length - able.length, over = able.length - ok2.length;
+    if (!ok2.length) {
+      snack("Nothing to set aside: those meetings are already drafted, done or being processed");
+      return false;
+    }
+    if (how !== "later" && !IR_REASONS.includes(how.reason)) return false;
+    const word = how === "later" ? "Later" : "Not needed", note = (left ? ` · ${left} left out: already drafted, done or being processed` : "") + (over ? ` · ${over} not done: 200 at a time, do the rest again` : "");
+    const done = await setAside(ok2, how === "later" ? (m5) => ({ kind: "later", seen: m5.state === "ready" }) : { reason: how.reason, note: "" }, word, note);
+    if (done) irClearTicks();
+    return done;
   }
   function irRestoredWords(keys, n4) {
     const files = keys.filter((k5) => (D.inbox || []).some((f5) => f5.path === k5)).length;
@@ -77084,6 +77595,16 @@ ${d5.text}`);
     const day = f5.slice(0, 10), t47 = /^.{10}[ T](\d{2}:\d{2})/.exec(f5);
     return `Calendar read ${[day === today ? "" : fd(day), t47 ? t47[1] : ""].filter(Boolean).join(" ")}`;
   }
+  async function irOpenFolder(m5) {
+    if (!m5) return false;
+    if (!viaServer()) {
+      snack(needsConnection("Opening the folder"));
+      return false;
+    }
+    const r4 = await openFiled("folder", { key: m5.mkey || m5.key, path: m5.src === "upload" ? null : m5.path });
+    if (r4.message) snack(r4.message);
+    return r4.ok;
+  }
   async function irRemoveFile(m5) {
     if (!m5 || m5.src !== "upload" || !m5.path) return false;
     if (!viaServer()) {
@@ -77145,6 +77666,8 @@ ${d5.text}`);
     drafted: [["path", { d: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" }], ["path", { d: "M14 3v5h5M9 13h6M9 17h4" }]],
     approved: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M8 12.5l3 3 5-6" }]],
     all: [["path", { d: "M12 3l9 5-9 5-9-5z" }], ["path", { d: "M3 13l9 5 9-5" }]],
+    /* a meeting's state chip: waiting for its transcript (a clock) */
+    clock: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M12 7v5l3 2" }]],
     /* the page's controls */
     upload: [["path", { d: "M12 16V4M7 9l5-5 5 5M4 20h16" }]],
     stop: [["rect", { x: "6", y: "6", width: "12", height: "12", rx: "2" }]],
@@ -77177,6 +77700,50 @@ ${d5.text}`);
       },
       (IR_ICONS[name] || []).map(([tag, attrs], i5) => k(tag, { key: i5, ...attrs }))
     );
+  }
+
+  // components/intakeReview/selection.js
+  function irTargets(id2) {
+    const ms2 = irModel().meetings || [], shown2 = irTickedShown(), ids = shown2.includes(id2) ? shown2 : [id2];
+    return ms2.filter((m5) => ids.includes(m5.id) && irIsShown(m5.id));
+  }
+  function irMenuItems(ms2) {
+    const n4 = ms2.length, one = n4 === 1 ? ms2[0] : null, can = ms2.filter(irCanSetAside).length, words = n4 === 1 ? "" : ` · ${n4} meetings`;
+    const menu = (
+      /** @type {any[]} */
+      []
+    );
+    if (one && irCanProcess(one)) menu.push({ label: "Process", run: () => irProcess(one) });
+    menu.push({ label: `Later${words}`, disabled: !can, hint: can ? "" : "Nothing here can be set aside", run: () => irAsideMany(ms2, "later") });
+    menu.push({ label: `Not needed because${words}`, disabled: !can, sub: IR_REASONS.map((r4) => ({ label: r4, run: () => irAsideMany(ms2, { reason: r4 }) })) });
+    if (one && irCanCheck(one)) menu.push({ label: "Check again", run: () => irCheck(one) });
+    if (n4 > 1 || irTickedShown().length) menu.push({ sep: true }, { label: "Clear the ticks", run: () => irClearTicks() });
+    return menu;
+  }
+  var irKbAt = 0;
+  function irRowMenu(e4, m5) {
+    const el2 = (
+      /** @type {HTMLElement} */
+      e4.currentTarget
+    );
+    if (
+      /** @type {Element} */
+      e4.target.closest("a,input,select,textarea")
+    ) return;
+    e4.preventDefault();
+    if (performance.now() - irKbAt < 400) return;
+    const r4 = el2.getBoundingClientRect();
+    openContextMenu(irMenuItems(irTargets(m5.id)), e4.clientX || r4.left + 24, e4.clientY || r4.bottom, { label: "Intake actions", from: el2 });
+  }
+  function irRowKey(e4, m5) {
+    if (e4.target !== e4.currentTarget || !(e4.key === "ContextMenu" || e4.key === "F10" && e4.shiftKey)) return;
+    const el2 = (
+      /** @type {HTMLElement} */
+      e4.currentTarget
+    ), r4 = el2.getBoundingClientRect();
+    e4.preventDefault();
+    irKbAt = performance.now();
+    openContextMenu(irMenuItems(irTargets(m5.id)), r4.left + 24, r4.bottom, { label: "Intake actions", from: el2 });
   }
 
   // components/intakeReview/rows.jsx
@@ -77218,6 +77785,62 @@ ${d5.text}`);
     ] || ""}${tx3}`;
     const age = state === "ready" || state === "proposals" ? ` · ${ageWords(m5.age)}` : "";
     return `${base}${age}${m5.later_back ? " · back from Later" : ""}`;
+  }
+  function IrTick({ m: m5 }) {
+    if (!irCanSetAside(m5)) return null;
+    const on2 = irTicked.value.includes(m5.id);
+    return /* @__PURE__ */ u4(
+      "input",
+      {
+        type: "checkbox",
+        class: "irtick",
+        "data-irtick-box": m5.id,
+        checked: on2,
+        "aria-label": `Select ${m5.title}`,
+        onClick: (e4) => {
+          e4.stopPropagation();
+          irSetTick(
+            m5.id,
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked,
+            [...document.querySelectorAll("#v-intake-review input.irtick")].map((x5) => x5.getAttribute("data-irtick-box") || ""),
+            e4.shiftKey
+          );
+        }
+      }
+    );
+  }
+  function IrStateChip({ m: m5, n: n4 }) {
+    if (irBusy.value.includes(m5.id)) return null;
+    const st2 = irMeetingState(m5, n4), words = IR_STATE_CHIP[
+      /** @type {"waiting"} */
+      st2
+    ];
+    if (!words) return null;
+    return /* @__PURE__ */ u4("span", { class: `irchip ${st2}`, "data-irchip": st2, children: [
+      /* @__PURE__ */ u4(IrIcon, { name: st2 === "waiting" ? "clock" : st2 === "done" ? "approved" : "drafted" }),
+      words,
+      st2 === "check" ? ` · ${n4}` : ""
+    ] });
+  }
+  function stateDetail(m5, n4) {
+    const st2 = irMeetingState(m5, n4), tx3 = st2 === "waiting" && IR_TX_WORDS[
+      /** @type {keyof IR_TX_WORDS} */
+      m5.tx
+    ] ? IR_TX_WORDS[
+      /** @type {keyof IR_TX_WORDS} */
+      m5.tx
+    ] : "";
+    return [tx3, st2 === "check" ? ageWords(m5.age) : "", st2 === "done" && m5.already ? "Already processed" : "", m5.later_back ? "back from Later" : ""].filter(Boolean).join(" · ");
+  }
+  function IrStateLine({ m: m5, n: n4 }) {
+    const chip = IrStateChip({ m: m5, n: n4 });
+    if (!chip) return /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, n4) });
+    const d5 = stateDetail(m5, n4);
+    return /* @__PURE__ */ u4("div", { class: "why irstate", children: [
+      chip,
+      d5 ? ` ${d5}` : ""
+    ] });
   }
   function Progress({ words }) {
     return /* @__PURE__ */ u4(S2, { children: [
@@ -77271,7 +77894,7 @@ ${d5.text}`);
         " · Likely project: ",
         m5.p ? pName(m5.p) : "Not sure"
       ] }),
-      /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, n4) }),
+      /* @__PURE__ */ u4(IrStateLine, { m: m5, n: n4 }),
       waiting ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
     ] });
   }
@@ -77288,7 +77911,7 @@ ${d5.text}`);
     ] });
     if (m5.stage === "drafted") return mini ? null : /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "open", onClick: () => irClickMeeting(m5.id), children: open2 ? "Close" : "Check them" });
     if (!irCanSetAside(m5)) return m5.stage === "approved" ? /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("span", { class: "icsub", children: "Done" }),
+      m5.src !== "upload" ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "openfolder", title: "Show where the minutes were filed", onClick: () => irOpenFolder(m5), children: "Open folder" }) : null,
       m5.already ? /* @__PURE__ */ u4(S2, { children: [
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "removefile", title: "Take it out of Intake (kept in backups)", onClick: () => irRemoveFile(m5), children: "Remove" })
@@ -77364,8 +77987,11 @@ ${d5.text}`);
           if (!/** @type {Element} */
           e4.target.closest("button,a,input")) irClickMeeting(m5.id);
         },
+        onContextMenu: (e4) => irRowMenu(e4, m5),
+        onKeyDown: (e4) => irRowKey(e4, m5),
         children: [
           /* @__PURE__ */ u4("td", { class: "title", children: [
+            /* @__PURE__ */ u4(IrTick, { m: m5 }),
             /* @__PURE__ */ u4("span", { class: "ki", "aria-hidden": "true", "data-irki": m5.src === "upload" ? "file" : "meeting", children: /* @__PURE__ */ u4(IrIcon, { name: m5.src === "upload" ? "file" : "meeting" }) }),
             /* @__PURE__ */ u4("b", { class: "icmeethd", children: m5.title }),
             m5.stale ? /* @__PURE__ */ u4(S2, { children: [
@@ -77381,7 +78007,7 @@ ${d5.text}`);
                 m5.start ? ` ${m5.start}${m5.end ? `–${m5.end}` : ""}` : "",
                 m5.p && !m5.private && !m5.confidential ? ` · ${pName(m5.p)}` : ""
               ] }),
-              /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, n4) })
+              /* @__PURE__ */ u4(IrStateLine, { m: m5, n: n4 })
             ] }),
             state === "running" ? /* @__PURE__ */ u4(S2, { children: [
               /* @__PURE__ */ u4("div", { class: "why", children: "ask creaite waits until this ends" }),
@@ -77587,7 +78213,7 @@ ${d5.text}`);
   }
   var TIP_FALLBACK = { draft: "Draft minutes or a report: open it to read the Word draft", files: "File changes: open the suggestion to see them" };
   var canDraftResponse = (r4) => !!r4 && !r4.done && r4.kind === "raid" && !String(r4.rec && r4.rec.resp || "").trim() && !(r4.rec.type && r4.rec.type !== "Risk") && draftOn("thinking");
-  function ProposalLine({ n: n4, child }) {
+  function ProposalLine({ n: n4, child, kids, kid, minHeld }) {
     const tick2 = irTick.value;
     const r4 = irRow(n4);
     if (!r4) return null;
@@ -77602,8 +78228,10 @@ ${d5.text}`);
     return /* @__PURE__ */ u4(
       "tr",
       {
-        class: `click irprop${child ? " mchild" : ""}`,
+        class: `click irprop${child ? " mchild" : ""}${kid ? " irkid" : ""}${kids ? " irparent" : ""}`,
         "data-irn": n4,
+        "data-irkids": kids ? kids.id : void 0,
+        "aria-expanded": kids && kids.count ? !kids.folded : void 0,
         "data-irtick": tick2,
         "data-hold": r4.hold || "",
         "data-kind": r4.kind,
@@ -77672,7 +78300,22 @@ ${d5.text}`);
               /* @__PURE__ */ u4("span", { class: "h-warn", children: "No Word draft was made for these minutes" }),
               " · Reject them and process the meeting again"
             ] }) : null,
-            /* @__PURE__ */ u4(HeldNote, { r: r4 })
+            /* @__PURE__ */ u4(HeldNote, { r: r4 }),
+            kids && kids.count ? /* @__PURE__ */ u4("div", { class: "irkidsbar", children: [
+              /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "kids", "aria-expanded": !kids.folded, onClick: () => irToggleKids(kids.id), children: [
+                /* @__PURE__ */ u4("span", { class: "irkidscaret", "aria-hidden": "true", children: kids.folded ? "▸" : "▾" }),
+                " ",
+                kids.count,
+                " item",
+                kids.count === 1 ? "" : "s",
+                " in these minutes"
+              ] }),
+              kids.folded ? /* @__PURE__ */ u4("span", { class: "sub", children: " · folded" }) : null
+            ] }) : null,
+            kid && minHeld ? /* @__PURE__ */ u4("div", { class: "rvnote", "data-irheldkid": "1", children: [
+              /* @__PURE__ */ u4("span", { class: "h-warn", children: "Its minutes are held." }),
+              " Approving this does not approve them."
+            ] }) : null
           ] }),
           /* @__PURE__ */ u4("td", { class: "iracts", children: [
             r4.kind !== "files" ? /* @__PURE__ */ u4("button", { type: "button", class: "ib sm", "data-ira": "edit", "aria-label": "Open in the peek", "data-tip": "Open in the peek", onClick: () => irOpenPeek(n4), children: "✎" }) : null,
@@ -77701,34 +78344,55 @@ ${d5.text}`);
       }
     );
   }
-  function ProposalGroups({ groups, meet, child }) {
-    return /* @__PURE__ */ u4(S2, { children: irGroupsShown(groups, irDone, irHeld).map((g5) => /* @__PURE__ */ u4(S2, { children: [
-      /* @__PURE__ */ u4("tr", { class: `icsubhead ${g5.kind}${child ? " child" : ""}`, "data-irg": g5.kind, children: /* @__PURE__ */ u4("td", { colSpan: 2, children: [
-        /* @__PURE__ */ u4("span", { class: "icsh", children: [
-          meet ? `${meet} · ` : "",
-          IR_GROUP_HEAD[g5.kind][0],
-          " · ",
-          g5.ns.length
-        ] }),
-        /* @__PURE__ */ u4("span", { class: "icshs", children: IR_GROUP_HEAD[g5.kind][1] }),
-        g5.kind === "routine" ? /* @__PURE__ */ u4("span", { class: "icshr", children: /* @__PURE__ */ u4(
-          "button",
-          {
-            type: "button",
-            class: "mini ok",
-            "data-ira": "routine",
-            title: "Approves every routine suggestion here; the ones above stay for you",
-            onClick: () => irApproveRoutine(groups),
-            children: [
-              "Approve routine (",
-              g5.ns.length,
-              ")"
-            ]
-          }
-        ) }) : null
-      ] }) }),
-      g5.ns.map((n4) => /* @__PURE__ */ u4(ProposalLine, { n: n4, child }, modelKeyOf(n4) + "|" + ((SNAP.keys.get(n4) || {}).cfp || "")))
-    ] })) });
+  var isMinutes = (r4) => !!r4 && r4.kind === "draft" && r4.ref === "meeting";
+  function ProposalGroups({ groups, meet, child, meetId }) {
+    const tick2 = irTick.value;
+    const shown2 = irGroupsShown(groups, irDone, irHeld), minN = meetId ? shown2.flatMap((g5) => g5.ns).find((n4) => isMinutes(irRow(n4))) : void 0;
+    const nested = minN != null, rest = nested ? shown2.map((g5) => ({ ...g5, ns: g5.ns.filter((n4) => n4 !== minN) })).filter((g5) => g5.ns.length) : shown2;
+    const count = rest.reduce((a5, g5) => a5 + g5.ns.length, 0), folded = nested && !!irKidsFold.value[
+      /** @type {string} */
+      meetId
+    ], mr2 = nested ? irRow(
+      /** @type {number} */
+      minN
+    ) : null;
+    const minHeld = tick2 >= 0 && !!mr2 && !mr2.done && !!(mr2.held || mr2.nodraft);
+    return /* @__PURE__ */ u4(S2, { children: [
+      nested ? [
+        /** @type {number} */
+        minN
+      ].map((n4) => /* @__PURE__ */ u4(ProposalLine, { n: n4, child, kids: { id: (
+        /** @type {string} */
+        meetId
+      ), count, folded } }, modelKeyOf(n4) + "|" + ((SNAP.keys.get(n4) || {}).cfp || ""))) : null,
+      folded ? null : rest.map((g5) => /* @__PURE__ */ u4(S2, { children: [
+        /* @__PURE__ */ u4("tr", { class: `icsubhead ${g5.kind}${child ? " child" : ""}${nested ? " irkid" : ""}`, "data-irg": g5.kind, children: /* @__PURE__ */ u4("td", { colSpan: 2, children: [
+          /* @__PURE__ */ u4("span", { class: "icsh", children: [
+            meet ? `${meet} · ` : "",
+            IR_GROUP_HEAD[g5.kind][0],
+            " · ",
+            g5.ns.length
+          ] }),
+          /* @__PURE__ */ u4("span", { class: "icshs", children: IR_GROUP_HEAD[g5.kind][1] }),
+          g5.kind === "routine" ? /* @__PURE__ */ u4("span", { class: "icshr", children: /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              class: "mini ok",
+              "data-ira": "routine",
+              title: "Approves every routine suggestion here; the ones above stay for you",
+              onClick: () => irApproveRoutine(groups),
+              children: [
+                "Approve routine (",
+                g5.ns.length,
+                ")"
+              ]
+            }
+          ) }) : null
+        ] }) }),
+        g5.ns.map((n4) => /* @__PURE__ */ u4(ProposalLine, { n: n4, child, kid: nested, minHeld }, modelKeyOf(n4) + "|" + ((SNAP.keys.get(n4) || {}).cfp || "")))
+      ] }))
+    ] });
   }
   var keysBooted = false;
   function bootIrReviewKeys() {
@@ -77768,6 +78432,13 @@ ${d5.text}`);
         e4.stopImmediatePropagation();
         const to2 = rows2[Math.max(0, Math.min(rows2.length - 1, at2 + (e4.key === "ArrowDown" ? 1 : -1)))];
         if (to2) to2.focus();
+      } else if ((e4.key === "ArrowLeft" || e4.key === "ArrowRight") && row2.hasAttribute("data-irkids")) {
+        const id2 = row2.getAttribute("data-irkids") || "", folded = !!irKidsFold.value[id2];
+        if (e4.key === "ArrowLeft" !== folded) {
+          e4.preventDefault();
+          e4.stopImmediatePropagation();
+          irToggleKids(id2);
+        }
       } else if (e4.key === "a" || e4.key === "A") {
         e4.preventDefault();
         e4.stopImmediatePropagation();
@@ -77785,6 +78456,16 @@ ${d5.text}`);
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
   var IR_EMPTY = "Nothing here. Meetings appear when they end.";
   var irNone = () => irQuery.value.trim() ? "Nothing matches your search." : IR_EMPTY;
+  var liveN = (m5) => {
+    const l6 = irLive(m5.groups, irDone, irHeld);
+    return l6.needs.length + l6.routine.length;
+  };
+  var irGroups = (list) => irGroupMeetings(list, irGroup.value, { done: irDone, kinds: irFileKinds.value, day: fd, project: pName });
+  var GroupHead = ({ g: g5 }) => /* @__PURE__ */ u4("tr", { class: "icgrouphd", "data-irgroup": g5.key || "none", children: /* @__PURE__ */ u4("td", { colSpan: 2, children: [
+    /* @__PURE__ */ u4("b", { children: g5.label }),
+    " ",
+    /* @__PURE__ */ u4("span", { class: "sub", children: g5.items.length })
+  ] }) });
   function MailSections({ model }) {
     const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
     const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
@@ -77811,14 +78492,27 @@ ${d5.text}`);
     const live = irLive(m5.groups, irDone, irHeld);
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4(MeetingRow, { m: m5, live }),
-      irOpen.value === m5.id ? /* @__PURE__ */ u4(ProposalGroups, { groups: m5.groups, meet: m5.title, child: true }) : null
+      irOpen.value === m5.id ? /* @__PURE__ */ u4(ProposalGroups, { groups: m5.groups, meet: m5.title, child: true, meetId: m5.id }) : null
     ] });
   }
   function ListView({ model, list }) {
-    return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
-      list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: list.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 }, m5.id)) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
+    const lead = irLeadWithWork(list), grouped = irGroup.value !== "none";
+    const table = (rows2, part) => rows2.length ? /* @__PURE__ */ u4("div", { class: "tbl", "data-irpart": part, children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(rows2).map((g5) => /* @__PURE__ */ u4(S2, { children: [
+      grouped ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
+      g5.items.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 }, m5.id))
+    ] })) }) }) }) : null;
+    if (!list.length) return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
+      /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
+    return /* @__PURE__ */ u4("div", { "data-irv": "list", children: grouped ? /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(MailSections, { model }),
+      table(lead, "all")
+    ] }) : /* @__PURE__ */ u4(S2, { children: [
+      table(lead.filter((m5) => m5.stage !== "arrived"), "work"),
+      /* @__PURE__ */ u4(MailSections, { model }),
+      table(lead.filter((m5) => m5.stage === "arrived"), "arrived")
+    ] }) });
   }
   function BoardView({ model }) {
     const open2 = model.meetings.find((m5) => m5.id === irOpen.value);
@@ -77846,11 +78540,17 @@ ${d5.text}`);
                 if (!/** @type {Element} */
                 e4.target.closest("button,a,input")) irClickMeeting(m5.id);
               },
+              onContextMenu: (e4) => irRowMenu(e4, m5),
+              onKeyDown: (e4) => irRowKey(e4, m5),
               children: [
-                /* @__PURE__ */ u4("div", { class: "t", children: m5.title }),
-                m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: m5.groups.needs.length + m5.groups.routine.length }) : /* @__PURE__ */ u4(S2, { children: [
+                /* @__PURE__ */ u4("div", { class: "t", children: [
+                  /* @__PURE__ */ u4(IrTick, { m: m5 }),
+                  " ",
+                  m5.title
+                ] }),
+                m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
                   /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
-                  /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(m5, m5.groups.needs.length + m5.groups.routine.length) })
+                  /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
                 ] }),
                 irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
                 /* @__PURE__ */ u4(IrNote, { m: m5 }),
@@ -77861,7 +78561,7 @@ ${d5.text}`);
           )) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing here." })
         ] });
       }) }),
-      open2 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true }) }) }) }) : null,
+      open2 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true, meetId: open2.id }) }) }) }) : null,
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
   }
@@ -77869,7 +78569,7 @@ ${d5.text}`);
     const sel = list.find((m5) => m5.id === irSel.value) || list[0], c5 = irLiveCounts();
     const hidden = (m5) => m5.private || m5.confidential;
     const right = (m5) => {
-      const n4 = m5.groups.needs.length + m5.groups.routine.length;
+      const n4 = liveN(m5);
       return n4 ? `${n4} suggestion${n4 === 1 ? "" : "s"}` : m5.stage === "arrived" && m5.state === "ready" ? "ready" : "";
     };
     return /* @__PURE__ */ u4("div", { "data-irv": "two", children: [
@@ -77883,22 +78583,40 @@ ${d5.text}`);
             " → Approved ",
             c5.approved
           ] }) }),
-          list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: list.map((m5) => /* @__PURE__ */ u4("tr", { class: `click${sel && sel.id === m5.id ? " sel" : ""}`, "data-irm": m5.id, tabindex: 0, onClick: () => {
-            irSel.value = m5.id;
-          }, children: [
-            /* @__PURE__ */ u4("td", { class: "title", children: [
-              m5.title,
-              /* @__PURE__ */ u4("div", { class: "why", children: [
-                IR_STAGE_NAMES[
-                  /** @type {keyof IR_STAGE_NAMES} */
-                  m5.stage
-                ],
-                " · ",
-                irWhen(m5)
-              ] })
-            ] }),
-            /* @__PURE__ */ u4("td", { class: "icsub irright", children: right(m5) })
-          ] }, m5.id)) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() })
+          list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(list).map((g5) => /* @__PURE__ */ u4(S2, { children: [
+            irGroup.value !== "none" ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
+            g5.items.map((m5) => /* @__PURE__ */ u4(
+              "tr",
+              {
+                class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
+                "data-irm": m5.id,
+                tabindex: 0,
+                onClick: (e4) => {
+                  if (!/** @type {Element} */
+                  e4.target.closest("input")) irSel.value = m5.id;
+                },
+                onContextMenu: (e4) => irRowMenu(e4, m5),
+                onKeyDown: (e4) => irRowKey(e4, m5),
+                children: [
+                  /* @__PURE__ */ u4("td", { class: "title", children: [
+                    /* @__PURE__ */ u4(IrTick, { m: m5 }),
+                    " ",
+                    m5.title,
+                    /* @__PURE__ */ u4("div", { class: "why", children: [
+                      IR_STAGE_NAMES[
+                        /** @type {keyof IR_STAGE_NAMES} */
+                        m5.stage
+                      ],
+                      " · ",
+                      irWhen(m5)
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ u4("td", { class: "icsub irright", children: right(m5) })
+                ]
+              },
+              m5.id
+            ))
+          ] })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() })
         ] }),
         /* @__PURE__ */ u4("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h2", { style: { margin: "0 0 4px" }, children: sel.title }),
@@ -77907,12 +78625,12 @@ ${d5.text}`);
             sel.src !== "upload" && sel.p && !hidden(sel) ? ` · ${pName(sel.p)}` : ""
           ] }),
           /* @__PURE__ */ u4("div", { class: "icrack", children: /* @__PURE__ */ u4(StageTrack, { m: sel }) }),
-          sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: sel.groups.needs.length + sel.groups.routine.length }) : /* @__PURE__ */ u4("div", { class: "why", children: irStateWords(sel, sel.groups.needs.length + sel.groups.routine.length) }),
+          sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: liveN(sel) }) : /* @__PURE__ */ u4(IrStateLine, { m: sel, n: liveN(sel) }),
           sel.stage === "arrived" && sel.state === "waiting" ? /* @__PURE__ */ u4("div", { class: "empty", children: "Waiting for the transcript. It appears here when the meeting’s transcript arrives." }) : null,
           irBusy.value.includes(sel.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(sel) }) : null,
           /* @__PURE__ */ u4(IrNote, { m: sel }),
           /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: sel, mini: true }) }),
-          /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: sel.groups, meet: sel.title }) }) }) })
+          /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: sel.groups, meet: sel.title, meetId: sel.id }) }) }) })
         ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Select a meeting." }) })
       ] }),
       /* @__PURE__ */ u4(MailSections, { model })
@@ -78085,11 +78803,67 @@ ${d5.text}`);
       ] }))
     ] });
   }
+  function GroupControls({ view }) {
+    const counts = irStateCounts(irModel(), irDone), all = counts.waiting + counts.ready + counts.check + counts.done;
+    return /* @__PURE__ */ u4(S2, { children: [
+      view === "board" ? null : /* @__PURE__ */ u4("label", { class: "irsel", children: [
+        "Group by",
+        " ",
+        /* @__PURE__ */ u4("select", { class: "fsel", "data-irgroupby": "1", "aria-label": "Group by", value: irGroup.value, onChange: (e4) => irSetGroup(
+          /** @type {HTMLSelectElement} */
+          e4.currentTarget.value
+        ), children: IR_GROUPS.map(([v5, l6]) => /* @__PURE__ */ u4("option", { value: v5, children: l6 })) })
+      ] }),
+      /* @__PURE__ */ u4("label", { class: "irsel", children: [
+        "Show",
+        " ",
+        /* @__PURE__ */ u4("select", { class: "fsel", "data-irshow": "1", "aria-label": "Show", value: irStateFilter.value, onChange: (e4) => irSetStateFilter(
+          /** @type {HTMLSelectElement} */
+          e4.currentTarget.value
+        ), children: IR_STATE_FILTERS.map(([v5, l6]) => /* @__PURE__ */ u4("option", { value: v5, children: [
+          l6,
+          " (",
+          v5 === "all" ? all : counts[
+            /** @type {"waiting"} */
+            v5
+          ],
+          ")"
+        ] })) })
+      ] })
+    ] });
+  }
+  function TickBar() {
+    const shown2 = irTickedShown(), ms2 = irTargets(shown2[0] || ""), n4 = shown2.length, hidden = irTicked.value.length - n4;
+    if (!n4 && !hidden) return null;
+    return /* @__PURE__ */ u4("div", { class: "irtickbar", role: "group", "aria-label": "Selected meetings", "data-irtickbar": "1", children: [
+      /* @__PURE__ */ u4("b", { children: [
+        n4,
+        " selected",
+        hidden ? `, ${hidden} hidden` : ""
+      ] }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "laterall", onClick: () => irAsideMany(ms2, "later"), children: "Later" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "reasonall", "aria-haspopup": "menu", onClick: (e4) => {
+        const el2 = (
+          /** @type {HTMLElement} */
+          e4.currentTarget
+        );
+        openContextMenuAt(
+          el2,
+          /** @type {any} */
+          (irMenuItems(ms2).find((x5) => x5.sub) || { label: "", sub: [] }).sub,
+          { label: "Not needed because" }
+        );
+      }, children: "Not needed because…" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "clearticks", onClick: () => irClearTicks(), children: "Clear" })
+    ] });
+  }
   function IntakeReviewView() {
     const tick2 = irTick.value;
     const c5 = irLiveCounts(), view = irView.value, q5 = irQuery.value;
-    const model = irFilterModel(irModel(), q5);
+    const found = irFilterModel(irModel(), q5);
+    const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };
     const list = irFiltered(model, irStage.value);
+    irSetShown((view === "list" ? list : model.meetings).map((m5) => m5.id));
     return /* @__PURE__ */ u4("div", { class: "wrapmax irpage", "data-irtick": tick2, children: [
       /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake" }),
       /* @__PURE__ */ u4("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
@@ -78112,6 +78886,7 @@ ${d5.text}`);
             onInput: (e4) => {
               irQuery.value = /** @type {HTMLInputElement} */
               e4.currentTarget.value;
+              irClearTicks();
             },
             onKeyDown: (e4) => {
               if (e4.key === "Escape" && irQuery.value) {
@@ -78122,6 +78897,7 @@ ${d5.text}`);
             }
           }
         ),
+        /* @__PURE__ */ u4(GroupControls, { view }),
         /* @__PURE__ */ u4("span", { class: "sp" }),
         /* @__PURE__ */ u4(ProcessAll, { n: irReady().length, left: irLeftOut().length }),
         /* @__PURE__ */ u4(UploadFiles, {}),
@@ -78133,6 +78909,7 @@ ${d5.text}`);
           /* @__PURE__ */ u4("span", { style: { marginLeft: "6px" }, children: l6 })
         ] })) })
       ] }),
+      /* @__PURE__ */ u4(TickBar, {}),
       irAddProblems.value.length ? /* @__PURE__ */ u4("div", { class: "why irnote iraddfail", role: "alert", "data-iraddfail": "1", children: [
         /* @__PURE__ */ u4("b", { children: irAddProblems.value.length === 1 ? "1 file wasn't added" : `${irAddProblems.value.length} files weren't added` }),
         /* @__PURE__ */ u4("ul", { style: { margin: "4px 0 0", paddingLeft: "18px" }, children: irAddProblems.value.map((p6) => /* @__PURE__ */ u4("li", { children: p6 })) }),
@@ -80053,6 +80830,78 @@ ${d5.text}`);
     setInterval(rollDay, 6e4);
   }
 
+  // chatLength.js
+  var LONG_TURNS = 30, LAST_TURNS = 4, ASKED_ABOUT = 5, LINE_MAX = 160, SUMMARY_MAX = 1800;
+  var NOTNOW = /* @__PURE__ */ new Set();
+  var CATLOADED = false;
+  var clip = (s5, n4) => {
+    s5 = String(s5 || "").replace(/\s+/g, " ").trim();
+    return s5.length > n4 ? s5.slice(0, n4 - 1).trimEnd() + "…" : s5;
+  };
+  function chatTurns() {
+    const out = [];
+    for (const m5 of $$("#chLog .msg.u, #chLog .msg.a.md, #chLog .msg.a:not(.info):not(.runask)")) {
+      const u5 = m5.classList.contains("u"), t47 = clip(m5.textContent, 600);
+      if (t47) out.push({ who: u5 ? "you" : "creaite", text: t47 });
+    }
+    return out;
+  }
+  var chatLength = () => $$("#chLog .msg.u").length;
+  function longLimit() {
+    const s5 = settingOf("assistant.long_chat_turns"), n4 = Number(s5 ? s5.value : LONG_TURNS);
+    return Number.isFinite(n4) && n4 >= 5 ? Math.round(n4) : LONG_TURNS;
+  }
+  function summaryOf(turns) {
+    const asked2 = turns.filter((t47) => t47.who === "you");
+    const about = asked2.slice(0, ASKED_ABOUT).map((t47) => "- " + clip(t47.text, LINE_MAX));
+    const last = turns.slice(-LAST_TURNS).map((t47) => (t47.who === "you" ? "You: " : "creaite: ") + clip(t47.text, 400));
+    let s5 = `Continuing from an earlier chat of ${asked2.length} messages.
+
+What I asked about:
+${about.join("\n")}
+
+The last few turns:
+${last.join("\n")}
+
+Next: `;
+    if (s5.length > SUMMARY_MAX) s5 = s5.slice(0, SUMMARY_MAX - 7).trimEnd() + "…\n\nNext: ";
+    return s5;
+  }
+  function chatLengthSync() {
+    const box = $("#chLong");
+    if (!box) return;
+    const n4 = chatLength(), lim = longLimit(), key2 = String(shared.ASKCHAT || ""), on2 = !!shared.ASKCHAT && n4 >= lim && !NOTNOW.has(key2);
+    box.hidden = !on2;
+    const t47 = $("#chLongText");
+    if (t47 && on2) t47.textContent = `This chat is long (${n4} messages), so each reply takes longer and costs more.`;
+  }
+  function chatContinueFresh() {
+    if (shared.BUSY) return;
+    const text = summaryOf(chatTurns());
+    newChat();
+    chPut(text);
+    chatLengthSync();
+  }
+  function bootChatLength() {
+    const log = $("#chLog"), box = $("#chLong");
+    if (!log || !box) return;
+    let t47 = 0;
+    new MutationObserver(() => {
+      clearTimeout(t47);
+      t47 = window.setTimeout(chatLengthSync, 120);
+    }).observe(log, { childList: true });
+    $("#chLongGo").addEventListener("click", chatContinueFresh);
+    $("#chLongNo").addEventListener("click", () => {
+      NOTNOW.add(String(shared.ASKCHAT || ""));
+      chatLengthSync();
+      $("#chIn").focus();
+    });
+    if (viaServer() && !CATLOADED) {
+      CATLOADED = true;
+      loadCatalogue().then(chatLengthSync);
+    }
+  }
+
   // core/globals.json
   var globals_default = {
     about: "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and so do dev/tools/build_dashboard_js.py and convert_area.py. Keep each list sorted.",
@@ -80132,6 +80981,7 @@ ${d5.text}`);
         "Health",
         "ICONS",
         "ID_RE",
+        "IR_STATE_CHIP",
         "Icon",
         "IconButton",
         "LASTVISIT",
@@ -80297,6 +81147,7 @@ ${d5.text}`);
         "calFoot",
         "calendarLive",
         "canHover",
+        "cancelFiling",
         "cantGo",
         "capped",
         "cardGroup",
@@ -80308,6 +81159,7 @@ ${d5.text}`);
         "cell",
         "chFit",
         "changesCardHtml",
+        "chatLengthSync",
         "chatMdInline",
         "checkHealth",
         "checkLive",
@@ -80339,6 +81191,7 @@ ${d5.text}`);
         "cmOK",
         "comboboxOpen",
         "confirmCard",
+        "confirmFiling",
         "copied",
         "countFor",
         "countUp",
@@ -80421,6 +81274,9 @@ ${d5.text}`);
         "evidence",
         "fd",
         "fileWithoutTranscript",
+        "filedNote",
+        "filingAsk",
+        "filingError",
         "firstHelp",
         "fitFilterBar",
         "flip",
@@ -80497,6 +81353,7 @@ ${d5.text}`);
         "irChanged",
         "irChecking",
         "irChooseKind",
+        "irClearTicks",
         "irCounts",
         "irDone",
         "irEsc",
@@ -80512,6 +81369,7 @@ ${d5.text}`);
         "irIfApproved",
         "irIsFolded",
         "irKeepOpen",
+        "irKidsFold",
         "irKindOf",
         "irLeftOut",
         "irLineHead",
@@ -80519,6 +81377,7 @@ ${d5.text}`);
         "irLive",
         "irLiveCounts",
         "irMeetingOf",
+        "irMeetingState",
         "irMergeEdits",
         "irMissing",
         "irModel",
@@ -80542,13 +81401,19 @@ ${d5.text}`);
         "irRow",
         "irSaveChanges",
         "irSel",
+        "irSetBusy",
         "irSetChecking",
         "irSetFileKind",
+        "irSetGroup",
+        "irSetStateFilter",
         "irSetView",
         "irStage",
         "irStageClick",
+        "irStateCounts",
+        "irStateOf",
         "irStop",
         "irTick",
+        "irTicked",
         "irToggle",
         "irUpdateList",
         "irVerb",
@@ -80582,6 +81447,7 @@ ${d5.text}`);
         "loadTab",
         "logoKindsOf",
         "longDate",
+        "longLimit",
         "mCreated",
         "mLandRow",
         "mScroll",
@@ -80656,6 +81522,7 @@ ${d5.text}`);
         "noteGone",
         "noteLeave",
         "noteMeta",
+        "noteNumbered",
         "noteSave",
         "noteText",
         "notesList",
@@ -80867,6 +81734,7 @@ ${d5.text}`);
         "send",
         "sensitive",
         "sentLog",
+        "setChat",
         "setChatWidth",
         "setClientLogos",
         "setClientName",
@@ -81353,6 +82221,7 @@ ${d5.text}`);
   bootPanel0166();
   bootPanelChase();
   bootSneak();
+  bootChatLength();
   bootPanel0167();
   bootPanel0168();
   bootPanel0169();

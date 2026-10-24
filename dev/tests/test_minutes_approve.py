@@ -409,16 +409,16 @@ class Distributed(Base):
         before = (self.v.root / FILED).read_bytes()
         first, second = (self.js(exp.replace("{p!r}", repr(FILED))) for _ in range(2))
         self.assertTrue(first["ok"] and second["ok"], (first, second))
-        self.assertEqual(first["path"], f"{ABC}/minutes/2026-10-14 Steering committee (distributed) (read only).html")
+        self.assertEqual(first["path"], f"{ABC}/minutes/2026-10-14 Steering committee (shareable) (read only).html")
         self.assertNotEqual(second["path"], first["path"])                            # never over a file
-        self.assertTrue(second["path"].startswith(f"{ABC}/minutes/2026-10-14 Steering committee (distributed)"))
+        self.assertTrue(second["path"].startswith(f"{ABC}/minutes/2026-10-14 Steering committee (shareable)"))
         page = (self.v.root / first["path"]).read_text(encoding="utf-8")
         self.assertNotIn("The committee met.", page)
         self.assertNotIn("Test data isn't anonymised", page)                          # marked as @2, filed as ABC-005
         self.assertIn("Book the UAT environment", page)
-        self.assertIn("Distributed", page)
+        self.assertIn("Shareable", page)
         self.assertEqual((self.v.root / FILED).read_bytes(), before)                  # the filed minutes are untouched
-        left = [f.name for f in (self.v.root / "system/staging/drafts").iterdir() if "(distributed)" in f.name]
+        left = [f.name for f in (self.v.root / "system/staging/drafts").iterdir() if "(shareable)" in f.name]
         self.assertEqual(left, [])                                                     # no working copy is left behind
         bad = self.js("import minutes_record\ntry:\n    minutes_record.export(" + repr(FILED) + ", 'html', True, version='client')\n"
                       "    print('{\"ok\": true}')\nexcept minutes_record.RecordError as e:\n    print(json.dumps({'ok': False}))")
@@ -592,7 +592,7 @@ class ThroughTheServer(unittest.TestCase):
         dist = self.post("/api/minutes/export", {"path": FILED, "format": "html", "version": "distributed"})
         self.assertTrue(dist["ok"], dist)
         self.assertEqual((dist["version"], dist["filed"]), ("distributed", True))
-        self.assertIn("(distributed)", dist["path"])
+        self.assertIn("(shareable)", dist["path"])
         doc = filed["doc"]
         before = (self.v.root / FILED).read_bytes()
         log = self.v.root / "system/config/files-log.jsonl"

@@ -74,7 +74,7 @@ class IrHardenCase(LiveBrowserCase):
     # ---- helpers ----
     def row(self, title):
         """The id of the row whose title starts with `title`."""
-        return self.b.eval("(t=>{ const r=[...document.querySelectorAll('#v-intake-review [data-irv=list] [data-irm]')].find(x=>x.querySelector('.icmeethd').textContent.trim().startsWith(t)); return r?r.dataset.irm:null; })(%s)" % json.dumps(title))
+        return self.b.eval("(t=>{ const all=[...document.querySelectorAll('#v-intake-review [data-irv=list] [data-irm]')], is=x=>x.querySelector('.icmeethd').textContent.trim().startsWith(t); const r=all.find(x=>is(x)&&x.dataset.stage==='arrived')||all.find(is); return r?r.dataset.irm:null; })(%s)" % json.dumps(title))
 
     def sel(self, title, extra=""):
         rid = self.row(title)

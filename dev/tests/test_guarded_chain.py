@@ -1,7 +1,8 @@
 """The guarded-file check's marker rule, on a throwaway git repo (never the live history).
 (1) a marked commit with an extra guarded edit fails; (2) an unmarked guarded edit fails; (3) the exact chain, marked, passes;
 (4) a marked commit with no chain file fails; plus: a marked commit touching a guarded file the chain doesn't list fails.
-Every case runs for the 2.6.1 chain and for the 2.6.2 chain (own marker, chain file and pin); a last group mixes the two."""
+Every case runs for the 2.6.1, the 2.6.2 and the 2.6.3 chain (own marker, chain file and pin); a group mixes 2.6.1 with 2.6.2, and one 2.6.2 with 2.6.3.
+2.6.3 put system/scripts/draft_delivery.py on the guarded list: its cases are at the end."""
 import subprocess
 import sys
 import tempfile
@@ -10,10 +11,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import guarded_chain  # noqa: E402
-from guarded_chain import HistoryMissing, SPEC1, SPEC2, chain_digest, guarded_touched  # noqa: E402
+from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
 LIVE, LEAK, EDIT, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "dev/tests/snapshots/golden.txt"
+DRAFT = "system/scripts/draft_delivery.py"
 DIFF_T, DIFF_U = "dev/proposals/x/tracker.diff", "dev/proposals/x/update.diff"
 
 
@@ -35,6 +37,7 @@ class Repo:
         self.write(LIVE, "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n")
         self.write(LEAK, "k1\nk2\n")
         self.write(EDIT, "e1\ne2\n")
+        self.write(DRAFT, "d1\nd2\nd3\n")
         self.write(GOLD, "g1\ng2\n")
         self.commit("base")
         run(self.d, "tag", "base")
@@ -92,7 +95,7 @@ class Repo:
     pin = "none"
 
     def touched(self, **kw):
-        key = "pin" if self.spec is SPEC1 else "pin2"
+        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3"}[self.spec[0]]
         if "pin" in kw and key != "pin":
             kw[key] = kw.pop("pin")
         kw.setdefault(key, self.pin)
@@ -236,6 +239,8 @@ class GuardedChain(unittest.TestCase):
     def test_the_live_pin_matches_the_live_chain_files(self):
         repo = Path(__file__).resolve().parents[2]
         name = self.SPEC[2]
+        if chain_digest(repo, "HEAD", self.SPEC) is None and not getattr(guarded_chain, name):
+            self.skipTest("the 2.6.3 chain list is not cut yet: its pin is set with the list")
         self.assertEqual(chain_digest(repo, "HEAD", self.SPEC), getattr(guarded_chain, name),
                          f"the chain list or a listed diff changed: update {name} only with Alan's say (python3 dev/tests/guarded_chain.py)")
 
@@ -244,6 +249,11 @@ class GuardedChain(unittest.TestCase):
 class GuardedChain2(GuardedChain):
     """The same cases for the 2.6.2 chain: its own marker, chain file and pin."""
     SPEC = SPEC2
+
+
+class GuardedChain3(GuardedChain):
+    """The same cases for the 2.6.3 chain: its own marker, chain file and pin."""
+    SPEC = SPEC3
 
 
 class BothChains(unittest.TestCase):
@@ -307,6 +317,109 @@ class BothChains(unittest.TestCase):
         self.r.commit(SPEC2[0] + " tracker and reach")
         first = run(self.r.d, "log", "--format=%H", "--grep", SPEC1[0]).strip()
         self.assertEqual(guarded_touched(self.r.d, first, "HEAD", pin2=self.r.pin2), [])
+
+
+DRAFT_DIFF = "dev/proposals/x/draft.diff"
+
+
+class DraftDelivery(unittest.TestCase):
+    """2.6.3: draft_delivery.py (the Outlook draft hook) is guarded. A plain edit fails; an edit inside the marked chain commit passes."""
+    SPEC = SPEC3
+
+    def setUp(self):
+        self.r = Repo(self.SPEC)
+        self.addCleanup(self.r._t.cleanup)
+
+    def anchor_chain(self):
+        r = self.r
+        r.write(DRAFT_DIFF, r.diff_of(DRAFT, "d1\nd2 guarded\nd3\n"))
+        r.write(r.cfile, DRAFT_DIFF + "\n")
+        r.commit("add the chain files")
+        r.pin = chain_digest(r.d, "HEAD", self.SPEC)
+        run(r.d, "apply", DRAFT_DIFF)
+
+    def touched(self):
+        return guarded_touched(self.r.d, "base", "HEAD", pin3=self.r.pin)
+
+    def test_it_is_on_the_guarded_list(self):
+        self.assertIn("draft_delivery.py", GUARDED)
+
+    def test_a_plain_edit_fails(self):
+        self.r.write(DRAFT, "d1\nd2\nd3\nd4\n")
+        self.r.commit("tweak the hook")
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD"), [DRAFT])
+
+    def test_a_new_file_added_outside_a_chain_fails(self):
+        run(self.r.d, "rm", "-q", DRAFT)
+        self.r.commit("remove it")
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD"), [DRAFT])
+
+    def test_the_edit_inside_the_marked_chain_commit_passes(self):
+        self.anchor_chain()
+        self.r.commit(SPEC3[0] + " draft_delivery anchor")
+        self.assertEqual(self.touched(), [])
+
+    def test_the_same_edit_unmarked_fails(self):
+        self.anchor_chain()
+        self.r.commit("draft_delivery anchor")
+        self.assertEqual(self.touched(), [DRAFT])
+
+    def test_an_extra_edit_in_the_marked_commit_fails(self):
+        self.anchor_chain()
+        self.r.write(DRAFT, (self.r.d / DRAFT).read_text() + "sneaky\n")
+        self.r.commit(SPEC3[0] + " draft_delivery anchor")
+        self.assertEqual(self.touched(), [DRAFT])
+
+    def test_a_later_plain_edit_after_the_chain_fails(self):
+        self.anchor_chain()
+        self.r.commit(SPEC3[0] + " draft_delivery anchor")
+        self.r.write(DRAFT, (self.r.d / DRAFT).read_text() + "later\n")
+        self.r.commit("later")
+        self.assertEqual(self.touched(), [DRAFT])
+
+    def test_the_2_6_2_marker_does_not_excuse_it(self):
+        self.anchor_chain()
+        self.r.commit(SPEC2[0] + " draft_delivery anchor")
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD", pin2=self.r.pin), [DRAFT])
+
+    def test_an_empty_pin_fails_closed(self):
+        self.anchor_chain()
+        self.r.commit(SPEC3[0] + " draft_delivery anchor")
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD"), [DRAFT])
+
+
+class Chains2And3(unittest.TestCase):
+    """A range holding the 2.6.2 chain commit and then the 2.6.3 chain commit (tracker.py in 2.6.2, draft_delivery.py in 2.6.3)."""
+
+    def setUp(self):
+        self.r = Repo(SPEC2)
+        self.addCleanup(self.r._t.cleanup)
+
+    def build(self, mark3=True):
+        r = self.r
+        r.chain()
+        pin2 = r.pin
+        r.commit(SPEC2[0] + " tracker and update")
+        r.write(DRAFT_DIFF, r.diff_of(DRAFT, "d1\nd2 guarded\nd3\n"))
+        r.write(SPEC3[1], DRAFT_DIFF + "\n")
+        r.commit("add the 2.6.3 chain files")
+        pin3 = chain_digest(r.d, "HEAD", SPEC3)
+        run(r.d, "apply", DRAFT_DIFF)
+        r.commit(SPEC3[0] + " draft_delivery" if mark3 else "draft_delivery")
+        return pin2, pin3
+
+    def test_both_marked_pass(self):
+        p2, p3 = self.build()
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD", pin2=p2, pin3=p3), [])
+
+    def test_the_third_unmarked_fails(self):
+        p2, p3 = self.build(mark3=False)
+        self.assertIn(DRAFT, guarded_touched(self.r.d, "base", "HEAD", pin2=p2, pin3=p3))     # an unexplained net change reports them all
+
+    def test_base_after_the_second_checks_the_third_alone(self):
+        p2, p3 = self.build()
+        second = run(self.r.d, "log", "--format=%H", "--grep", SPEC2[0]).strip()
+        self.assertEqual(guarded_touched(self.r.d, second, "HEAD", pin3=p3), [])
 
 
 if __name__ == "__main__":

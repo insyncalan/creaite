@@ -116,6 +116,7 @@ class Findings(Base):
         b = self.b
         b.eval("window.GATE=null")
         sel = self.sel("ABC Steering", " [data-ira=process]")
+        b.eval("document.querySelector(%s).scrollIntoView({block:'center'}); 0" % json.dumps(sel))      # #340: the Arrived rows come after the work to decide, below the first screen
         self.assertTrue(b.eval("(x=>{ const r=x.getBoundingClientRect(); return x.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)); })(document.querySelector(%s))" % json.dumps(sel)),
                         "something sits over the Process button")
         b.click(sel)

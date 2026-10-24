@@ -4,11 +4,12 @@
    (style.css, "#232 Intake and Review"). */
 import { pName } from "../../core/data.js";
 import { fd, TODAY } from "../../core/page.js";
-import { irAskQ, irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen, irStep } from "../../stores/intakeReview.js";
+import { irAskQ, irBlocked, irBusy, irChecking, irClickMeeting, irNotes, irOpen, irSetTick, irStep, irTicked } from "../../stores/intakeReview.js";
 import { IconButton } from "../IconButton.jsx";
 import { IrIcon } from "./icons.js";
-import { irFixed } from "../../core/irFold.js";
-import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irProcessWord, irRemoveFile } from "./actions.js";
+import { IR_STATE_CHIP, irFixed, irMeetingState } from "../../core/irFold.js";
+import { irRowKey, irRowMenu } from "./selection.js";
+import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irOpenFolder, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
 export const IR_TX_WORDS = { none: "No transcript", no_access: "No access", not_transcribed: "Not transcribed" };
@@ -43,6 +44,41 @@ export function irStateWords(m, n) {
   const base = state === "proposals" ? (n === 1 ? "1 suggestion to check" : `${n} ${IR_STATE_WORDS.proposals}`) : `${IR_STATE_WORDS[/** @type {keyof IR_STATE_WORDS} */ (state)] || ""}${tx}`;
   const age = state === "ready" || state === "proposals" ? ` · ${ageWords(m.age)}` : "";
   return `${base}${age}${m.later_back ? " · back from Later" : ""}`;
+}
+
+/** #323: the tick box on a row that can be set aside (Later, Not needed). Shift-click ticks everything between the last tick and this
+    row, in the order the rows are drawn. The label names the meeting. @param {{m: any}} props */
+export function IrTick({ m }) {
+  if (!irCanSetAside(m)) return null;
+  const on = irTicked.value.includes(m.id);
+  return <input type="checkbox" class="irtick" data-irtick-box={m.id} checked={on} aria-label={`Select ${m.title}`}
+    onClick={e => { e.stopPropagation(); irSetTick(m.id, /** @type {HTMLInputElement} */ (e.currentTarget).checked,
+      [...document.querySelectorAll("#v-intake-review input.irtick")].map(x => x.getAttribute("data-irtick-box") || ""), e.shiftKey); }} />;
+}
+
+/** #325: a meeting's state as one chip: an icon, words and a coloured left edge (never colour alone). The state is irMeetingState, the
+    one definition the stage boxes and the Show choice also read. Ready, running and files being read have no chip. @param {{m: any, n: number}} props */
+export function IrStateChip({ m, n }) {
+  if (irBusy.value.includes(m.id)) return null;
+  const st = irMeetingState(m, n), words = IR_STATE_CHIP[/** @type {"waiting"} */ (st)];
+  if (!words) return null;
+  return <span class={`irchip ${st}`} data-irchip={st}><IrIcon name={st === "waiting" ? "clock" : st === "done" ? "approved" : "drafted"} />{words}{st === "check" ? ` · ${n}` : ""}</span>;
+}
+
+/** What goes beside the chip: why the transcript is not here, how long suggestions have waited, whether it came back from Later.
+    @param {any} m @param {number} n */
+function stateDetail(m, n) {
+  const st = irMeetingState(m, n), tx = st === "waiting" && IR_TX_WORDS[/** @type {keyof IR_TX_WORDS} */ (m.tx)] ? IR_TX_WORDS[/** @type {keyof IR_TX_WORDS} */ (m.tx)] : "";
+  return [tx, st === "check" ? ageWords(m.age) : "", st === "done" && m.already ? "Already processed" : "", m.later_back ? "back from Later" : ""].filter(Boolean).join(" · ");
+}
+
+/** The state line of a row, the same in the List, the Board's card and the Two panes' detail: the chip with its detail, or the plain
+    words while there is no chip (ready, running). @param {{m: any, n: number}} props */
+export function IrStateLine({ m, n }) {
+  const chip = IrStateChip({ m, n });
+  if (!chip) return <div class="why">{irStateWords(m, n)}</div>;
+  const d = stateDetail(m, n);
+  return <div class="why irstate">{chip}{d ? ` ${d}` : ""}</div>;
 }
 
 /** The progress bar a meeting shows while it is drafted in the background. */
@@ -100,7 +136,7 @@ export function FileFacts({ m, n }) {
   const waiting = m.stage === "arrived" && m.state === "ready" && !irBusy.value.includes(m.id);
   return <>
     <div class="why">{irAdded(m)} · Likely project: {m.p ? pName(m.p) : "Not sure"}</div>
-    <div class="why">{irStateWords(m, n)}</div>
+    <IrStateLine m={m} n={n} />
     {waiting ? <FileKind m={m} /> : null}
   </>;
 }
@@ -115,7 +151,7 @@ export function RowActions({ m, mini }) {
   const open = irOpen.value === m.id;
   if (running) return <><button type="button" class="mini" disabled data-ira="processing">Processing</button>{irCanStop(m) ? <>{" "}<button type="button" class="mini" data-ira="stop" title="Stop processing" onClick={() => irStop()}>Stop</button></> : null}</>;
   if (m.stage === "drafted") return mini ? null : <button type="button" class="mini" data-ira="open" onClick={() => irClickMeeting(m.id)}>{open ? "Close" : "Check them"}</button>;
-  if (!irCanSetAside(m)) return m.stage === "approved" ? <><span class="icsub">Done</span>{m.already ? <>{" "}<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)" onClick={() => irRemoveFile(m)}>Remove</button></> : null}</> : null;
+  if (!irCanSetAside(m)) return m.stage === "approved" ? <>{m.src !== "upload" ? <button type="button" class="mini" data-ira="openfolder" title="Show where the minutes were filed" onClick={() => irOpenFolder(m)}>Open folder</button> : null}{m.already ? <>{" "}<button type="button" class="mini" data-ira="removefile" title="Take it out of Intake (kept in backups)" onClick={() => irRemoveFile(m)}>Remove</button></> : null}</> : null;
   const unsure = m.src === "upload" && !irFileKind(m), badName = irBadName(m);
   return <>
     {badName ? <button type="button" class="mini" data-ira="process" disabled title="Rename this file to process it">{irProcessWord(m)}</button> : unsure ? <>
@@ -139,14 +175,16 @@ export function MeetingRow({ m, live }) {
   return (
     <tr class={`click irmeet${open ? " icopen" : ""}`} data-irm={m.id} data-stage={m.stage} data-state={state} tabindex={0}
       aria-expanded={can ? open : undefined}
-      onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}>
+      onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input")) irClickMeeting(m.id); }}
+      onContextMenu={e => irRowMenu(e, m)} onKeyDown={e => irRowKey(e, m)}>
       <td class="title">
+        <IrTick m={m} />
         <span class="ki" aria-hidden="true" data-irki={m.src === "upload" ? "file" : "meeting"}><IrIcon name={m.src === "upload" ? "file" : "meeting"} /></span>
         <b class="icmeethd">{m.title}</b>
         {m.stale ? <> <span class="tag stale">Stale · {ageWords(m.age)}</span></> : null}
         {m.src === "upload" ? <FileFacts m={m} n={n} /> : <>
           <div class="why">{m.day ? fd(m.day) : ""}{m.start ? ` ${m.start}${m.end ? `–${m.end}` : ""}` : ""}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div>
-          <div class="why">{irStateWords(m, n)}</div>
+          <IrStateLine m={m} n={n} />
         </>}
         {state === "running" ? <><div class="why">ask creaite waits until this ends</div><Progress words={irRunningWords(m)} /></> : null}
         <IrNote m={m} />

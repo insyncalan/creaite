@@ -65,6 +65,19 @@ class LiveBrowserCase(unittest.TestCase):
 
     quiet_jobs = True        # a test of backups or archiving sets False and keeps the shipped settings
 
+    def wait_filing(self, js, timeout=30):
+        """Like self.b.wait(js), for a step that approves minutes: #324 Approve minutes asks "File the minutes" first when the server offers
+        it (the guarded diff), so File and approve is pressed when the box opens. The same test passes with and without the question."""
+        import time
+        end = time.time() + timeout
+        while time.time() < end:
+            if self.b.eval("!!(document.getElementById('mnFiling')||{}).open"):
+                self.b.click("#mnFilingGo")
+            if self.b.eval(js):
+                return
+            self.b.pump(0.25)
+        self.b.wait(js, 1)
+
     @classmethod
     def quiet_periodic_jobs(cls):
         """The live server's timer runs the daily backup, zip, Tidy up and archiving a minute after start (backup_daily_job),

@@ -117,7 +117,7 @@ class Server:
         (self.root / hm.TRANSCRIPT).unlink()
         prop = sorted((self.root / "system/staging").glob("proposed-*.json"))[-1]
         before = prop.read_bytes()
-        code, res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "discard"})
+        code, res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "discard", "expect": hm.meeting_fp(prop)})
         assert code == 200 and res["ok"], res
         return prop, before, self.root / "system/staging/discarded" / prop.name
 

@@ -18,7 +18,7 @@ import { reloadData, reviewViaServer, snack, viaServer } from "../../core/server
 import { shared } from "../../core/state.js";
 import { draftResponse, NODRAFT_MSG, openProposal, pkEscBusy, pkNote, updPeekable } from "../../panel.js";
 import { approveRoutineTracked, BAD_MSG, decide, draftOn, HELD_ERR, heldApprove, heldDiscard, heldMsg, isRecordMin, rejectMinutes, rjMenuFor, rvBulkOK, rvDecideMany, trkLeftOut, rvRejectOK, rvTipText, WKRVF } from "../../review.js";
-import { irCur, irDone, irHeld, irPeek, irRow, irTick } from "../../stores/intakeReview.js";
+import { irCur, irDone, irHeld, irKidsFold, irPeek, irRow, irTick, irToggleKids } from "../../stores/intakeReview.js";
 import { isConflict } from "../../today.js";
 import { IR_GROUP_HEAD } from "./rows.jsx";
 import { ConflictBlock } from "./UpdatePeek.jsx";
@@ -180,15 +180,17 @@ const canDraftResponse = r => !!r && !r.done && r.kind === "raid" && !String((r.
 
 /** One proposal as the full row: the title, ONE meta line (the pill, the emphasised change, whether it is routine, the source; its
     detail is that line's tooltip, #229), and beside it what a person acts on: the quote, a conflict's before and after, the weekend
-    note, the no-Word-draft notice. @param {{n: number, child?: boolean}} props */
-export function ProposalLine({ n, child }) {
+    note, the no-Word-draft notice. #325: `kids` makes it the parent of its meeting's work items (a count and a fold button); `kid` draws
+    it as one of them, `minHeld` saying the minutes it hangs under are held.
+    @param {{n: number, child?: boolean, kids?: {id: string, count: number, folded: boolean}, kid?: boolean, minHeld?: boolean}} props */
+export function ProposalLine({ n, child, kids, kid, minHeld }) {
   const tick = irTick.value;       /* a row reads REV, which is not a signal: the tick redraws it when REV changed (an edit, a draft) and its props did not */
   const r = irRow(n);
   if (!r) return null;
   const parts = irChange(r), quote = irQuote(r), held = r.hold ? (HOLD_WORDS[/** @type {keyof HOLD_WORDS} */ (r.hold)] || "approve individually") : "";
   const rej = !!r.kind && r.kind !== "files", conflict = isConflict(r), tip = rvTipText(r) || TIP_FALLBACK[/** @type {keyof TIP_FALLBACK} */ (r.kind)] || "Open it to see the detail";
   return (
-    <tr class={`click irprop${child ? " mchild" : ""}`} data-irn={n} data-irtick={tick} data-hold={r.hold || ""} data-kind={r.kind} tabindex={0}
+    <tr class={`click irprop${child ? " mchild" : ""}${kid ? " irkid" : ""}${kids ? " irparent" : ""}`} data-irn={n} data-irkids={kids ? kids.id : undefined} aria-expanded={kids && kids.count ? !kids.folded : undefined} data-irtick={tick} data-hold={r.hold || ""} data-kind={r.kind} tabindex={0}
       onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("button,a,input,select")) irOpenPeek(n); }}
       onKeyDown={e => { if (e.target === e.currentTarget && e.key === "Enter") { e.preventDefault(); irOpenPeek(n); } }}>
       <td class="title">
@@ -206,6 +208,10 @@ export function ProposalLine({ n, child }) {
         <WeekendNote r={r} />
         {r.nodraft ? <div class="rvnote"><span class="h-warn">No Word draft was made for these minutes</span> · Reject them and process the meeting again</div> : null}
         <HeldNote r={r} />
+        {kids && kids.count ? <div class="irkidsbar"><button type="button" class="linkbtn" data-ira="kids" aria-expanded={!kids.folded} onClick={() => irToggleKids(kids.id)}>
+          <span class="irkidscaret" aria-hidden="true">{kids.folded ? "▸" : "▾"}</span> {kids.count} item{kids.count === 1 ? "" : "s"} in these minutes</button>
+          {kids.folded ? <span class="sub"> · folded</span> : null}</div> : null}
+        {kid && minHeld ? <div class="rvnote" data-irheldkid="1"><span class="h-warn">Its minutes are held.</span> Approving this does not approve them.</div> : null}
       </td>
       <td class="iracts">
         {r.kind !== "files" ? <button type="button" class="ib sm" data-ira="edit" aria-label="Open in the peek" data-tip="Open in the peek" onClick={() => irOpenPeek(n)}>✎</button> : null}
@@ -218,18 +224,30 @@ export function ProposalLine({ n, child }) {
   );
 }
 
-/** The groups under an open meeting (child rows on its rail) or in the mail and other sections.
-    @param {{groups: {needs: number[], routine: number[]}, meet?: string, child?: boolean}} props */
-export function ProposalGroups({ groups, meet, child }) {
-  return <>{irGroupsShown(groups, irDone, irHeld).map(g => (
+/** Whether a proposal is a meeting's own minutes (the parent its work items hang under). @param {any} r */
+const isMinutes = r => !!r && r.kind === "draft" && r.ref === "meeting";
+
+/** The groups under an open meeting (child rows on its rail) or in the mail and other sections. With `meetId` (#325) the meeting's
+    minutes are the parent row and the work items found in the same meeting are indented beneath it, each still its own row with its
+    own file-plus-item key (#307): the nesting is only drawn, nothing is approved with the minutes. The parent folds and unfolds.
+    @param {{groups: {needs: number[], routine: number[]}, meet?: string, child?: boolean, meetId?: string}} props */
+export function ProposalGroups({ groups, meet, child, meetId }) {
+  const tick = irTick.value;        /* the minutes' hold is read from REV, which is not a signal: the tick redraws the children when it changes */
+  const shown = irGroupsShown(groups, irDone, irHeld), minN = meetId ? shown.flatMap(g => g.ns).find(n => isMinutes(irRow(n))) : undefined;
+  const nested = minN != null, rest = nested ? shown.map(g => ({ ...g, ns: g.ns.filter(n => n !== minN) })).filter(g => g.ns.length) : shown;
+  const count = rest.reduce((a, g) => a + g.ns.length, 0), folded = nested && !!irKidsFold.value[/** @type {string} */ (meetId)], mr = nested ? irRow(/** @type {number} */ (minN)) : null;
+  const minHeld = tick >= 0 && !!mr && !mr.done && !!(mr.held || mr.nodraft);
+  return <>
+    {nested ? [/** @type {number} */ (minN)].map(n => <ProposalLine key={modelKeyOf(n) + "|" + ((SNAP.keys.get(n) || {}).cfp || "")} n={n} child={child} kids={{ id: /** @type {string} */ (meetId), count, folded }} />) : null}
+    {folded ? null : rest.map(g => (
     <>
-      <tr class={`icsubhead ${g.kind}${child ? " child" : ""}`} data-irg={g.kind}><td colSpan={2}>
+      <tr class={`icsubhead ${g.kind}${child ? " child" : ""}${nested ? " irkid" : ""}`} data-irg={g.kind}><td colSpan={2}>
         <span class="icsh">{meet ? `${meet} · ` : ""}{IR_GROUP_HEAD[g.kind][0]} · {g.ns.length}</span>
         <span class="icshs">{IR_GROUP_HEAD[g.kind][1]}</span>
         {g.kind === "routine" ? <span class="icshr"><button type="button" class="mini ok" data-ira="routine" title="Approves every routine suggestion here; the ones above stay for you"
           onClick={() => irApproveRoutine(groups)}>Approve routine ({g.ns.length})</button></span> : null}
       </td></tr>
-      {g.ns.map(n => <ProposalLine key={modelKeyOf(n) + "|" + ((SNAP.keys.get(n) || {}).cfp || "")} n={n} child={child} />)}
+      {g.ns.map(n => <ProposalLine key={modelKeyOf(n) + "|" + ((SNAP.keys.get(n) || {}).cfp || "")} n={n} child={child} kid={nested} minHeld={minHeld} />)}
     </>
   ))}</>;
 }
@@ -259,6 +277,9 @@ export function bootIrReviewKeys() {
       e.preventDefault(); e.stopImmediatePropagation();
       const to = rows[Math.max(0, Math.min(rows.length - 1, at + (e.key === "ArrowDown" ? 1 : -1)))];
       if (to) to.focus();
+    } else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && row.hasAttribute("data-irkids")) {        /* #325: the minutes row folds (Left) and unfolds (Right) its work items */
+      const id = row.getAttribute("data-irkids") || "", folded = !!irKidsFold.value[id];
+      if ((e.key === "ArrowLeft") !== folded) { e.preventDefault(); e.stopImmediatePropagation(); irToggleKids(id); }
     } else if (e.key === "a" || e.key === "A") { e.preventDefault(); e.stopImmediatePropagation(); irApprove(n); }
     else if (e.key === "r" || e.key === "R") { e.preventDefault(); e.stopImmediatePropagation(); irReject(n, row.querySelector("[data-ira=reject]")); }
   }, true);

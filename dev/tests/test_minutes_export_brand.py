@@ -34,7 +34,7 @@ class Brand(InternalMark):
         page = self.html("distributed")
         self.assertIn("Minutes of Meeting", page)
         self.assertIn("data:image/png;base64,", page)
-        self.assertIn("Distributed", page)
+        self.assertIn("Shareable", page)
         self.assertNotIn("Internal", re.sub(r"<style>.*?</style>", "", page, flags=re.S))
 
     def test_word_html_and_pdf_use_the_same_tokens(self):

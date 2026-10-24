@@ -977,6 +977,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .chgrip:hover::after,.chgrip:focus-visible::after,body.chresizing .chgrip::after{background:var(--faint)} body.chresizing{cursor:ew-resize;user-select:none}
 @media (max-width:600px){#chat{width:100vw} .chgrip{display:none}}
 .chh{display:flex;align-items:center;gap:8px;padding:14px 12px 6px 16px} .chh h2{flex:1}
+.chcont{display:block;padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chcont input{margin-right:6px}
 .chs{padding:0 16px 8px;font-size:var(--fs-xs);color:var(--muted)} .chs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:4px} .chs .dot.off{background:var(--bad)}
 .chq{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 10px;border-bottom:1px solid var(--line)}
 .chbtn{color:var(--muted)} #askBtn.working{position:relative} #askBtn.working::after{content:"";position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--ok);animation:askpulse 1.2s ease-in-out infinite}
@@ -988,6 +989,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
    theme's own primary button, so it reads in every theme and mode */
 .chlogbox{position:relative;flex:1;min-height:0;display:flex;flex-direction:column} .chlogbox .chlog{flex:1;min-height:0}
 /* ===== BL-257 (sprint-ask-flow) ===== the queued messages, under the log */
+.chlong{border-top:1px solid var(--line);padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;font-size:var(--fs-sm)} .chlong[hidden]{display:none} .chlongact{display:flex;gap:6px}
 .chqueue{border-top:1px solid var(--line);padding:6px 14px 4px;display:flex;flex-direction:column;gap:4px;max-height:30%;overflow:auto} .chqueue[hidden]{display:none}
 .chqhead{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .chqitem{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm)} .chqitem .chqtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1814,6 +1816,7 @@ body.keys-seen #whintList,body.keys-seen #whintBoard,body.keys-seen #rvHint{disp
 /* ===== end BL-155 (CSS) ===== */
 /* ===== BL-156 (sprint-ux) ===== the first-run checklist on Today */
 .setupsec .th{display:flex;align-items:baseline;gap:8px} .setupsec .setupx{margin-left:auto}
+.asq-slot{visibility:hidden}   /* #asQ's reserved slot: keeps the height until the autostart status answers */
 .setupbl li.done .t{color:var(--day-muted);text-decoration:line-through;text-decoration-color:var(--day-rule)}
 .setupbl li.done .n{color:var(--ok)}
 /* ===== end BL-156 (CSS) ===== */
@@ -3659,6 +3662,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnflag2{display:inline-block;font-size:var(--fs-xs);color:var(--warn);background:var(--warn-soft);border-radius:var(--r-pill);padding:1px 9px}
 .page tr.mi.nx td{background:var(--accent-soft)}
 .page tr.mi[hidden]{display:none}
+.page tr.mi.kc{outline:2px solid var(--accent);outline-offset:-2px}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
 .mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
@@ -4186,6 +4190,19 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
+/* #325 Intake: a meeting's state chip, and the work items nested under their minutes */
+#v-intake-review .irchip{display:inline-flex;align-items:center;gap:6px;padding:1px 10px 1px 8px;border-left:3px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk);color:var(--ink);font-size:var(--fs-xs);font-weight:500;vertical-align:middle}
+#v-intake-review .irchip .i{width:14px;height:14px;flex:none}
+#v-intake-review .irchip.check{border-left-color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .irchip.done{border-left-color:var(--ok);background:var(--ok-soft)}
+#v-intake-review tr.mchild.irkid td.title{padding-left:48px} #v-intake-review tr.mchild.irkid td.title::before{left:32px}
+#v-intake-review tr.icsubhead.child.irkid td{padding-left:48px}
+#v-intake-review .irkidsbar{margin-top:4px;font-size:var(--fs-xs)} #v-intake-review .irkidscaret{display:inline-block;width:1em}
+/* #323 Intake: Group by and Show, headings, tick boxes and the bar for ticked rows */
+#v-intake-review .irsel{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted)}
+#v-intake-review tr.icgrouphd td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)} #v-intake-review tr.icgrouphd b{color:var(--ink);font-weight:600}
+#v-intake-review input.irtick{margin:0 8px 0 0;vertical-align:middle;accent-color:var(--accent)}
+#v-intake-review .irtickbar{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:8px 0;background:var(--accent-soft);border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead td{padding:8px 16px;background:var(--sunk);border-top:1px solid var(--line);font-size:var(--fs-xs)}
 #v-intake-review .icsubhead .icsh{font-weight:600;color:var(--ink);margin-right:10px}#v-intake-review .icsubhead.needs .icsh{color:var(--warn)}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}

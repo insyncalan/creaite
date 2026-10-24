@@ -65,6 +65,24 @@ class LateStatus(Base):
         self.assertEqual(b.eval("window.__clicked"), 1)
         self.assertTrue(b.eval("!!document.querySelector('#asQ')"))
 
+    def test_the_question_card_does_not_move_when_the_status_arrives(self):
+        """The card's slot is reserved before the status answers, so its place and height are the same after (no sleeps: the
+        status is held by hand). Fails if the card only appears late."""
+        b = self.held()
+        if not b.eval("/Mac/i.test(String(navigator.platform||navigator.userAgent))"):
+            self.skipTest("the slot is reserved on a Mac only")
+        box = "(()=>{const e=document.querySelector('#asQ'),l=document.querySelector('#setupList');"\
+              "if(!e)return null;const r=e.getBoundingClientRect(),q=l.getBoundingClientRect();return [r.top,r.height,q.height,document.querySelector('#dnList').getBoundingClientRect().top]})()"
+        # The real status may already have answered, so put the page back into its boot state (no status yet) and draw Today's list
+        # as the first paint does; the held status is then still in flight.
+        b.eval("(()=>{const e=document.querySelector('#asQ'); if(e) e.remove(); AS.status=null; AS.done=false; renderSetup(); 0})()")
+        first = b.eval(box)
+        self.assertIsNotNone(first, "no slot before the status answers")
+        b.eval("window.__asr.release()")
+        b.wait("!!document.querySelector('#asQ') && !document.querySelector('#asQ').dataset.slot", 10)
+        b.frames(2)
+        self.assertEqual(b.eval(box), first)
+
 
 if __name__ == "__main__":
     unittest.main()

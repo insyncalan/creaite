@@ -41,13 +41,13 @@ class InternalMark(_Base):
                 self.assertIn(MARK, self.export(path, "html").read_text(encoding="utf-8"), "HTML")
                 self.assertIn(MARK, pdf_text(self.export(path, "pdf")), "PDF")
 
-    def test_the_distributed_export_says_distributed_and_is_not_marked_internal(self):
+    def test_the_distributed_export_says_shareable_and_is_not_marked_internal(self):
         self.approved("actions", "y")
         for fmt in ("docx", "html", "pdf"):
             p = self.export(FILED, fmt, "distributed")
             text = word_text(p) if fmt == "docx" else p.read_text(encoding="utf-8") if fmt == "html" else pdf_text(p)
             with self.subTest(fmt=fmt):
-                self.assertIn("Distributed", text)
+                self.assertIn("Shareable", text)
                 self.assertNotIn("Internal", text)
 
 

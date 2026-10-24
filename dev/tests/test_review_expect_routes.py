@@ -2,7 +2,8 @@
 
 The route passes the item's fingerprint to review.py (`--expect`), which checks it on the file it reads for the decision. The guarded
 diffs (dev/proposals/review-expect/review.py.diff and live_server.diff) are applied to the throwaway copy when this tree lacks them, so the
-same checks pass either way. Cases: a match decides that item only; a mismatch (item taken out, so the ref names another item: Cap's c55)
+same checks pass either way. 2.6.3 (dev/proposals/expect-mandatory/live_server.diff) makes `expect` mandatory: the same copy is taken to the level a
+case needs (0 the old route, 1 the 2.6.2 route where `expect` is optional, 2 mandatory) whatever level this tree is at. Cases: a match decides that item only; a mismatch (item taken out, so the ref names another item: Cap's c55)
 decides nothing and says why in plain words; a malformed `expect` is refused; no `expect` behaves as before. An OLD server (review.py's
 diff but not the route's) ignores `expect`: documented, unchanged behaviour. Mutant: the pass-through removed -> the mismatch check goes red.
 
@@ -29,8 +30,13 @@ import build_dashboard  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 DIFFS = ROOT / "dev/proposals/review-expect"
+MANDATORY = ROOT / "dev/proposals/expect-mandatory/live_server.diff"
 HAS_REVIEW = "_main_with_expect" in (ROOT / "system/scripts/review.py").read_text()
-HAS_ROUTE = '"--expect=' in (ROOT / "system/scripts/live_server.py").read_text() or "--expect={expect}" in (ROOT / "system/scripts/live_server.py").read_text()
+_LIVE = (ROOT / "system/scripts/live_server.py").read_text()
+HAS_ROUTE = '"--expect=' in _LIVE or "--expect={expect}" in _LIVE
+HAS_MANDATORY = "Reload the page and try again" in _LIVE
+TREE_LEVEL = 2 if HAS_MANDATORY else 1 if HAS_ROUTE else 0
+LEVEL_DIFFS = [None, DIFFS / "live_server.diff", MANDATORY]          # LEVEL_DIFFS[n] takes level n-1 to level n
 
 
 def item(n, text):
@@ -40,24 +46,31 @@ def item(n, text):
 
 
 class Server:
-    def __init__(self, route=True, mutate=False):
+    def __init__(self, route=True, mutate=False, level=None):
+        level = (1 if not route else TREE_LEVEL or 1) if level is None else level
         self.home = Path(tempfile.mkdtemp(prefix="creaite-re262-")).resolve()
         self.v = Vault()
         d = self.v.root
-        todo = [f for f, have in (("review.py.diff", HAS_REVIEW), ("live_server.diff", HAS_ROUTE)) if not have and (route or f == "review.py.diff")]
-        if todo:
-            subprocess.run(["git", "init", "-q", str(d)], check=True)
-            for f in todo:
-                subprocess.run(["git", "apply", str(DIFFS / f)], cwd=d, check=True)
-        if HAS_ROUTE and not route:                    # this tree has the route's diff: the copy goes back to the old route
-            subprocess.run(["git", "init", "-q", str(d)], check=True)
-            subprocess.run(["git", "apply", "-R", str(DIFFS / "live_server.diff")], cwd=d, check=True)
+        level = 0 if not route else level
+        subprocess.run(["git", "init", "-q", str(d)], check=True)
+        if not HAS_REVIEW:
+            subprocess.run(["git", "apply", str(DIFFS / "review.py.diff")], cwd=d, check=True)
+        for n in range(TREE_LEVEL + 1, level + 1):                      # up to the wanted level
+            subprocess.run(["git", "apply", str(LEVEL_DIFFS[n])], cwd=d, check=True)
+        for n in range(TREE_LEVEL, level, -1):                          # or back down, last diff first
+            subprocess.run(["git", "apply", "-R", str(LEVEL_DIFFS[n])], cwd=d, check=True)
         if mutate:
             f = d / "system/scripts/live_server.py"
             t = f.read_text()
             old = "return args + guard"
             assert old in t
             f.write_text(t.replace(old, "return args", 1))
+        if mutate == "optional":                       # 2.6.3 mutant: the route lets a missing `expect` through again
+            f = d / "system/scripts/live_server.py"
+            t = f.read_text()
+            old = "        if expect is None:\n            return None\n"
+            assert old in t
+            f.write_text(t.replace(old, "        if expect is None:\n            return []\n", 1))
         self.v.run("init")
         (d / ".creaite-dev").unlink(missing_ok=True)
         with socket.socket() as s:
@@ -154,9 +167,10 @@ class Checks:
 
 
 class Routes(unittest.TestCase):
+    """The 2.6.2 level (`expect` optional), kept as the record of what 2.6.3 changes."""
     @classmethod
     def setUpClass(cls):
-        cls.s = Server()
+        cls.s = Server(level=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -172,14 +186,53 @@ class Routes(unittest.TestCase):
         Checks.malformed(self.s)
 
     def test_no_expect_behaves_as_before(self):
-        Checks.without(self.s)
+        Checks.without(self.s)       # the 2.6.2 level: optional
+
+
+class Mandatory(unittest.TestCase):
+    """2.6.3 (dev/proposals/expect-mandatory): a decision without `expect` is refused in plain words, whatever the decision."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.s = Server(level=2)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.s.close()
+
+    def test_a_match_still_decides_that_item_only(self):
+        Checks.match(self.s)
+
+    def test_a_mismatch_still_decides_nothing(self):
+        Checks.mismatch(self.s)
+
+    def test_a_malformed_expect_is_still_refused(self):
+        Checks.malformed(self.s)
+
+    def test_no_expect_is_refused_for_every_decision_and_nothing_is_decided(self):
+        s = self.s
+        name = s.stage()
+        for decision in ("approved", "rejected", "keep", "override", "discard", "delete"):
+            r = s.review(file=name, ref=2, decision=decision, modes=[])
+            self.assertFalse(r.get("ok"), (decision, r))
+            self.assertIn("didn't say which item it meant", r.get("message", ""), (decision, r))
+            self.assertIn("Reload the page", r["message"])
+            self.assertNotIn("Traceback", r["message"])
+        self.assertEqual(s.decisions(name), {1: "pending", 2: "pending", 3: "pending"})
+        r = s.review(file=name, ref=2, decision="approved", modes=[], expect=s.fp(name, 2))      # and the same request with it works
+        self.assertTrue(r.get("ok"), r)
+        self.assertEqual(s.decisions(name), {1: "pending", 2: "approved", 3: "pending"})
+
+    def test_a_proposal_that_is_gone_still_says_so_first(self):
+        r = self.s.review(file="proposed-nope.json", ref=1, decision="approved")
+        self.assertIn("no longer pending", r.get("message", ""))
 
 
 class OldServer(unittest.TestCase):
     """The engine has --expect but the route does not pass it: `expect` is ignored, the call behaves as it always did."""
 
     def test_expect_is_ignored(self):
-        s = Server(route=False)
+        s = Server(level=0)
         try:
             name = s.stage()
             s.take_out(name, "Alpha item")
@@ -192,10 +245,19 @@ class OldServer(unittest.TestCase):
 
 class Mutant(unittest.TestCase):
     def test_without_the_pass_through_the_mismatch_check_goes_red(self):
-        s = Server(mutate=True)
+        s = Server(mutate=True, level=2)
         try:
             with self.assertRaises(AssertionError):
                 Checks.mismatch(s)
+        finally:
+            s.close()
+
+    def test_a_route_that_lets_a_missing_expect_through_fails_the_mandatory_check(self):
+        s = Server(mutate="optional", level=2)
+        try:
+            name = s.stage()
+            r = s.review(file=name, ref=2, decision="approved", modes=[])
+            self.assertTrue(r.get("ok"), "the mutant decides without expect, which Mandatory.test_no_expect_is_refused... would catch")
         finally:
             s.close()
 

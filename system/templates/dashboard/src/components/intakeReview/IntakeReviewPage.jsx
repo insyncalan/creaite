@@ -12,15 +12,18 @@
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
-import { IR_VIEWS, irEsc, irFiltered, irIsFolded } from "../../core/irFold.js";
+import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irEsc, irFiltered, irIsFolded, irStateCounts } from "../../core/irFold.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClickStage, irDropOn, irFolded, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
+import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irSetShown, irTickedShown, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
+import { irAsideMany } from "./actions.js";
+import { irMenuItems, irTargets } from "./selection.js";
 import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
+import { openContextMenuAt } from "../review/ContextMenu.jsx";
 
 export * from "./actions.js";   /* #232-A: the Intake actions are on window for the tests, as the page's other exports are */
 
@@ -127,19 +130,51 @@ function AsideMenu() {
   );
 }
 
+/** #323: Group by (List and Two panes; the Board is already grouped by step) and Show (the meeting state), with the number of meetings
+    in each state beside its choice. @param {{view: string}} props */
+function GroupControls({ view }) {
+  const counts = irStateCounts(irModel(), irDone), all = counts.waiting + counts.ready + counts.check + counts.done;
+  return <>
+    {view === "board" ? null : <label class="irsel">Group by{" "}
+      <select class="fsel" data-irgroupby="1" aria-label="Group by" value={irGroup.value} onChange={e => irSetGroup(/** @type {HTMLSelectElement} */ (e.currentTarget).value)}>
+        {IR_GROUPS.map(([v, l]) => <option value={v}>{l}</option>)}
+      </select></label>}
+    <label class="irsel">Show{" "}
+      <select class="fsel" data-irshow="1" aria-label="Show" value={irStateFilter.value} onChange={e => irSetStateFilter(/** @type {HTMLSelectElement} */ (e.currentTarget).value)}>
+        {IR_STATE_FILTERS.map(([v, l]) => <option value={v}>{l} ({v === "all" ? all : counts[/** @type {"waiting"} */ (v)]})</option>)}
+      </select></label>
+  </>;
+}
+
+/** #323: what the ticked rows can do at once, above the list. The same actions as the right-click menu on a ticked row. */
+function TickBar() {
+  const shown = irTickedShown(), ms = irTargets(shown[0] || ""), n = shown.length, hidden = irTicked.value.length - n;
+  if (!n && !hidden) return null;
+  return <div class="irtickbar" role="group" aria-label="Selected meetings" data-irtickbar="1">
+    <b>{n} selected{hidden ? `, ${hidden} hidden` : ""}</b>
+    <button type="button" class="mini" data-ira="laterall" onClick={() => irAsideMany(ms, "later")}>Later</button>
+    <button type="button" class="mini" data-ira="reasonall" aria-haspopup="menu" onClick={e => {
+      const el = /** @type {HTMLElement} */ (e.currentTarget); openContextMenuAt(el, /** @type {any} */ (irMenuItems(ms).find(x => x.sub) || { label: "", sub: [] }).sub, { label: "Not needed because" }); }}>Not needed because…</button>
+    <button type="button" class="linkbtn" data-ira="clearticks" onClick={() => irClearTicks()}>Clear</button>
+  </div>;
+}
+
 function IntakeReviewView() {
   const tick = irTick.value;   /* read for real: a bare `irTick.value;` is dropped by the bundler and nothing would redraw */
   const c = irLiveCounts(), view = irView.value, q = irQuery.value;
-  const model = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
+  const found = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
+  const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };     /* #323: Show */
   const list = irFiltered(model, irStage.value);
+  irSetShown((view === "list" ? list : model.meetings).map((/** @type {any} */ m) => m.id));       /* #323: ticked rows a filter hides are not acted on */
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
       <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "suggestion")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
       <div class="toolbar rvtools">
         <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
-          onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
+          onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; irClearTicks(); }}
           onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; } }} />
+        <GroupControls view={view} />
         <span class="sp"></span>
         <ProcessAll n={irReady().length} left={irLeftOut().length} />
         <UploadFiles />
@@ -152,6 +187,7 @@ function IntakeReviewView() {
           ))}
         </span>
       </div>
+      <TickBar />
       {irAddProblems.value.length ? <div class="why irnote iraddfail" role="alert" data-iraddfail="1">
         <b>{irAddProblems.value.length === 1 ? "1 file wasn't added" : `${irAddProblems.value.length} files weren't added`}</b>
         <ul style={{ margin: "4px 0 0", paddingLeft: "18px" }}>{irAddProblems.value.map(p => <li>{p}</li>)}</ul>

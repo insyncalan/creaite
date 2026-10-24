@@ -13,7 +13,7 @@ import { settingHasAll, settingWords } from "./Essentials.jsx";
 import { rowId, SettingRow } from "./SettingRow.jsx";
 
 /* Limits and shapes the generic controls can't guess (the old Advanced card's, BL-206 and BL-208). */
-const LIMITS = { "assistant.run_timeout_minutes": [1, 240], "logging.max_mb": [1, 500], "logging.keep_days": [1, 90],
+const LIMITS = { "assistant.run_timeout_minutes": [1, 240], "assistant.long_chat_turns": [5, 500], "logging.max_mb": [1, 500], "logging.keep_days": [1, 90],
   "search.debounce_ms": [0, 2000], "search.ask_budget_chars": [1000, 200000], "review.spot_check_every": [0, 100],
   "logging.repeat_window_hours": [1, 168], "live_mode.health_check_seconds": [5, 3600] };
 const CHOICES = { "dashboard.generate_days": [7, 14, 30], "logging.level": ["info", "debug"],

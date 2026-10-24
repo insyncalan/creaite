@@ -1,0 +1,11 @@
+# The approved guarded chain for 2.6.3, one diff per line, in apply order (GUARDED-2.6.3.md). Read by dev/tests/guarded_chain.py.
+# Lines starting with # are comments. Paths are relative to the repo root. Change this list only when Alan approves a change to the chain.
+# Base: the 2.6.2 release (main 39c1060a; the 2.6.1 and 2.6.2 chains are already applied there).
+# 327 B: fresh ask creaite sessions by default, Continue this chat (live_server)
+dev/proposals/327b/live_server.diff
+# 324: File the minutes box, names and Open folder (live_server)
+dev/proposals/324/live_server.diff
+# lows: draft_delivery.py anchor, review expect mandatory at the route, a comment
+dev/proposals/draft-delivery-guarded/draft_delivery.diff
+dev/proposals/expect-mandatory/live_server.diff
+dev/proposals/draft-comment/live_server.diff

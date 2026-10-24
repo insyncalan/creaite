@@ -26,6 +26,13 @@ from live_browser import LiveBrowserCase  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_tracker import Vault, action, make_draft  # noqa: E402
 
+
+def meeting_fp(prop):
+    """The fingerprint the page sends as `expect` for a staged meeting's minutes row (2.6.3: the route refuses a decision without it)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+    import build_dashboard
+    return build_dashboard.block_fp(json.loads(Path(prop).read_text(encoding="utf-8"))["meeting"])
+
 REPO = Path(__file__).resolve().parents[2]
 DAY, TITLE = "2026-10-20", "Supplier checkpoint"
 TRANSCRIPT = f"inbox/{DAY} Supplier checkpoint.vtt"
@@ -237,20 +244,20 @@ class HeldThroughTheServer(unittest.TestCase):
 
     def test_discard_through_the_server(self):
         prop = self.staged()
-        res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "discard"})
+        res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "discard", "expect": meeting_fp(prop)})
         self.assertTrue(res["ok"], res)
         self.assertTrue((self.root / "system/staging/discarded" / prop.name).is_file())
 
     def test_approve_without_the_transcript_through_the_server(self):
         prop = self.staged()
         res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "approved",
-                                        "modes": ["without-transcript", "as-staged"]})
+                                        "modes": ["without-transcript", "as-staged"], "expect": meeting_fp(prop)})
         self.assertTrue(res["ok"], res)
         self.assertEqual(json.loads(prop.read_text(encoding="utf-8"))["meeting"]["minutes_decision"], "approved")
 
     def test_an_unknown_decision_is_refused(self):
         prop = self.staged()
-        res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "delete"})
+        res = self.post("/api/review", {"file": prop.name, "ref": "meeting", "decision": "delete", "expect": meeting_fp(prop)})
         self.assertFalse(res["ok"])
         self.assertTrue(prop.exists())
 

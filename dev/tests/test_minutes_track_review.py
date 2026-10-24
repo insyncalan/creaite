@@ -94,7 +94,7 @@ class TrackFromReview(LiveBrowserCase):
     def test_01_approve_from_review_applies_the_track_column_and_undo_puts_the_minutes_back(self):
         b = self.b
         b.eval(MIN + ".querySelector('[data-ira=approve]').click()")
-        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.wait_filing("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 1 work item registered", self.snack())
         self.assertNotIn("wait in Review", self.snack())
         self.assert_track_applied()
@@ -150,7 +150,7 @@ class TrackFromReview(LiveBrowserCase):
         self.assertFalse([x for x in lis if "Possible duplicate" in x], "the crossed item isn't listed")
         self.assertEqual(self.staged(1)["decision"], "pending", "nothing approved yet")
         b.click("#mnApproveGo")
-        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.wait_filing("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 2 work items registered", self.snack())
         self.assertIn(CUT, self.descs())
         self.assertNotIn(UAT, self.descs())
@@ -329,7 +329,7 @@ class TwoProjects(LiveBrowserCase):
         # Approve under one project is decide's project argument (review.js approveTracked's `g`), driven here as Review drove it
         b.eval("(()=>{ const r=REV.find(x=>x.kind==='draft'&&x.ref==='meeting'&&x.file===" + json.dumps(self.proposal) + ");"
                " decide(r.n,'approved',false,'ABC'); })()")
-        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.wait_filing("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         descs = [a["description"] for a in self.rows_of("actions")]
         self.assertIn(SOW, descs, "ABC's ticked action")
         self.assertNotIn(UAT, descs, "DEF's ticked action waits in Review")
@@ -540,7 +540,7 @@ class RowlessPromiseFromReview(LiveBrowserCase):
         b = self.b
         to_intake(b, self.proposal)
         b.eval(MIN + ".querySelector('[data-ira=approve]').click()")
-        b.wait("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
+        self.wait_filing("document.getElementById('snack').classList.contains('on') && /Minutes approved/.test(document.getElementById('snack').textContent)", 30)
         self.assertIn("Minutes approved · 1 work item registered · 1 still to check", self.snack())
         self.assertIn("Draft the cutover runbook", [a["description"] for a in self.rows_of("actions")])
         self.assertNotIn("Send the vendor's rate card", [x["description"] for x in self.rows_of("promises")],

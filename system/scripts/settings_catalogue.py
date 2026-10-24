@@ -304,6 +304,9 @@ CATALOGUE = {
     "assistant.run_timeout_minutes": ("creaite and ask creaite", "Unwatched run stops after (minutes)",
                                       "A request nobody is watching ends after this long.",
                                       "Half an hour fits the longest real job (a mail and Teams check or minutes)."),
+    "assistant.long_chat_turns": ("creaite and ask creaite", "Offer a fresh chat after (messages)",
+                                  "After this many of your messages, ask creaite offers to continue in a fresh chat with a summary.",
+                                  "Thirty: long enough for a real job, before each reply gets slow and costly."),
     # ── You
     "identity.name": ("You", "Your name", "Who \"me\" is: items you own, mail you sent.", "Empty until set-up asks for it."),
     "identity.short_forms": ("You", "Short forms of your name", "Other ways people write your name (Al, AC).",

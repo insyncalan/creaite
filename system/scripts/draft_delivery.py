@@ -2,7 +2,8 @@
 
 With Settings › Essentials › Draft email › Create drafts in Outlook on (settings.json `draft_email.outlook_drafts`, off by
 default), the Draft email popup's Create draft in Outlook asks the live server to make one Outlook draft. This module is the plain
-code behind that route; it never calls Microsoft 365 itself and has no way to send anything:
+code behind that route; it never calls Microsoft 365 itself and has no way to send anything. Guarded since 2.6.3 (it holds the hook
+that checks the one create-draft call): it changes only in a commit marked "Guarded 2.6.x chain:" (dev/tests/guarded_chain.py).
 
   - `request(payload)`  the popup's payload checked and turned into the one create-draft call: the To addresses as shown
                         (none is allowed: Alan, 19-10-2026, the draft is still made with nothing in To), the subject as shown, and

@@ -129,7 +129,7 @@ class ServerRuns(unittest.TestCase):
         self.assert_prompt_last(self.last_argv(), "--dangerously-skip-permissions")
 
     def test_a_continuation_resumes_before_the_prompt(self):
-        self.stream("/api/ask", {"message": "-v", "session": "sess-dd", "run": "dd-resume-1"})
+        self.stream("/api/ask", {"message": "-v", "session": "sess-dd", "continue": True, "run": "dd-resume-1"})
         args = self.last_argv()
         self.assert_prompt_last(args, "-v")
         self.assertEqual(args[args.index("--resume") + 1], "sess-dd")
