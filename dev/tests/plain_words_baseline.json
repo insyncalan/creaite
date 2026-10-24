@@ -37,6 +37,14 @@
    "count": 1,
    "text": "Raised in {} meetings or sweeps, with no response yet"
   },
+  "chatLength.js | script | 003b1f99b9e6": {
+   "count": 1,
+   "text": "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and"
+  },
+  "chatLength.js | script | e9cadb97048f": {
+   "count": 1,
+   "text": "Names dev/tests use by name (b.eval(\"go('today')\")): each one a module exports is on window. Regener"
+  },
   "components/LinkPopover.jsx | apply | cfea419c3b4e": {
    "count": 1,
    "text": "Apply"
@@ -56,14 +64,6 @@
   "components/settings/Essentials.jsx | apply | cfea419c3b4e": {
    "count": 1,
    "text": "Apply"
-  },
-  "core/dayroll.js | script | 003b1f99b9e6": {
-   "count": 1,
-   "text": "BL-231 step 2b: the page's names that are on window on purpose. core/globals.js reads this file, and"
-  },
-  "core/dayroll.js | script | e9cadb97048f": {
-   "count": 1,
-   "text": "Names dev/tests use by name (b.eval(\"go('today')\")): each one a module exports is on window. Regener"
   },
   "core/page.js | path | 04747237af0a": {
    "count": 1,
@@ -1811,7 +1811,7 @@
   },
   "live_server.py | apply | 53e9d023330b": {
    "count": 1,
-   "text": "Nothing to save: no decided items."
+   "text": "Nothing to apply: no decided items."
   },
   "live_server.py | apply | 59c24e495d27": {
    "count": 1,
@@ -2187,7 +2187,7 @@
   },
   "tracker.py | apply | 53e9d023330b": {
    "count": 1,
-   "text": "Nothing to save: no decided items."
+   "text": "Nothing to apply: no decided items."
   },
   "tracker.py | apply | 5987ca46b1d2": {
    "count": 1,
