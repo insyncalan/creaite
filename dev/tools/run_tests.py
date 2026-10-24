@@ -69,6 +69,7 @@ import time
 import proc_guard
 import run_support as support
 import split_dashboard
+import suite_queue
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -521,6 +522,8 @@ def main(argv):
     if a.list:
         print("\n".join(f"{f.name}{'  (Chrome)' if support.is_chrome(f) else ''}" for f in files))
         return 0
+    if len(files) >= suite_queue.min_files():            # a big run takes its turn beside other agents' big runs (CI: off)
+        suite_queue.wait_turn()
     return run_all(files, a.j, a.repeat, a.stress, timeout=a.file_timeout, rerun_max=a.rerun_max, max_fail=a.max_fail)
 
 
