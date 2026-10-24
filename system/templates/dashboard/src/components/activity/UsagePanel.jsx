@@ -71,7 +71,7 @@ function Chart({ days, fd }) {
 /** The week's AI budget (#334): used against the limit and when the week ends. Counts only; the figures come from the server.
     @param {{b: Budget | undefined, fd: (s: string) => string}} p */
 function BudgetBar({ b, fd }) {
-  if (!b || !b.enabled) return b ? <p class="sub">The weekly AI budget is off. Turn it on in Settings, Advanced, creaite and ask creaite.</p> : null;
+  if (!b || !b.enabled) return b ? <p class="sub" data-budget-off="1">The weekly AI budget is off, as it is until you switch it on. Switched on, it counts this week's AI use, warns you at 80%, and at 100% asks first (or stops) before a request you type runs. The buttons in the dashboard and the daily mail check are never held. Switch it on in Settings, Advanced, creaite and ask creaite.</p> : null;
   const fmt = (/** @type {number} */ n) => (b.unit === "dollars" ? usd(n) : `${num(n)} tokens`), pct = Math.min(100, Math.round(b.percent));
   const word = b.state === "over" ? "Used up" : b.state === "warn" ? "Nearly used" : "Within budget";
   return (

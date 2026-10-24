@@ -23,7 +23,7 @@ UNITS = ("dollars", "tokens")
 AT_LIMIT = ("confirm", "stop")
 WARN_AT = 0.8                       # a plain warning from 80% of the week (the issue's figure)
 BLOCKABLE = ("ask",)                # runs a person starts by typing; a sweep, the alert check and drafts are never held (README)
-DEFAULTS = {"enabled": True, "unit": "dollars", "weekly_dollars": 50, "weekly_tokens": 50000000, "at_limit": "confirm"}
+DEFAULTS = {"enabled": False, "unit": "dollars", "weekly_dollars": 50, "weekly_tokens": 50000000, "at_limit": "confirm"}
 LIMITS = {"weekly_dollars": (1, 10000), "weekly_tokens": (100000, 10 ** 10)}
 MAX_COUNT = 10 ** 12
 
@@ -161,7 +161,7 @@ def gate(kind, st=None, confirmed=None, over_budget=False):
         return None
     try:
         st = st if st is not None else status()
-        if st["state"] != "over" or not st["counted"]:
+        if not st.get("enabled") or st["state"] != "over" or not st["counted"]:      # off: nothing is ever held
             return None
         can = st["at_limit"] == "confirm"
         if can and over_budget is True:

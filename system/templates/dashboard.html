@@ -68386,7 +68386,7 @@ ${d5.text}`);
     ] });
   }
   function BudgetBar({ b: b5, fd: fd3 }) {
-    if (!b5 || !b5.enabled) return b5 ? /* @__PURE__ */ u4("p", { class: "sub", children: "The weekly AI budget is off. Turn it on in Settings, Advanced, creaite and ask creaite." }) : null;
+    if (!b5 || !b5.enabled) return b5 ? /* @__PURE__ */ u4("p", { class: "sub", "data-budget-off": "1", children: "The weekly AI budget is off, as it is until you switch it on. Switched on, it counts this week's AI use, warns you at 80%, and at 100% asks first (or stops) before a request you type runs. The buttons in the dashboard and the daily mail check are never held. Switch it on in Settings, Advanced, creaite and ask creaite." }) : null;
     const fmt = (n4) => b5.unit === "dollars" ? usd(n4) : `${num(n4)} tokens`, pct = Math.min(100, Math.round(b5.percent));
     const word = b5.state === "over" ? "Used up" : b5.state === "warn" ? "Nearly used" : "Within budget";
     return /* @__PURE__ */ u4("div", { class: `ubudget ${b5.state}`, role: "group", "aria-label": "Weekly AI budget", children: [

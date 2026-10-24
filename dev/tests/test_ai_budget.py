@@ -44,10 +44,10 @@ class Week(unittest.TestCase):
 
 
 class States(unittest.TestCase):
-    CFG = ai_budget.settings({"weekly_dollars": 100})
+    CFG = ai_budget.settings({"enabled": True, "weekly_dollars": 100})
 
     def st(self, spent, **cfg):
-        c = ai_budget.settings(dict({"weekly_dollars": 100}, **cfg))
+        c = ai_budget.settings(dict({"enabled": True, "weekly_dollars": 100}, **cfg))
         return ai_budget.status([row("2026-10-20T09:00:00", spent)], c, WED)
 
     def test_ok_warn_over_at_the_edges(self):
@@ -72,11 +72,11 @@ class States(unittest.TestCase):
 
     def test_a_new_week_starts_empty(self):
         rows = [row("2026-10-20T09:00:00", 500)]
-        nxt = ai_budget.status(rows, ai_budget.settings({}), datetime(2026, 10, 26, 8, 0))
+        nxt = ai_budget.status(rows, ai_budget.settings({"enabled": True}), datetime(2026, 10, 26, 8, 0))
         self.assertEqual((nxt["used"], nxt["state"]), (0.0, "ok"))
 
     def test_missing_log_is_nothing_used_and_never_holds(self):
-        st = ai_budget.status([], ai_budget.settings({}), WED)
+        st = ai_budget.status([], ai_budget.settings({"enabled": True}), WED)
         self.assertEqual((st["used"], st["state"], st["counted"]), (0.0, "ok", True))
         broken = dict(self.st(500), counted=False)               # the file could not be read
         self.assertIsNone(ai_budget.gate("ask", broken))
@@ -84,7 +84,7 @@ class States(unittest.TestCase):
 
 class Gate(unittest.TestCase):
     def over(self, **cfg):
-        return ai_budget.status([row("2026-10-20T09:00:00", 60)], ai_budget.settings(dict({"weekly_dollars": 50}, **cfg)), WED)
+        return ai_budget.status([row("2026-10-20T09:00:00", 60)], ai_budget.settings(dict({"enabled": True, "weekly_dollars": 50}, **cfg)), WED)
 
     def test_confirm_mode_asks_then_runs_anyway(self):
         held = ai_budget.gate("ask", self.over())
@@ -115,13 +115,13 @@ class Gate(unittest.TestCase):
 class CountsOnly(unittest.TestCase):
     def test_no_text_from_the_log_reaches_the_output(self):
         rows = [row("2026-10-20T09:00:00", 60, label="Mia Hale budget", model="SECRET-MODEL", skills=["SECRET-SKILL"])]
-        st = ai_budget.status(rows, ai_budget.settings({"weekly_dollars": 50}), WED)
+        st = ai_budget.status(rows, ai_budget.settings({"enabled": True, "weekly_dollars": 50}), WED)
         out = json.dumps([st, ai_budget.gate("ask", st), ai_budget.warning(st)])
         for word in ("SECRET", "Mia", "budget\"}"):
             self.assertNotIn(word, out)
 
     def test_status_values_are_numbers_dates_and_fixed_words(self):
-        st = ai_budget.status([], ai_budget.settings({}), WED)
+        st = ai_budget.status([], ai_budget.settings({"enabled": True}), WED)
         for k, v in st.items():
             if k != "line":
                 self.assertIsInstance(v, (int, float, bool, str), k)
@@ -157,9 +157,34 @@ class Corrupt(unittest.TestCase):
 
     def test_an_infinite_line_never_locks_a_typed_ask(self):
         rows = [{"at": "2026-10-20T09:00:00", "cost_usd": 1e999}]
-        st = ai_budget.status(rows, ai_budget.settings({"at_limit": "stop"}), WED)
+        st = ai_budget.status(rows, ai_budget.settings({"enabled": True, "at_limit": "stop"}), WED)
         self.assertEqual(st["state"], "ok")
         self.assertIsNone(ai_budget.gate("ask", st))
+
+
+class OffByDefault(unittest.TestCase):
+    """Alan (via the lead): the budget is OFF until it is switched on. Off, nothing is ever held and nothing warns."""
+    OVER = [row("2026-10-20T09:00:00", 5000)]
+
+    def test_the_shipped_defaults_are_off(self):
+        self.assertIs(ai_budget.DEFAULTS["enabled"], False)
+        self.assertIs(json.loads((ROOT / "system/templates/settings-defaults.json").read_text())["ai_budget"]["enabled"], False)
+        self.assertIs(ai_budget.settings({})["enabled"], False)
+        self.assertIs(ai_budget.settings({"enabled": "yes"})["enabled"], False)       # only a real true turns it on
+        self.assertIs(ai_budget.settings({"enabled": True})["enabled"], True)
+
+    def test_off_never_holds_warns_or_shows_a_bar(self):
+        for at_limit in ("confirm", "stop"):
+            st = ai_budget.status(self.OVER, ai_budget.settings({"at_limit": at_limit}), WED)       # far over, never switched on
+            self.assertEqual(st["state"], "off")
+            self.assertIsNone(ai_budget.gate("ask", st))
+            self.assertIsNone(ai_budget.gate("ask", st, over_budget=False))
+            self.assertEqual(ai_budget.warning(st), "")
+
+    def test_the_usage_tab_says_it_is_off_and_how_to_switch_it_on(self):
+        src = (ROOT / "system/templates/dashboard/src/components/activity/UsagePanel.jsx").read_text()
+        self.assertIn("is off, as it is until you switch it on", src)
+        self.assertIn("Settings, Advanced, creaite and ask creaite", src)
 
 
 class Settings(unittest.TestCase):
@@ -170,7 +195,7 @@ class Settings(unittest.TestCase):
 
     def test_defaults_and_hand_edits(self):
         d = ai_budget.settings({})
-        self.assertEqual((d["enabled"], d["unit"], d["at_limit"]), (True, "dollars", "confirm"))
+        self.assertEqual((d["enabled"], d["unit"], d["at_limit"]), (False, "dollars", "confirm"))       # Alan: off until switched on
         s = ai_budget.settings({"enabled": "no", "unit": "pounds", "at_limit": "ignore", "weekly_dollars": "lots", "weekly_tokens": True})
         self.assertEqual(s, d)                                   # junk falls back to the defaults
         self.assertEqual(ai_budget.settings({"weekly_dollars": 0.5})["weekly_dollars"], 1)           # held between its limits
