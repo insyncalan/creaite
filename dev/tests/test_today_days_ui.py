@@ -194,20 +194,23 @@ class DayLine(TodayFixture):
         b.wait(f"{TABS}.length>1")
         self.assertEqual(self.chosen(), "2026-10-13")
 
-    # ---- past days: follow-up ----
-    def test_a_past_day_shows_each_meeting_s_follow_up(self):
+    # ---- past days: no follow-up under the meetings (#351 b) ----
+    def test_a_past_day_shows_no_follow_up_chips_or_links(self):
         b = self.b
         self.pick_past("2026-10-12")
         got = {m["t"]: m["acts"] for m in self.meetings()}
-        self.assertEqual(got["ABC weekly Example Programme"], ["Minutes made"])                     # processed.txt
-        self.assertEqual(got["ABC steering committee Example Programme"], ["Transcript ready", "Process"])
-        self.assertEqual(got["ABC design chat Example Programme"], ["No transcript"])
-        self.assertEqual(got["DEF sync Digital Enablement"], ["Not checked yet", "Check"])           # Alan: offers Check
-        self.assertEqual(got["Busy"], [])                                                             # private: times only
+        self.assertEqual(len(got), 5)                                                                 # the meetings are all there
+        self.assertTrue(all(v == [] for v in got.values()), got)                                      # no chips, no Check, no Process
+        self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .acts').length"), 0)
+        text = b.eval("document.getElementById('dayMeets').textContent")
+        for w in ("Minutes made", "Draft in Review", "Transcript ready", "No transcript", "Not checked yet"):
+            self.assertNotIn(w, text, w)
         self.assertEqual(b.eval("document.querySelectorAll('#dayMeets .preplink').length"), 0)       # no Prep on a past day
         self.assertEqual(b.eval("document.querySelectorAll('#dayLine .dot.past').length"), 5)
-        b.eval("D.days.days[0].meetings[0].follow={state:'minutes',draft:true,cleared:false}; renderDay()")
-        self.assertEqual({m["t"]: m["acts"] for m in self.meetings()}["ABC weekly Example Programme"][:1], ["Draft in Review"])
+        for width in (1400, 900):                                                                     # nothing spills sideways
+            b.resize(width, 1000)
+            b.pump(0.4)
+            self.assertTrue(b.eval("(()=>{const h=document.getElementById('dayMeets'); return h.scrollWidth<=h.clientWidth+1 && document.documentElement.scrollWidth<=document.documentElement.clientWidth+1})()"), width)
 
     # ---- today and later: Prep, in a popup on the title (#140) ----
     def popup(self, ix=0):
