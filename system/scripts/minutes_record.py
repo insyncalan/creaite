@@ -945,7 +945,6 @@ def plan_with_fps(data):
 def view(file=None, path=None):
     """What the minutes view opens: the record, its versions, the transcript's turns for the pane, and (while its items are
     pending) the approve popup's plan. By the proposal's file name, or the record's stored path."""
-    import review
     data = None
     if file:
         p = paths.STAGING / Path(str(file)).name

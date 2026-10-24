@@ -19,7 +19,7 @@ import { api, applyNow, oneLine, reloadData, REVIEW_CHANGED, STALE_ROW_MSG, viaS
 /** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{n: number, who: string|null, start: string|null, end: string|null, text: string}} Turn */
 /** @typedef {{version: number, current: boolean, at?: string, change?: number, why?: string, backup?: string}} Version */
-/** @typedef {{n: number, group: string, why: string|null, label: string}} PlanItem */
+/** @typedef {{n: number, group: string, why: string|null, label: string, fp?: string}} PlanItem */
 /** @typedef {{files: string[], transcripts: string[], items: PlanItem[], group: number, joins: string[]}} Plan */
 /** @typedef {{ok: boolean, message?: string, path?: string, doc?: SheetDoc, versions?: Version[],
     turns?: {timed: boolean, turns: Turn[]}, proposal?: string|null, plan?: Plan|null, labels?: Record<string, string[]>,

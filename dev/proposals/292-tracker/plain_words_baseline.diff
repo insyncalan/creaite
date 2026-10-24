@@ -1,5 +1,5 @@
 diff --git a/dev/tests/plain_words_baseline.json b/dev/tests/plain_words_baseline.json
-index 8ed2da5a..1228753d 100644
+index 8ed2da5a..fcb3602c 100644
 --- a/dev/tests/plain_words_baseline.json
 +++ b/dev/tests/plain_words_baseline.json
 @@ -277,10 +277,6 @@
@@ -13,6 +13,15 @@ index 8ed2da5a..1228753d 100644
    "live_server.py | apply | 59c24e495d27": {
     "count": 1,
     "text": "Staged and approved: auto-apply is off, so it's written when you press Apply."
+@@ -334,7 +330,7 @@
+    "text": "it changes what ask creaite may do (a permission rule in .claude/settings.json)"
+   },
+   "live_server.py | proposal | fc64089924e4": {
+-   "count": 7,
++   "count": 6,
+    "text": "That proposal is no longer pending."
+   },
+   "live_server.py | script | 0eb251259b7c": {
 @@ -641,10 +637,6 @@
     "count": 1,
     "text": "Apply stopped. Nothing was written."

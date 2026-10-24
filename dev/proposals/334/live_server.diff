@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index d397895d..d7754ea8 100644
+index d397895d..10748150 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -1650,6 +1650,9 @@ class Handler(BaseHTTPRequestHandler):
@@ -34,13 +34,13 @@ index d397895d..d7754ea8 100644
  CARRY_TURNS, CARRY_CHARS = 4, 600       # #327 B: the last two exchanges, each message cut to this length, go into a fresh session
  
  
-@@ -3306,11 +3324,21 @@ def queue_start(q, prev=None):
+@@ -3306,17 +3324,26 @@ def queue_start(q, prev=None):
      #264 round 2 (review L2): the busy check and the start are one step under START_LOCK, like every other start, so a queued
      message never starts beside a run that began meanwhile (Process, a calendar refresh, a prep page): the queue holds instead,
      and Run now starts it. `prev`, the run that is ending, doesn't count as busy."""
 +    first = q["items"][0]
-+    ask = {"over_budget": prev is None, "message": first.get("text"),
-+           "images": [i for i in first.get("images") or [] if ask_image_files(i)]}      # only the pictures still there, as the ask handler does
++    images = [i for i in first.get("images") or [] if ask_image_files(i)]               # only the pictures still there
++    ask = {"over_budget": prev is None, "message": first.get("text"), "images": images}
 +    held = budget_gate(ask)                                 # #334: read before the lock (up to 8 MB of usage lines)
 +    q.pop("why", None)
      with START_LOCK:
@@ -56,7 +56,13 @@ index d397895d..d7754ea8 100644
          item = q["items"].pop(0)
          q["held"] = False
          mine = prev is not None and prev.kind == "ask"
-@@ -3390,7 +3418,7 @@ def queue_route(handler, req):
+         chat = q["chat"] or (prev.chat or prev.session if mine else None)
+         session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
+-        images = [i for i in item.get("images") or [] if ask_image_files(i)]
+         try:
+             nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
+                       sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
+@@ -3390,7 +3417,7 @@ def queue_route(handler, req):
              if live:
                  return handler.send(200, queue_public(q, message="ask creaite is still working: the queue runs when it finishes."))
              nxt = queue_start(q) if q["items"] else None
