@@ -4229,7 +4229,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
 #v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
 #v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:var(--fs-md);font-weight:600}
-#v-intake-review tr.icopen td,#v-intake-review tr.hl td{background:var(--accent-soft)!important;box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
+#v-intake-review tr.icopen td,#v-intake-review tr.hl td,#v-intake-review tr.sel td{background:var(--accent-soft)!important;box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
 #v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
@@ -51809,7 +51809,7 @@ system/scripts/run launch.py agent ${what}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${ftLabel(f5.type)}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${ftLabel(f5.type)}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && FF.type === "All" && !FF.from && !FF.to ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
@@ -51897,6 +51897,10 @@ system/scripts/run launch.py agent ${what}`;
       renderFiles();
     }
     menu.addEventListener("click", (e4) => {
+      if (e4.target.matches && e4.target.matches("input[name=fsView][value=all]") && (shared.FSEL.p !== "All" || shared.FSEL.f !== "All" || shared.FSEL.sub)) {
+        shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
+        renderFiles();
+      }
       if (e4.target.closest("#fmDone")) fmSet(false, true);
       if (e4.target.closest("#fmClear")) {
         Object.assign(FF, { type: "All", from: "", to: "" });
@@ -53148,7 +53152,7 @@ system/scripts/run launch.py agent ${what}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(who(r4.o)) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(who(r4.o)) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open risk or issue item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -53202,7 +53206,7 @@ system/scripts/run launch.py agent ${what}`;
       const h5 = document.querySelector(`#v-cockpit h2 a[data-nav="actions:dueor:${code}"]`), card = h5 && h5.closest(".card");
       if (card && !card.querySelector("[data-allitems]")) {
         const n4 = [...A4, ...R3, ...DEC].filter((x5) => x5.p === code && allBucket(x5.st) === "Open").length;
-        addHTML(card, "beforeend", html` <a href="#" class="seeall" data-allitems="1" data-nav="all:open:${raw(code)}" title="Actions, RAID items and decisions together">All items${n4 ? html` (${raw(n4)} open)` : ""} ›</a>`);
+        addHTML(card, "beforeend", html` <a href="#" class="seeall" data-allitems="1" data-nav="all:open:${raw(code)}" title="Actions, risks and issues, and decisions together">All items${n4 ? html` (${raw(n4)} open)` : ""} ›</a>`);
       }
     }
     rkClamp($("#v-cockpit"));
@@ -55184,7 +55188,7 @@ ${pre}**Current state title:** ${title}`);
     L3.sort((a5, b5) => isNewUndated(a5[1]) - isNewUndated(b5[1]) || pri(a5[1]) - pri(b5[1]) || a5[1].id.localeCompare(b5[1].id));
     return `<div class="card" id="undatedCard"><h2>No due date <span class="sub">· ${L3.length}</span></h2>
     <div class="mini-list">${L3.map(([k5, x5]) => `<div class="undrow${isNewUndated(x5) ? " dim" : ""}" data-open="${k5}:${x5.id}" style="cursor:pointer"><span class="sub undid">${esc(x5.id)}</span>${ico(k5 === "actions" ? "action" : kindOf("raid", x5))}<span class="undt">${esc(x5.t)}${isNewUndated(x5) ? ' <span class="tag">new</span>' : ""}</span><span class="sub">— ${esc(who(x5.o))}${x5.pr ? " · " + esc(x5.pr) : ""}</span><span class="dwrap undset"><input type="text" id="und-${esc(x5.id)}" data-pick="1" data-date="1" data-und="${k5}:${x5.id}" placeholder="Set date" autocomplete="off" aria-label="Set the due date of ${esc(x5.id)}" title="Set the due date of ${esc(x5.id)} here: type DD-MM-YYYY or choose from the calendar"><button type="button" class="dbtn" data-cal="und-${esc(x5.id)}" aria-label="Choose the due date of ${esc(x5.id)}">${CALI}</button></span></div>`).join("")}</div>
-    ${na2 ? seeAll(na2, `${pName(code)} undated action`, "actions:undated:" + code) + " " : ""}${nr2 ? seeAll(nr2, `${pName(code)} undated RAID item`, "raid:undated:" + code) : ""}</div>`;
+    ${na2 ? seeAll(na2, `${pName(code)} undated action`, "actions:undated:" + code) + " " : ""}${nr2 ? seeAll(nr2, `${pName(code)} undated risk or issue item`, "raid:undated:" + code) : ""}</div>`;
   }
   async function undCommit(inp, picked) {
     if (!picked) {
@@ -57047,8 +57051,8 @@ ${pre}**Current state title:** ${title}`);
     const parts = [
       [ov, countLink(`${plur(ov, "overdue action")} in ${nm3}`, ov, `actions:overdue:${c5}`, null, `Overdue <b class="${ov ? "bad" : ""}">${ov}</b>`)],
       [nd2, jumpLink(`${plur(nd2, "open item")} with no due date in ${nm3}`, nd2, c5, "undated", `No date <b>${nd2}</b>`)],
-      [urg, countLink(`${plur(urg, "urgent open RAID item")} in ${nm3}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)],
-      [p6.slip, jumpLink(`Milestone slip of ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm3}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)],
+      [urg, countLink(`${urg === 1 ? "1 urgent open risk or issue" : urg + " urgent open risks and issues"} in ${nm3}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)],
+      [p6.slip, jumpLink(`Late milestones: ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm3}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)],
       [nw2, `Warnings <b class="${nw2 ? "bad" : ""}">${nw2}</b>`]
     ];
     const shown2 = onlyFlagged ? parts.filter((x5) => x5[0]) : parts;
@@ -59543,7 +59547,7 @@ ${pre}**Current state title:** ${title}`);
       title: "Project page",
       groups: ["Project page"],
       kw: "flow weeks undated grace no due date list cap overdue ageing",
-      render: () => row("Flow looks back (weeks)", nm2("flowWeeks"), "The project page's Flow card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)") + row("A new undated item counts as new for (days)", nm2("undatedGrace"), "The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made") + row("Project page lists show at most", nm2("listCap"), "Actions due or overdue; the rest are a link away")
+      render: () => row("Progress over time looks back (weeks)", nm2("flowWeeks"), "The project page's Progress over time card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)") + row("A new undated item counts as new for (days)", nm2("undatedGrace"), "The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made") + row("Project page lists show at most", nm2("listCap"), "Actions due or overdue; the rest are a link away")
     },
     {
       id: "files",
@@ -60505,7 +60509,7 @@ ${pre}**Current state title:** ${title}`);
      <p class="sub" style="margin:2px 0">${p6 && (p6.org || p6.role) ? [p6.org, p6.role].filter(Boolean).join(" · ") : "Organisation and role not recorded"}${p6 && p6.email ? html` · ${mailLink(p6.email)}` : ""}</p>
      ${p6 && p6.aliases.length ? html`<p class="sub" style="margin:2px 0">Also written as ${p6.aliases.join(", ")}</p>` : ""}</div>
      ${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", 'id="ppEdit" aria-haspopup="dialog"', "bd"))}</div>
-   <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x5.oo.length, "open action")} owned by ${name}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) }, `<b>${x5.oo.length}</b> open action${x5.oo.length === 1 ? "" : "s"}`))}</span><span>${raw(countLink(`${plur(x5.or.length, "open RAID item")} owned by ${name}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) }, `<b>${x5.or.length}</b> open risk${x5.or.length === 1 ? "" : "s"} and issue${x5.or.length === 1 ? "" : "s"}`))}</span><span class="${x5.late ? "late" : ""}">${raw(countLink(`${plur(x5.late, "overdue item")} owned by ${name}`, x5.late, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(latesOf(x5)) }, `<b>${x5.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ") || "—")}</span></div>
+   <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x5.oo.length, "open action")} owned by ${name}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) }, `<b>${x5.oo.length}</b> open action${x5.oo.length === 1 ? "" : "s"}`))}</span><span>${raw(countLink(`${x5.or.length === 1 ? "1 open risk or issue" : x5.or.length + " open risks and issues"} owned by ${name}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) }, `<b>${x5.or.length}</b> open risk${x5.or.length === 1 ? "" : "s"} and issue${x5.or.length === 1 ? "" : "s"}`))}</span><span class="${x5.late ? "late" : ""}">${raw(countLink(`${plur(x5.late, "overdue item")} owned by ${name}`, x5.late, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(latesOf(x5)) }, `<b>${x5.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ") || "—")}</span></div>
    <div class="card ppcard"><h2>Open work${items2.length ? html` <span class="sub">· ${items2.length}</span>` : ""}</h2>${items2.length ? raw(personLinks(x5) + personWork(x5, codes)) : html`<p class="sub">Nothing open.</p>`}</div>
    <div class="card ppcard"><h2>Decisions made${recent.length ? html` <span class="sub">· last ${raw(RECENT_DEC_DAYS)} days</span>` : ""}</h2>${recent.length ? raw(personTbl("decisions", recent)) : html`<p class="sub">None in the last ${raw(RECENT_DEC_DAYS)} days.</p>`}</div>
    ${leads.length ? html`<div class="card ppcard"><h2>Workstreams led</h2><div class="mini-list">${leads.map((w6) => html`<div class="li"><div class="t">${raw(pLink(w6[0]))} ${w6[1]}</div></div>`)}</div></div>` : ""}</div>`);
@@ -79294,6 +79298,7 @@ ${d5.text}`);
         "tr",
         {
           class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
+          "aria-current": sel && sel.id === m5.id ? "true" : void 0,
           "data-irm": m5.id,
           tabindex: 0,
           onClick: (e4) => {
