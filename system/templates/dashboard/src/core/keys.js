@@ -16,6 +16,7 @@ import { shared } from "./state.js";
 import { closePanel } from "../projects.js";
 import { dayKey } from "../today.js";
 import { HL, hlClear, hlKey, openDisp } from "../work.js";
+import { openPeopleDisplay } from "../components/people/PeopleDisplay.js";
 /* click outside closes ask creaite and the detail panel — never while editing */
 export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";   /* #121: the link form and the field's corner button sit outside the peek and must not close it */   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0122's place) */
@@ -71,6 +72,7 @@ document.addEventListener("keydown",e=>{
   if(e.key==="F"&&e.shiftKey&&(shared.VIEW==="work"||shared.VIEW==="mine")&&!popupOpen()){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: Shift+F opens the field picker (#288: F is Files) */
   if(e.key==="F"&&e.shiftKey&&shared.VIEW==="people"&&!popupOpen()){ const b=$("#plFBtn"); if(b){ e.preventDefault(); b.click(); } return; }   /* #288: and People's filters, as its funnel's tip says */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
+  if((e.key==="d"||e.key==="D")&&!e.shiftKey&&shared.VIEW==="people"&&!popupOpen()){ e.preventDefault(); openPeopleDisplay(); return; }   /* #360: D opens People's Display, as on Work */
   if(e.key==="?"){ e.preventDefault(); if(document.querySelector("dialog[open]")) return; if(helpPanelOpen()){ closeHelpPanel(); return; } if(!openHelpPanel(screenKey())) go("help"); return; }   /* #158: a panel on the jobs for this screen; no list: Help, on the tab used last */
   if(["[","]","t","T"].includes(e.key)&&shared.VIEW==="today"&&dayKey(e)){ e.preventDefault(); return; }   /* BL-293: [ ] step a day, T back to today */
   if(!e.shiftKey&&!e.repeat&&PAGE_KEYS[e.key.toLowerCase()]&&!(shared.VIEW==="intake-review"&&/^[ar]$/i.test(e.key))&&!popupOpen()){ e.preventDefault(); if(shared.VIEW==="today"&&e.key.toLowerCase()==="t") return; go(railGo(PAGE_KEYS[e.key.toLowerCase()])); return; }   /* #288: T P W I F A S R E (T on Today is back to today, above; on Intake A and R stay its approve and reject) */

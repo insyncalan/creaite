@@ -21,12 +21,13 @@ export function dispOrder({ id, revId, options, cur, reversed, extra = "" }) {
 }
 
 /** Properties: every column, ticked when shown, the shown ones with ↑ ↓ (24 px targets; the first can't go earlier nor the last later).
-    `shown` is in order. @param {{shown: [string, string][], rest: [string, string][], locked: string, prefix: string}} o */
-export function dispProps({ shown, rest, locked, prefix }) {
+    `shown` is in order. `pinFirst` keeps the first column where it is: it has no arrows and the next one can't go above it (People's Name).
+    @param {{shown: [string, string][], rest: [string, string][], locked: string, prefix: string, pinFirst?: boolean}} o */
+export function dispProps({ shown, rest, locked, prefix, pinFirst }) {
   const ord = shown.map(c => c[0]);
   return [...shown, ...rest].map(c => {
     const on = ord.includes(c[0]), i = ord.indexOf(c[0]), l = esc(c[1]);
-    return `<label><input type="checkbox" data-prop id="${prefix}-${c[0]}" value="${c[0]}" ${on ? "checked" : ""} ${c[0] === locked ? "disabled" : ""}>${l}${on ? `<span class="colmv"><button type="button" data-mv="${c[0]}" data-d="-1" aria-label="Move ${l} earlier" ${i === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c[0]}" data-d="1" aria-label="Move ${l} later" ${i === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+    return `<label><input type="checkbox" data-prop id="${prefix}-${c[0]}" value="${c[0]}" ${on ? "checked" : ""} ${c[0] === locked ? "disabled" : ""}>${l}${on && !(pinFirst && i === 0) ? `<span class="colmv"><button type="button" data-mv="${c[0]}" data-d="-1" aria-label="Move ${l} earlier" ${i === 0 || (pinFirst && i === 1) ? "disabled" : ""}>↑</button><button type="button" data-mv="${c[0]}" data-d="1" aria-label="Move ${l} later" ${i === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
   }).join("");
 }
 

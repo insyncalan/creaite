@@ -4331,11 +4331,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title,#v-people #peopleTbl .pj a{white-space:normal}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
-#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:anywhere}
+#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
-@media (max-width:1100px){ #v-people #peopleTbl :is(th,td):nth-child(2){display:none} }   /* the email is in the person's record; the room goes to the counts */
+@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
+/* #360: People's Display menu sits under its button like Work's, and its group rows are Work's */
+#v-people .toolbar>.ddisp .dispmenu{left:auto;right:0;transform-origin:top right}
+#v-people #peopleTbl tr.wgh td{cursor:pointer}   /* the email is in the person's record; the room goes to the counts */
 
 /* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
 .tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
@@ -28529,11 +28533,11 @@ ${s5}`;
     const now = noteCur.value;
     if (now && now.path === r4.from) noteCur.value = { ...now, path: r4.note.path, note: r4.note, base: r4.base };
     noteRenamed.value = { from: r4.from, to: r4.note.path };
-    const changed2 = (r4.relinked || []).length, listed = (
+    const changed3 = (r4.relinked || []).length, listed = (
       /** @type {{title: string, why: string}[]} */
       r4.listed || []
     );
-    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed2 ? ` ${changed2 === 1 ? "One link" : `${changed2} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
+    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed3 ? ` ${changed3 === 1 ? "One link" : `${changed3} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
     const refresh = async (cc2) => {
       const L3 = await api("/api/notes/list", { code: cc2 });
       if (L3 && L3.ok) {
@@ -28541,7 +28545,7 @@ ${s5}`;
         if (notesCode.value === cc2) notesList.value = sortNotes(L3.notes);
       }
     };
-    if (changed2) {
+    if (changed3) {
       for (const cc2 of Object.keys(all)) if ((all[cc2] || []).some((x5) => (r4.relinked || []).includes(x5.path))) refresh(cc2);
     }
   }
@@ -36153,9 +36157,9 @@ system/scripts/run launch.py agent ${what}`;
     return /* @__PURE__ */ u4("a", { href: "#", class: `cntl${late ? " late" : ""}`, "data-nav": navOf(nav, extra), "data-n": String(n4), "aria-label": `${label}, open in Work`, children: n4 });
   }
   var Star = () => /* @__PURE__ */ u4("svg", { class: "i pstar", viewBox: "0 0 24 24", fill: "currentColor", stroke: "currentColor", "stroke-width": "1.5", "stroke-linejoin": "round", role: "img", "aria-label": "Followed", children: /* @__PURE__ */ u4("path", { d: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.2 9.5l6.1-.9z" }) });
-  function NameCell({ x: x5, code, follow, codes, you }) {
+  function NameCell({ x: x5, code, follow, codes, you, col }) {
     const also = codes ? x5.on.filter((c5) => c5 !== code) : [];
-    return /* @__PURE__ */ u4("td", { class: "title", children: [
+    return /* @__PURE__ */ u4("td", { class: "title", "data-col": col, children: [
       /* @__PURE__ */ u4("a", { href: "#", class: "plink2", "data-person": x5.n, title: x5.me ? "Open My work" : `Open ${x5.n}’s work`, children: you && x5.me ? `You (${x5.n})` : x5.n }),
       follow && x5.followed ? /* @__PURE__ */ u4(S2, { children: [
         " ",
@@ -36176,7 +36180,7 @@ system/scripts/run launch.py agent ${what}`;
     ] });
   }
   var Dash = ({ v: v5 }) => v5 ? /* @__PURE__ */ u4(S2, { children: v5 }) : /* @__PURE__ */ u4("span", { class: "sub", children: "—" });
-  function PeopleTools({ L: L3, F: F5, s: s5, ids, onChange }) {
+  function PeopleTools({ L: L3, F: F5, s: s5, ids, onChange, display }) {
     const host2 = A2(
       /** @type {HTMLSpanElement|null} */
       null
@@ -36209,7 +36213,28 @@ system/scripts/run launch.py agent ${what}`;
           }
         }
       ),
-      /* @__PURE__ */ u4("span", { class: "dd", id: `${ids}Fdd`, ref: host2 })
+      /* @__PURE__ */ u4("span", { class: "dd", id: `${ids}Fdd`, ref: host2 }),
+      display || null
+    ] });
+  }
+  function DisplayButton() {
+    return /* @__PURE__ */ u4("span", { class: "dd ddisp", children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          class: "ib bd",
+          id: "plDispBtn",
+          type: "button",
+          "aria-haspopup": "dialog",
+          "aria-expanded": "false",
+          "aria-controls": "plDispMenu",
+          "aria-label": "Display: grouping, order and properties",
+          "data-tip": "Display: grouping, order and properties",
+          "data-key": "D",
+          children: /* @__PURE__ */ u4(Icon, { name: "sliders" })
+        }
+      ),
+      /* @__PURE__ */ u4("div", { class: "ddmenu dispmenu", id: "plDispMenu", role: "dialog", "aria-label": "Display", hidden: true })
     ] });
   }
   function drawBar(h5, L3, F5, s5, ids, onChange) {
@@ -36423,6 +36448,296 @@ system/scripts/run launch.py agent ${what}`;
     ] }, k5) : null });
   }
 
+  // core/displayMenu.js
+  var dispHead = (label, forId, extra = "") => `<h2>${forId ? `<label for="${forId}">${esc(label)}</label>` : esc(label)}${extra}</h2>`;
+  function dispSelect({ id: id2, label, options, cur, hidden }) {
+    return `<div${hidden ? " hidden" : ""}>${dispHead(label, id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}</select></div></div>`;
+  }
+  function dispOrder({ id: id2, revId, options, cur, reversed, extra = "" }) {
+    return `${dispHead("Order by", id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}${extra}</select><button type="button" class="btn" id="${revId}" aria-pressed="${reversed}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>`;
+  }
+  function dispProps({ shown: shown2, rest, locked, prefix, pinFirst }) {
+    const ord = shown2.map((c5) => c5[0]);
+    return [...shown2, ...rest].map((c5) => {
+      const on2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]), l6 = esc(c5[1]);
+      return `<label><input type="checkbox" data-prop id="${prefix}-${c5[0]}" value="${c5[0]}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 && !(pinFirst && i5 === 0) ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 || pinFirst && i5 === 1 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+    }).join("");
+  }
+  var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
+  function dispController({ btn, menu, draw: draw2 }) {
+    const isOpen = () => !!$(menu) && $(menu).classList.contains("on");
+    const close = (focus) => {
+      const m5 = $(menu), b5 = $(btn);
+      if (!m5 || !b5 || !isOpen() && m5.hidden) return;
+      m5.classList.remove("on");
+      m5.hidden = true;
+      b5.setAttribute("aria-expanded", "false");
+      b5.classList.remove("on");
+      if (focus) b5.focus();
+    };
+    const open2 = () => {
+      const m5 = $(menu), b5 = $(btn);
+      if (!m5 || !b5) return;
+      if (isOpen()) {
+        close(true);
+        return;
+      }
+      $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
+      draw2();
+      m5.hidden = false;
+      m5.classList.add("on");
+      b5.setAttribute("aria-expanded", "true");
+      b5.classList.add("on");
+      (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
+    };
+    return { isOpen, open: open2, close };
+  }
+
+  // core/peopleDisplay.js
+  var PD_COLS = (
+    /** @type {[string, string, string?][]} */
+    [
+      ["name", "Name"],
+      ["email", "Email"],
+      ["org", "Organisation"],
+      ["role", "Role"],
+      ["proj", "Projects"],
+      ["oa", "Actions", "Open actions"],
+      ["or", "RAID", "Open risks and issues"],
+      ["dw", "Decisions", "Decisions waiting on them"],
+      ["late", "Overdue"]
+    ]
+  );
+  var PD_KEYS = PD_COLS.map((c5) => c5[0]);
+  var PD_LOCKED = "name";
+  var PD_SORTS = (
+    /** @type {Record<string, "asc"|"desc">} */
+    { name: "asc", email: "asc", org: "asc", role: "asc", oa: "desc", or: "desc", dw: "desc", late: "desc" }
+  );
+  var PD_DEFAULT_SORT = { col: "late", dir: "desc" };
+  var PD_GROUPS = (
+    /** @type {[string, string][]} */
+    [["none", "None"], ["org", "Organisation"], ["proj", "Project"], ["role", "Role"], ["late", "Overdue"], ["details", "Details"]]
+  );
+  var GROUP_KEYS = PD_GROUPS.map((g5) => g5[0]);
+  var pdDefault = () => ({ group: "none", sub: "none", cols: [...PD_KEYS], collapsed: {} });
+  function pdNormalise(saved) {
+    const d5 = pdDefault(), s5 = saved && typeof saved === "object" ? saved : {};
+    const group = GROUP_KEYS.includes(s5.group) ? s5.group : d5.group;
+    const sub = GROUP_KEYS.includes(s5.sub) && s5.sub !== group ? s5.sub : "none";
+    let cols = Array.isArray(s5.cols) ? s5.cols.filter((k5, i5, a5) => PD_KEYS.includes(k5) && a5.indexOf(k5) === i5) : [];
+    if (!cols.length) cols = [...d5.cols];
+    if (!cols.includes(PD_LOCKED)) cols.unshift(PD_LOCKED);
+    const collapsed = {};
+    if (s5.collapsed && typeof s5.collapsed === "object") {
+      for (const k5 of Object.keys(s5.collapsed)) if (s5.collapsed[k5] === true && typeof k5 === "string" && k5.length < 200) collapsed[k5] = true;
+    }
+    return { group, sub, cols, collapsed };
+  }
+  function pdSort(s5) {
+    return s5 && PD_SORTS[s5.col] && (s5.dir === "asc" || s5.dir === "desc") ? { col: s5.col, dir: s5.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
+  }
+  function pdGroupsOf(x5, g5, projectName) {
+    if (g5 === "org") return [[x5.org || "", x5.org || "No organisation"]];
+    if (g5 === "role") return [[x5.role || "", x5.role || "No role"]];
+    if (g5 === "proj") return x5.on.length ? x5.on.map((c5) => (
+      /** @type {[string, string]} */
+      [c5, projectName(c5)]
+    )) : [["", "On no project"]];
+    if (g5 === "late") return x5.late > 0 ? [["has", "Has overdue"]] : [["none", "Nothing overdue"]];
+    if (g5 === "details") return x5.missing.length ? [["needs", "Needs details"]] : [["complete", "Complete"]];
+    return [["", ""]];
+  }
+  var FIXED = (
+    /** @type {Record<string, string[]>} */
+    { late: ["has", "none"], details: ["needs", "complete"] }
+  );
+  function pdGroup(rows2, g5, projectName) {
+    if (!GROUP_KEYS.includes(g5) || g5 === "none") return [{ key: "", label: "", items: rows2 }];
+    const by2 = /* @__PURE__ */ new Map();
+    for (const x5 of rows2) for (const [v5, label] of pdGroupsOf(x5, g5, projectName)) {
+      if (!by2.has(v5)) by2.set(v5, { key: v5, label, items: [] });
+      by2.get(v5).items.push(x5);
+    }
+    const fixed = FIXED[g5];
+    return [...by2.values()].sort((a5, b5) => fixed ? fixed.indexOf(a5.key) - fixed.indexOf(b5.key) : (!a5.key ? 1 : 0) - (!b5.key ? 1 : 0) || a5.label.localeCompare(b5.label));
+  }
+  var pdKey = (g5, v5, sub, sv) => `${g5}|${v5}${sub ? `|${sub}|${sv}` : ""}`;
+  var pdColumns = (st2) => st2.cols.filter((k5) => PD_KEYS.includes(k5));
+  var PD_ORDER = (
+    /** @type {[string, string][]} */
+    PD_COLS.map((c5) => [c5[0], c5[0] === PD_DEFAULT_SORT.col ? `${c5[1]} (default)` : c5[1]]).filter((c5) => c5[0] !== "proj")
+  );
+
+  // stores/peopleDisplay.js
+  var KEY2 = "creaite-peopledisplay", SORT_KEY = "creaite-peoplesort";
+  var ST = null;
+  var sortRead = false;
+  var pdState = () => ST || (ST = pdNormalise(store.get(KEY2, null)));
+  var pdSave = () => {
+    store.set(KEY2, pdState());
+  };
+  function pdReset() {
+    ST = pdDefault();
+    pdSave();
+    shared.PSORT = { ...PD_DEFAULT_SORT };
+    pdSaveSort();
+  }
+  function pdSyncSort() {
+    if (!sortRead) {
+      sortRead = true;
+      shared.PSORT = pdSort(store.get(SORT_KEY, null));
+      return;
+    }
+    pdSaveSort();
+  }
+  function pdSaveSort() {
+    store.set(SORT_KEY, pdSort(shared.PSORT));
+  }
+  function pdForget() {
+    ST = null;
+    sortRead = false;
+  }
+
+  // components/people/PeopleDisplay.js
+  var sortNow = () => pdSort(shared.PSORT);
+  function drawPeopleDisplayMenu() {
+    const m5 = $("#plDispMenu");
+    if (!m5) return;
+    const st2 = pdState(), so2 = sortNow(), label = (
+      /** @type {Record<string,string>} */
+      Object.fromEntries(PD_COLS.map((c5) => [c5[0], c5[1]]))
+    );
+    const active2 = document.activeElement, focusKey = active2 && m5.contains(active2) ? active2.id || /** @type {HTMLElement} */
+    active2.dataset.mv + "|" + /** @type {HTMLElement} */
+    active2.dataset.d : null;
+    const shown2 = st2.cols.map((k5) => (
+      /** @type {[string, string]} */
+      [k5, label[k5]]
+    )), rest = PD_KEYS.filter((k5) => !st2.cols.includes(k5)).map((k5) => (
+      /** @type {[string, string]} */
+      [k5, label[k5]]
+    ));
+    putHTML(m5, html`${raw(dispSelect({ id: "pdgrp", label: "Group by", options: PD_GROUPS, cur: st2.group }))}
+    ${raw(dispSelect({ id: "pdsub", label: "Sub-group", options: [["none", "None"], ...PD_GROUPS.filter((g5) => g5[0] !== "none" && g5[0] !== st2.group)], cur: st2.sub, hidden: st2.group === "none" }))}
+    ${raw(dispOrder({ id: "pdsort", revId: "pdRev", options: PD_ORDER, cur: so2.col, reversed: so2.dir !== PD_SORTS[so2.col] }))}
+    <h2>Properties</h2><div class="dprops">${raw(dispProps({ shown: shown2, rest, locked: PD_LOCKED, prefix: "pdprop", pinFirst: true }))}</div>
+    ${raw(dispFoot({ resetId: "pdReset", doneId: "pdDone", resetLabel: "Reset to the default" }))}`);
+    if (focusKey) {
+      const f5 = m5.querySelector("#" + CSS.escape(focusKey)) || (focusKey.includes("|") ? m5.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`) : null);
+      if (f5 && !/** @type {any} */
+      f5.disabled) f5.focus();
+      else m5.querySelector("button,select,input")?.focus();
+    }
+  }
+  var MENU = dispController({ btn: "#plDispBtn", menu: "#plDispMenu", draw: drawPeopleDisplayMenu });
+  var openPeopleDisplay = () => MENU.open();
+  var closePeopleDisplay = (focus) => MENU.close(focus);
+  var peopleDisplayOpen = () => MENU.isOpen();
+  function changed2() {
+    pdSave();
+    drawPeoplePage();
+    drawPeopleDisplayMenu();
+  }
+  var bound = false;
+  function bindPeopleDisplay() {
+    if (bound) return;
+    bound = true;
+    window.addEventListener("hashchange", () => closePeopleDisplay(false));
+    document.addEventListener("click", (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (!t47 || !t47.closest) return;
+      if (t47.closest("#plDispBtn")) {
+        e4.stopPropagation();
+        openPeopleDisplay();
+        return;
+      }
+      const m5 = t47.closest("#plDispMenu");
+      if (!m5) {
+        if (peopleDisplayOpen() && !t47.closest(".ddisp")) closePeopleDisplay(false);
+        return;
+      }
+      e4.stopPropagation();
+      const st2 = pdState(), mv = t47.closest("[data-mv]");
+      if (mv) {
+        e4.preventDefault();
+        const k5 = (
+          /** @type {HTMLElement} */
+          mv.dataset.mv || ""
+        ), i5 = st2.cols.indexOf(k5), j5 = i5 + Number(
+          /** @type {HTMLElement} */
+          mv.dataset.d
+        );
+        if (i5 < 1 || j5 < 1 || j5 >= st2.cols.length) return;
+        [st2.cols[i5], st2.cols[j5]] = [st2.cols[j5], st2.cols[i5]];
+        changed2();
+        return;
+      }
+      const id2 = (
+        /** @type {HTMLElement} */
+        t47.id
+      );
+      if (id2 === "pdRev") {
+        const so2 = sortNow();
+        shared.PSORT = { col: so2.col, dir: so2.dir === "asc" ? "desc" : "asc" };
+        changed2();
+        return;
+      }
+      if (id2 === "pdReset") {
+        pdReset();
+        changed2();
+        snack("Display reset to the default");
+        return;
+      }
+      if (id2 === "pdDone") closePeopleDisplay(true);
+    });
+    document.addEventListener("change", (e4) => {
+      const i5 = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      );
+      if (!i5 || !i5.closest || !i5.closest("#plDispMenu")) return;
+      const st2 = pdState();
+      if (i5.id === "pdgrp") {
+        st2.group = i5.value;
+        if (st2.sub === st2.group) st2.sub = "none";
+        changed2();
+        return;
+      }
+      if (i5.id === "pdsub") {
+        st2.sub = i5.value;
+        changed2();
+        return;
+      }
+      if (i5.id === "pdsort") {
+        const c5 = i5.value;
+        shared.PSORT = { col: c5, dir: PD_SORTS[c5] || "desc" };
+        changed2();
+        return;
+      }
+      if (i5.dataset.prop !== void 0) {
+        const k5 = i5.value;
+        if (k5 === PD_LOCKED || !PD_KEYS.includes(k5)) return;
+        if (i5.checked) {
+          if (!st2.cols.includes(k5)) st2.cols.push(k5);
+        } else st2.cols = st2.cols.filter((x5) => x5 !== k5);
+        changed2();
+      }
+    });
+    document.addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && peopleDisplayOpen() && /** @type {Element} */
+      e4.target.closest && /** @type {Element} */
+      e4.target.closest("#plDispMenu")) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePeopleDisplay(true);
+      }
+    }, true);
+  }
+
   // components/people/PeoplePage.jsx
   var PTABS = [["all", "Everyone"], ["work", "With work"], ["none", "Nothing assigned"], ["att", "Needs attention"]];
   var ptabOf = (t47) => PTABS.some((x5) => x5[0] === t47) ? String(t47) : "all";
@@ -36444,18 +36759,7 @@ system/scripts/run launch.py agent ${what}`;
     dw: (x5) => x5.dw.length,
     late: (x5) => x5.late
   };
-  var PL_COLS = [
-    ["name", "Name"],
-    ["email", "Email"],
-    ["org", "Organisation"],
-    ["role", "Role"],
-    ["", "Projects"],
-    ["oa", "Actions", "Open actions"],
-    ["or", "RAID", "Open risks and issues"],
-    ["dw", "Decisions", "Decisions waiting on them"],
-    ["late", "Overdue"]
-  ];
-  var ST = { s: newFilter() };
+  var ST2 = { s: newFilter() };
   var sortOf = () => shared.PSORT && SORTS[shared.PSORT.col] ? shared.PSORT : { col: "late", dir: "desc" };
   var plOwners = (L3) => [...new Set(L3.map((i5) => i5.o || i5.by).filter(Boolean))];
   var plHandlers = {
@@ -36499,22 +36803,22 @@ system/scripts/run launch.py agent ${what}`;
       /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", "data-pl-remove-no": x5.n, onClick: () => setAsk(false), children: "Keep" })
     ] });
   }
-  function PlRow({ x: x5 }) {
+  function PlRow({ x: x5, cols }) {
     const nm3 = x5.me ? "you" : x5.n, late = x5.lateItems;
     const edit = () => openPersonForm({ x: x5 }, plHandlers);
-    return /* @__PURE__ */ u4("tr", { "data-pn": x5.n, "data-pp": x5.n, class: `click${x5.missing.length ? " nr" : ""}`, children: [
-      /* @__PURE__ */ u4(NameCell, { x: x5, you: true }),
-      /* @__PURE__ */ u4("td", { children: x5.email ? x5.email : /* @__PURE__ */ u4(Dash, {}) }),
-      /* @__PURE__ */ u4("td", { children: /* @__PURE__ */ u4(Dash, { v: x5.org }) }),
-      /* @__PURE__ */ u4("td", { children: /* @__PURE__ */ u4(Dash, { v: x5.role }) }),
-      /* @__PURE__ */ u4("td", { children: /* @__PURE__ */ u4("span", { class: "pj", children: x5.on.length ? x5.on.map((c5, i5) => /* @__PURE__ */ u4("span", { children: [
+    const cell2 = {
+      name: /* @__PURE__ */ u4(NameCell, { x: x5, you: true, col: "name" }, "name"),
+      email: /* @__PURE__ */ u4("td", { "data-col": "email", children: x5.email ? x5.email : /* @__PURE__ */ u4(Dash, {}) }, "email"),
+      org: /* @__PURE__ */ u4("td", { "data-col": "org", children: /* @__PURE__ */ u4(Dash, { v: x5.org }) }, "org"),
+      role: /* @__PURE__ */ u4("td", { "data-col": "role", children: /* @__PURE__ */ u4(Dash, { v: x5.role }) }, "role"),
+      proj: /* @__PURE__ */ u4("td", { "data-col": "proj", children: /* @__PURE__ */ u4("span", { class: "pj", children: x5.on.length ? x5.on.map((c5, i5) => /* @__PURE__ */ u4("span", { children: [
         i5 ? " " : "",
         /* @__PURE__ */ u4("span", { class: "pcode plink", "data-proj": c5, role: "link", tabindex: 0, title: `Open ${pName(c5)}`, children: pName(c5) })
-      ] }, c5)) : /* @__PURE__ */ u4(Dash, {}) }) }),
-      /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.oa.length, label: `${peoplePlural(x5.oa.length, "open action")} owned by ${nm3}`, nav: "actions:open:", extra: { o: plOwners(x5.oa) } }) }),
-      /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.or.length, label: `${peoplePlural(x5.or.length, "open RAID item")} owned by ${nm3}`, nav: "raid:open:", extra: { o: plOwners(x5.or) } }) }),
-      /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.dw.length, label: `${peoplePlural(x5.dw.length, "decision")} waiting on ${nm3}`, nav: "decisions:pending:", extra: { o: plOwners(x5.dw) } }) }),
-      /* @__PURE__ */ u4("td", { class: `num${x5.late ? " late" : ""}`, children: /* @__PURE__ */ u4(
+      ] }, c5)) : /* @__PURE__ */ u4(Dash, {}) }) }, "proj"),
+      oa: /* @__PURE__ */ u4("td", { "data-col": "oa", class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.oa.length, label: `${peoplePlural(x5.oa.length, "open action")} owned by ${nm3}`, nav: "actions:open:", extra: { o: plOwners(x5.oa) } }) }, "oa"),
+      or: /* @__PURE__ */ u4("td", { "data-col": "or", class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.or.length, label: `${peoplePlural(x5.or.length, "open RAID item")} owned by ${nm3}`, nav: "raid:open:", extra: { o: plOwners(x5.or) } }) }, "or"),
+      dw: /* @__PURE__ */ u4("td", { "data-col": "dw", class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.dw.length, label: `${peoplePlural(x5.dw.length, "decision")} waiting on ${nm3}`, nav: "decisions:pending:", extra: { o: plOwners(x5.dw) } }) }, "dw"),
+      late: /* @__PURE__ */ u4("td", { "data-col": "late", class: `num${x5.late ? " late" : ""}`, children: /* @__PURE__ */ u4(
         Count,
         {
           n: x5.late,
@@ -36522,25 +36826,86 @@ system/scripts/run launch.py agent ${what}`;
           nav: "all:open:",
           extra: { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: plOwners(late) }
         }
-      ) }),
-      /* @__PURE__ */ u4("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u4("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u4(S2, { children: [
+      ) }, "late")
+    };
+    return /* @__PURE__ */ u4("tr", { "data-pn": x5.n, "data-pp": x5.n, class: `click${x5.missing.length ? " nr" : ""}`, children: [
+      cols.map((k5) => cell2[k5]),
+      /* @__PURE__ */ u4("td", { class: "mgract", "data-col": "act", children: x5.me ? /* @__PURE__ */ u4("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u4(S2, { children: [
         x5.missing.length ? /* @__PURE__ */ u4("button", { type: "button", class: "miniflag", "data-pl-details": x5.n, "aria-haspopup": "dialog", "aria-label": `${missingFlag(x5)} for ${x5.n}: edit details`, onClick: edit, children: missingFlag(x5) }) : null,
         /* @__PURE__ */ u4(IconButton, { icon: "pencil", label: "Edit details", name: `Edit details: ${x5.n}`, haspopup: "dialog", data: { "pl-edit": x5.n }, onClick: edit }),
         /* @__PURE__ */ u4(RemoveButton, { x: x5 })
       ] }) })
     ] });
   }
+  function GroupRow({ label, items: items2, k: k5, lvl, cols, folded }) {
+    const late = items2.reduce((t47, x5) => t47 + x5.late, 0);
+    const toggle = () => {
+      const st2 = pdState();
+      if (st2.collapsed[k5]) delete st2.collapsed[k5];
+      else st2.collapsed[k5] = true;
+      pdSave();
+      drawPeoplePage();
+    };
+    return /* @__PURE__ */ u4("tr", { class: `wgh lv${lvl}${folded ? " coll" : ""}`, "data-gk": k5, onClick: toggle, children: /* @__PURE__ */ u4("td", { colSpan: cols, children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "wgtog",
+          "data-gtog": k5,
+          "aria-expanded": !folded,
+          "aria-label": `${folded ? "Expand" : "Collapse"} ${label}`,
+          onClick: (e4) => {
+            e4.stopPropagation();
+            toggle();
+          },
+          children: /* @__PURE__ */ u4(Icon, { name: "chevdown", cls: "chev" })
+        }
+      ),
+      " ",
+      /* @__PURE__ */ u4("b", { class: "wgn", children: label }),
+      " ",
+      /* @__PURE__ */ u4("span", { class: "sub", children: [
+        peoplePlural(items2.length, "person").replace(/persons$/, "people"),
+        late ? ` · ${late} overdue` : "",
+        folded ? " · folded" : ""
+      ] })
+    ] }) });
+  }
   function Head({ col, so: so2 }) {
-    const [k5, label, tip] = col;
-    if (!k5) return /* @__PURE__ */ u4("th", { scope: "col", children: label });
+    const c5 = PD_COLS.find((x5) => x5[0] === col) || [col, col], label = c5[1], tip = c5[2], k5 = PD_SORTS[col] ? col : "";
+    if (!k5) return /* @__PURE__ */ u4("th", { scope: "col", "data-col": col, children: label });
     const on2 = so2.col === k5, num2 = !["name", "email", "org", "role"].includes(k5);
-    return /* @__PURE__ */ u4("th", { scope: "col", class: num2 ? "num" : void 0, "aria-sort": on2 ? so2.dir === "asc" ? "ascending" : "descending" : "none", "data-psort": k5, children: /* @__PURE__ */ u4("button", { type: "button", class: "thsort", title: tip, children: [
+    return /* @__PURE__ */ u4("th", { scope: "col", "data-col": col, class: num2 ? "num" : void 0, "aria-sort": on2 ? so2.dir === "asc" ? "ascending" : "descending" : "none", "data-psort": k5, children: /* @__PURE__ */ u4("button", { type: "button", class: "thsort", title: tip, children: [
       label,
       on2 ? so2.dir === "asc" ? " ▲" : " ▼" : ""
     ] }) });
   }
+  function rowsOf(L3, st2, cols) {
+    if (st2.group === "none") return L3.map((x5) => /* @__PURE__ */ u4(PlRow, { x: x5, cols }, x5.n));
+    const n4 = cols.length + 1, out = (
+      /** @type {any[]} */
+      []
+    );
+    for (const g5 of pdGroup(L3, st2.group, pName)) {
+      const k5 = pdKey(st2.group, g5.key), folded = !!st2.collapsed[k5];
+      out.push(/* @__PURE__ */ u4(GroupRow, { label: g5.label, items: g5.items, k: k5, lvl: 1, cols: n4, folded }, "g" + k5));
+      if (folded) continue;
+      if (st2.sub === "none") {
+        g5.items.forEach((x5) => out.push(/* @__PURE__ */ u4(PlRow, { x: x5, cols }, k5 + "|" + x5.n)));
+        continue;
+      }
+      for (const g22 of pdGroup(g5.items, st2.sub, pName)) {
+        const k22 = pdKey(st2.group, g5.key, st2.sub, g22.key), f22 = !!st2.collapsed[k22];
+        out.push(/* @__PURE__ */ u4(GroupRow, { label: g22.label, items: g22.items, k: k22, lvl: 2, cols: n4, folded: f22 }, "g" + k22));
+        if (!f22) g22.items.forEach((x5) => out.push(/* @__PURE__ */ u4(PlRow, { x: x5, cols }, k22 + "|" + x5.n)));
+      }
+    }
+    return out;
+  }
   function PeoplePage(_props) {
-    const s5 = ST.s, tab = ptabOf(shared.PTAB);
+    pdSyncSort();
+    const s5 = ST2.s, tab = ptabOf(shared.PTAB), st2 = pdState(), cols = pdColumns(st2);
     const all = registerRows(), F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
     const so2 = sortOf(), f5 = SORTS[so2.col], dir = so2.dir === "asc" ? 1 : -1;
     const L3 = hit2.filter(IN_TAB[tab]).sort((a5, b5) => (a5.me ? -1 : b5.me ? 1 : 0) || (() => {
@@ -36569,72 +36934,28 @@ system/scripts/run launch.py agent ${what}`;
           }
         }
       ) }),
-      /* @__PURE__ */ u4(PeopleTools, { L: all, F: F5, s: s5, ids: "pl", onChange: drawPeoplePage }),
+      /* @__PURE__ */ u4(PeopleTools, { L: all, F: F5, s: s5, ids: "pl", onChange: drawPeoplePage, display: /* @__PURE__ */ u4(DisplayButton, {}) }),
       /* @__PURE__ */ u4(PeopleApplied, { F: F5, s: s5, ids: "pl", count, onChange: drawPeoplePage }),
       /* @__PURE__ */ u4("div", { class: "tbl", id: "peopleTbl", role: "tabpanel", children: /* @__PURE__ */ u4("table", { class: "plt", children: [
         /* @__PURE__ */ u4("thead", { children: /* @__PURE__ */ u4("tr", { children: [
-          PL_COLS.map((c5) => /* @__PURE__ */ u4(Head, { col: c5, so: so2 }, c5[0] || c5[1])),
-          /* @__PURE__ */ u4("th", { scope: "col", children: /* @__PURE__ */ u4("span", { class: "vh", children: "Actions on the person" }) })
+          cols.map((k5) => /* @__PURE__ */ u4(Head, { col: k5, so: so2 }, k5)),
+          /* @__PURE__ */ u4("th", { scope: "col", "data-col": "act", children: /* @__PURE__ */ u4("span", { class: "vh", children: "Actions on the person" }) })
         ] }) }),
-        /* @__PURE__ */ u4("tbody", { id: "plRows", children: L3.length ? L3.map((x5) => /* @__PURE__ */ u4(PlRow, { x: x5 }, x5.n)) : /* @__PURE__ */ u4("tr", { children: /* @__PURE__ */ u4("td", { colSpan: 10, class: "sub plnone", children: "No one matches. Try another tab or clear a filter." }) }) })
+        /* @__PURE__ */ u4("tbody", { id: "plRows", children: L3.length ? rowsOf(L3, st2, cols) : /* @__PURE__ */ u4("tr", { children: /* @__PURE__ */ u4("td", { colSpan: cols.length + 1, class: "sub plnone", children: "No one matches. Try another tab or clear a filter." }) }) })
       ] }) })
     ] });
   }
-  var tick = 0, bound = false;
+  var tick = 0, bound2 = false;
   function drawPeoplePage() {
     const el2 = document.getElementById("peopleRoot");
     if (!el2) return;
     const add = document.getElementById("plAdd");
-    if (add && !bound) {
-      bound = true;
+    if (add && !bound2) {
+      bound2 = true;
       add.addEventListener("click", () => openPersonForm({ x: null, isNew: true }, plHandlers));
     }
+    bindPeopleDisplay();
     R(/* @__PURE__ */ u4(PeoplePage, { t: ++tick }, "pl"), el2);
-  }
-
-  // core/displayMenu.js
-  var dispHead = (label, forId, extra = "") => `<h2>${forId ? `<label for="${forId}">${esc(label)}</label>` : esc(label)}${extra}</h2>`;
-  function dispSelect({ id: id2, label, options, cur, hidden }) {
-    return `<div${hidden ? " hidden" : ""}>${dispHead(label, id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}</select></div></div>`;
-  }
-  function dispOrder({ id: id2, revId, options, cur, reversed, extra = "" }) {
-    return `${dispHead("Order by", id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}${extra}</select><button type="button" class="btn" id="${revId}" aria-pressed="${reversed}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>`;
-  }
-  function dispProps({ shown: shown2, rest, locked, prefix }) {
-    const ord = shown2.map((c5) => c5[0]);
-    return [...shown2, ...rest].map((c5) => {
-      const on2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]), l6 = esc(c5[1]);
-      return `<label><input type="checkbox" data-prop id="${prefix}-${c5[0]}" value="${c5[0]}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
-    }).join("");
-  }
-  var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
-  function dispController({ btn, menu, draw: draw2 }) {
-    const isOpen = () => !!$(menu) && $(menu).classList.contains("on");
-    const close = (focus) => {
-      const m5 = $(menu), b5 = $(btn);
-      if (!m5 || !b5 || !isOpen() && m5.hidden) return;
-      m5.classList.remove("on");
-      m5.hidden = true;
-      b5.setAttribute("aria-expanded", "false");
-      b5.classList.remove("on");
-      if (focus) b5.focus();
-    };
-    const open2 = () => {
-      const m5 = $(menu), b5 = $(btn);
-      if (!m5 || !b5) return;
-      if (isOpen()) {
-        close(true);
-        return;
-      }
-      $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
-      draw2();
-      m5.hidden = false;
-      m5.classList.add("on");
-      b5.setAttribute("aria-expanded", "true");
-      b5.classList.add("on");
-      (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
-    };
-    return { isOpen, open: open2, close };
   }
 
   // components/peek/PeekProps.jsx
@@ -36856,8 +37177,8 @@ system/scripts/run launch.py agent ${what}`;
       if (dx2 || dy2) anim(e4, [{ transform: `translate(${dx2}px,${dy2}px)` }, { transform: "none" }], { duration: 160 });
     });
   }
-  function mNoFade(paint2, changed2) {
-    const t47 = document.documentElement, off = shared.MKEYHELD || changed2 > 2 || reduced();
+  function mNoFade(paint2, changed3) {
+    const t47 = document.documentElement, off = shared.MKEYHELD || changed3 > 2 || reduced();
     if (off) t47.classList.add("mnofade");
     paint2();
     if (off) {
@@ -41900,8 +42221,8 @@ system/scripts/run launch.py agent ${what}`;
       paint2();
       return;
     }
-    const changed2 = $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").filter((e4) => e4.classList.contains("hl") !== HL.has(e4.dataset.row) || e4.classList.contains("cur") !== (e4.dataset.row === shared.HLC)).length;
-    mNoFade(() => mTick("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]", (e4) => e4.dataset.row, HLTICK, paint2), changed2);
+    const changed3 = $$("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]").filter((e4) => e4.classList.contains("hl") !== HL.has(e4.dataset.row) || e4.classList.contains("cur") !== (e4.dataset.row === shared.HLC)).length;
+    mNoFade(() => mTick("#workTbl tr[data-row],#v-person table.ptbl tr[data-row],#workBoard .bcard[data-row]", (e4) => e4.dataset.row, HLTICK, paint2), changed3);
   }
   function hlClear() {
     shared.HLALL = false;
@@ -42679,11 +43000,11 @@ system/scripts/run launch.py agent ${what}`;
       putHTML($("#helpPane"), html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`);
       return;
     }
-    const a5 = helpNorm(arg) || helpNorm(store.get("creaite-help-tab", "start")) || HTABS[0], i5 = a5.indexOf("-"), tab = i5 < 0 ? a5 : a5.slice(0, i5), rest = i5 < 0 ? "" : a5.slice(i5 + 1), changed2 = !$("#helpPane").dataset.tab || $("#helpPane").dataset.tab !== tab;
+    const a5 = helpNorm(arg) || helpNorm(store.get("creaite-help-tab", "start")) || HTABS[0], i5 = a5.indexOf("-"), tab = i5 < 0 ? a5 : a5.slice(0, i5), rest = i5 < 0 ? "" : a5.slice(i5 + 1), changed3 = !$("#helpPane").dataset.tab || $("#helpPane").dataset.tab !== tab;
     shared.HELPARG = a5;
     store.set("creaite-help-tab", tab);
     drawTabs($("#helpTabsHost"), { items: HD.tabs.map((t47) => ({ id: t47.id, label: t47.title, tabId: "htab-" + t47.id, data: { help: t47.id } })), selected: tab, onSelect: helpGo, label: "Help", className: "tabs", id: "helpTabs", wrap: true });
-    if (changed2) {
+    if (changed3) {
       const html2 = HD.tabs.find((t47) => t47.id === tab).html.replace("<p>[start command]</p>", cmdBox());
       putHTML($("#helpPane"), raw(`<div class="hp-wrap hp-${tab}">${html2}</div>`));
       $("#helpPane").dataset.tab = tab;
@@ -42699,7 +43020,7 @@ system/scripts/run launch.py agent ${what}`;
       if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => {
         if (shared.HELPARG === a5 && target.isConnected) target.scrollIntoView({ block: "start" });
       });
-    } else if (changed2) $("#v-help").scrollTop = 0;
+    } else if (changed3) $("#v-help").scrollTop = 0;
   }
   function helpGo(arg) {
     const a5 = helpNorm(arg);
@@ -44192,6 +44513,11 @@ system/scripts/run launch.py agent ${what}`;
       if ((e4.key === "d" || e4.key === "D") && (shared.VIEW === "work" || shared.VIEW === "mine")) {
         e4.preventDefault();
         openDisp();
+        return;
+      }
+      if ((e4.key === "d" || e4.key === "D") && !e4.shiftKey && shared.VIEW === "people" && !popupOpen()) {
+        e4.preventDefault();
+        openPeopleDisplay();
         return;
       }
       if (e4.key === "?") {
@@ -52347,7 +52673,7 @@ system/scripts/run launch.py agent ${what}`;
     };
     const saved = rec && rec.notes || {};
     const flat2 = (L3) => (L3 || []).map((l6) => l6.text.replace(/\s+/g, " ").trim()).join("\n");
-    const changed2 = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
+    const changed3 = prop ? SHAPE_SECTIONS.filter(([k5]) => flat2(prop.notes[k5]) !== flat2(saved[k5])) : [];
     return /* @__PURE__ */ u4("div", { class: "ppshape", children: [
       conf ? /* @__PURE__ */ u4("p", { class: "sub shconf", role: "note", children: "Confidential meeting: shaped from your text and your project record only. creaite doesn't read the invite, minutes or documents." }) : null,
       /* @__PURE__ */ u4("div", { class: "ppshrow", children: [
@@ -52406,7 +52732,7 @@ system/scripts/run launch.py agent ${what}`;
             /* @__PURE__ */ u4(Icon, { name: "spark" }),
             "Suggestion from creaite"
           ] }),
-          /* @__PURE__ */ u4("span", { class: "sub", children: changed2.length ? `${shPlural(changed2.length, "section")} changed${changed2.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
+          /* @__PURE__ */ u4("span", { class: "sub", children: changed3.length ? `${shPlural(changed3.length, "section")} changed${changed3.length < SHAPE_SECTIONS.length ? "; the others stay as they are" : ""}.` : "Nothing changed." }),
           /* @__PURE__ */ u4("span", { class: "sp" }),
           /* @__PURE__ */ u4("button", { type: "button", class: "btn shsm", "data-ppdiscard": "1", onClick: () => discardProposal(rec), children: "Discard" }),
           /* @__PURE__ */ u4(
@@ -52415,7 +52741,7 @@ system/scripts/run launch.py agent ${what}`;
               type: "button",
               class: "btn primary shsm",
               "data-ppuse": "1",
-              disabled: !changed2.length || !shapeReading.value,
+              disabled: !changed3.length || !shapeReading.value,
               onClick: async () => {
                 if (await useProposal()) onUsed();
               },
@@ -52427,7 +52753,7 @@ system/scripts/run launch.py agent ${what}`;
           c5.section ? `${c5.section}: ` : "",
           c5.note
         ] }, i5)) }) : null,
-        changed2.map(([k5, label]) => /* @__PURE__ */ u4("div", { class: "shsec", children: [
+        changed3.map(([k5, label]) => /* @__PURE__ */ u4("div", { class: "shsec", children: [
           /* @__PURE__ */ u4("div", { class: "shsech", children: /* @__PURE__ */ u4("b", { children: label }) }),
           /* @__PURE__ */ u4("ul", { class: "ppsugl", children: (prop.notes[k5] || []).map((l6, i5) => /* @__PURE__ */ u4("li", { children: [
             l6.text,
@@ -54217,17 +54543,17 @@ ${pre}**Current state title:** ${title}`);
   function claimTrack() {
     const root2 = $("#curEd");
     if (root2 && shared.CURED && shared.CURED.claims) {
-      let changed2 = false;
+      let changed3 = false;
       for (const [n4, c5] of Object.entries(shared.CURED.claims)) {
         if (c5.edited) continue;
         if (claimText(root2, n4) !== c5.text) {
           c5.edited = true;
           c5.touched = true;
           c5.ids = [];
-          changed2 = true;
+          changed3 = true;
         }
       }
-      if (changed2) {
+      if (changed3) {
         claimPaint("ed");
         evRefresh();
       }
@@ -58027,7 +58353,7 @@ ${pre}**Current state title:** ${title}`);
   // components/settings/SettingRow.jsx
   var N2 = 0;
   var rowId = () => "ss" + ++N2;
-  function SettingRow({ id: id2, label, line, note, changed: changed2, keys, resettable = true, fixedWhy = "", saved = false, children }) {
+  function SettingRow({ id: id2, label, line, note, changed: changed3, keys, resettable = true, fixedWhy = "", saved = false, children }) {
     const [busy2, setBusy] = d2(false);
     const reset = async () => {
       setBusy(true);
@@ -58038,7 +58364,7 @@ ${pre}**Current state title:** ${title}`);
     return /* @__PURE__ */ u4("div", { class: "srow", "data-keys": keys.join(" "), children: [
       /* @__PURE__ */ u4("div", { children: [
         /* @__PURE__ */ u4("span", { id: id2, children: label }),
-        changed2 && /* @__PURE__ */ u4("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
+        changed3 && /* @__PURE__ */ u4("span", { class: "setdot", role: "img", "aria-label": "Changed from the default", title: "Changed from the default" }),
         (line || note) && /* @__PURE__ */ u4("small", { id: id2 + "h", children: [
           line,
           note ? /* @__PURE__ */ u4("span", { class: "setnote", children: [
@@ -58054,7 +58380,7 @@ ${pre}**Current state title:** ${title}`);
       /* @__PURE__ */ u4("div", { class: "setctl", children: [
         saved && /* @__PURE__ */ u4("span", { class: "saved", role: "status", children: "Saved" }),
         children,
-        changed2 && resettable && /* @__PURE__ */ u4(
+        changed3 && resettable && /* @__PURE__ */ u4(
           "button",
           {
             type: "button",
@@ -61798,16 +62124,16 @@ ${d5.text}`);
     const label = short2 && SHORT[c5.col] ? SHORT[c5.col] : irLabel(c5.col).toLowerCase();
     return { label, delta: `${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`, text: false };
   }
-  function irNoteWords(changed2) {
-    const ph2 = changed2.map((c5) => irPhrase(c5));
+  function irNoteWords(changed3) {
+    const ph2 = changed3.map((c5) => irPhrase(c5));
     return ph2.map((p6) => p6.text ? p6.label : `${p6.label} ${p6.delta}`).join(" and ");
   }
-  function irNoteText(id2, title, changed2) {
+  function irNoteText(id2, title, changed3) {
     const what = [id2, title].filter(Boolean).join(" · ");
-    return changed2.length ? `What changes if you approve: ${what}: ${irNoteWords(changed2)}. The rest of the item stays as it is.` : `Nothing changes if you approve: ${what} already has every value in this update.`;
+    return changed3.length ? `What changes if you approve: ${what}: ${irNoteWords(changed3)}. The rest of the item stays as it is.` : `Nothing changes if you approve: ${what} already has every value in this update.`;
   }
-  function irIfApproved(changed2) {
-    return changed2.map((c5) => irIsText(c5.col) ? `${c5.label} replaced` : `${c5.label} ${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`).join(" · ");
+  function irIfApproved(changed3) {
+    return changed3.map((c5) => irIsText(c5.col) ? `${c5.label} replaced` : `${c5.label} ${irWord(c5.col, c5.was)} → ${irWord(c5.col, c5.now)}`).join(" · ");
   }
   function irLineParts(changes) {
     const chs = changes.filter((c5) => c5.col).map((c5) => ({ col: c5.col, was: "was" in c5 ? c5.was : c5.from, now: "now" in c5 ? c5.now : c5.to }));
@@ -61896,9 +62222,9 @@ ${d5.text}`);
   function updateChips(table, list, now, show) {
     const editable = EDITABLE[table] || [];
     const chip = (col, f5, name, mark, popup) => {
-      const c5 = list.find((x5) => x5.col === col), changed2 = !!c5 && !c5.same;
+      const c5 = list.find((x5) => x5.col === col), changed3 = !!c5 && !c5.same;
       const shownNow = show(col, now[col]);
-      return { f: f5, name, mark, was: changed2 ? show(col, c5.was) : shownNow, now: shownNow, changed: changed2, editable: editable.includes(col), popup, empty: now[col] == null || now[col] === "" };
+      return { f: f5, name, mark, was: changed3 ? show(col, c5.was) : shownNow, now: shownNow, changed: changed3, editable: editable.includes(col), popup, empty: now[col] == null || now[col] === "" };
     };
     const dueCol = table === "decisions" ? "needed_by" : "due_date", ownerCol = table === "decisions" ? "made_by" : "owner";
     const row1 = [
@@ -61958,10 +62284,10 @@ ${d5.text}`);
   }
   var DIFF_TEXT = ["description", "decision", "response_action", "reasoning", "options"];
   function UpdateBody({ id: id2, title, table, list, rec, conflict, current }) {
-    const changed2 = irChanged(list), diffs = changed2.filter((c5) => DIFF_TEXT.includes(c5.col));
+    const changed3 = irChanged(list), diffs = changed3.filter((c5) => DIFF_TEXT.includes(c5.col));
     const plain = table === "raid" ? "response_action" : table === "decisions" ? "reasoning" : "";
-    const shownPlain = plain && !changed2.some((c5) => c5.col === plain) && current[plain] ? current[plain] : "";
-    const cm2 = changed2.some((c5) => c5.col === "client_message");
+    const shownPlain = plain && !changed3.some((c5) => c5.col === plain) && current[plain] ? current[plain] : "";
+    const cm2 = changed3.some((c5) => c5.col === "client_message");
     return /* @__PURE__ */ u4(S2, { children: [
       conflict ? /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("div", { class: "pk-dl", children: "This suggestion and your project record disagree" }),
@@ -61973,18 +62299,18 @@ ${d5.text}`);
         /* @__PURE__ */ u4("div", { class: "pk-dl", children: irLabel(plain) }),
         /* @__PURE__ */ u4("div", { class: "pk-updtext", children: String(shownPlain) })
       ] }) : null,
-      /* @__PURE__ */ u4("div", { class: "pk-note", id: "pkUpdNote", role: "status", children: /* @__PURE__ */ u4(NoteWords, { id: id2, title, changed: changed2 }) })
+      /* @__PURE__ */ u4("div", { class: "pk-note", id: "pkUpdNote", role: "status", children: /* @__PURE__ */ u4(NoteWords, { id: id2, title, changed: changed3 }) })
     ] });
   }
-  function NoteWords({ id: id2, title, changed: changed2 }) {
+  function NoteWords({ id: id2, title, changed: changed3 }) {
     const what = [id2, title].filter(Boolean).join(" · ");
-    if (!changed2.length) return /* @__PURE__ */ u4(S2, { children: irNoteText(id2, title, changed2) });
+    if (!changed3.length) return /* @__PURE__ */ u4(S2, { children: irNoteText(id2, title, changed3) });
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("b", { children: "What changes if you approve" }),
       ": ",
       what,
       ": ",
-      changed2.map((c5, i5) => {
+      changed3.map((c5, i5) => {
         const p6 = irPhrase(c5);
         return /* @__PURE__ */ u4(S2, { children: [
           i5 ? " and " : "",
@@ -61998,8 +62324,8 @@ ${d5.text}`);
       ". The rest of the item stays as it is."
     ] });
   }
-  function LatestWas({ was, changed: changed2 }) {
-    return changed2 ? /* @__PURE__ */ u4("div", { class: "updiff", children: /* @__PURE__ */ u4("div", { class: "old", children: [
+  function LatestWas({ was, changed: changed3 }) {
+    return changed3 ? /* @__PURE__ */ u4("div", { class: "updiff", children: /* @__PURE__ */ u4("div", { class: "old", children: [
       /* @__PURE__ */ u4("span", { class: "icsub", children: "Now" }),
       " ",
       was == null || was === "" ? /* @__PURE__ */ u4("i", { children: "not set" }) : /* @__PURE__ */ u4("s", { children: String(was) })
@@ -62641,10 +62967,10 @@ ${d5.text}`);
     updFeed();
   }
   function updFeed() {
-    const { u: u5, changed: changed2 } = updModel(), r4 = pkRev(), tab = PK.tab || "all";
+    const { u: u5, changed: changed3 } = updModel(), r4 = pkRev(), tab = PK.tab || "all";
     if (!r4 || !$("#pkFeed")) return;
     const items2 = [...feedLines(pkHistory(u5.id), (ch2) => /^created\b/.test(ch2) ? "src" : ch2.toLowerCase().startsWith(pkUpdLabel(u5.table) + ":") ? "upd" : "act"), { type: "src", who: "Source", html: `<div class="pk-src">${srcHTML(r4.src)}</div>`, when: "" }];
-    const pend = changed2.length && (tab === "all" || tab === "act") ? html`<div class="pk-fe pending" data-t="act"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>If approved</b> · ${irIfApproved(changed2)}</div></div>` : html``;
+    const pend = changed3.length && (tab === "all" || tab === "act") ? html`<div class="pk-fe pending" data-t="act"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>If approved</b> · ${irIfApproved(changed3)}</div></div>` : html``;
     putHTML($("#pkFeed"), html`${pend}${raw(feedListHtml(items2, tab))}`);
   }
   async function updSave(approve) {
@@ -78302,8 +78628,8 @@ ${d5.text}`);
     const same2 = (
       /** @type {any[]} */
       now.filter(Boolean)
-    ), changed2 = looked.length - same2.length;
-    const left = changed2 ? `${changed2} changed since you looked, left for you` : "";
+    ), changed3 = looked.length - same2.length;
+    const left = changed3 ? `${changed3} changed since you looked, left for you` : "";
     if (looked.length && !same2.length) {
       snack(STALE_MSG);
       return;
@@ -81738,6 +82064,7 @@ Next: `;
         "partnerProblem",
         "partners",
         "passes",
+        "pdSave",
         "peekFrame",
         "peekPropNodes",
         "peeks",

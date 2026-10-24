@@ -4321,11 +4321,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title,#v-people #peopleTbl .pj a{white-space:normal}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
-#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:anywhere}
+#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
-@media (max-width:1100px){ #v-people #peopleTbl :is(th,td):nth-child(2){display:none} }   /* the email is in the person's record; the room goes to the counts */
+@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
+/* #360: People's Display menu sits under its button like Work's, and its group rows are Work's */
+#v-people .toolbar>.ddisp .dispmenu{left:auto;right:0;transform-origin:top right}
+#v-people #peopleTbl tr.wgh td{cursor:pointer}   /* the email is in the person's record; the room goes to the counts */
 
 /* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
 .tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}

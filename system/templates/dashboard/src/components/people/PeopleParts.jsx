@@ -42,11 +42,11 @@ export const Star = () => (
 
 /** The name (it opens their work; a right-click is the person menu, with Draft email), "(you)", "needs details" with what is
     missing, and the codes of the other projects they are on. `you`: Alan's own row reads "You (name)" (the People page).
-    @param {{x: PersonRow, code?: string, follow?: boolean, codes?: boolean, you?: boolean}} props */
-export function NameCell({ x, code, follow, codes, you }) {
+    @param {{x: PersonRow, code?: string, follow?: boolean, codes?: boolean, you?: boolean, col?: string}} props */
+export function NameCell({ x, code, follow, codes, you, col }) {
   const also = codes ? x.on.filter(c => c !== code) : [];
   return (
-    <td class="title">
+    <td class="title" data-col={col}>
       <a href="#" class="plink2" data-person={x.n} title={x.me ? "Open My work" : `Open ${x.n}’s work`}>{you && x.me ? `You (${x.n})` : x.n}</a>
       {follow && x.followed ? <> <Star /></> : null}
       {x.me && !you ? <> <span class="tag">(you)</span></> : null}
@@ -60,8 +60,8 @@ export function NameCell({ x, code, follow, codes, you }) {
 export const Dash = ({ v }) => v ? <>{v}</> : <span class="sub">—</span>;
 
 /** The search box and the funnel. `ids` is the view's own id prefix (two views must never share ids).
-    @param {{L: PersonRow[], F: PeopleField[], s: PeopleFilterState, ids: string, onChange: () => void}} props */
-export function PeopleTools({ L, F, s, ids, onChange }) {
+    @param {{L: PersonRow[], F: PeopleField[], s: PeopleFilterState, ids: string, onChange: () => void, display?: any}} props */
+export function PeopleTools({ L, F, s, ids, onChange, display }) {
   const host = useRef(/** @type {HTMLSpanElement|null} */ (null));
   useLayoutEffect(() => { if (host.current) drawBar(host.current, L, F, s, ids, onChange); });
   return (
@@ -70,7 +70,17 @@ export function PeopleTools({ L, F, s, ids, onChange }) {
         onInput={e => { s.q = /** @type {HTMLInputElement} */ (e.target).value; onChange(); }}
         onKeyDown={e => { if (e.key === "Escape" && s.q) { e.preventDefault(); e.stopPropagation(); s.q = ""; onChange(); } }} />
       <span class="dd" id={`${ids}Fdd`} ref={host}></span>
+      {display || null}
     </div>
+  );
+}
+
+/** The Display button and its menu (#360): the page fills the menu when it opens (components/people/PeopleDisplay.js). */
+export function DisplayButton() {
+  return (
+    <span class="dd ddisp"><button class="ib bd" id="plDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="plDispMenu"
+      aria-label="Display: grouping, order and properties" data-tip="Display: grouping, order and properties" data-key="D"><Icon name="sliders" /></button>
+    <div class="ddmenu dispmenu" id="plDispMenu" role="dialog" aria-label="Display" hidden></div></span>
   );
 }
 
