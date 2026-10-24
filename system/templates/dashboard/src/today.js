@@ -197,9 +197,6 @@ export function renderToday(){
   mDots("today");
   renderSetup();   /* BL-155 */
   renderSweepDue();   /* #200 */
-  { $("#drStale")?.remove(); const host=$("#mineMore"); if(host&&draftOn("update")){
-    const st=A.filter(x=>isStale("actions",x)); if(st.length){
-    addHTML(host,"afterend",html`<div class="drstale" id="drStale"><span>${raw(plur(st.length,"open action"))} ${st.length===1?"has":"have"} had no update for ${raw(+S.staleDays||7)} days.</span>${raw(draftBtn("update-bulk","Draft updates","Draft an update for each from what has happened since, as suggestions in Review",'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`); } } }   /* AI drafts: stale actions */
   dcIcon(); } }   /* BL-205 */
 /* Today's day view: Alan's meetings (saved locally by cx-sweep from Outlook) as a line with a bump per meeting,
    a sun at the current time, and a headline naming the day's shape. Without a calendar the line is flat. */
