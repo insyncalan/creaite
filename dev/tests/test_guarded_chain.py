@@ -240,7 +240,7 @@ class GuardedChain(unittest.TestCase):
         repo = Path(__file__).resolve().parents[2]
         name = self.SPEC[2]
         if chain_digest(repo, "HEAD", self.SPEC) is None and not getattr(guarded_chain, name):
-            self.skipTest("the 2.6.3 chain list is not cut yet: its pin is set with the list")
+            self.skipTest("this tree carries no chain list and no pin for it")
         self.assertEqual(chain_digest(repo, "HEAD", self.SPEC), getattr(guarded_chain, name),
                          f"the chain list or a listed diff changed: update {name} only with Alan's say (python3 dev/tests/guarded_chain.py)")
 
