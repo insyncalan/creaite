@@ -74,6 +74,20 @@ class CalmSave(LiveBrowserCase):
         b.wait("document.getElementById('snackT').textContent.includes('still be undone in Activity')")
         self.assertFalse(b.eval("document.getElementById('snack').classList.contains('ok')"))
 
+    def test_part_saved_and_part_waiting_says_so_plainly_not_the_calm_way(self):
+        """The partial-save message (panel.js pkApply): a change that was edited elsewhere stays waiting, so the toast counts what was saved,
+        says how many still wait and why, and is not the calm ok one that would sit beside the bar saying all is well."""
+        b = self.b
+        self.stage_two()
+        # one staged file is still there after the save, as when the item was changed elsewhere and so was not taken
+        b.eval("(()=>{const keep=PKS[0].name,o=shared.VW.exists;shared.VW.exists=async function(p){return p.endsWith(keep)?true:o.call(this,p)};window.__undoVW=()=>{shared.VW.exists=o}})()")
+        b.eval("pkApply()")
+        b.wait("document.getElementById('snack').classList.contains('on')", timeout=20)
+        b.eval("window.__undoVW()")
+        text = b.eval("document.getElementById('snackT').textContent")
+        self.assertEqual(text, "Saved 1 change; 1 still waiting to be saved (changed elsewhere since)")
+        self.assertFalse(b.eval("document.getElementById('snack').classList.contains('ok')"))
+
     def test_undo_reverses_the_save(self):
         b = self.b
         ids = self.stage_two()

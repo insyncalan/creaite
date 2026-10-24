@@ -4322,11 +4322,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
 #v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
-#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj],[data-col=org],[data-col=role]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl th{white-space:normal}
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl :is(th,td)[data-col=org]{min-width:112px} #v-people #peopleTbl :is(th,td)[data-col=role]{min-width:92px}   /* org and role keep whole words; only an address or a project name breaks */ #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
-@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
+@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }
+@media (max-width:1100px){ #v-people #peopleTbl th.num{white-space:normal} #v-people #peopleTbl td.title{min-width:112px} #v-people #peopleTbl :is(th,td).num,#v-people #peopleTbl td.mgract{padding-left:5px;padding-right:5px} }   /* #343 M1: the count headings wrap by word, so Organisation and Role keep their room at 900px */   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
 /* #360: People's Display menu sits under its button like Work's, and its group rows are Work's */
 #v-people .toolbar>.ddisp .dispmenu{left:auto;right:0;transform-origin:top right}
 #v-people #peopleTbl tr.wgh td{cursor:pointer}   /* the email is in the person's record; the room goes to the counts */

@@ -103,6 +103,71 @@ class FirstScreen(IntakeBase):
             b.click("#v-intake-review [data-irfold=waiting]")
             b.wait(f"{n}.length==={folded}")
 
+    def tick_waiting_then_hide(self, v):
+        """Show the waiting tail, tick a waiting meeting, then Hide: returns the id ticked."""
+        b = self.b
+        self.fold()
+        self.view(v)
+        b.click("#v-intake-review [data-irfold=waiting]")
+        b.wait("!!document.querySelector('#v-intake-review [data-irm] input.irtick')")
+        wid = b.eval("(D.intake_review.meetings.find(m=>m.stage==='arrived'&&m.state==='waiting')||{}).id")
+        self.assertTrue(wid)
+        b.eval("document.querySelector('#v-intake-review [data-irm=%s] input.irtick').click()" % wid)
+        b.wait("irTicked.value.includes(%r)" % wid)
+        self.assertIn("1 selected", b.eval("document.querySelector('[data-irtickbar]').textContent"))
+        b.click("#v-intake-review [data-irfold=waiting]")
+        b.wait("!document.querySelector('#v-intake-review [data-irm=%s]')" % wid)
+        return wid
+
+    def test_hiding_the_waiting_tail_drops_the_tick_and_the_bar_acts_on_nothing_hidden(self):
+        b = self.b
+        for v in ("list", "board", "two"):
+            wid = self.tick_waiting_then_hide(v)
+            self.assertEqual(b.eval("irTicked.value.length"), 0, v)                                # the fold clears the ticks, as a search does
+            self.assertFalse(b.eval("!!document.querySelector('[data-irtickbar]')"), v)           # no "1 selected" bar left over
+            before = b.eval("JSON.stringify(D.intake_review.later)")
+            b.eval("document.querySelector('[data-irtickbar] [data-ira=laterall]')&&document.querySelector('[data-irtickbar] [data-ira=laterall]').click(); 0")
+            b.pump(0.4)
+            self.assertEqual(b.eval("JSON.stringify(D.intake_review.later)"), before, v)           # nothing hidden was set aside
+            self.assertTrue(b.eval("D.intake_review.meetings.some(m=>m.id===%r)" % wid), v)
+
+    def test_the_bar_works_out_what_it_acts_on_when_clicked_not_when_drawn(self):
+        """Even if a tick were left behind a fold, Later and Not needed act only on rows on the page at the click."""
+        b = self.b
+        wid = self.tick_waiting_then_hide("list")
+        b.eval("irTicked.value=[%r]; 0" % wid)                                                       # a stale tick on the hidden row
+        b.wait("!!document.querySelector('[data-irtickbar]')")
+        self.assertIn("0 selected, 1 hidden", b.eval("document.querySelector('[data-irtickbar]').textContent"))
+        before = b.eval("JSON.stringify(D.intake_review.later)")
+        b.eval("document.querySelector('[data-irtickbar] [data-ira=laterall]').click(); 0")                 # Later with only a hidden row ticked
+        b.pump(0.4)
+        self.assertEqual(b.eval("JSON.stringify(D.intake_review.later)"), before)
+        self.assertTrue(b.eval("D.intake_review.meetings.some(m=>m.id===%r)" % wid))
+
+    def test_two_panes_moves_off_a_meeting_that_is_folded_away(self):
+        b = self.b
+        self.fold()
+        self.view("two")
+        b.click("#v-intake-review [data-irfold=waiting]")
+        b.wait("!!document.querySelector('#v-intake-review tr[data-irm]')")
+        wid = b.eval("(D.intake_review.meetings.find(m=>m.stage==='arrived'&&m.state==='waiting')||{}).id")
+        b.eval("document.querySelector('#v-intake-review tr[data-irm=%s]').click()" % wid)
+        b.wait("document.querySelector('#v-intake-review [data-irdet]').dataset.irdet===%r" % wid)
+        b.click("#v-intake-review [data-irfold=waiting]")
+        b.wait("!document.querySelector('#v-intake-review tr[data-irm=%s]')" % wid)
+        self.assertNotEqual(b.eval("document.querySelector('#v-intake-review [data-irdet]').dataset.irdet"), wid)
+
+    def test_hide_is_not_offered_while_a_search_or_choice_holds_the_tail_open(self):
+        b = self.b
+        self.fold()
+        self.view("list")
+        before = b.eval("JSON.stringify(irFolded.value)")
+        b.eval("irSetStateFilter('waiting'); 0")
+        b.wait("!document.querySelector('#v-intake-review [data-irfold=waiting]')&&!!document.querySelector('#v-intake-review [data-irm]')")
+        self.assertEqual(b.eval("JSON.stringify(irFolded.value)"), before)                           # no silent change to the saved fold
+        b.eval("irSetStateFilter('all'); 0")
+        b.wait("!!document.querySelector('#v-intake-review [data-irfold=waiting]')")
+
     def test_board_leads_with_work_and_the_open_suggestions_sit_above_it(self):
         b = self.b
         self.fold()
