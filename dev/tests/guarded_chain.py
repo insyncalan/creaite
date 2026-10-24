@@ -4,7 +4,7 @@ The convention (dev/proposals/GUARDED-2.6.1.md, GUARDED-2.6.2.md): each approved
 exactly that chain's marker. That commit is allowed to change guarded scripts only if, with the diffs listed in the chain file (read from
 that commit's PARENT) reverse-applied to the guarded files, every guarded file equals its parent's content. A marked commit with anything
 extra, a missing or unreadable chain file, a pin mismatch, a listed diff that is missing or does not reverse, or a guarded file the
-diffs don't explain, fails closed: its guarded files are reported as changed. Three chains are known (2.6.1, 2.6.2, then 2.6.3); a range may
+diffs don't explain, fails closed: its guarded files are reported as changed. Four chains are known (2.6.1, 2.6.2, 2.6.3, then 2.6.4); a range may
 hold any of them, in order. Plain code, no network."""
 import hashlib
 import os
@@ -40,10 +40,20 @@ CHAIN3_MARKER = "Guarded 2.6.3 chain:"
 CHAIN3_FILE = "dev/proposals/GUARDED-2.6.3.chain"
 CHAIN3_SHA256 = "e0670db88b51a179f8cacc97018859ac374c35b7a4a035f7b498b6d6b3878d99"
 BASE3 = "39c1060aaeffa0c47a03a3c8e0e48208d3cb9ed6"
-BASE = BASE3
+# The 2.6.4 chain (its guarded diffs come from the v264-guarded branch: 345, 346 and the 334 live_server diff): its own marker, list and
+# pin, the same way. BASE4 is the published 2.6.3 release commit (main e6389af8, tag v2.6.3), so the range now starts after the 2.6.3 chain
+# and a range from BASE3 would carry the 2.6.3 chain commit, whose pin is no longer the one in force. The list file starts EMPTY and the pin
+# empty: an empty list has no digest, so a marked 2.6.4 commit fails closed (its guarded files are reported as changed) until the list is
+# cut and CHAIN4_SHA256 set with it, on Alan's say. `python3 dev/tests/guarded_chain.py` prints the value.
+CHAIN4_MARKER = "Guarded 2.6.4 chain:"
+CHAIN4_FILE = "dev/proposals/GUARDED-2.6.4.chain"
+CHAIN4_SHA256 = ""
+BASE4 = "e6389af8bd466dabd768b7f1a4fd170922fda255"
+BASE = BASE4
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
 SPEC3 = (CHAIN3_MARKER, CHAIN3_FILE, "CHAIN3_SHA256")
+SPEC4 = (CHAIN4_MARKER, CHAIN4_FILE, "CHAIN4_SHA256")
 
 
 class HistoryMissing(AssertionError):
@@ -117,13 +127,13 @@ def chain_explains(repo, sha, files, pin=None, spec=SPEC1):
     return back is not None and all(back[f] == _blob(repo, sha + "^", f) for f in files)
 
 
-def _marked_chains(repo, base, head, pin, pin2, pin3=None):
+def _marked_chains(repo, base, head, pin, pin2, pin3=None, pin4=None):
     """(peel, carried): per chain, latest first, (spec, pin, marked commit, guarded files its marked commits changed), and the union of
     those files. (None, set()) when a marked commit is not exactly its chain."""
     log = _git(repo, "log", "--no-merges", "--format=%H%x09%s", f"{base}..{head}")
     subjects = [l.split("\t", 1) for l in log.stdout.splitlines()]
     peel, carried = [], set()
-    for spec, p in ((SPEC3, pin3), (SPEC2, pin2), (SPEC1, pin)):
+    for spec, p in ((SPEC4, pin4), (SPEC3, pin3), (SPEC2, pin2), (SPEC1, pin)):
         marked = [h for h, subj in subjects if subj.startswith(spec[0])]
         if not marked:
             continue
@@ -148,9 +158,9 @@ def _peel_back(repo, head, peel, cur):
     return True
 
 
-def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None, pin3=None):
+def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None, pin3=None, pin4=None):
     """Guarded script paths whose content differs between base and head (the net change), except what the approved chain commits
-    explain: for each chain (2.6.1, 2.6.2, 2.6.3) a commit in the range whose subject starts with its marker and which passes chain_explains.
+    explain: for each chain (2.6.1, 2.6.2, 2.6.3, 2.6.4) a commit in the range whose subject starts with its marker and which passes chain_explains.
     Every net change must be carried by a marked commit, and the chains' diffs, reversed latest chain first, each only on the files its
     own marked commit changed, must give base's content. None when git history for base isn't available."""
     d = _git(repo, "diff", "--name-only", "--no-renames", base, head)
@@ -161,7 +171,7 @@ def guarded_touched(repo, base=BASE, head="HEAD", pin=None, ci=None, pin2=None, 
     net = [f for f in d.stdout.splitlines() if _is_guarded(f)]
     if not net:
         return []
-    peel, carried = _marked_chains(repo, base, head, pin, pin2, pin3)
+    peel, carried = _marked_chains(repo, base, head, pin, pin2, pin3, pin4)
     if peel is None or not peel or not set(net) <= carried:     # a net change no marked commit made itself is somebody else's edit
         return net
     cur = {f: _blob(repo, head, f) for f in net}
@@ -175,3 +185,4 @@ if __name__ == "__main__":
     print("CHAIN_SHA256 ", chain_digest(here, "HEAD", SPEC1))
     print("CHAIN2_SHA256", chain_digest(here, "HEAD", SPEC2))
     print("CHAIN3_SHA256", chain_digest(here, "HEAD", SPEC3))
+    print("CHAIN4_SHA256", chain_digest(here, "HEAD", SPEC4))

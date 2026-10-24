@@ -1,7 +1,7 @@
 """The guarded-file check's marker rule, on a throwaway git repo (never the live history).
 (1) a marked commit with an extra guarded edit fails; (2) an unmarked guarded edit fails; (3) the exact chain, marked, passes;
 (4) a marked commit with no chain file fails; plus: a marked commit touching a guarded file the chain doesn't list fails.
-Every case runs for the 2.6.1, the 2.6.2 and the 2.6.3 chain (own marker, chain file and pin); a group mixes 2.6.1 with 2.6.2, and one 2.6.2 with 2.6.3.
+Every case runs for the 2.6.1, the 2.6.2, the 2.6.3 and the 2.6.4 chain (own marker, chain file and pin); a group mixes 2.6.1 with 2.6.2, and one 2.6.2 with 2.6.3.
 2.6.3 put system/scripts/draft_delivery.py on the guarded list: its cases are at the end."""
 import subprocess
 import sys
@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import guarded_chain  # noqa: E402
-from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, chain_digest, guarded_touched  # noqa: E402
+from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, SPEC4, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
 LIVE, LEAK, EDIT, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "dev/tests/snapshots/golden.txt"
@@ -95,7 +95,7 @@ class Repo:
     pin = "none"
 
     def touched(self, **kw):
-        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3"}[self.spec[0]]
+        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3", SPEC4[0]: "pin4"}[self.spec[0]]
         if "pin" in kw and key != "pin":
             kw[key] = kw.pop("pin")
         kw.setdefault(key, self.pin)
@@ -254,6 +254,40 @@ class GuardedChain2(GuardedChain):
 class GuardedChain3(GuardedChain):
     """The same cases for the 2.6.3 chain: its own marker, chain file and pin."""
     SPEC = SPEC3
+
+
+class GuardedChain4(GuardedChain):
+    """The same cases for the 2.6.4 chain: its own marker, chain file and pin."""
+    SPEC = SPEC4
+
+
+class EmptyChain4(unittest.TestCase):
+    """2.6.4 starts with an empty chain list and no pin: it must fail closed, never pass a marked commit."""
+
+    def test_the_empty_list_has_no_digest(self):
+        r = Repo(SPEC4)
+        self.addCleanup(r._t.cleanup)
+        r.write(SPEC4[1], "# nothing yet\n")
+        r.commit("an empty list")
+        self.assertIsNone(chain_digest(r.d, "HEAD", SPEC4))
+
+    def test_a_marked_commit_fails_closed_with_an_empty_list_and_pin(self):
+        r = Repo(SPEC4)
+        self.addCleanup(r._t.cleanup)
+        r.write(SPEC4[1], "# nothing yet\n")
+        r.commit("an empty list")
+        r.write(TRK, "a\nB\nc\n")
+        r.commit(SPEC4[0] + " tracker")
+        self.assertEqual(guarded_touched(r.d, "base", "HEAD"), [TRK])
+        self.assertEqual(guarded_touched(r.d, "base", "HEAD", pin4=""), [TRK])
+
+    def test_the_shipped_pin_is_empty_until_the_list_is_cut(self):
+        repo = Path(__file__).resolve().parents[2]
+        listed = chain_digest(repo, "HEAD", SPEC4)
+        if listed is None:
+            self.assertEqual(guarded_chain.CHAIN4_SHA256, "", "a pin is set but the 2.6.4 list is empty or missing")
+        else:
+            self.assertEqual(listed, guarded_chain.CHAIN4_SHA256)
 
 
 class BothChains(unittest.TestCase):
