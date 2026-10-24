@@ -107,10 +107,6 @@ Claude reads the content it works on, under your own Claude plan. Confidential m
 
 **Is it finished?** No. It is an early product with frequent releases, and the plain-English notes for each one are in [`dev/release-notes/`](dev/release-notes/).
 
-## Be one of the first ten
-
-We are looking for a small group of programme managers to use creaite on real work and tell us what is missing. If you run one to five programmes and spend your week writing up meetings and chasing owners, [open an issue](https://github.com/insyncalan/creaite/issues/new) titled **Pilot** and tell us what you run.
-
 ## Get started
 
 Step-by-step set-up, including the optional double-click launcher and the sign-in start-up agent, is in [`dev/SETUP.md`](dev/SETUP.md). To look around first, this repository includes a fictional portfolio:
