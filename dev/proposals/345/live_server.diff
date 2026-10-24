@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index a8fe10b6..21846971 100644
+index a8fe10b6..963accab 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -6213,6 +6213,9 @@ def minutes_approve_route(handler, req):
@@ -12,7 +12,7 @@ index a8fe10b6..21846971 100644
          moved = minutes_destination.settle(str(req.get("file") or ""))      # #332: a name already used is numbered, never a stop
          out = review.approve_minutes(str(req.get("file") or ""), group=req.get("group", True) is not False, own=own)
      if moved and out.get("ok"):
-@@ -6277,6 +6280,51 @@ REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
+@@ -6277,6 +6280,67 @@ REVIEW_WORK_ROUTES.update(MINUTES_DESTINATION_ROUTES)
  # ===== end BL-200 =====
  
  
@@ -53,7 +53,7 @@ index a8fe10b6..21846971 100644
 +
 +
 +def expect_refusal(rows):
-+    """None when every (file, ref, expect) carries a fingerprint that matches the item now there; else the plain words that refuse the whole request."""
++    """None when every (file, ref, expect) carries the fingerprint of the item now there; else the plain words that decline the request."""
 +    if any(e is None for _, _, e in rows):
 +        return EXPECT_MISSING
 +    if not all(isinstance(e, str) and EXPECT_FP.fullmatch(e) for _, _, e in rows):
@@ -61,10 +61,26 @@ index a8fe10b6..21846971 100644
 +    return None if all(current_fp(f, r) == e for f, r, e in rows) else EXPECT_CHANGED
 +
 +
++def rows_refusal(found):
++    """expect_refusal for the reject route's pending rows, [({file, ref, expect}, review number)]: all rows or none."""
++    return expect_refusal([(r.get("file"), r.get("ref"), r.get("expect")) for r, _ in found])
++
++
++def rejected_run(cmd, keys, req):
++    """(exit code, text) of review.py for the rejected route's command. 2.6.4 (#345): Approve instead first needs each row's fingerprint
++    (rows pair with `keys`); a declined one is (2, the plain words) and nothing runs. Undo and a new reason need none."""
++    if cmd == "approve-instead":
++        rows = [r for r in req.get("rows") or [] if isinstance(r, dict)][:500]
++        why = expect_refusal([(r.get("file"), key_ref(k), r.get("expect")) for r, k in zip(rows, keys)])
++        if why:
++            return 2, why
++    return run("review.py", cmd, *keys, "--json", *(reject_args(req) if cmd == "rereason" else []))
++
++
  # ===== BL-221 (sprint-drafts-extraction) ===== POST /api/review/repeat {file, ref, how: "merge" | "keep"}: Review's "Looks like" choices
  # for a pending new item marked as repeating an existing one, through review.py merge or keep-new (their checks: the same project,
  # an open item; nothing new to carry rejects it as a duplicate). Only the proposal changes; nothing reaches tracker.db before apply.
-@@ -6291,6 +6339,9 @@ def review_repeat_route(handler, req):
+@@ -6291,6 +6355,9 @@ def review_repeat_route(handler, req):
          n = next((r["n"] for r in rows if r["file"] == req.get("file") and r["ref"] == req.get("ref")), None)
          if n is None:
              return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
@@ -74,7 +90,7 @@ index a8fe10b6..21846971 100644
          rc, out = run("review.py", how, str(n))
      return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
  
-@@ -6338,6 +6389,9 @@ def review_retarget_route(handler, req):
+@@ -6338,6 +6405,9 @@ def review_retarget_route(handler, req):
          n = review_number(req.get("file"), req.get("ref"))
          if n is None:
              return handler.send(200, {"ok": False, "message": "That proposal is no longer pending."})
@@ -84,25 +100,22 @@ index a8fe10b6..21846971 100644
          rc, out = run("review.py", "retarget", str(n), target)
      return handler.send(200, {"ok": rc == 0, "message": out.replace("creaite: ", "", 1).strip()})
  
-@@ -6429,6 +6483,9 @@ def review_reject_route(handler, req):
+@@ -6429,6 +6499,9 @@ def review_reject_route(handler, req):
          gone = [{"file": r.get("file"), "ref": r.get("ref")} for r in rows if (r.get("file"), r.get("ref")) not in listed]
          if not found:
              return handler.send(200, {"ok": False, "message": "That proposal is no longer pending.", "rejected": [], "gone": gone})
-+        why = expect_refusal([(r.get("file"), r.get("ref"), r.get("expect")) for r, _ in found])      # 2.6.4 (#345): all rows or none
++        why = rows_refusal(found)                            # 2.6.4 (#345): all rows or none
 +        if why:
 +            return handler.send(200, {"ok": False, "message": why, "rejected": [], "gone": gone})
          spec = ",".join(str(n) for _, n in found)
          rc, out = run("review.py", "reject", spec, *(["--guess"] if req.get("guess") else reject_args(req)))
      ok = rc == 0 and not out.startswith("Rejected 0.")
-@@ -6443,6 +6500,11 @@ def review_rejected_route(handler, req):
+@@ -6443,7 +6516,7 @@ def review_rejected_route(handler, req):
      if not cmd or not keys or not all(REJECT_KEY.fullmatch(k) for k in keys):
          return handler.send(400, {"ok": False, "message": "Choose a rejected item and what to do with it."})
      with LOCK:
-+        if cmd == "approve-instead":                 # 2.6.4 (#345): approving is a decision; undo and a changed reason are not
-+            rows = [r for r in req.get("rows") or [] if isinstance(r, dict)][:500]
-+            why = expect_refusal([(r.get("file"), key_ref(k), r.get("expect")) for r, k in zip(rows, keys)])
-+            if why:
-+                return handler.send(200, {"ok": False, "message": why, "done": [], "open": []})
-         rc, out = run("review.py", cmd, *keys, "--json", *(reject_args(req) if cmd == "rereason" else []))
+-        rc, out = run("review.py", cmd, *keys, "--json", *(reject_args(req) if cmd == "rereason" else []))
++        rc, out = rejected_run(cmd, keys, req)
      got = last_json(out, {}) if rc == 0 else {}
      msg = out.replace("creaite: ", "", 1).strip() if rc != 0 else \
+         {"unreject": "Back in Review", "rereason": "Reason changed", "approve-instead": "Approved instead"}[cmd]

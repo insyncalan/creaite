@@ -1,7 +1,7 @@
 # Weekly AI budget: the guarded part (2.6.4, #334)
 
 ## What
-`live_server.diff` (one file, +24 lines, `system/scripts/live_server.py`), rebased on the 2.6.3 main (after the fresh-session and filing
+`live_server.diff` (one file, +19 lines, `system/scripts/live_server.py`), rebased on the 2.6.3 main (after the fresh-session and filing
 changes) and after 345 and 346:
 - `budget_gate(req)`: asks `ai_budget.gate("ask", ...)` and returns its reply, or None. Any fault returns None (nothing is held).
 - `Handler.ask`: before the busy check, a held request is answered with HTTP 429 `{ok: false, budget, message}` and starts nothing.

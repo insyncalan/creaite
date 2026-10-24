@@ -270,7 +270,8 @@ def _fingerprints(data):
     """{item number as text: the item's fingerprint} as the file now stands (#346): a new name changes each item's source, so the
     open Review page needs the new ones to go on deciding those items. Numbers and hex digits only."""
     import build_dashboard
-    return {str(it["n"]): build_dashboard.item_fp(it) for it in data.get("items") or [] if isinstance(it, dict) and isinstance(it.get("n"), int)}
+    items = [it for it in data.get("items") or [] if isinstance(it, dict) and isinstance(it.get("n"), int)]
+    return {str(it["n"]): build_dashboard.item_fp(it) for it in items}
 
 
 def set_names(file, names):

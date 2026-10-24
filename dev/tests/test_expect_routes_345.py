@@ -37,7 +37,7 @@ CHANGED = "has changed since you looked at it"
 BAD = "can't check which item that is"
 
 MUTANTS = {          # the line each route runs, and what stands in for it
-    "reject": ('why = expect_refusal([(r.get("file"), r.get("ref"), r.get("expect")) for r, _ in found])', "why = None"),
+    "reject": ("why = rows_refusal(found)", "why = None"),
     "approve-instead": ('why = expect_refusal([(r.get("file"), key_ref(k), r.get("expect")) for r, k in zip(rows, keys)])', "why = None"),
     "repeat": ('        why = expect_refusal([(req.get("file"), req.get("ref"), req.get("expect"))])          # 2.6.4 (#345)\n',
                "        why = None\n"),

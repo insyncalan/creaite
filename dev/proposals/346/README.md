@@ -9,7 +9,7 @@ itself (`runs-YYYY-MM-DD`, see `plain_chat_id`) is never marked as having read o
 calendar title of up to 160 characters (`prep_page.ask_line`). If Alan typed into that chat, the next fresh run carried those lines as
 his words, unmarked.
 
-Fix (`carry_over`, 3 lines): a chat whose id starts with `runs-` carries nothing. Every other chat is as before. A fresh run in that chat
+Fix (`carry_over`, a docstring and 2 lines): a chat whose id starts with `runs-` carries nothing. Every other chat is as before. A fresh run in that chat
 resumes no session either (#327 B), so it starts clean.
 
 ## 3. A failed set-up cannot leave a stale run record

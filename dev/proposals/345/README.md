@@ -5,9 +5,10 @@ fingerprint, so a page left open could decide an item that had changed or moved 
 
 ## What changes
 
-`live_server.diff` (guarded; one file, `system/scripts/live_server.py`, +60 lines, nothing removed; `review.py` is not touched):
+`live_server.diff` (guarded; one file, `system/scripts/live_server.py`, +74 lines, 1 changed; `review.py` is not touched):
 
-- One shared check, `expect_refusal(rows)`, with `current_fp(file, ref)` (reads the very file the route is about to act on, under the same
+- One shared check, `expect_refusal(rows)` (with two small helpers for the reject and Approve instead routes, kept out of the routes so they
+  stay under check.py's complexity limit), with `current_fp(file, ref)` (reads the very file the route is about to act on, under the same
   job lock, and fingerprints the item or the minutes block with `build_dashboard.item_fp` / `block_fp`, the functions review.py's own
   `--expect` uses).
 - It runs after the route's existing "no longer pending" answer and before anything changes, on:

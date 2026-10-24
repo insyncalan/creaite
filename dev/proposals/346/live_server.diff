@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 21846971..a0bba366 100644
+index 1d77cd8a..5c735e3b 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -2606,7 +2606,11 @@ def fresh_session(req):
