@@ -33,9 +33,9 @@ BASE2 = "5bf7da29e22e9b5b9b5c6b494c357280df4e4c4b"
 # The 2.6.3 chain (dev/proposals/draft-delivery-guarded/README.md): its own marker, list and pin. draft_delivery.py joined GUARDED with it
 # (it holds the hook that checks the Outlook create-draft call; the 2.6.2 blocker was found there). BASE3 is the published 2.6.2 release
 # commit, main's merge 39c1060a: draft_delivery.py was written in the 2.6.2 range by unmarked commits, so the check now starts from the
-# release (BASE below) and a range from BASE2 would report the whole file as new. CHAIN3_SHA256 is "" until the 2.6.3 chain list is cut
-# (a "" pin matches nothing, so a marked 2.6.3 commit fails closed until it is set, on Alan's say); then
-# `python3 dev/tests/guarded_chain.py` prints the value.
+# release (BASE below) and a range from BASE2 would report the whole file as new. CHAIN3_SHA256 is the pin of the cut
+# 2.6.3 chain list (dev/proposals/GUARDED-2.6.3.chain and the diffs it names). A pin that does not match the list matches nothing, so a
+# marked 2.6.3 commit fails closed; change the pin only with the list, on Alan's say. `python3 dev/tests/guarded_chain.py` prints the value.
 CHAIN3_MARKER = "Guarded 2.6.3 chain:"
 CHAIN3_FILE = "dev/proposals/GUARDED-2.6.3.chain"
 CHAIN3_SHA256 = "e0670db88b51a179f8cacc97018859ac374c35b7a4a035f7b498b6d6b3878d99"
