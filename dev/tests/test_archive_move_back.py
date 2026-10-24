@@ -357,10 +357,10 @@ class FilesMoveBack(LiveBrowserCase):
     def test_move_back_only_on_archived_files_and_it_comes_back(self):
         b = self.b
         b.eval("go('files')")
-        b.wait("document.querySelector('#fquick [data-q=\"archived\"]')")
+        b.wait("document.querySelector('#fmBtn')")
         b.wait("document.querySelector('#filesTbl tr[data-fp]')")
         self.assertEqual(b.eval("document.querySelectorAll('#filesTbl [data-moveback]').length"), 0)    # All files: none
-        b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=archived]').click(); })()")
         b.wait("document.querySelector('#filesTbl [data-moveback]')")
         rows = b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(tr=>[tr.dataset.fp, "
                       "!!tr.querySelector('[data-moveback]'), !!tr.querySelector('.tag') && tr.textContent.includes('Archived')])")

@@ -24,8 +24,7 @@ export function renderFiles(){ const cnt=f=>FILES.filter(f).length; const pr=(b)
       if(fd==="reports") REPFOLDERS.forEach(s=>h.push(html`<button class="l3" data-p="${c}" data-f="reports" data-s="${s}" aria-pressed="${pr(shared.FSEL.sub===s&&shared.FSEL.p===c)}">${s}<span class="n">${cnt(x=>x.p===c&&x.f==="reports"&&x.sub===s)}</span></button>`));
       if(fd==="documents") [...new Set(FILES.filter(x=>x.p===c&&x.f==="documents"&&x.sub).map(x=>x.sub))].forEach(s=>h.push(html`<button class="l3" data-p="${c}" data-f="documents" data-s="${s}" aria-pressed="${pr(shared.FSEL.sub===s&&shared.FSEL.p===c)}">${s}<span class="n">${cnt(x=>x.p===c&&x.f==="documents"&&x.sub===s)}</span></button>`)); }); });
   putHTML($("#tree"),html`${h}`);
-  /* #192: four pills choose the VIEW (Archived is a view), the tree chooses the folder, the Filter narrows within both; a pill clears the folder, a folder clears the pill */
-  putHTML($("#fquick"),html`${[["all","All files"],["latest","Latest reports"],["week","This week's meetings"],["archived","Archived"]].map(q=>html`<button class="vchip" data-q="${q[0]}" aria-pressed="${String(shared.FSEL.quick===q[0]&&(q[0]!=="all"||(shared.FSEL.p==="All"&&shared.FSEL.f==="All"&&!shared.FSEL.sub)))}">${q[1]}</button>`)}`);
+  /* #341 item 13: the view (All files, Latest reports, This week's meetings, Archived) is chosen in Filter, beside Type and the dates; the tree chooses the folder */
   const t=FF.type, fr=FF.from, to=FF.to;
   let L=FILES.filter(x=>(shared.FSEL.p==="All"||x.p===shared.FSEL.p)&&(shared.FSEL.f==="All"||x.f===shared.FSEL.f)&&(!shared.FSEL.sub||x.sub===shared.FSEL.sub));
   if(shared.FSEL.quick==="latest"){ L=[]; P.forEach(p=>REPFOLDERS.forEach(k=>{ const r=FILES.filter(f=>f.p===p.code&&f.f==="reports"&&f.sub===k).sort((a,b)=>(b.date||b.mod||"").localeCompare(a.date||a.mod||""))[0]; if(r) L.push(r); })); }   /* BL-87: the newest in each report folder, by folder not by name */
@@ -41,13 +40,14 @@ export const FF={type:"All",from:"",to:""}; let fmOpen=false;
 export const FTLAB={docx:"Word",doc:"Word",xlsx:"Excel",xls:"Excel",pptx:"PowerPoint",pdf:"PDF",vtt:"Transcript",md:"Note",txt:"Text",html:"Web page",eml:"Email"};
 export const ftLabel=t=>FTLAB[String(t).toLowerCase()]||t;
 const FTYPES=()=>["All",...new Set(["docx","pdf","vtt","xlsx",...FILES.map(f=>f.type).filter(Boolean)])];
-export const ffCount=()=>(FF.type!=="All"?1:0)+(FF.from?1:0)+(FF.to?1:0);
-const ffChips=()=>[...(FF.type!=="All"?[["type",`Type: ${ftLabel(FF.type)}`]]:[]),...(FF.from?[["from",`From ${fd(FF.from)}`]]:[]),...(FF.to?[["to",`To ${fd(FF.to)}`]]:[])];
+export const FVIEWS=[["all","All files"],["latest","Latest reports"],["week","This week's meetings"],["archived","Archived"]];
+export const ffCount=()=>(shared.FSEL.quick!=="all"?1:0)+(FF.type!=="All"?1:0)+(FF.from?1:0)+(FF.to?1:0);
+const ffChips=()=>[...(shared.FSEL.quick!=="all"?[["view",`View: ${(FVIEWS.find(v=>v[0]===shared.FSEL.quick)||[,""])[1]}`]]:[]),...(FF.type!=="All"?[["type",`Type: ${ftLabel(FF.type)}`]]:[]),...(FF.from?[["from",`From ${fd(FF.from)}`]]:[]),...(FF.to?[["to",`To ${fd(FF.to)}`]]:[])];
 export function filterChrome(){ const n=ffCount(), c=ffChips(), btn=$("#fmBtn"), tip=n?`Filter: ${n} on`:"Filter";
   btn.setAttribute("aria-label",tip); btn.setAttribute("data-tip",tip); btn.classList.toggle("on",n>0); btn.querySelector(".fcount")?.remove();
   if(n) addHTML(btn,"beforeend",html`<span class="fcount" aria-hidden="true">${n}</span>`);
   const h=$("#fchips"); h.hidden=!c.length; putHTML(h,html`${c.map(x=>html`<span class="fchip">${x[1]}<button type="button" data-fclr="${x[0]}" aria-label="Remove ${x[1]}" data-tip="Remove ${x[1]}">✕</button></span>`)}`); }
-function fmDraw(){ putHTML($("#fmenu"),html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map(t=>html`<label><input type="radio" name="fsType" value="${t}" ${raw(t===FF.type?"checked":"")}> ${t==="All"?"All types":ftLabel(t)}</label>`)}</fieldset>
+function fmDraw(){ putHTML($("#fmenu"),html`<fieldset class="fmrow"><legend>View</legend>${FVIEWS.map(v=>html`<label><input type="radio" name="fsView" value="${v[0]}" ${raw(v[0]===shared.FSEL.quick?"checked":"")}> ${v[1]}</label>`)}</fieldset><fieldset class="fmrow"><legend>Type</legend>${FTYPES().map(t=>html`<label><input type="radio" name="fsType" value="${t}" ${raw(t===FF.type?"checked":"")}> ${t==="All"?"All types":ftLabel(t)}</label>`)}</fieldset>
     <div class="fmrow"><label class="fmlab" for="fsFrom">From</label><span class="dwrap"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.from?fd(FF.from):""}"><button type="button" class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsFromErr" role="alert"></span></div>
     <div class="fmrow"><label class="fmlab" for="fsTo">To</label><span class="dwrap"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.to?fd(FF.to):""}"><button type="button" class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsToErr" role="alert"></span></div>
     <div class="fmfoot"><button type="button" class="mini" id="fmClear">Clear</button><button type="button" class="btn primary" id="fmDone">Done</button></div>`); paintIcons($("#fmenu")); }
@@ -56,7 +56,8 @@ export function fmSet(show,focusBtn){ fmOpen=show; $("#fmBtn").setAttribute("ari
 function bootFilterMenu(){
   $("#fmBtn").addEventListener("click",e=>{ e.stopPropagation(); fmSet(!fmOpen); });
   const menu=$("#fmenu");
-  menu.addEventListener("change",e=>{ if(e.target.name==="fsType"){ FF.type=e.target.value; renderFiles(); } });
+  menu.addEventListener("change",e=>{ if(e.target.name==="fsType"){ FF.type=e.target.value; renderFiles(); }
+    if(e.target.name==="fsView"){ shared.FSEL={p:"All",f:"All",sub:"",quick:e.target.value}; renderFiles(); } });   /* choosing a view clears the folder, as the pills did */
   menu.addEventListener("input",dateIn); menu.addEventListener("change",dateIn);
   function dateIn(e){ const k=e.target.id==="fsFrom"?"from":e.target.id==="fsTo"?"to":""; if(!k) return; const v=e.target.value.trim(), err=$(`#${e.target.id}Err`);
     const flag=m=>{ e.target.setAttribute("aria-invalid",m?"true":"false"); err.textContent=m; };   /* a bad date keeps the previous filter and says why */
@@ -65,16 +66,15 @@ function bootFilterMenu(){
     if(!real){ if(e.type==="change") flag("Type a date as DD-MM-YYYY"); return; }   /* while typing, wait: the app reads "tomorrow" and the like when the box is left */
     const iso=toIso(v), o=k==="from"?FF.to:FF.from; if(o&&(k==="from"?iso>o:iso<o)){ flag("From is after To"); return; }
     flag(""); if(FF[k]===iso) return; FF[k]=iso; renderFiles(); }   /* a blur's change event must not redraw the tree under the click that caused it */
-  menu.addEventListener("click",e=>{ if(e.target.closest("#fmDone")) fmSet(false,true); if(e.target.closest("#fmClear")){ Object.assign(FF,{type:"All",from:"",to:""}); fmDraw(); renderFiles(); } });
+  menu.addEventListener("click",e=>{ if(e.target.closest("#fmDone")) fmSet(false,true); if(e.target.closest("#fmClear")){ Object.assign(FF,{type:"All",from:"",to:""}); shared.FSEL={...shared.FSEL,quick:"all"}; fmDraw(); renderFiles(); } });
   menu.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!shared.CAL){ e.preventDefault(); e.stopPropagation(); fmSet(false,true); return; }
     if((e.key==="ArrowDown"||e.key==="ArrowUp")&&!e.target.matches('input[type=radio],input[type=text]')){ const c=[...menu.querySelectorAll("input:checked,input[type=text],button")], i=c.indexOf(e.target); if(i<0) return; e.preventDefault(); c[(i+(e.key==="ArrowDown"?1:c.length-1))%c.length].focus(); } });
-  $("#fchips").addEventListener("click",e=>{ const b=e.target.closest("[data-fclr]"); if(!b) return; const k=b.dataset.fclr; if(k==="type") FF.type="All"; else FF[k]=""; if(fmOpen) fmDraw(); renderFiles(); $("#fmBtn").focus(); });
+  $("#fchips").addEventListener("click",e=>{ const b=e.target.closest("[data-fclr]"); if(!b) return; const k=b.dataset.fclr; if(k==="view") shared.FSEL={...shared.FSEL,quick:"all"}; else if(k==="type") FF.type="All"; else FF[k]=""; if(fmOpen) fmDraw(); renderFiles(); $("#fmBtn").focus(); });
   document.addEventListener("click",e=>{ if(fmOpen&&!e.target.closest("#fmenu,#fmBtn,.cal")) fmSet(false); });
 }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootFiles0068(){
 $("#tree").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; if(b.dataset.toggle){ const c=b.dataset.toggle; if(FOPEN.has(c)&&shared.FSEL.p===c&&shared.FSEL.f==="All") FOPEN.delete(c); else FOPEN.add(c); store.set("creaite-files-open",[...FOPEN]); } shared.FSEL={p:b.dataset.p,f:b.dataset.f,sub:b.dataset.s||"",quick:"all"}; renderFiles(); });
-$("#fquick").addEventListener("click",e=>{ const b=e.target.closest("[data-q]"); if(!b) return; shared.FSEL={p:"All",f:"All",sub:"",quick:b.dataset.q}; renderFiles(); });
 bootFilterMenu();
 }
 /* ===== Dashboard pages (BL-87 to BL-95) ===== */
