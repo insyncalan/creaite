@@ -225,7 +225,7 @@ class Tab(AllItemsCase):
         self.change("#wgrp", "priority")
         self.assertIn("No priority", b.eval("[...document.querySelectorAll('#workTbl tr.wgh .wgn')].map(x=>x.textContent)"))
         self.change("#wgrp", "status")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#workTbl tr.wgh .wgn')].map(x=>x.textContent)"), ["Open", "Closed", "Cancelled"])   # empty groups shown, as on the other tabs
+        self.assertEqual(b.eval("[...document.querySelectorAll('#workTbl tr.wgh .wgn')].map(x=>x.textContent)"), ["Open"])   # #343: a group with nothing in it is not drawn (the Board keeps its columns)
         b.eval("applyFilters({st:['Open'],o:['Nobody At All']}); workChanged()")       # the empty state names the filters
         b.wait("document.querySelector('#workTbl .wempty')")
         self.assertIn("Nothing matches these 2 filters", b.eval("document.querySelector('#workTbl .wempty h2').textContent"))

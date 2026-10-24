@@ -5773,7 +5773,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     dismissedS: () => dismissedS,
     dispChanged: () => dispChanged,
     dispOpen: () => dispOpen,
-    dispProps: () => dispProps,
+    dispProps: () => dispProps2,
     dispReset: () => dispReset,
     dnBlock: () => dnBlock,
     dnChase: () => dnChase,
@@ -36592,6 +36592,51 @@ system/scripts/run launch.py agent ${what}`;
     R(/* @__PURE__ */ u4(PeoplePage, { t: ++tick }, "pl"), el2);
   }
 
+  // core/displayMenu.js
+  var dispHead = (label, forId, extra = "") => `<h2>${forId ? `<label for="${forId}">${esc(label)}</label>` : esc(label)}${extra}</h2>`;
+  function dispSelect({ id: id2, label, options, cur, hidden }) {
+    return `<div${hidden ? " hidden" : ""}>${dispHead(label, id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}</select></div></div>`;
+  }
+  function dispOrder({ id: id2, revId, options, cur, reversed, extra = "" }) {
+    return `${dispHead("Order by", id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}${extra}</select><button type="button" class="btn" id="${revId}" aria-pressed="${reversed}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>`;
+  }
+  function dispProps({ shown: shown2, rest, locked, prefix }) {
+    const ord = shown2.map((c5) => c5[0]);
+    return [...shown2, ...rest].map((c5) => {
+      const on2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]), l6 = esc(c5[1]);
+      return `<label><input type="checkbox" data-prop id="${prefix}-${c5[0]}" value="${c5[0]}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+    }).join("");
+  }
+  var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
+  function dispController({ btn, menu, draw: draw2 }) {
+    const isOpen = () => !!$(menu) && $(menu).classList.contains("on");
+    const close = (focus) => {
+      const m5 = $(menu), b5 = $(btn);
+      if (!m5 || !b5 || !isOpen() && m5.hidden) return;
+      m5.classList.remove("on");
+      m5.hidden = true;
+      b5.setAttribute("aria-expanded", "false");
+      b5.classList.remove("on");
+      if (focus) b5.focus();
+    };
+    const open2 = () => {
+      const m5 = $(menu), b5 = $(btn);
+      if (!m5 || !b5) return;
+      if (isOpen()) {
+        close(true);
+        return;
+      }
+      $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
+      draw2();
+      m5.hidden = false;
+      m5.classList.add("on");
+      b5.setAttribute("aria-expanded", "true");
+      b5.classList.add("on");
+      (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
+    };
+    return { isOpen, open: open2, close };
+  }
+
   // components/peek/PeekProps.jsx
   var ST_COLOUR = (
     /** @type {Record<string, string>} */
@@ -40156,12 +40201,9 @@ system/scripts/run launch.py agent ${what}`;
     syncView();
     if (TABSTATE[t47] && TABSTATE[t47].base) WB[t47] = TABSTATE[t47].base;
   }
-  function dispProps() {
+  function dispProps2() {
     const ord = orderedCols().map((c5) => c5[0]), rest = COLS[shared.WT].filter((c5) => !ord.includes(c5[0]));
-    return [...orderedCols(), ...rest].map((c5) => {
-      const shown2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]);
-      return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown2 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
-    }).join("");
+    return dispProps({ shown: orderedCols().map((c5) => [c5[0], c5[1]]), rest: rest.map((c5) => [c5[0], c5[1]]), locked: "t", prefix: "dprop" });
   }
   shared.RZ = store.obj("creaite-colwidths");
   var rzOf = (k5) => {
@@ -41018,13 +41060,13 @@ system/scripts/run launch.py agent ${what}`;
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
     const gopts = bd2 ? groupsOf(t47) : [["none", "None"], ...groupsOf(t47)], gcur = bd2 ? groupOf(t47) : listGroupOf(t47), sub = subOf(t47, bd2 ? "board" : "list");
-    putHTML(m5, html`<div><h2><label for="wgrp">${bd2 ? "Group by (columns)" : "Group by"}</label></h2><div class="dline"><select id="wgrp">${gopts.map((g5) => html`<option value="${g5[0]}" ${g5[0] === gcur ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <div ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><h2><label for="wsub">${bd2 ? "Sub-group (swimlanes)" : "Sub-group"}</label></h2><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => html`<option value="${g5[0]}" ${g5[0] === sub ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <h2><label for="wbsort">Order by</label></h2><div class="dline"><select id="wbsort">${opts.map((o5) => html`<option value="${o5[0]}" ${o5[0] === cur ? "selected" : ""}>${o5[1]}</option>`)}${cur && !opts.some((o5) => o5[0] === cur) ? html`<option value="${cur}" selected>Sorted by ${cur}</option>` : ""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s5 && s5.dir === "desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
-    <h2>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h2><div class="dprops">${raw(dispProps())}</div>
-    <h2>Show</h2><div class="dline" ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
+    putHTML(m5, html`${raw(dispSelect({ id: "wgrp", label: bd2 ? "Group by (columns)" : "Group by", options: gopts.map((g5) => [g5[0], g5[1]]), cur: gcur }))}
+    ${raw(dispSelect({ id: "wsub", label: bd2 ? "Sub-group (swimlanes)" : "Sub-group", options: [["none", "None"], ...groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => [g5[0], g5[1]])], cur: sub, hidden: !bd2 && (gcur === "none" || listGroupDefault(t47)) }))}
+    ${raw(dispOrder({ id: "wbsort", revId: "wordRev", options: opts.map((o5) => [o5[0], o5[1]]), cur, reversed: !!(s5 && s5.dir === "desc"), extra: cur && !opts.some((o5) => o5[0] === cur) ? `<option value="${esc(cur)}" selected>Sorted by ${esc(cur)}</option>` : "" }))}
+    <h2>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h2><div class="dprops">${raw(dispProps2())}</div>
+    <h2>Show</h2><div class="dline" ${!bd2 ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
     <div class="dline"><label for="wclosed">${t47 === "decisions" ? "Decided" : "Closed"} column</label><select id="wclosed"><option value="recent" ${BCLALL.has(t47) ? "" : "selected"}>Last ${raw(+S.boardClosedDays || 14)} days</option><option value="all" ${BCLALL.has(t47) ? "selected" : ""}>All</option></select></div>` : html`<div class="dline sub">Closed items: use the Status filter.</div>`}
-    <div class="dfoot"><button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button><span class="sp"></span><button type="button" class="btn primary" id="dispDone">Done</button></div>`);
+    ${raw(dispFoot({ resetId: "dispReset", doneId: "dispDone", resetLabel: "Reset to this tab’s default" }))}`);
     if (focusKey) {
       const f5 = m5.querySelector("#" + CSS.escape(focusKey)) || (focusKey.includes("|") ? m5.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`) : null);
       if (f5 && !f5.disabled) f5.focus();
@@ -41035,7 +41077,7 @@ system/scripts/run launch.py agent ${what}`;
       const m6 = $("#dispMenu"), seg = m6.querySelector('.seg[aria-label="Layout"]');
       if (seg) {
         const line = seg.closest(".dline");
-        if (line.previousElementSibling && line.previousElementSibling.tagName === "H3") line.previousElementSibling.remove();
+        if (line.previousElementSibling && line.previousElementSibling.tagName === "H2") line.previousElementSibling.remove();
         line.remove();
       }
       const s6 = $("#wbsort");
@@ -41048,28 +41090,12 @@ system/scripts/run launch.py agent ${what}`;
       s6.value = cur2;
     }
   }
+  var DISP = dispController({ btn: "#dispBtn", menu: "#dispMenu", draw: () => drawDisp() });
   function openDisp() {
-    const m5 = $("#dispMenu");
-    if (dispOpen()) {
-      closeDisp(true);
-      return;
-    }
-    $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
-    drawDisp();
-    m5.hidden = false;
-    m5.classList.add("on");
-    $("#dispBtn").setAttribute("aria-expanded", "true");
-    $("#dispBtn").classList.add("on");
-    (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
+    DISP.open();
   }
   function closeDisp(focus) {
-    const m5 = $("#dispMenu");
-    if (!dispOpen() && m5.hidden) return;
-    m5.classList.remove("on");
-    m5.hidden = true;
-    $("#dispBtn").setAttribute("aria-expanded", "false");
-    $("#dispBtn").classList.remove("on");
-    if (focus) $("#dispBtn").focus();
+    DISP.close(focus);
   }
   function dispChanged() {
     renderWork();
