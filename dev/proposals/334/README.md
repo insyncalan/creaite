@@ -12,6 +12,15 @@ Not in this folder (unguarded, merged separately): `ai_budget.py`, the settings 
 the Usage tab bar, the Settings controls, the 429 card and the 80% line in `ask.js`, the rebuilt `dashboard.html`. See `DESIGN.md` for the
 rules and the open questions for Alan.
 
+## Added after the first reviews
+- A typed sweep (`panel_sweep`'s words: "sweep", "sweep mail for ABC", "refresh calendar") is never held: `budget_gate` asks `panel_sweep`
+  first, in the ask handler and in `queue_start` (which now hands the first queued message's words to the gate). Tests with a mutant for each path.
+- A queue held by the budget keeps its reason (`q["why"]`, the gate's own sentence: how much is used, "It starts again on Monday DD-MM-YYYY",
+  and in stop mode where to raise it). Run now returns it as `message`, which the page already shows; a hold for another reason clears it.
+- The usage file (up to 8 MB) is read in `queue_start` before the start lock is taken, not while it is held. Test with a mutant.
+- The gate test does not depend on the card's wording (`ai_budget.py` / `ask.js` are unguarded and handled elsewhere); it checks the figures,
+  the date and "AI budget is used up" only.
+
 ## Why
 No weekly cap exists; the audit found single ask runs of $9 to $16.
 

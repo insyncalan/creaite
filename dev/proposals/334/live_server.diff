@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index f4fbced7..31bb2836 100644
+index fb09f615..a4b80ff3 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -1650,6 +1650,9 @@ class Handler(BaseHTTPRequestHandler):
@@ -12,7 +12,7 @@ index f4fbced7..31bb2836 100644
          with START_LOCK:                                  # #264 review: the busy check and the start are one step, like every other start
              busy = current_run()
              if busy and not busy.done:
-@@ -2595,6 +2598,18 @@ def run_dirs(policy, guarded):
+@@ -2595,6 +2598,21 @@ def run_dirs(policy, guarded):
      return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
  
  
@@ -20,9 +20,12 @@ index f4fbced7..31bb2836 100644
 +    """#334: the weekly AI budget (ai_budget.py), asked before a typed request or a queued message starts a run. None: go ahead.
 +    Otherwise the reply to send (HTTP 429): the budget's counts and plain words, never text. Only a typed ask is ever held; a
 +    confirmed request, a sweep or alert check running on its own, Review, Apply and Undo never are, and a fault in the count holds
-+    nothing. `over_budget` is the page's "Run anyway" in confirm mode."""
++    nothing. `over_budget` is the page's "Run anyway" in confirm mode. A typed sweep (panel_sweep: the same words the run itself
++    uses) is never held, whatever the figures say."""
 +    try:
 +        import ai_budget
++        if panel_sweep(req.get("message"), req.get("images") or (), req.get("confirmed")):
++            return None
 +        return ai_budget.gate("ask", confirmed=req.get("confirmed"), over_budget=req.get("over_budget"))
 +    except Exception:
 +        return None
@@ -31,14 +34,32 @@ index f4fbced7..31bb2836 100644
  CARRY_TURNS, CARRY_CHARS = 4, 600       # #327 B: the last two exchanges, each message cut to this length, go into a fresh session
  
  
-@@ -3310,6 +3325,10 @@ def queue_start(q, prev=None):
+@@ -3306,11 +3324,19 @@ def queue_start(q, prev=None):
+     #264 round 2 (review L2): the busy check and the start are one step under START_LOCK, like every other start, so a queued
+     message never starts beside a run that began meanwhile (Process, a calendar refresh, a prep page): the queue holds instead,
+     and Run now starts it. `prev`, the run that is ending, doesn't count as busy."""
++    first = q["items"][0]
++    held = budget_gate({"over_budget": prev is None, "message": first.get("text"), "images": first.get("images")})   # #334, read before the lock
++    q.pop("why", None)
+     with START_LOCK:
+         if any(not r.done and r is not prev for r in list(RUNS.values())):
              q["held"] = True
              queue_save(q)
              return None
-+        if budget_gate({"over_budget": prev is None}):          # #334: over the week's budget the queue holds (Run now: confirm mode)
++        if held:                                            # #334: over the week's budget the queue holds (Run now: confirm mode)
 +            q["held"] = True
++            q["why"] = held["message"]                      # and Run now says why, and until when
 +            queue_save(q)
 +            return None
          item = q["items"].pop(0)
          q["held"] = False
          mine = prev is not None and prev.kind == "ask"
+@@ -3390,7 +3416,7 @@ def queue_route(handler, req):
+             if live:
+                 return handler.send(200, queue_public(q, message="ask creaite is still working: the queue runs when it finishes."))
+             nxt = queue_start(q) if q["items"] else None
+-            return handler.send(200, queue_public(q, run=nxt))
++            return handler.send(200, queue_public(q, run=nxt, **({"message": q["why"]} if not nxt and q.get("why") else {})))
+         elif op != "list":
+             return handler.send(400, {"ok": False, "message": "Unknown queue operation"})
+     return handler.send(200, queue_public(q))

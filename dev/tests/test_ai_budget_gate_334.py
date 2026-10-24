@@ -5,6 +5,8 @@ the usage status; no Claude, no network.
 Run: python3 dev/tests/test_ai_budget_gate_334.py
 """
 import sys
+import threading
+import types
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -44,13 +46,25 @@ class FakeHandler:
         raise Reached()
 
 
-def ask(req, st):
+def mutated(old, new):
+    """live_server.py with one change, run as a second module (the mutant)."""
+    path = ROOT / "system/scripts/live_server.py"
+    src = path.read_text(encoding="utf-8")
+    assert src.count(old) == 1, old
+    mod = types.ModuleType("live_server_mutant")
+    mod.__file__ = str(path)
+    exec(compile(src.replace(old, new), str(path), "exec"), mod.__dict__)
+    return mod
+
+
+def ask(req, st, ls=None):
+    ls = ls or live_server
     h = FakeHandler()
     with mock.patch.object(ai_budget, "status", return_value=st), \
-            mock.patch.object(live_server, "Run", side_effect=Reached), \
-            mock.patch.object(live_server, "current_run", return_value=None):
+            mock.patch.object(ls, "Run", side_effect=Reached), \
+            mock.patch.object(ls, "current_run", return_value=None):
         try:
-            live_server.Handler.ask(h, dict({"message": "hello"}, **req))
+            ls.Handler.ask(h, dict({"message": "hello"}, **req))
             reached = False
         except Reached:
             reached = True
@@ -118,11 +132,131 @@ class Queue(unittest.TestCase):
         self.assertTrue(self.start(status(5), mock.Mock(done=True, kind="ask", chat="c-1", session="s"))[1])
 
 
+SWEEPS = ("sweep", "sweep mail for ABC", "refresh calendar", "sweep the last 7 days")
+SKIP_ASK = '        if panel_sweep(req.get("message"), req.get("images") or (), req.get("confirmed")):\n            return None\n'
+
+
+@unittest.skipUnless(HAVE, "needs dev/proposals/334/live_server.diff")
+class SweepsAreNeverHeld(unittest.TestCase):
+    """A typed sweep (the words panel_sweep recognises) is never held at 100%, in confirm or stop mode, typed or queued."""
+
+    def test_the_ask_path(self):
+        for at_limit in ("confirm", "stop"):
+            for words in SWEEPS:
+                self.assertTrue(ask({"message": words}, status(500, at_limit=at_limit))[1], (at_limit, words))
+        sent, reached = ask({"message": "tell me about the pilot"}, status(500))
+        self.assertFalse(reached)                                    # anything else is still held
+        self.assertEqual(sent[0], 429)
+        self.assertFalse(ask({"message": "sweep", "images": ["i-1"]}, status(500))[1])        # an image makes it a chat, not a sweep
+
+    def test_mutant_without_the_sweep_check_the_ask_path_holds_a_sweep(self):
+        ls = mutated(SKIP_ASK, "")
+        sent, reached = ask({"message": "sweep"}, status(500, at_limit="stop"), ls)
+        self.assertFalse(reached)
+        self.assertEqual(sent[0], 429)
+
+    def queued(self, text, st, ls=None):
+        ls = ls or live_server
+        q = {"chat": "c-1", "items": [{"id": "1", "text": text, "images": []}], "held": False}
+        with mock.patch.object(ai_budget, "status", return_value=st), mock.patch.object(ls, "queue_save"), \
+                mock.patch.object(ls, "Run", side_effect=Reached), mock.patch.object(ls, "ask_image_files", return_value=None):
+            try:
+                ls.queue_start(q, mock.Mock(done=True, kind="ask", chat="c-1", session="s"))
+                return q, False
+            except Reached:
+                return q, True
+
+    def test_the_queue_path(self):
+        for at_limit in ("confirm", "stop"):
+            for words in SWEEPS:
+                self.assertTrue(self.queued(words, status(500, at_limit=at_limit))[1], (at_limit, words))
+        q, reached = self.queued("tell me about the pilot", status(500))
+        self.assertFalse(reached)
+        self.assertTrue(q["held"])
+
+    def test_mutant_without_the_message_the_queue_path_holds_a_sweep(self):
+        ls = mutated(', "message": first.get("text"), "images": first.get("images")})', "})")
+        self.assertFalse(self.queued("sweep", status(500, at_limit="stop"), ls)[1])
+
+
+@unittest.skipUnless(HAVE, "needs dev/proposals/334/live_server.diff")
+class RunNowSaysWhy(unittest.TestCase):
+    """A queue held by the budget is held with a reason: Run now in stop mode answers with it (why, and until when)."""
+
+    def resume(self, st, ls=None):
+        ls = ls or live_server
+        q = {"chat": "c-1", "items": [{"id": "1", "text": "next", "images": []}], "held": True}
+
+        class H:
+            def send(self, code, body):
+                self.got = (code, body)
+
+        h = H()
+        with mock.patch.object(ai_budget, "status", return_value=st), mock.patch.object(ls, "queue_save"), mock.patch.object(ls, "queue_load", return_value=q), \
+                mock.patch.object(ls, "current_run", return_value=None), mock.patch.object(ls, "Run", side_effect=Reached), \
+                mock.patch.object(ls, "ask_image_files", return_value=None):
+            try:
+                ls.queue_route(h, {"op": "resume"})
+            except Reached:
+                return None, q
+        return h.got[1], q
+
+    def test_stop_mode_says_why_and_until_when(self):
+        body, q = self.resume(status(60, at_limit="stop"))
+        self.assertIs(body["ok"], True)
+        self.assertIsNone(body.get("run"))
+        self.assertIn("AI budget is used up", body["message"])
+        self.assertIn("starts again on Monday 26-10-2026", body["message"])
+        self.assertTrue(body["held"])
+        self.assertEqual(len(body["items"]), 1)
+
+    def test_confirm_mode_run_now_starts_and_under_budget_has_no_reason(self):
+        self.assertIsNone(self.resume(status(60))[0])               # Run now is the click: it starts
+        body, _ = self.resume(status(5))
+        self.assertIsNone(body)
+
+    def test_a_reason_from_an_earlier_hold_does_not_stick(self):
+        q = {"chat": "c-1", "items": [{"id": "1", "text": "next", "images": []}], "held": True, "why": "old reason"}
+        with mock.patch.object(ai_budget, "status", return_value=status(5)), mock.patch.object(live_server, "queue_save"), \
+                mock.patch.object(live_server, "Run", side_effect=Reached), mock.patch.object(live_server, "ask_image_files", return_value=None):
+            with self.assertRaises(Reached):
+                live_server.queue_start(q, None)
+        self.assertNotIn("why", q)
+
+
+@unittest.skipUnless(HAVE, "needs dev/proposals/334/live_server.diff")
+class UsageIsReadOutsideTheLock(unittest.TestCase):
+    """The usage file (up to 8 MB) is read before the start lock is taken, not while it is held."""
+    GATE_INSIDE = 'if held:                                            # #334'
+
+    def locked_during_read(self, ls):
+        seen, me, st = [], threading.get_ident(), status(5)
+
+        def status_(*a, **k):
+            if threading.get_ident() == me:                          # not the page's own polling threads
+                seen.append(ls.START_LOCK.locked())
+            return st
+
+        q = {"chat": "c-1", "items": [{"id": "1", "text": "next", "images": []}], "held": False}
+        with mock.patch.object(ai_budget, "status", status_), mock.patch.object(ls, "queue_save"), \
+                mock.patch.object(ls, "Run", side_effect=Reached), mock.patch.object(ls, "ask_image_files", return_value=None):
+            with self.assertRaises(Reached):
+                ls.queue_start(q, mock.Mock(done=True, kind="ask", chat="c-1", session="s"))
+        return seen
+
+    def test_the_read_happens_with_the_lock_free(self):
+        self.assertEqual(self.locked_during_read(live_server), [False])
+
+    def test_mutant_reading_inside_the_lock_is_seen(self):
+        ls = mutated(self.GATE_INSIDE, 'if budget_gate({"over_budget": prev is None}) or held:                   # #334')
+        self.assertIn(True, self.locked_during_read(ls))
+
+
 @unittest.skipUnless(HAVE, "needs dev/proposals/334/live_server.diff")
 class NotRuns(unittest.TestCase):
     def test_only_the_ask_path_calls_the_gate(self):
         src = (ROOT / "system/scripts/live_server.py").read_text(encoding="utf-8")
-        self.assertEqual(src.count("budget_gate("), 3)               # its definition, ask() and queue_start(); nothing else
+        self.assertEqual(src.count("budget_gate("), 3)               # its definition, ask() and queue_start(); nothing else (Run now reads the reason queue_start kept)
 
 
 if __name__ == "__main__":
