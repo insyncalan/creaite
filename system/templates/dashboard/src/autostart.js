@@ -15,7 +15,7 @@ import { copied, store, VAULT_PATH } from "./core/page.js";
 
 /** @typedef {{ok?: boolean, supported?: boolean, installed?: boolean, loaded?: boolean|null, on?: boolean, dev?: boolean, folder?: string}} AutoStatus */
 
-export const AS = { /** @type {AutoStatus|null} */ status: null, confirm: /** @type {""|"on"|"off"} */ (""), busy: false, /** the boot read, so a test can wait for the late answer before it clicks */ ready: /** @type {Promise<void>|null} */ (null) };
+export const AS = { /** @type {AutoStatus|null} */ status: null, confirm: /** @type {""|"on"|"off"} */ (""), busy: false, /** the boot read, so a test can wait for the late answer before it clicks */ ready: /** @type {Promise<void>|null} */ (null), /** the boot read has answered (or failed): the reserved slot is filled or released */ done: false };
 export const AS_HELP_ID = "fix-a-stopped-server-and-other-problems";
 export const ASKED_KEY = "creaite-autostart-asked";
 
@@ -91,7 +91,21 @@ export function asHelpHtml() {
 }
 
 /** Today's Getting started: the one question. "" when it isn't due. */
+/** The slot for the question while the status is still on its way (a Mac, the live app, not yet asked): same markup, hidden, so the
+    answer fills it in place and nothing below it moves. */
+export function asReserved() {
+  if (AS.done || AS.status || !viaServer()) return false;
+  let asked = false; try { asked = !!store.get(ASKED_KEY, false); } catch (e) { /* no storage */ }
+  return !asked && /Mac/i.test(String(navigator.platform || navigator.userAgent));
+}
 export function asQuestionHtml() {
+  const body = asQuestionDueHtml();
+  return body ? body : asReserved() ? asQuestionDueHtml(true) : "";
+}
+/** @param {boolean} [slot] */
+function asQuestionDueHtml(slot) {
+  if (slot) return `<div class="tb asq-slot" id="asQ" data-slot="1" aria-hidden="true"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
+    <span class="rmgo"><button type="button" class="btn primary" tabindex="-1" disabled>Yes</button> <button type="button" class="btn" tabindex="-1" disabled>Not now</button></span></div>`;
   return asQuestionDue() ? `<div class="tb" id="asQ"><span class="t">Start creaite automatically when you sign in?</span><p>creaite opens by itself after every restart. You can change this any time in Settings.</p>
     <span class="rmgo"><button type="button" class="btn primary" data-asq="yes">Yes</button> <button type="button" class="btn" data-asq="no">Not now</button></span></div>` : "";
 }
@@ -100,13 +114,14 @@ export function asQuestionHtml() {
 export function asQuestionSync() {
   const box = $("#setupList"), cur = $("#asQ"), q = asQuestionDue();
   if (!box) return;
-  if (q && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
+  if (q && cur && cur.dataset.slot) { cur.remove(); addHTML(box, "beforeend", raw(asQuestionHtml())); }   /* the reserved slot, filled in place */
+  else if (q && !cur) addHTML(box, "beforeend", raw(asQuestionHtml()));
   else if (!q && cur) cur.remove();
 }
 /** Draw the Settings card again, in place. */
 export function asRedraw() { const c = $("#asCard"); if (c) { swapHTML(c, raw(asCardHtml())); asWire(asRedraw); } }
 /** Read the state, then draw whatever shows it: the Settings card and Today's question. */
-export async function asRefresh() { await asStatus(true); if (shared.VIEW === "settings") asRedraw(); if (shared.VIEW === "today") asQuestionSync(); }
+export async function asRefresh() { try { await asStatus(true); } finally { AS.done = true; } if (shared.VIEW === "settings") asRedraw(); if (shared.VIEW === "today") asQuestionSync(); }
 
 /** The start-up step: the first-run question's two buttons, and the first read of the state. */
 export function bootAutostart() {
