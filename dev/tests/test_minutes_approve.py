@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 import unittest
+from pathlib import Path
 import urllib.error
 import urllib.request
 from contextlib import closing
@@ -494,9 +495,8 @@ class FollowUp(Base):
         self.assertFalse(out["ok"])
 
 
-class ThroughTheServer(unittest.TestCase):
-    """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
-    the filed minutes reopened and a save over them refused (Alan, 15-10-2026), leaving no draft behind."""
+class ServerWorld(unittest.TestCase):
+    """A throwaway vault with the meeting staged and a real live server over it (no tests of its own)."""
 
     @classmethod
     def setUpClass(cls):
@@ -534,6 +534,10 @@ class ThroughTheServer(unittest.TestCase):
                                      headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
         with urllib.request.urlopen(req, timeout=120) as r:
             return json.loads(r.read().decode())
+
+class ThroughTheServer(ServerWorld):
+    """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
+    the filed minutes reopened and a save over them refused (Alan, 15-10-2026), leaving no draft behind."""
 
     def test_the_save_route_never_issues_an_approval(self):
         """Saving over filed minutes stays refused (Alan, 15-10-2026): there is no card path, and the route never passes
@@ -580,7 +584,12 @@ class ThroughTheServer(unittest.TestCase):
         else:
             self.assertTrue(ex["ok"], ex)
         self.assertFalse(self.post("/api/minutes/export", {"path": DRAFT, "format": "odt"})["ok"])
-        ok = self.post("/api/minutes/approve", {"file": self.name, "group": True, "own": [4]})
+        sys.path.insert(0, str(self.v.root / "system/scripts"))
+        import build_dashboard
+        staged = json.loads((self.v.root / "system/staging" / self.name).read_text(encoding="utf-8"))
+        ok = self.post("/api/minutes/approve", {"file": self.name, "group": True, "own": [4],        # 2.6.4 (#345): the minutes' and the items' fingerprints
+                                                "expect": build_dashboard.block_fp(staged["meeting"]),
+                                                "expects": {str(i["n"]): build_dashboard.item_fp(i) for i in staged["items"]}})
         self.assertTrue(ok["ok"], ok)
         self.assertIsInstance(ok["apply_id"], int)
         self.assertEqual(ok["waiting"], [5, 6, 7])
@@ -613,6 +622,56 @@ class ThroughTheServer(unittest.TestCase):
         for bad in ("../etc/passwd.html", "system/config/settings.json", f"{ABC}/CLAUDE.md"):
             self.assertFalse(self.post("/api/minutes/draft", {"path": bad})["ok"], bad)
 
+
+
+HAS_ITEM_CHECK = "def minutes_refusal" in (Path(__file__).resolve().parents[2] / "system/scripts/live_server.py").read_text(encoding="utf-8")
+
+
+@unittest.skipUnless(HAS_ITEM_CHECK, "needs dev/proposals/345/live_server.diff (the item check in Approve minutes)")
+class ApprovedInReviewThroughTheServer(ServerWorld):
+    """#345 M2 follow-up: an item approved in Review and not yet saved (auto-save off) is not in Review's list, so the page cannot take its
+    fingerprint from there. Approve minutes takes every ticked item's fingerprint from the minutes view's plan, which carries them."""
+
+    def approved_in_review(self):
+        p = self.v.root / "system/staging" / self.name
+        data = json.loads(p.read_text(encoding="utf-8"))
+        item = next(i for i in data["items"] if i.get("op") == "new" and i.get("decision") != "approved")
+        item["decision"] = "approved"                                    # Approve in Review, auto-save off: decided, not applied
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        return item["n"]
+
+    def plan_expects(self, view):
+        return {str(i["n"]): i["fp"] for i in view["plan"]["items"] if i.get("fp")}
+
+    def test_the_plan_carries_every_items_fingerprint_and_approve_works(self):
+        sys.path.insert(0, str(self.v.root / "system/scripts"))
+        import build_dashboard
+        n = self.approved_in_review()
+        view = self.post("/api/minutes/draft", {"file": self.name})
+        staged = json.loads((self.v.root / "system/staging" / self.name).read_text(encoding="utf-8"))
+        for row in view["plan"]["items"]:
+            item = next(i for i in staged["items"] if i["n"] == row["n"])
+            self.assertEqual(row["fp"], build_dashboard.item_fp(item), row)
+        self.assertIn(str(n), self.plan_expects(view))                   # the item Review approved is in the plan, with its fingerprint
+        ticked = [r["n"] for r in view["plan"]["items"] if r["group"] in ("group", "own")]
+        out = self.post("/api/minutes/approve", {"file": self.name, "group": False, "own": ticked, "expect": build_dashboard.block_fp(staged["meeting"]),
+                                                 "expects": self.plan_expects(view)})
+        self.assertNotIn("didn't say which item", out.get("message", ""), out)
+        self.assertNotIn("has changed since you looked", out.get("message", ""), out)
+        self.assertTrue(out.get("ok"), out)
+
+    def test_mutant_fingerprints_taken_from_review_only_leave_the_item_unnamed_and_the_approve_declined(self):
+        sys.path.insert(0, str(self.v.root / "system/scripts"))
+        import build_dashboard
+        n = self.approved_in_review()
+        view = self.post("/api/minutes/draft", {"file": self.name})
+        staged = json.loads((self.v.root / "system/staging" / self.name).read_text(encoding="utf-8"))
+        review_rows = {str(i["n"]): i["fp"] for i in view["plan"]["items"] if i["n"] != n and i.get("fp")}      # what Review's pending list would give
+        ticked = [r["n"] for r in view["plan"]["items"] if r["group"] in ("group", "own")]
+        out = self.post("/api/minutes/approve", {"file": self.name, "group": False, "own": ticked, "expect": build_dashboard.block_fp(staged["meeting"]),
+                                                 "expects": review_rows})
+        self.assertFalse(out.get("ok"), out)
+        self.assertIn("didn't say which item", out.get("message", ""))
 
 
 class ReviewEditThroughTheServer(unittest.TestCase):

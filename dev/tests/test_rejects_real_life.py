@@ -266,22 +266,26 @@ class Server(unittest.TestCase):
 
         old, live_server.run = live_server.run, fake
         R = live_server.REVIEW_WORK_ROUTES
+        EXP = {"expect": "a" * 12}              # 2.6.4 (#345): every deciding route names the item; the check itself is test_expect_routes_345
+        had = hasattr(live_server, "current_fp")
+        real_fp = getattr(live_server, "current_fp", None)
+        live_server.current_fp = lambda file, ref: "a" * 12
         try:
             h = H()
             R["/api/review/guesses"](h, {})
             self.assertEqual((h.got[1]["reasons"], h.got[1]["guesses"][0]["reason"]), (SEVEN, "Chatter"))
-            R["/api/review/reject"](h, {"rows": [{"file": "proposed-p.json", "ref": 2}, {"file": "proposed-p.json", "ref": 3},
+            R["/api/review/reject"](h, {"rows": [{"file": "proposed-p.json", "ref": 2, **EXP}, {"file": "proposed-p.json", "ref": 3, **EXP},
                                                  {"file": "gone.json", "ref": 1}], "reason": "Chatter"})
             self.assertTrue(h.got[1]["ok"])
             self.assertEqual([r["key"] for r in h.got[1]["rejected"]], ["proposed-p.json#2", "proposed-p.json#3"])
             self.assertEqual(h.got[1]["gone"], [{"file": "gone.json", "ref": 1}])
-            R["/api/review/reject"](h, {"rows": [{"file": "proposed-p.json", "ref": 2}], "guess": True})
-            R["/api/review/reject"](h, {"rows": [{"file": "proposed-p.json", "ref": 2}], "reason": "x\ny", "duplicate_of": "not an id"})
+            R["/api/review/reject"](h, {"rows": [{"file": "proposed-p.json", "ref": 2, **EXP}], "guess": True})
+            R["/api/review/reject"](h, {"rows": [{"file": "proposed-p.json", "ref": 2, **EXP}], "reason": "x\ny", "duplicate_of": "not an id"})
             R["/api/review/rejected"](h, {"rows": [{"file": "proposed-p.json", "ref": 2}], "how": "reason", "reason": "Duplicate",
                                           "duplicate_of": "ABC-A-001"})
             self.assertTrue(h.got[1]["ok"])
             R["/api/review/rejected"](h, {"rows": [{"file": "../proposed-p.json", "ref": 2}], "how": "undo"})
-            R["/api/review/rejected"](h, {"rows": [{"file": "proposed-p.json", "ref": 2}], "how": "approve"})
+            R["/api/review/rejected"](h, {"rows": [{"file": "proposed-p.json", "ref": 2, **EXP}], "how": "approve"})
             R["/api/review/rejected"](h, {"rows": [{"file": "proposed-p.json", "ref": "2; rm"}], "how": "undo"})
             self.assertEqual(h.got[0], 400)
             R["/api/review/rejected"](h, {"rows": [{"file": "proposed-p.json", "ref": 2}], "how": "delete"})
@@ -290,6 +294,10 @@ class Server(unittest.TestCase):
             self.assertTrue(h.got[1]["ok"])
         finally:
             live_server.run = old
+            if had:
+                live_server.current_fp = real_fp
+            else:
+                del live_server.current_fp
         self.assertIn(("review.py", "reject", "4,5", "--reason=Chatter"), calls)
         self.assertIn(("review.py", "reject", "4", "--guess"), calls)
         self.assertIn(("review.py", "reject", "4"), calls)                                 # a bad reason or ID is left out

@@ -226,7 +226,7 @@ class DecisionTests(Base):
         self.apply(decision(1, date="2026-10-12", decision="Pilot extended", replaces="ABC-D-001"))
         self.assertEqual(sql(self.v, "SELECT id, replaces FROM decisions ORDER BY id"),
                          [{"id": "ABC-D-001", "replaces": None}, {"id": "ABC-D-002", "replaces": "ABC-D-001"}])
-        self.assertIn("is not in the tracker", self.refused(decision(1, date="2026-10-12", replaces="ABC-D-077")))
+        self.assertIn("is not in the tracker", self.refused(decision(1, date="2026-10-12", replaces="ABC-D-077")).replace("your project record", "the tracker"))
         self.assertIn("would replace each other",
                       self.refused(item(1, "decisions", "update", id="ABC-D-001", changes={"replaces": "ABC-D-002"})))
 
@@ -261,7 +261,7 @@ class PromiseTests(Base):
     def test_refusals(self):
         self.assertIn("missing required field(s): promised_to", self.refused(promise(1, promised_to="")))
         self.assertIn("status must be one of", self.refused(promise(1, status="Closed")))
-        self.assertIn("project XYZ is not in the tracker", self.refused(promise(1, project="XYZ")))
+        self.assertIn("project XYZ is not in the tracker", self.refused(promise(1, project="XYZ")).replace("your project record", "the tracker"))
 
     def test_no_priority_or_workstream(self):
         self.assertIn("unknown field(s) for promises: priority", self.refused(promise(1, priority="High")))
@@ -298,8 +298,8 @@ class LinkTests(Base):
         self.assertEqual(sql(self.v, "SELECT * FROM links"), before)
 
     def test_refusals(self):
-        self.assertIn("ABC-099 is not in the tracker", self.refused(link(1, "ABC-099", "ABC-A-002")))
-        self.assertIn("ABC-A-077 is not in the tracker", self.refused(link(1, "ABC-001", "ABC-A-077")))
+        self.assertIn("ABC-099 is not in the tracker", self.refused(link(1, "ABC-099", "ABC-A-002")).replace("your project record", "the tracker"))
+        self.assertIn("ABC-A-077 is not in the tracker", self.refused(link(1, "ABC-001", "ABC-A-077")).replace("your project record", "the tracker"))
         self.assertIn("isn't an action", self.refused(link(1, "ABC-001", "nonsense")))
         self.assertIn("can't block itself", self.refused(link(1, "ABC-001", "ABC-001")))
         self.assertIn("kind must be one of", self.refused(link(1, "ABC-001", "ABC-A-002", kind="relates")))

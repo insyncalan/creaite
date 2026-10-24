@@ -389,9 +389,11 @@ class Server(unittest.TestCase):
                 self.got = (code, body)
 
         old, live_server.run = live_server.run, fake
+        had, real_fp = hasattr(live_server, "current_fp"), getattr(live_server, "current_fp", None)
+        live_server.current_fp = lambda file, ref: "a" * 12          # 2.6.4 (#345): the check itself is test_expect_routes_345
         try:
             h = H()
-            live_server.REVIEW_WORK_ROUTES["/api/review/retarget"](h, {"file": "p.json", "ref": 2, "id": "FAL-A-007"})
+            live_server.REVIEW_WORK_ROUTES["/api/review/retarget"](h, {"file": "p.json", "ref": 2, "id": "FAL-A-007", "expect": "a" * 12})
             self.assertTrue(h.got[1]["ok"])
             live_server.REVIEW_WORK_ROUTES["/api/review/retarget"](h, {"file": "../p.json", "ref": 2, "undo": True})
             live_server.REVIEW_WORK_ROUTES["/api/review/candidates"](h, {"file": "p.json", "ref": 2})
@@ -400,6 +402,10 @@ class Server(unittest.TestCase):
             self.assertFalse(h.got[1]["ok"])
         finally:
             live_server.run = old
+            if had:
+                live_server.current_fp = real_fp
+            else:
+                del live_server.current_fp
         self.assertIn(("review.py", "retarget", "4", "FAL-A-007"), calls)
         self.assertIn(("review.py", "unmerge", "p.json#2"), calls)
         self.assertIn(("review.py", "candidates", "4", "--json"), calls)

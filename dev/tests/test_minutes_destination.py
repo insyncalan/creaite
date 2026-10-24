@@ -107,6 +107,30 @@ class Names(Dest):
             self.assertNotIn(FILED, s)
         self.assertTrue(any(i["values"].get("source", "").startswith(new) for i in d["items"] if i.get("op") == "new"))
 
+    def test_a_rename_answers_with_the_items_new_fingerprints_so_an_open_review_page_goes_on_deciding(self):
+        """#346 item 2 (with #345): a new name changes each item's source, hence its fingerprint; the answer carries the new ones
+        (the page puts them on its open Review rows) and they are exactly what the file now holds."""
+        sys.path.insert(0, str(REPO / "system/scripts"))
+        import build_dashboard
+        before = {str(i["n"]): build_dashboard.item_fp(i) for i in self.data()["items"]}
+        out = self.lib(f"print(json.dumps(md.set_names({self.name!r}, {{'ABC': '2026-10-14 Steering (pm)'}})))")
+        self.assertTrue(out["ok"], out)
+        now = {str(i["n"]): build_dashboard.item_fp(i) for i in self.data()["items"]}
+        self.assertEqual(out["fps"], now)
+        self.assertTrue(all(len(v) == 12 and set(v) <= set("0123456789abcdef") for v in out["fps"].values()))
+        self.assertTrue(any(before[k] != now[k] for k in now), "a new name does change some item's fingerprint")
+        refused = self.lib(f"print(json.dumps(md.set_names({self.name!r}, {{'ABC': '../x'}})))")
+        self.assertFalse(refused["ok"])
+        self.assertNotIn("fps", refused)
+        self.assertEqual({str(i["n"]): build_dashboard.item_fp(i) for i in self.data()["items"]}, now)     # and a refusal changes nothing
+
+    def test_the_page_takes_the_new_fingerprints_after_a_rename(self):
+        src = (REPO / "system/templates/dashboard/src/stores/minutesFiling.js").read_text(encoding="utf-8")
+        self.assertIn("keepFingerprints(a.file, r.fps);", src)
+        self.assertIn("r.fp = fps[String(r.ref)]", src)
+        mins = (REPO / "system/templates/dashboard/src/stores/minutes.js").read_text(encoding="utf-8")
+        self.assertIn("renamedFp(v.proposal, n) || (rv && rv.fp)", mins)      # Approve minutes takes the new ones over the plan drawn before the name changed
+
     def test_a_renamed_meeting_still_files_and_the_items_cite_the_new_name(self):
         self.lib(f"print(json.dumps(md.set_name({self.name!r}, 'ABC', '2026-10-14 Steering (pm)')))")
         r = self.approve()
@@ -321,7 +345,11 @@ class Routes(Dest):
                 f"name = {self.name!r}\n"
                 "reg = sorted(k for k in ls.REVIEW_WORK_ROUTES if k.startswith('/api/minutes/destination'))\n"
                 "v = call('/api/minutes/destination', {'file': name})\n"
-                "a = call('/api/minutes/approve', {'file': name, 'group': True, 'own': []})\n"
+                "import build_dashboard\n"
+                "staged = json.load(open(ls.paths.STAGING / name))\n"                                          # 2.6.4 (#345)
+                "fp = build_dashboard.block_fp(staged['meeting'])\n"
+                "fps = {str(i['n']): build_dashboard.item_fp(i) for i in staged['items']}\n"
+                "a = call('/api/minutes/approve', {'file': name, 'group': True, 'own': [], 'expect': fp, 'expects': fps})\n"
                 "print(json.dumps({'reg': reg, 'view': v, 'approve': {k: a.get(k) for k in ('ok', 'numbered')}}))")
         return self.js(code)
 

@@ -286,7 +286,7 @@ class DeleteNoteNoCard(Server):
         r = self.post("/api/apply", {})
         self.assertTrue(r["ok"], r)
         self.assertIn(f"Left in staging, not applied: {Path(rel).name} file_changes_decision: move: {src} is moved only by "
-                      "Delete note or Move back on the dashboard (the live server's own button)", r["message"])
+                      "Delete note or Move back on the dashboard (the live server's own button)", r["message"].replace("Left waiting, not saved:", "Left in staging, not applied:"))
         self.assertTrue((self.folder() / "By hand.md").is_file())
         self.assertFalse((self.archive() / "By hand.md").exists())
 

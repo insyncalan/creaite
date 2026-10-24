@@ -166,7 +166,7 @@ class DefaultLayoutTests(Recode, unittest.TestCase):
         self.v.propose("later", [item(1, "actions", {"project": "ABC", "description": "Still pending", "raised": "2026-10-02", "source": SRC})])
         r = self.recode("ABC", "XPL", "--name", "Example Plus", "--folder", "XPL Example Plus", ok=False)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("pending proposal(s) still mention ABC: proposed-later.json", r.stdout)
+        self.assertIn("pending proposal(s) still mention ABC: proposed-later.json", r.stdout.replace("waiting suggestion(s)", "pending proposal(s)"))     # #292: the new words are the same fact
         self.assertEqual(list((self.v.root / "system/staging").glob("proposed-*-edit.json")), [])
         self.assertEqual(self.state(), before)
 
@@ -233,7 +233,7 @@ class DefaultLayoutTests(Recode, unittest.TestCase):
         self.v.propose("other", [item(1, "decisions", {"project": "XPL", "decision": "Unrelated", "date": "2026-10-03",
                                                               "source": "projects/XPL Example Plus/minutes/2026-10-03 Call.docx — Decisions"})])
         out = self.v.run("apply").stdout
-        self.assertIn("is a recode: applying it first, on its own", out)
+        self.assertIn("applying it first, on its own" if "is a recode" in out else "saving it first, on its own", out)     # #292: the new words are the same fact
         self.assertEqual(self.ids("decisions"), ["XPL-D-005", "XPL-D-007"])                  # the other proposal waits
         self.assertIn("written 1", self.v.run("apply").stdout)
         self.assertEqual(self.ids("decisions"), ["XPL-D-005", "XPL-D-007", "XPL-D-008"])

@@ -5926,6 +5926,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     fmSet: () => fmSet,
+    forgetRenamed: () => forgetRenamed,
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
@@ -6232,6 +6233,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     jumpLink: () => jumpLink,
     kOfId: () => kOfId,
     kb: () => kb2,
+    keepFingerprints: () => keepFingerprints,
     keepHref: () => keepHref,
     keysSeen: () => keysSeen,
     kindLabel: () => kindLabel,
@@ -6958,6 +6960,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     regSave: () => regSave,
     regSetHidden: () => regSetHidden,
     rejectMinutes: () => rejectMinutes,
+    rejectedAgainWords: () => rejectedAgainWords,
     rel: () => rel,
     relaxHtml: () => relaxHtml,
     reloadData: () => reloadData,
@@ -6977,6 +6980,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renamePerson: () => renamePerson,
     renameProject: () => renameProject,
     renameView: () => renameView,
+    renamedFp: () => renamedFp,
     renderActivity: () => renderActivity,
     renderApplied: () => renderApplied,
     renderAskChanges: () => renderAskChanges,
@@ -7092,6 +7096,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     rvBulkOK: () => rvBulkOK,
     rvDecideMany: () => rvDecideMany,
     rvDup: () => rvDup,
+    rvExp: () => rvExp,
     rvKey: () => rvKey,
     rvRejectOK: () => rvRejectOK,
     rvSummary: () => rvSummary,
@@ -32758,10 +32763,10 @@ ${s5}`;
         if (await openNote(p6)) onAddressChange();
       }
     );
-    const renamed = noteRenamed.value;
+    const renamed2 = noteRenamed.value;
     h2(() => {
-      if (renamed) onAddressChange();
-    }, [renamed]);
+      if (renamed2) onAddressChange();
+    }, [renamed2]);
     return /* @__PURE__ */ u4("div", { class: "wrapmax notespage", children: [
       /* @__PURE__ */ u4("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
         code === "_portfolio" ? /* @__PURE__ */ u4(S2, { children: [
@@ -37120,6 +37125,10 @@ system/scripts/run launch.py agent ${what}`;
     });
     return t47;
   }
+  function rejectedAgainWords(replies, count) {
+    const list = replies || [], i5 = list.findIndex((r4) => !r4 || !r4.ok);
+    return i5 >= 0 ? `Not rejected again: ${plainSay(list[i5] && list[i5].message || "nothing was changed")}` : `Rejected again: ${count}`;
+  }
   var needsConnection = (what) => `${what} needs creaite to be connected. Reopen it and try again.`;
   function savedNoun(r4) {
     if (!r4) return ["change", "changes"];
@@ -37824,11 +37833,22 @@ system/scripts/run launch.py agent ${what}`;
         return;
       }
       used2 = r4.names || {};
+      keepFingerprints(a5.file, r4.fps);
     }
     const shown2 = a5.items.map((it2) => ({ code: it2.code, project: it2.project, folder_label: it2.folder_label, name: used2[it2.code] || it2.will_be }));
     filingAsk.value = null;
     filedNote.value = { key: a5.key, items: shown2 };
     a5.resolve(true);
+  }
+  var renamed = /* @__PURE__ */ new Map();
+  var renamedFp = (file, n4) => (renamed.get(file) || {})[String(n4)] || "";
+  var forgetRenamed = (file) => {
+    renamed.delete(file);
+  };
+  function keepFingerprints(file, fps) {
+    if (!fps) return;
+    renamed.set(file, fps);
+    for (const r4 of REV) if (r4.file === file && Object.prototype.hasOwnProperty.call(fps, String(r4.ref))) r4.fp = fps[String(r4.ref)];
   }
   function noteNumbered(moved2) {
     const n4 = filedNote.value;
@@ -38079,7 +38099,21 @@ system/scripts/run launch.py agent ${what}`;
     }
     if (how.approve === false) return { ok: true, made, done };
     if (!v5.proposal) return { ok: false, message: "These minutes have nothing pending.", made };
-    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own: how.mine ? args.own.filter(how.mine) : args.own });
+    const meeting = REV.find((x5) => x5.kind === "draft" && x5.file === v5.proposal && x5.ref === "meeting");
+    const own = how.mine ? args.own.filter(how.mine) : args.own, expects = (
+      /** @type {Record<string, string>} */
+      {}
+    );
+    for (const n4 of own) {
+      const rv = (plan || []).find((i5) => i5.n === n4), fp2 = renamedFp(v5.proposal, n4) || rv && rv.fp;
+      if (fp2) expects[String(n4)] = fp2;
+    }
+    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own, expects, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });
+    forgetRenamed(v5.proposal);
+    if (r4 && !r4.ok && REVIEW_CHANGED.test(r4.message || "")) {
+      await reloadData();
+      return { ok: false, message: STALE_ROW_MSG, made };
+    }
     if (r4 && r4.ok) noteNumbered(r4.numbered);
     return { ...r4 || { ok: false, message: "Nothing was saved or changed." }, made };
   }
@@ -38801,6 +38835,7 @@ system/scripts/run launch.py agent ${what}`;
     dlg.dataset.n = r4.n;
     openDialog(dlg, { focus: "#llClose" });
   }
+  var rvExp = (r4) => r4 && r4.fp ? { expect: r4.fp } : {};
   async function llAct(how, r4) {
     if (!r4 || r4.done) return;
     if (!viaServer()) {
@@ -38812,7 +38847,7 @@ system/scripts/run launch.py agent ${what}`;
       await reloadData();
       return;
     }
-    const res = await api("/api/review/repeat", { file: r4.file, ref: r4.ref, how });
+    const res = await api("/api/review/repeat", { file: r4.file, ref: r4.ref, how, ...rvExp(r4) });
     snack(saidPlain(res.message) || (res.ok ? "Done" : "Not changed"));
     if (res.ok) {
       closePanel();
@@ -38860,7 +38895,7 @@ system/scripts/run launch.py agent ${what}`;
       return;
     }
     const at2 = { file: r4.file, ref: r4.ref };
-    const res = await api("/api/review/retarget", { ...at2, id: id2 });
+    const res = await api("/api/review/retarget", { ...at2, id: id2, ...rvExp(r4) });
     if (!res || !res.ok) {
       snack(saidPlain(res && res.message) || "Not changed");
       return;
@@ -39148,7 +39183,7 @@ system/scripts/run launch.py agent ${what}`;
       }
     }
     for (const { body: body2, L: L3 } of rjBy(list, (r4) => c5.guess ? { guess: true } : { reason: c5.reason || "", duplicate_of: dupOf(r4) || "" })) {
-      const res = await api("/api/review/reject", { rows: L3.map((r4) => ({ file: r4.file, ref: r4.ref })), ...body2 });
+      const res = await api("/api/review/reject", { rows: L3.map((r4) => ({ file: r4.file, ref: r4.ref, ...rvExp(r4) })), ...body2 });
       if (res.ok) (res.rejected || []).forEach((x5) => {
         const r4 = L3.find((y5) => y5.file === x5.file && String(y5.ref) === String(x5.ref));
         if (r4) done.push(r4);
@@ -39171,7 +39206,7 @@ system/scripts/run launch.py agent ${what}`;
     if (after) after();
   }
   async function rjRejected(rows2, how, extra) {
-    return api("/api/review/rejected", { rows: rows2.map((r4) => ({ file: r4.file, ref: r4.ref })), how, ...extra || {} });
+    return api("/api/review/rejected", { rows: rows2.map((r4) => ({ file: r4.file, ref: r4.ref, ...rvExp(r4) })), how, ...extra || {} });
   }
   var rjOff = (what) => {
     snack(needsConnection(what));
@@ -39243,7 +39278,9 @@ system/scripts/run launch.py agent ${what}`;
     if (shared.VIEW === "activity") rjLoadRecent();
     const n4 = was.length, text = [n4 ? `Approved instead: ${n4}` : "", open2.length ? `${open2.length} need${open2.length === 1 ? "s" : ""} approving on ${open2.length === 1 ? "its" : "their"} own` : "", ap2 && !ap2.ok ? `not saved: ${saidPlain(ap2.message)}` : ""].filter(Boolean).join(" · ");
     const undo = n4 ? async () => {
-      const back2 = was.map((d5) => ({ ...rjRef(d5.key), key: d5.key, was: d5.was || {} }));
+      const replies = [];
+      const fpOf = new Map(rows2.map((r4) => [r4.key || rjKey(r4), r4.fp]));
+      const back2 = was.map((d5) => ({ ...rjRef(d5.key), key: d5.key, fp: fpOf.get(d5.key), was: d5.was || {} }));
       if (ap2 && ap2.ok && ap2.apply_id) {
         const u5 = await api("/api/undo", { apply_id: ap2.apply_id });
         if (!u5.ok) {
@@ -39251,7 +39288,7 @@ system/scripts/run launch.py agent ${what}`;
           return;
         }
         await reloadData();
-        for (const { body: b5, L: L3 } of rjBy(back2, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) await api("/api/review/reject", { rows: L3.map((x5) => ({ file: x5.file, ref: x5.ref })), ...b5 });
+        for (const { body: b5, L: L3 } of rjBy(back2, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) replies.push(await api("/api/review/reject", { rows: L3.map((x5) => ({ file: x5.file, ref: x5.ref, ...rvExp(x5) })), ...b5 }));
       } else {
         for (const x5 of back2) {
           try {
@@ -39266,15 +39303,15 @@ system/scripts/run launch.py agent ${what}`;
               else delete it2.duplicate_of;
             });
           } catch (e4) {
-            snack("Not rejected again: " + e4.message);
+            replies.push({ ok: false, message: e4.message });
           }
         }
       }
-      rjAddGone(ghosts.filter((g5) => back2.some((x5) => x5.key === g5.key)));
+      if (replies.every((r4) => r4 && r4.ok)) rjAddGone(ghosts.filter((g5) => back2.some((x5) => x5.key === g5.key)));
       if (S.autoApply) await applyNow();
       else await reloadData();
       if (shared.VIEW === "activity") rjLoadRecent();
-      snack(`Rejected again: ${back2.length}`);
+      snack(rejectedAgainWords(replies, back2.length));
     } : null;
     rjSay(text || "Nothing changed", undo);
     if (open2.length) {
@@ -81461,6 +81498,7 @@ Next: `;
         "jobLive",
         "joinPanes",
         "kb",
+        "keepFingerprints",
         "keepHref",
         "kindLabel",
         "laneDrop",
@@ -81709,6 +81747,7 @@ Next: `;
         "regAddAlias",
         "regAddPerson",
         "regSetHidden",
+        "rejectedAgainWords",
         "rel",
         "reloadData",
         "remMenu",
@@ -81717,6 +81756,7 @@ Next: `;
         "renamePartner",
         "renamePerson",
         "renameProject",
+        "renamedFp",
         "renderActivity",
         "renderBadge",
         "renderCockpit",
@@ -81737,6 +81777,7 @@ Next: `;
         "revDetail",
         "revForModelN",
         "reviewViaServer",
+        "rjAddGone",
         "rjGuesses",
         "rjMenu",
         "rkText",
@@ -81751,6 +81792,7 @@ Next: `;
         "runSearch",
         "rvBulkOK",
         "rvDecideMany",
+        "rvExp",
         "rvWhyNot",
         "save",
         "saveCurEdit",
