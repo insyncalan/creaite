@@ -4391,3 +4391,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 :is(.pk-ask,.mv-explain.warn,.evidence.warn,.msg.a.cant)::before{background:var(--warn);-webkit-mask-image:var(--ic-alert);mask-image:var(--ic-alert)}
 :is(.curtext blockquote,.rted blockquote,:is(.msg.md,.mdv) blockquote,.evsent,.rfsrc,#v-intake-review .icq)::before{top:5px;background:var(--muted);-webkit-mask-image:var(--ic-quote);mask-image:var(--ic-quote)}
 /* ===== end NEW (#341 item 1) ===== */
+/* #328 Intake: how sure the project match is. Icon + word + colour, never colour alone; tokens only. */
+#v-intake-review .mchip{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:2px 0}
+#v-intake-review .mlv{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);font-weight:500;padding:1px 8px;border-radius:var(--r-sm);border:1px solid var(--line)}
+#v-intake-review .mlv .i{width:14px;height:14px}
+#v-intake-review .mlv[data-irmatch="matched"]{color:var(--ok);background:var(--ok-soft)}
+#v-intake-review .mlv[data-irmatch="likely"]{color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .mlv[data-irmatch="unsure"]{color:var(--warn);background:var(--warn-soft)}
+#v-intake-review .mcands{display:inline-flex;flex-wrap:wrap;gap:4px 10px}
+#v-intake-review .moffer{flex-basis:100%;font-size:var(--fs-xs);color:var(--muted)}
