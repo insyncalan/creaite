@@ -61,7 +61,7 @@ export function TranscriptPane() {
         <input type="search" class="pkdt" id="mnPaneQ" aria-label="Search the transcript" placeholder="Search the transcript" value={paneQuery.value}
           onInput={e => { paneQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; }}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); next(); } }} />
-        <span class="sub" role="status">{q ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr.turns.length ? `${tr.turns.length} turns` : ""}</span>
+        <span class="sub" role="status">{q ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr.turns.length ? `${tr.turns.length} turn${tr.turns.length === 1 ? "" : "s"}` : ""}</span>
       </div>
       {tr.turns.length ? (
         <ol class="mnturns" ref={list} tabIndex={0} aria-label="Speaker turns">

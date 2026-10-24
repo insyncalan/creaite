@@ -71208,7 +71208,7 @@ ${d5.text}`);
             }
           }
         ),
-        /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: q5 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr2.turns.length ? `${tr2.turns.length} turns` : "" })
+        /* @__PURE__ */ u4("span", { class: "sub", role: "status", children: q5 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr2.turns.length ? `${tr2.turns.length} turn${tr2.turns.length === 1 ? "" : "s"}` : "" })
       ] }),
       tr2.turns.length ? /* @__PURE__ */ u4("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr2.turns.map((t47) => /* @__PURE__ */ u4(
         "li",
@@ -71450,6 +71450,18 @@ ${d5.text}`);
   }
   var DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
   var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
+  var DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
+  var FIG_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  function figuresMissing(text, said2) {
+    const low = String(said2 || "").toLowerCase(), out = /* @__PURE__ */ new Set();
+    const rest = String(text || "").replace(DATE_FIG, (all, d5, m5) => {
+      const word = FIG_MONTHS[+m5 - 1] || "", day = new RegExp(`\\b0?${+d5}(?:st|nd|rd|th)?\\b`);
+      if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
+      return " ";
+    });
+    for (const f5 of new Set(rest.match(FIGURE) || [])) if (!said2.includes(f5)) out.add(f5);
+    return [...out];
+  }
   function rowChecks(doc, s5, r4, i5, turns, unknown) {
     const out = [], it2 = (doc.items || {})[r4.ref], v5 = it2 && it2.values || {};
     if (!it2 || it2.op !== "new") return out;
@@ -71497,21 +71509,19 @@ ${d5.text}`);
         last: v5.due_date ? `The row says ${deadlineDay(v5.due_date)}.` : "The row has no deadline.",
         actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
       });
-    if (turn) {
-      for (const f5 of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f5))
-        out.push({
-          id: `fig:${r4.ref}:${f5}`,
-          section: s5.id,
-          row: i5,
-          quote: f5,
-          kind: "figure",
-          n: n4,
-          turn: turn.n,
-          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
-          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
-          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
-        });
-    }
+    if (turn) for (const f5 of figuresMissing(label, turn.text))
+      out.push({
+        id: `fig:${r4.ref}:${f5}`,
+        section: s5.id,
+        row: i5,
+        quote: f5,
+        kind: "figure",
+        n: n4,
+        turn: turn.n,
+        note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+        last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+        actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+      });
     if ((it2.flags || []).some((f5) => f5 === "invalid" || f5 === "conflict"))
       out.push({
         id: `item:${r4.ref}`,
@@ -71534,7 +71544,7 @@ ${d5.text}`);
         s5.tags || []
       ), turn = t47 ? turns.find((x5) => x5.n === t47.turn) : null;
       if (!turn) return;
-      for (const f5 of new Set(l6.text.match(FIGURE) || [])) if (!turn.text.includes(f5))
+      for (const f5 of figuresMissing(l6.text, turn.text))
         out.push({
           id: `fig:${s5.id}:${i5}:${f5}`,
           section: s5.id,
