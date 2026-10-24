@@ -10,7 +10,7 @@ diff, and is to be confirmed against the plain notes.
    2  #337  Activity: the By column does not wrap (one line, rows no taller than 52 px) at 900 and 1400 px
    3  #337  Cockpit: the edit pencils are 3:1 or better in light and dark, 24 px targets; chart text is 12 px or more
    4  #337  People at 900 and 1400 px: the table fits its box and Overdue (the sort column) is on screen
-   5  #337  People at 900 and 1400 px: no word breaks in the middle                                  EXPECTED FAILURE (M2)
+   5  #337  People at 900 and 1400 px: no word breaks in the middle                                  (fixed on the line at 72de4a6a; was M2)
    6  #337  Milestones, Client view with several hidden milestones: "None of the N milestones are shown to the client yet", page and card
    7  #337  Milestones, Client view with ONE hidden milestone says it is NOT shown                    (fixed on the line; was H1)
    8  #292  Walk Today, Work, Intake, Files, Activity, Projects, a cockpit, People and every Settings tab: no file path, script name, "sweep"
@@ -42,15 +42,18 @@ diff, and is to be confirmed against the plain notes.
             Show: Waiting or a search; folded without, folded again when released)                       (own vault, Chrome)
   32  #338  The rules file every run reads is at most 60% of its 2.6.3 size, the reference file is there and the rules point to it, and
             every never clause survives; a mutant that drops one turns the check red                          (own vault, no browser)
-  33  #343  Show the waiting tail, tick a waiting meeting, Hide it: the bar says "0 selected, 1 hidden" and Later and Not needed
-            because... do not move the hidden meeting                                  EXPECTED FAILURE (Team Cap #343 H1; own vault, Chrome)
+  33  #343  Show the waiting tail, tick a waiting meeting, Hide it: nothing is ticked, no tick bar is shown, and Later and Not needed
+            because... do not move the hidden meeting          (fixed on the line at 72de4a6a, which clears the ticks on a fold; own vault, Chrome)
   34  #343  People's Organisation and Role columns (headings included) keep a word on one line at 900 and 1400 px; a sibling of
-            check 5, narrowed to the two columns                                                  EXPECTED FAILURE (Team Cap #343 M1)
+            check 5, narrowed to the two columns                                                  (fixed on the line at 72de4a6a; was M1)
+  35  #343  Tick a waiting meeting found by search, press Esc in the search box: the tail folds, no tick may stay behind it (no bar saying
+            "1 selected") and Later does not move it; also covers M-1, the click-time guard   EXPECTED FAILURE (Team Cap #343 M-2; own vault, Chrome)
+  36  #343  Group by Day, tick a waiting meeting, Group by None: same assertions                   EXPECTED FAILURE (Team Cap #343 M-2; own vault, Chrome)
 
 How a check is wired (every class that changes data has a vault of its own, made from the zip, so nothing a check changes reaches another):
   Design264, Words264, Figures264, Today264  the shared hand-check vault and Chrome; nothing is changed (Today264 sets the page's own data and puts it back)
   Item264, Profile264, Card264, UsageOff264, PastDay264, TickFold264  a vault of its own, its server and Chrome (UsageOff264: the budget never switched on;
-                                   PastDay264, TickFold264: a fictional calendar of the past day and today, with every transcript state)
+                                   PastDay264, TickFold264 (checks 33, 35, 36): a fictional calendar of the past day and today, with every transcript state)
   Routes264, Budget264             a vault of its own and its live server (the page's own token), no browser; Budget264's Claude is a stand-in
                                    (the budget is OFF by default: its checks switch it on the way Settings does; check 28 leaves it off)
   Commands264, Extraction264, Runs264, Rules264  a vault of its own and the engine's own code run in it (Runs264: a stand-in for the thread and the process)
@@ -99,7 +102,7 @@ REPO = HERE.parents[2]
 SCRIPTS = REPO / "system/scripts"
 DASH = REPO / "system/templates/dashboard/src"
 
-KIND = {n: "scriptable" for n in range(1, 35)}
+KIND = {n: "scriptable" for n in range(1, 37)}
 LIVE_ONLY = {}        # check 24 runs on the stand-in; a real model over a real week's use is Alan's own
 
 
@@ -459,7 +462,6 @@ class Design264(HandcheckCase):
         } }
       return out; })()"""
 
-    @known("Team Cap M2: #v-people in style.css puts overflow-wrap:anywhere on every cell, so ordinary words break in the middle")
     def test_c05_people_words_do_not_break_in_the_middle(self):
         """5. (#337) People at 900 px and at 1400 px is readable: no ordinary word is broken across two lines in the middle ("Programm/e",
         "Spon/sor", "organisatio/n")."""
@@ -487,11 +489,10 @@ class Design264(HandcheckCase):
           for (let n; (n=w.nextNode()); ) if (n.parentElement.getClientRects().length) broken(n, c.n); } }
       return {seen, out}; })()"""
 
-    @known("Team Cap #343 M1: People's Organisation and Role columns break words mid-word at 900 px, and the Organisation heading reads 'ORGANISATIO/N' at 1400 px")
     def test_c34_people_organisation_and_role_do_not_break_in_the_middle(self):
         """34. (#343 M1) People at 900 px and at 1400 px: the Organisation and Role columns, their headings included, keep a word on one
         line (the heading was "ORGANISATIO/N" at 1400 px). A sibling of check 5, which looks at every word of the table; this one
-        looks at the two columns Team Cap named and says which column broke."""
+        looks at the two columns Team Cap named and says which column broke. (Fixed on the line at 72de4a6a; a plain check.)"""
         found = {}
         for w in (900, 1400):
             with width(self, w):
@@ -1340,7 +1341,7 @@ MEETING_TIMES = [("09:00", "09:30", "Weekly sync", True), ("09:45", "10:30", "Pr
 
 
 class PastWorld264(HandcheckCase):
-    """The base of checks 31 and 33. A vault of its own with a fictional calendar of about ten Teams meetings on the day before today and
+    """The base of checks 31, 33, 35 and 36. A vault of its own with a fictional calendar of about ten Teams meetings on the day before today and
     on today, and every state the old follow-up chips showed (transcript ready, none, not transcribed, minutes made, not checked yet).
     No checks of its own."""
     own_vault = True
@@ -1518,7 +1519,7 @@ class PastDay264(PastWorld264):
 
 
 class TickFold264(PastWorld264):
-    """Check 33. The past-day world's Intake, for the tick bar and a folded waiting tail."""
+    """Checks 33, 35 and 36. The past-day world's Intake, for the tick bar and a folded waiting tail."""
 
     def tick_bar(self):
         return self.b.eval("(()=>{ const t=document.querySelector('[data-irtickbar]'); return t?t.innerText.replace(/\\s+/g,' ').trim():null; })()")
@@ -1533,10 +1534,29 @@ class TickFold264(PastWorld264):
         f = self.vault / "system/staging/intake-cleared.json"
         return gone or (f.is_file() and mid in f.read_text(encoding="utf-8"))
 
-    @known("Team Cap #343 H1: TickBar does not redraw on a fold")
+    def tick_waiting_behind(self, mid):
+        """Tick the waiting meeting `mid` (its row must be on the page) and wait until the bar says it is selected."""
+        self.b.click(f'#v-intake-review input.irtick[data-irtick-box="{mid}"]')
+        self.b.wait("(document.querySelector('[data-irtickbar]')||{innerText:''}).innerText.indexOf('1 selected')>=0", 10)
+
+    def after_the_fold(self, mid, problems, route):
+        """The tail is folded with `mid` ticked behind it. Nothing may stay ticked, so no tick bar may be shown; and if one is, Later
+        (and Not needed because... where the bar has it) must not move the hidden meeting. Returns the bar's words, or None."""
+        b = self.b
+        self.assertEqual(self.buttons()["waiting"], 0, f"{route}: the tail folded")
+        bar = self.tick_bar()
+        if bar:
+            problems.append(f"{route}: after the fold the tick bar still says {bar!r}, with a tick behind it on a hidden meeting")
+            b.eval("(()=>{ const x=document.querySelector('[data-ira=laterall]'); if (x && !x.disabled) x.click(); })()")
+            if self.moved(mid):
+                problems.append(f"{route}: Later moved the hidden meeting")
+        return bar
+
     def test_c33_the_tick_bar_does_not_act_on_a_meeting_the_fold_has_hidden(self):
-        """33. (#343 H1) Show the waiting tail, tick a waiting meeting, press Hide: the bar says "0 selected, 1 hidden", and Later and
-        Not needed because... do not move the hidden meeting (the bar was drawn for the tick and kept its buttons)."""
+        """33. (#343 H1, to the spec of 72de4a6a: folding the tail clears the ticks) Show the waiting tail, tick a waiting meeting, press
+        Hide: nothing is ticked and no tick bar is shown; and Later and Not needed because... (the bar's buttons, if a bar were shown)
+        do not move the hidden meeting. A folded row has no element, so the keys H and N have nothing to be pressed on; the bar's
+        buttons are the route to it. A plain check (the bar was left standing with "0 selected, 1 hidden" before the fix)."""
         b = self.b
         self.world()
         self.intake()
@@ -1545,14 +1565,12 @@ class TickFold264(PastWorld264):
             self.intake()                                # a fresh page: the tail folded, nothing ticked
             self.open_fold("show")
             mid = self.waiting_ids()[0 if action == "later" else 1]
-            b.click(f'#v-intake-review input.irtick[data-irtick-box="{mid}"]')
-            b.wait("(document.querySelector('[data-irtickbar]')||{innerText:''}).innerText.indexOf('1 selected')>=0", 10)
+            self.tick_waiting_behind(mid)
             self.release_fold("show")                    # Hide
             self.assertEqual(self.buttons()["waiting"], 0, "the tail folded")
             bar = said[action] = self.tick_bar()
-            if not (bar and "0 selected" in bar and "1 hidden" in bar):
-                problems.append(f"after Hide the bar says {bar!r}, not '0 selected, 1 hidden'")
             if bar:
+                problems.append(f"after Hide the tick bar is still shown and says {bar!r}")
                 if action == "later":
                     b.eval("(()=>{ const x=document.querySelector('[data-ira=laterall]'); if (x && !x.disabled) x.click(); })()")
                 else:
@@ -1561,7 +1579,55 @@ class TickFold264(PastWorld264):
                     b.eval("(()=>{ const x=document.querySelector('.cxmenu .pkopt'); if (x) x.click(); })()")
                 if self.moved(mid):
                     problems.append(f"{'Later' if action == 'later' else 'Not needed because'} moved the hidden meeting")
-        self.note(33, f"tick a waiting meeting, Hide the tail: the bar says {said['later']!r}")
+        self.note(33, f"tick a waiting meeting, Hide the tail: the tick bar is {said['later'] or 'not shown'!r}")
+        self.assertEqual(problems, [], "; ".join(problems))
+
+    @known("Team Cap #343 M-2: Esc in the search box folds the tail with a tick behind it")
+    def test_c35_esc_in_the_search_box_leaves_no_tick_behind_a_folded_row(self):
+        """35. (#343 M-2, and M-1 the click-time guard: this check covers M-1, so there is no separate one) Show the waiting tail by
+        searching for a waiting meeting's title, tick it, press Esc in the search box (it clears the search, and the tail folds again,
+        but irClearTicks is not called: IntakeReviewPage.jsx onKeyDown): afterwards no tick may stay on the hidden row, so the tick bar
+        must not be shown (it must not say "1 selected"), and Later must not move the hidden meeting (M-1: a click on Later with a
+        tick behind the fold must do nothing to it)."""
+        b = self.b
+        self.world()
+        self.intake()
+        mid = self.waiting_ids()[0]
+        title = b.eval(f"D.intake_review.meetings.find(m=>m.id==={json.dumps(mid)}).title")
+        self.open_fold("search", term=title)
+        self.tick_waiting_behind(mid)
+        b.click("#irQ")
+        b.key("Escape")
+        b.pump(0.5)
+        self.assertEqual(b.eval("document.querySelector('#irQ').value"), "", "Esc cleared the search")
+        problems = []
+        bar = self.after_the_fold(mid, problems, "Esc in the search box")
+        self.note(35, f"tick a waiting meeting found by search, Esc in the search box: the tick bar is {bar or 'not shown'!r}")
+        self.assertEqual(problems, [], "; ".join(problems))
+
+    @known("Team Cap #343 M-2: Group by None folds the tail with a tick behind it")
+    def test_c36_group_by_none_leaves_no_tick_behind_a_folded_row(self):
+        """36. (#343 M-2) Group by Day (the waiting rows are on the page), tick a waiting meeting, then Group by None (irSetGroup,
+        stores/intakeReview.js: it does not clear ticks, and the tail folds again): afterwards no tick may stay on the hidden row, so
+        the tick bar must not be shown (it must not say "1 selected"), and Later must not move the hidden meeting."""
+        b = self.b
+        self.world()
+        self.intake()
+        group = "(v)=>{ const s=document.querySelector('#v-intake-review [data-irgroupby]'); s.value=v; s.dispatchEvent(new Event('change',{bubbles:true})); }"
+        try:
+            b.eval(f"({group})('day')")
+            b.pump(0.5)
+            mid = b.eval("(()=>{ const r=document.querySelector('#v-intake-review tr.irmeet[data-stage=arrived][data-state=waiting]'); "
+                         "const i=r&&r.querySelector('input.irtick'); return i?i.getAttribute('data-irtick-box'):null; })()")
+            self.assertTrue(mid, "with Group by Day a waiting meeting is on the page to tick")
+            self.tick_waiting_behind(mid)
+            b.eval(f"({group})('none')")
+            b.pump(0.5)
+            problems = []
+            bar = self.after_the_fold(mid, problems, "Group by None")
+        finally:
+            b.eval(f"({group})('none')")                 # the browser remembers the grouping: put it back
+        self.note(36, f"tick a waiting meeting under Group by Day, then Group by None: the tick bar is {bar or 'not shown'!r}")
         self.assertEqual(problems, [], "; ".join(problems))
 
 
