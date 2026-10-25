@@ -673,14 +673,14 @@ export function pkPersist(){ try{ localStorage.setItem(PKSTORE,JSON.stringify(sh
 export function pkFile(){ const d=new Date(); return `proposed-${stampFile()}-${String(d.getMilliseconds()).padStart(3,"0")}${String(shared.PKSEQ++%100).padStart(2,"0")}-dashboard.json`; }
 export const pkStagedOf=id=>shared.PKS.filter(s=>s.id===id);
 export function pkSaving(state,msg){ const el=$("#pkSave"); if(!el) return; el.classList.toggle("fail",state==="fail");
-  putHTML(el,state==="busy"?msg||"Saving…":state==="fail"?msg||"Not saved":state==="ok"?html`${raw(ic("check"))}${(msg||"Saved for Review")}`:""); }
+  putHTML(el,state==="busy"?msg||"Saving…":state==="fail"?msg||"Not saved":state==="ok"?html`${raw(ic("check"))}${(msg||"Waiting to be saved")}`:""); }
 export function pkStageDraw(){ const st=$("#pkStage"), n=shared.PKS.length, m=new Set(shared.PKS.map(s=>s.id)).size; st.hidden=!n; document.body.classList.toggle("pkstaged",!!n); if(n) hideSavedSnack();
   if(n) $("#pkStN").textContent=`${n} change${n===1?"":"s"} waiting to be saved on ${m} item${m===1?"":"s"}`; }
 export function pkLast(x,k){ let el=$("#pkLast"); if(!el){ addHTML($("#pkAfter"),"afterbegin",html`<div class="pk-last" id="pkLast"></div>`); el=$("#pkLast"); }
   if(shared.CUR.mode!=="record"){ el.textContent=""; pkSaving(""); return; }
   const s=pkStagedOf(pkCid()), d=shared.PKDONE.filter(e=>e.id===pkCid());
   putHTML(el,html`${raw(ic("history"))}<span>${s.length?html`You edited this ${s[s.length-1].at.slice(11)===nowStamp().slice(11)?"just now":raw("at "+s[s.length-1].at.slice(11))} · ${s.length} change${s.length===1?"":"s"} waiting to be saved`:d.length?html`Last saved ${fd(d[d.length-1].at)}`:x.upd_at?html`Last updated ${fd(x.upd_at)}`:""}</span>`);
-  pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Saved for Review":d.length?"Saved":""); }
+  pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Waiting to be saved":d.length?"Saved":""); }
 /* the dot on a row with something staged: the StatusDot block, named by its word (BL-316) */
 export function markStagedRows(){ const ids=new Set([...shared.PKS.map(s=>s.id),...(shared.PENDING||[]).flatMap(p=>p.ids||[])]), sv=savingIds();   /* BL-304: also a change still saving (hollow), and one waiting for Apply */
   $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const id=r.dataset.row, st=sv.has(id)?"saving":ids.has(id)?"staged":"", d=/** @type {HTMLElement|null} */ (r.querySelector(".pkdot"));
@@ -1015,7 +1015,7 @@ export function pkNewFound(s){ const c=pkArr(s.k).filter(r=>r.p===s.p&&!(s.known
 /* the save state, the last-edited line and the feed for a new item */
 export function pkNewState(x,k){ if(shared.CUR.mode!=="new") return; const st=!!shared.CUR.staged, w=pkNewWord(k);
   let el=$("#pkLast"); if(el) putHTML(el,html`${raw(ic("history"))}<span>${st?html`Waiting to be saved · created when you save`:shared.CUR.alert?html`Not saved yet · Save (${MOD}↵) saves it for Review and dismisses the message`:html`Not saved yet · it is saved once it has a title and a project`}</span>`);
-  pkSaving(st?"ok":"",st?"Saved for Review":"");
+  pkSaving(st?"ok":"",st?"Waiting to be saved":"");
   putHTML($("#pkFeed"),st?html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w}<span class="pk-pill st">waiting</span></div></div>`:html`<div class="sub">Nothing here yet.</div>`);
   pkNewMarkDraw(); }
 /* ===== end BL-179 (the first commit) ===== */
@@ -1144,7 +1144,7 @@ export function bl185Row(){ const row=$("#v-cockpit .evrow"); if(!row) return;
   row.querySelectorAll(".evbox").forEach(b=>{ const l=b.querySelector(".l"), v=b.querySelector(".v"); if(!l||!v) return; const t=l.textContent.trim();
     if(t==="No due date"){ b.remove(); return; }
     const m=/^Due in (\d+) days?$/.exec(t); if(m) l.textContent=`Due ${m[1]}d`;
-    if(t==="Milestone slip"){ v.textContent=v.textContent.replace(/^(\d+) days?$/,"$1d");
+    if(t==="Late milestones"){ v.textContent=v.textContent.replace(/^(\d+) days?$/,"$1d");
       if(!b.classList.contains("click")){ b.classList.add("click"); b.setAttribute("data-msjump",""); b.setAttribute("role","link"); b.tabIndex=0; b.title="Show the milestones"; } }
     if(v.classList.contains("bad")&&!l.querySelector(".evi")){ b.classList.add("alert"); addHTML(l,"afterbegin",raw(ic("alert",{cls:"evi",bare:true}))); } }); }
 /* ===== end BL-185 ===== */

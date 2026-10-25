@@ -722,11 +722,11 @@ tr.click{cursor:pointer} tr.click:hover td{background:var(--bg)}
 tr.sel td{background:var(--accent-soft)!important}
 /* ===== BL-122 (sprint-polish) ===== a highlighted row has an edge bar and a tick as well as a tint, so colour is never the only cue; it is
    drawn differently from the open record (.sel), and both can show at once. The cursor has a dotted outline. */
-tr.hl td{background:color-mix(in srgb,var(--accent) 16%,var(--surface))} tr.hl td:first-child{box-shadow:inset 4px 0 0 var(--accent)}
+tr.hl td{background:color-mix(in srgb,var(--accent) 16%,var(--surface))} tr.hl td{box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
 tr.hl td.title::before,.bcard.hl .bct::before{content:"✓ ";font-weight:700;color:var(--accent)}
 tr.sel.hl td{background:color-mix(in srgb,var(--accent) 28%,var(--surface))!important}
-tr.cur{outline:2px dotted var(--accent);outline-offset:-2px} .bcard.hl{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)} .bcard.cur{outline:2px dotted var(--accent);outline-offset:2px}
-#reviewBody tr.hl td{background:color-mix(in srgb,var(--accent) 16%,var(--surface))} #reviewBody tr.hl td:first-child{box-shadow:inset 4px 0 0 var(--accent)}
+tr.cur{outline:2px dotted var(--accent);outline-offset:-2px} .bcard.hl{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)} .bcard.cur{outline:2px dotted var(--accent);outline-offset:2px}
+#reviewBody tr.hl td{background:color-mix(in srgb,var(--accent) 16%,var(--surface))} #reviewBody tr.hl td{box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
 #reviewBody tr.hl td.title::before{content:"✓ ";font-weight:700;color:var(--accent)}
 /* ===== BL-124 (sprint-polish) ===== */
 .wbulk{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:8px 0;padding:8px 12px;border:1px solid var(--accent);border-radius:var(--r-md);background:color-mix(in srgb,var(--accent) 8%,var(--surface))} .wbulk[hidden]{display:none}
@@ -754,7 +754,7 @@ td.editing select.celist{position:fixed;z-index:var(--z-pop);height:auto;padding
 .curcard p{margin:0 0 8px}.curcard ul,.curcard ol,.rted ul,.rted ol{margin:0 0 8px;padding-left:24px}
 .curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px}
 /* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
-.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
 .curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
@@ -791,9 +791,9 @@ td.editing select.celist{position:fixed;z-index:var(--z-pop);height:auto;padding
 .gensrc{margin-top:10px;font-size:var(--fs-sm);color:var(--muted)} .gensrc summary{cursor:pointer}
 /* ===== Executive Current state (BL-106) ===== */
 .gennotes{margin-top:8px;font-size:var(--fs-sm);color:var(--muted)} .gennotes ul,.genrewrite .rwnotes{margin:4px 0 6px;padding-left:16px} .gennotes li,.genrewrite .rwnotes li{color:var(--warn)} .oknote{color:var(--ok)}
-.genrewrite{margin-top:10px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md)} .genrewrite .rwhead{margin-bottom:6px} .genrewrite .rwbody{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 10px;margin-bottom:6px}
+.genrewrite{margin-top:10px;border:1px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md)} .genrewrite .rwhead{margin-bottom:6px} .genrewrite .rwbody{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 10px;margin-bottom:6px}
 .gensrc .factblk ul{margin:2px 0 6px;padding-left:16px}
-.evidence{grid-column:1/-1;font-size:var(--fs-sm);color:var(--muted);padding:8px 10px;border-radius:var(--r-md);background:var(--sunk)} .evidence.warn{color:var(--ink);border-left:3px solid var(--warn)}
+.evidence{grid-column:1/-1;font-size:var(--fs-sm);color:var(--muted);padding:8px 10px;border-radius:var(--r-md);background:var(--sunk)} .evidence.warn{color:var(--ink);border:1px solid var(--warn)}
 .dropzone{border:2px dashed var(--line);border-radius:var(--r-lg);padding:24px;text-align:center;color:var(--muted);cursor:pointer} .dropzone.over,.dropzone:focus-visible{border-color:var(--ink);color:var(--ink);background:var(--sunk)}
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
 .rte{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)} .rte:focus-within{border-color:var(--accent,var(--ink))}
@@ -909,7 +909,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .rgroup{margin:16px 0 6px;display:flex;align-items:center;gap:10px}
 .why{font-size:var(--fs-xs);color:var(--muted)} .why.rvmeta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}   /* #229: one meta line */ .indiv{font-size:var(--fs-xs);color:var(--warn)}
 .rvnote{font-size:var(--fs-xs);color:var(--muted)}
-.cock{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
+.cock{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px;align-items:start}   /* #341 item 12: the right column (risks, decisions, warnings) gets two fifths, not a third */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px} .card h2{margin-bottom:8px}
 .hhead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:6px 0 16px}
 .evrow{display:flex;gap:16px;flex-wrap:wrap} .evbox{min-width:120px} .evbox .v{font:500 var(--fs-xl)/26px var(--font)} .evbox .v.bad{color:var(--bad)} .evbox .l{font-size:var(--fs-xs);color:var(--muted)}
@@ -1009,7 +1009,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 :is(.msg.md,.mdv)>:first-child{margin-top:0} :is(.msg.md,.mdv)>:last-child{margin-bottom:0}
 :is(.msg.md,.mdv) p{margin:0 0 .6em} :is(.msg.md,.mdv) ul,:is(.msg.md,.mdv) ol{margin:.2em 0 .6em;padding-left:1.4em} :is(.msg.md,.mdv) li{margin:.15em 0} :is(.msg.md,.mdv) li>p{margin:0} :is(.msg.md,.mdv) li>ul,:is(.msg.md,.mdv) li>ol{margin:.15em 0 .15em}
 :is(.msg.md,.mdv) .mdh{font-weight:700;margin:.7em 0 .3em} :is(.msg.md,.mdv) .mdh1{font-size:var(--fs-lg)} :is(.msg.md,.mdv) .mdh2{font-size:var(--fs-md)} :is(.msg.md,.mdv) .mdh3{font-size:var(--fs-sm)}
-:is(.msg.md,.mdv) blockquote{margin:.4em 0 .6em;padding:2px 0 2px 10px;border-left:3px solid var(--accent);color:var(--muted)}
+:is(.msg.md,.mdv) blockquote{margin:.4em 0 .6em;padding:2px 0 2px 10px;color:var(--muted)}
 :is(.msg.md,.mdv) hr{border:0;border-top:1px solid var(--line);margin:.7em 0}
 :is(.msg.md,.mdv) code{font:var(--fs-xs)/1.4 ui-monospace,Menlo,monospace;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:0 4px;overflow-wrap:anywhere}
 .mdcode{position:relative;margin:.4em 0 .6em} .mdcode pre{margin:0;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow-x:auto;white-space:pre} .mdcode pre code{background:none;border:0;padding:0;overflow-wrap:normal}
@@ -1021,8 +1021,9 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .step{align-self:flex-start;font-size:var(--fs-xs);color:var(--muted);display:flex;gap:6px;align-items:center}
 /* ===== BL-201 (sprint-chat-text) ===== */ .step.refused{flex-direction:column;align-items:flex-start;gap:2px;max-width:100%} .step.refused .rfline{display:flex;gap:6px;align-items:baseline;line-height:var(--lh-body)}
 .step.refused .rfwarn{color:var(--warn,#B54708)} .step.refused .rfraw summary{cursor:pointer;color:var(--faint);font-size:var(--fs-xs)} .step.refused .rfraw code{display:block;margin-top:4px;padding:6px 8px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-xs);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
-/* ===== BL-314 (v1.9.1) ===== */ .msg.a.cant p{margin:0 0 6px} .msg.a.cant{border-left:3px solid var(--warn,#B54708)} .step.checked{color:var(--faint);font-size:var(--fs-xs)}
+/* ===== BL-314 (v1.9.1) ===== */ .msg.a.cant p{margin:0 0 6px} .msg.a.cant{border:1px solid var(--warn,#B54708)} .step.checked{color:var(--faint);font-size:var(--fs-xs)}
 .step.working .quip{font-style:italic}
+.step.working .mcline{color:var(--muted)} .rbl{min-width:0}   /* #358: the mail check's true line, in place of the quip */
 .step.steps details summary{cursor:pointer;list-style:none;display:inline-flex;gap:4px;align-items:center} .step.steps details summary::-webkit-details-marker{display:none}
 .step.steps details summary::after{content:"›";transition:transform .15s} .step.steps details[open] summary::after{transform:rotate(90deg)}
 .step.steps ul{margin:4px 0 2px;padding-left:16px;font:var(--fs-xs)/1.5 ui-monospace,Menlo,monospace;color:var(--faint)}
@@ -1197,10 +1198,10 @@ dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);
 /* Transcripts in Calendar import (BL-42 phase 3, BL-104): a transcript that exists and isn't processed gets a tint, an accent bar and a
    Transcript badge; the others are muted. The tint is built from each theme's own accent and surface, light and dark. */
 :root{--tx-tint:color-mix(in srgb,var(--accent) 11%,var(--surface))}
-.mtgchips{display:flex;gap:6px;margin:0 0 10px} .mtgtbl tr.mtgtx td{background:var(--tx-tint)} .mtgtbl tr.mtgtx td:first-child{box-shadow:inset 4px 0 0 var(--accent)}
+.mtgchips{display:flex;gap:6px;margin:0 0 10px} .mtgtbl tr.mtgtx td{background:var(--tx-tint)} .mtgtbl tr.mtgtx td{box-shadow:inset 0 1px 0 var(--accent),inset 0 -1px 0 var(--accent)}
 .txbadge{display:inline-block;font-size:var(--fs-xs);font-weight:600;padding:1px 6px;border:1px solid var(--accent);border-radius:var(--r-sm);color:var(--ink);background:var(--surface);margin-right:4px}
 .mtgtbl tr.mtgmute td{color:var(--muted)} .mtgtbl tr.mtgmute .title{color:var(--muted)} .mtgtbl tr.mtgdone td{opacity:.75}
-.mtgtbl tr.mtgtx:has(input:checked) td{background:color-mix(in srgb,var(--accent) 22%,var(--surface))} .mtgtbl tr.mtgtx:has(input:checked) td:first-child{box-shadow:inset 6px 0 0 var(--accent)}
+.mtgtbl tr.mtgtx:has(input:checked) td{background:color-mix(in srgb,var(--accent) 22%,var(--surface))} .mtgtbl tr.mtgtx:has(input:checked) td{box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
 .mtgtbl tr:has(input:checked):not(.mtgtx) td{background:var(--sunk)}
 .mtgyes{font-weight:500;color:var(--ink)} .mtgwhen{font-size:var(--fs-xs);min-height:0} .mtgchk{font-size:var(--fs-xs)}
 /* Clear day (BL-104) */
@@ -1412,7 +1413,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hp-job{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border:1px solid var(--hp-hair);background:var(--hp-paper);border-radius:var(--r-md);text-decoration:none;color:var(--hp-ink)}
 .hp-job:hover,.hp-job:focus-visible{border-color:var(--hp-teal)}
 .hp-job b{font:700 var(--fs-lg) var(--hp-display)} .hp-job span{color:var(--hp-soft);font-size:var(--fs-md)}
-.hp-new{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--hp-hair);border-left:3px solid var(--hp-green);background:var(--hp-paper);border-radius:var(--r-md);padding:12px 16px}
+.hp-new{display:flex;gap:14px;align-items:flex-start;border:1px solid var(--hp-green);background:var(--hp-paper);border-radius:var(--r-md);padding:12px 16px}
 .hp-ver{font:700 var(--fs-sm) var(--hp-mono);color:var(--hp-green);background:var(--hp-green-soft);border-radius:6px;padding:2px 7px;white-space:nowrap}
 .hp-newbody h2{font:700 var(--fs-lg) var(--hp-display);margin:0 0 6px} .hp-newbody p{margin:0 0 6px} .hp-newbody ul{margin:0;padding-left:20px}
 .hp-whatsnew{gap:12px}
@@ -1423,7 +1424,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hpn-jobs a{display:block;padding:8px 0;border-bottom:1px solid var(--line);color:var(--accent);text-decoration:none} .hpn-jobs a b{display:block}
 .hpn-jobs a span{display:block;color:var(--muted);font-size:var(--fs-sm)}
 .hpn-f{display:flex;flex-direction:column;gap:6px;margin-top:8px} .hpn-f a{color:var(--accent)}
-.hfirst{max-width:720px;margin:0 0 12px;padding:7px 12px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--accent-soft);font-size:var(--fs-md);color:var(--ink)}
+.hfirst{max-width:720px;margin:0 0 12px;padding:7px 12px;border:1px solid var(--accent);border-radius:var(--r-md);background:var(--accent-soft);font-size:var(--fs-md);color:var(--ink)}
 .hfirst[hidden],.hfoot[hidden]{display:none}
 html[data-single-keys="off"] .hfirst,html[data-single-keys="off"] .hfoot{display:none}   /* #298: the "Press ?" lines advertise a single key */
 .hfirst.ghost{visibility:hidden}   /* cleared: the slot stays, so nothing moves; not announced */
@@ -1447,7 +1448,7 @@ ol.bl>li.vipl .t{font-weight:600}
 /* BL-288, BL-296: Today's "Messages to see first", and the strip at the top of a peek made from a message */
 .seefirst{margin:0 0 6px} .seefirst .th3{font:600 var(--fs-xs)/18px var(--font);letter-spacing:.04em;color:var(--muted);margin:0 0 2px}
 ol.bl>li.vipl .vipend button{min-height:24px}
-.pk-alert{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);padding:8px 10px;margin:4px 0 10px;font-size:var(--fs-sm);display:grid;gap:8px}
+.pk-alert{border:1px solid var(--accent);border-radius:var(--r-md);padding:8px 10px;margin:4px 0 10px;font-size:var(--fs-sm);display:grid;gap:8px}
 .pk-alert[hidden]{display:none} .pk-alert-from{color:var(--muted);overflow-wrap:anywhere}
 .pk-alert-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px} .pk-alert-row .sp{flex:1}
 .pk-alert-types{display:inline-flex;flex-wrap:wrap;gap:4px} .pk-alert-types [aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
@@ -1507,7 +1508,7 @@ ol.bl>li.vipl .vipend{display:flex;gap:6px;align-items:flex-start;flex:none}
 .flfoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px;margin-top:12px;font-size:var(--fs-sm)} .flfoot b{font-weight:500}
 /* BL-90: Dependencies */
 .depg+.depg{margin-top:10px} .depgh{font-weight:500;display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px} .deprow{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0 4px 16px} .deprow .dept{flex:1;min-width:14ch} .deprow .depid{min-width:7.5ch}
-.depwarn{display:flex;gap:6px;width:100%;font-size:var(--fs-xs);color:var(--warn);padding-left:7.5ch} .msrow.atrisk{border-left:3px solid var(--warn);padding-left:8px} .tag.waiting{white-space:nowrap}
+.depwarn{display:flex;gap:6px;width:100%;font-size:var(--fs-xs);color:var(--warn);padding-left:7.5ch} .msrow.atrisk{background:var(--warn-soft);border-radius:var(--r-md);padding:4px 8px} .tag.waiting{white-space:nowrap}
 .depchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px} .chipbtn{border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:var(--r-pill);padding:4px 10px;font:500 var(--fs-xs)/16px var(--font);cursor:pointer} .chipbtn:hover{box-shadow:0 0 0 2px var(--accent)} .chipbtn.quiet{border-color:var(--line);background:var(--surface);color:var(--muted)}
 /* ===== end Dashboard pages (CSS) ===== */
 /* ===== BL-141 (sprint-admin): the one approval card ===== */
@@ -1610,12 +1611,12 @@ dialog[open]::backdrop{opacity:1;transition:opacity var(--d3) var(--out),overlay
 /* 12. Review: the decided row's tinted copy closes up (mRowGone); the rows below glide up */
 .mrowghost{position:fixed;z-index:var(--z-local);pointer-events:none;box-sizing:border-box;display:flex;align-items:center;padding:0 12px;overflow:hidden;font-size:var(--fs-sm);white-space:nowrap;color:var(--ink);transform-origin:top}
 .mrowghost::before{content:attr(data-t);overflow:hidden;text-overflow:ellipsis}
-.mrowghost.ok{background:var(--ok-soft);box-shadow:inset 3px 0 0 var(--ok)} .mrowghost.no{background:var(--bad-soft);box-shadow:inset 3px 0 0 var(--bad)}
+.mrowghost.ok{background:var(--ok-soft);box-shadow:inset 0 0 0 1px var(--ok)} .mrowghost.no{background:var(--bad-soft);box-shadow:inset 0 0 0 1px var(--bad)}
 /* 33. Board drag: the dragged copy lifts; a column that can take the drop gets a wash and an accent edge (one that can't, doesn't) */
 .bghost{animation:mlift var(--d1) var(--out) both}
 @keyframes mlift{from{scale:1}to{scale:1.03}}
 :root[data-reduced] .bghost{animation:none}
-.bcol.drop{background:color-mix(in srgb,var(--accent) 8%,var(--surface));box-shadow:inset 3px 0 0 var(--accent);transition:background-color var(--d1),box-shadow var(--d1)}
+.bcol.drop{background:color-mix(in srgb,var(--accent) 8%,var(--surface));box-shadow:inset 0 0 0 2px var(--accent);transition:background-color var(--d1),box-shadow var(--d1)}
 /* 34. Review cleared: one circle and tick drawn, the summary rising 4px, once per clearing */
 .mclear{display:block;width:44px;height:44px;margin:0 auto 10px;fill:none;stroke:var(--ok);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .mclear circle{stroke-dasharray:126;stroke-dashoffset:0;animation:mcdraw calc(500ms*var(--k)) var(--out) both}
@@ -1648,7 +1649,7 @@ dialog[open]::backdrop{opacity:1;transition:opacity var(--d3) var(--out),overlay
 tr.mland td,.mland{animation:mland calc(2800ms*var(--k)) var(--out) both}
 tr.mland td:first-child{animation-name:mlandedge}
 @keyframes mland{0%,36%{background-color:color-mix(in srgb,var(--accent) 18%,var(--surface))}100%{background-color:transparent}}
-@keyframes mlandedge{0%,36%{background-color:color-mix(in srgb,var(--accent) 18%,var(--surface));box-shadow:inset 3px 0 0 var(--accent)}100%{background-color:transparent;box-shadow:inset 3px 0 0 transparent}}
+@keyframes mlandedge{0%,36%{background-color:color-mix(in srgb,var(--accent) 18%,var(--surface));box-shadow:inset 0 0 0 2px var(--accent)}100%{background-color:transparent;box-shadow:inset 0 0 0 2px transparent}}
 /* 32. Banners: the live-server alert and a new VIP alert ease in (after the page has loaded, never one already showing) */
 :root.mready .livealert.on{transition:opacity var(--d2) var(--out),transform var(--d2) var(--out)}
 @starting-style{:root.mready .livealert.on{opacity:0;transform:translateY(-4px)}}
@@ -1659,7 +1660,7 @@ tr.mland td:first-child{animation-name:mlandedge}
 #v-today .th .cnt,.evbox .v{font-variant-numeric:tabular-nums}
 /* 22. a changed value: a 3px accent edge and a soft wash that fade over 1.4s (colour is not the only cue: the edge marks it) */
 .mflash{animation:mflash calc(1400ms*var(--k)) var(--out)}
-@keyframes mflash{0%{background-color:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:inset 3px 0 0 var(--accent)}100%{background-color:transparent;box-shadow:inset 3px 0 0 transparent}}
+@keyframes mflash{0%{background-color:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:inset 0 0 0 2px var(--accent)}100%{background-color:transparent;box-shadow:inset 0 0 0 2px transparent}}
 /* 23. a project's health changed: one soft ring leaves its icon, once */
 .health.mhchg{position:relative} .health.mhchg::before{content:"";position:absolute;left:0;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;border:2px solid currentColor;opacity:0;animation:mringout calc(900ms*var(--k)) var(--out)}
 @keyframes mringout{0%{opacity:.7;transform:scale(1)}100%{opacity:0;transform:scale(2.6)}}
@@ -2292,7 +2293,7 @@ body:has(#panel.pkprop.on) .snack,body:has(#panel.pkprop.on) .pkstage{bottom:76p
 .pk-type.empty{color:var(--faint)}
 .pk-src-l[hidden],.pk-srcin[hidden]{display:none}
 .pkbad{box-shadow:0 0 0 2px var(--bad)!important;border-radius:var(--r-md)}
-.pk-ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;border:1px solid var(--line);background:var(--surface);border-left:3px solid var(--warn);border-radius:var(--r-md);padding:10px 12px;margin:4px 0 10px;font-size:var(--fs-sm)}
+.pk-ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;border:1px solid var(--line);background:var(--surface);border-color:var(--warn);border-radius:var(--r-md);padding:10px 12px;margin:4px 0 10px;font-size:var(--fs-sm)}
 .pk-ask[hidden]{display:none} .pk-ask .t{flex:1 1 100%} .pk-ask .btn{padding:4px 12px;font-size:var(--fs-xs)}
 #pkScroll>.pdraft{margin:4px 0 10px}
 /* ===== end BL-179 (CSS) ===== */
@@ -2429,6 +2430,9 @@ svg .flk text{text-decoration:underline dotted}
 .mv-seg button{border:0;background:none;height:34px;padding:0 16px;cursor:pointer;font:inherit;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
 .mv-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)} .mv-seg button[aria-pressed="true"] .mv-tag{background:color-mix(in srgb,var(--surface) 22%,transparent);color:inherit}
 .mv-seg button[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+/* #341 item 9: the audience switch is quieter than the Plan/Movement switch: smaller, no dark fill, the chosen side marked by a soft fill and weight */
+.mv-seg.aud{border-radius:var(--r-md);background:none} .mv-seg.aud button{height:var(--ctl-h-sm);padding:0 12px;font-size:var(--fs-xs);color:var(--muted)}
+.mv-seg.aud button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600}
 .mv-seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .mv-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px}
 .mv-box h3{margin:0 0 2px;font-size:var(--fs-md);font-weight:600}
@@ -2511,7 +2515,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .mv-ttl:hover{background:var(--sunk)} .mv-ttl:focus{background:var(--sunk);outline:2px solid var(--focus)}
 .mv-pksec{margin:16px 0 0;padding-top:14px;border-top:1px solid var(--line)}
 .mv-pksec h4{margin:0 0 6px;font-size:var(--fs-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.mv-explain{font-size:var(--fs-sm);background:var(--sunk);border-radius:var(--r-md);padding:8px 10px;margin:10px 0 0} .mv-explain.warn{border-left:3px solid var(--warn)} .mv-explain button{margin-left:6px}
+.mv-explain{font-size:var(--fs-sm);background:var(--sunk);border-radius:var(--r-md);padding:8px 10px;margin:10px 0 0} .mv-explain.warn{border:1px solid var(--warn)} .mv-explain button{margin-left:6px}
 .mv-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:640px){.mv-row2{grid-template-columns:1fr}}
 .mv-inl{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:8px;padding:10px;background:var(--sunk);border-radius:var(--r-md)}
@@ -2534,7 +2538,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drbtn[aria-disabled="true"]{color:var(--faint);cursor:default;background:var(--surface)}
 /* BL-290: a switched-off draft greys its controls, never hides them: Generate's other forms, Draft email's tone chips */
 .detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
-.drcard{margin:8px 0 4px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md);color:var(--ink)}
+.drcard{margin:8px 0 4px;border:1px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md);color:var(--ink)}
 .drhead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px} .drhead svg{width:16px;height:16px;color:var(--accent);flex:none} .drhead .sub{font-size:var(--fs-xs)}
 .drtext{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;white-space:pre-wrap;line-height:var(--lh-body)}
 .drref{font-size:var(--fs-2xs);color:var(--accent);margin-left:2px;cursor:default} .drloose{background:var(--warn-soft);color:var(--ink);border-radius:var(--r-sm);padding:0 2px}
@@ -2598,7 +2602,7 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evbar .sp{flex:1} .evbar strong{font-size:var(--fs-lg)}
 .evint{font-size:var(--fs-xs);font-weight:600;padding:1px 8px;border-radius:var(--r-md);background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
 .evbody{flex:1;overflow:auto;padding:6px 16px 24px}
-.evsent{margin:12px 0;padding:8px 12px;border-left:3px solid var(--line-strong);background:var(--sunk);border-radius:0 var(--r-md) var(--r-md) 0}
+.evsent{margin:12px 0;padding:8px 12px;background:var(--sunk);border-radius:var(--r-md)}
 .evstate{margin:6px 0 10px;font-size:var(--fs-sm)}
 .evstate.none{color:var(--bad)}
 .evfact{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line)}
@@ -2607,7 +2611,7 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 /* #343: the cockpit's health numbers share the row in equal columns, so "Early warnings" is not left alone on a second line at 900 px */
 #v-cockpit .evrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px 16px} #v-cockpit .evrow .evbox{min-width:0}
 .evrow .hlink{font-weight:600}
-.evq{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--r-md) var(--r-md) 0;font-size:var(--fs-sm)}
+.evq{margin:6px 0 0;padding:6px 10px;background:var(--accent-soft);border-radius:var(--r-md);font-size:var(--fs-sm)}
 .evqsrc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;word-break:break-word}
 .evfoot{border-top:1px solid var(--line);padding:10px 16px;font-size:var(--fs-sm)}
 .evkeep{display:flex;gap:6px;margin-top:8px} .evkeep input{flex:1;min-width:0}
@@ -2671,7 +2675,7 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .rfrow .rfk{min-width:120px;color:var(--muted)}
 .rfrow.guess .rfv{text-decoration:underline dashed var(--warn);text-decoration-thickness:2px;text-underline-offset:3px}
 .rfrow .rfwhy{flex-basis:100%;font-size:var(--fs-xs);color:var(--warn)}
-.rfsrc{border-left:3px solid var(--line-strong);padding-left:12px;font-size:var(--fs-sm)} .rfsrc h3{margin:0 0 6px;font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.rfsrc{padding-left:12px;font-size:var(--fs-sm)} .rfsrc h3{margin:0 0 6px;font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .rfacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px} .rfacts kbd{font:inherit;font-size:var(--fs-xs);border:1px solid var(--line);border-radius:var(--r-sm);padding:0 4px;margin-right:4px}
 /* ===== sprint-drafts-extraction (BL-221, BL-218, BL-220, BL-233) ===== */
 .llacts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -2694,7 +2698,7 @@ dialog.lldlg{width:min(760px,calc(100vw - 32px))} .lltab{width:100%;border-colla
 .ucard .l{font-size:var(--fs-sm);color:var(--muted)} .ucard .d{font-size:var(--fs-xs);margin-top:4px;color:var(--muted)} .ucard .d.up{color:var(--warn)} .ucard .d.dn{color:var(--ok)}
 .uchart{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);padding:12px 14px;margin:12px 0} .uchart h2{margin:0 0 6px!important} .uchart .sub{margin:6px 0 0}
 .uchart svg{width:100%;height:150px;display:block} .uax{font-size:var(--fs-xs);fill:var(--muted)} .uaxl{fill:var(--warn)} .ugrid{stroke:var(--line)}
-.ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
+.ubar{fill:var(--accent);opacity:.85} .uline{stroke:var(--warn);stroke-width:2} .unote{margin:8px 0;padding:8px 12px;background:var(--accent-soft);border-radius:var(--r-sm);font-size:var(--fs-sm)}
 .ubudget{margin:0 0 14px} .ubar-track{height:10px;border-radius:var(--r-sm);background:var(--bg-sunk,var(--accent-soft));overflow:hidden} .ubar-fill{height:100%;background:var(--ok)}
 .ubudget.warn .ubar-fill{background:var(--warn)} .ubudget.over .ubar-fill{background:var(--bad)}
 #actUsage .qtab td:not(:first-child),#actUsage .qtab th:not(:first-child){white-space:nowrap}
@@ -3025,7 +3029,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .pp h3{font-size:var(--fs-sm);font-weight:600;margin:12px 0 4px}
 .pp section:focus{outline:none}
 .ppnew{margin:0;padding:10px 14px;border:1px dashed var(--line-strong);border-radius:var(--r-md);background:var(--sunk);font-size:var(--fs-sm)}
-.ppfocus{border-left:4px solid var(--spark);background:color-mix(in srgb,var(--spark) 9%,var(--surface));border-radius:var(--r-md);padding:12px 16px;min-width:0}
+.ppfocus{border:1px solid var(--spark);background:color-mix(in srgb,var(--spark) 9%,var(--surface));border-radius:var(--r-md);padding:12px 16px;min-width:0}
 .ppfocus h2{color:var(--ink)} .ppfocus h2 .i{color:var(--spark)}
 .ppaim{margin:0 0 8px;font-size:var(--fs-sm)}
 .ppnotes{display:grid;gap:10px}
@@ -3404,7 +3408,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .fu-list{list-style:none;margin:0;padding:0}
 .fu-r{display:grid;grid-template-columns:24px 20px minmax(0,1fr);gap:6px;padding:7px 12px;border-top:1px solid var(--line);align-items:start}
 .fu-r.hl{background:var(--accent-soft)}
-.fu-r.bad{box-shadow:inset 3px 0 0 var(--bad)}
+.fu-r.bad{box-shadow:inset 0 0 0 1px var(--bad)}
 .fu-tick{width:24px;height:24px;margin:0;accent-color:var(--accent)}
 .fu-mk,[data-fu-mk]::before{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:var(--fs-2xs);font-weight:600;font-variant-numeric:tabular-nums;margin-top:3px}
 [data-fu-mk]::before{content:attr(data-fu-mk);margin:0 6px 0 0;vertical-align:1px}
@@ -3452,7 +3456,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .aispark:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 @keyframes aispin{from{opacity:0;transform:translateX(4px)}}
 @media (forced-colors:active){.aispark,.aibar,.aibar .aiai{border:1px solid CanvasText;forced-color-adjust:auto} .aispark[aria-expanded=true]{border-color:Highlight}}
-.aisug{position:fixed;z-index:var(--z-toast);width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);box-shadow:var(--shadow-pop);padding:10px 12px;font-size:var(--fs-md)}
+.aisug{position:fixed;z-index:var(--z-toast);width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--accent);border-radius:var(--r-md);box-shadow:var(--shadow-pop);padding:10px 12px;font-size:var(--fs-md)}
 .aisug .aisughd{display:flex;align-items:center;gap:6px;margin-bottom:4px} .aisug .aisughd .i{color:var(--accent)}
 .aisug .aitext{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:var(--lh-body);margin:6px 0}
 .aisug .aidel{color:var(--bad-ink);background:color-mix(in srgb,var(--bad) 14%,transparent);text-decoration:line-through}
@@ -3645,7 +3649,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mntrk button.y[aria-pressed="true"]{color:var(--ok)} .mntrk button.n[aria-pressed="true"]{color:var(--bad)}
 .mntrk button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 .mntrw{font-size:var(--fs-xs);font-weight:600;color:var(--muted);padding-left:2px;white-space:nowrap} .mntrw.y{color:var(--ok)} .mntrw.n{color:var(--bad)}
-.page tr.mi[data-trk="y"] td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+.page tr.mi[data-trk="y"] td{background:var(--ok-soft)}
 .page tr.mi[data-trk="n"]{opacity:.55} .page tr.mi[data-trk="n"] .mnit{text-decoration:line-through;color:var(--muted)}
 .page tr.mi.hl td{background:var(--accent-soft)}
 .mnit{min-width:0;border-radius:var(--r-sm)} .mnit .sheet-ed{min-height:26px;padding:2px 4px;margin:0 -4px;border-radius:var(--r-sm);cursor:text}
@@ -3671,7 +3675,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .page tr.mi[hidden]{display:none}
 .page tr.mi.kc{outline:2px solid var(--accent);outline-offset:-2px}
 .mnsum-ed .sheet-ed{border-radius:var(--r-sm);padding:2px 4px;margin:0 -4px} .mnsum-ed .sheet-ed:hover{background:var(--sunk)}
-.mnturns li.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mnturns li.hl{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
 .sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
 .mncov-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline} .mncov-h h2{border:0!important;margin:0!important}
 .mncov-l,.mncov-ms{list-style:none;margin:6px 0 0;padding:0}
@@ -3685,7 +3689,7 @@ button.nchip{font:inherit;font-size:var(--fs-xs)}
 .mnpane-q{padding:8px 12px;display:flex;gap:8px;align-items:center} .mnpane-q input{margin:0;flex:1;min-width:0}
 .mnturns{list-style:none;margin:0;padding:0 12px 24px;overflow:auto;flex:1;min-height:0;position:relative}
 .mnturns li{padding:6px 8px;border-radius:6px;margin:0 0 2px;font-size:var(--fs-sm);line-height:1.45}
-.mnturns li.on{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mnturns li.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
 .mnturns li.dim{opacity:.5}
 .mnwho{display:block;font-weight:600;font-size:var(--fs-xs)} .mntime{font-weight:400;color:var(--muted);font-family:var(--mono,monospace)}
 .mnturns mark{background:var(--warn-soft);color:inherit}
@@ -4191,17 +4195,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 /* ===== #232 Intake and Review, one page (v2.5.0; components/intakeReview/). From the locked mockup (18-10-2026b): the app's
    tokens only, no new colours, so light, dark and both palettes follow. Scoped to #v-intake-review. ===== */
 #v-intake-review .icpipe{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
-#v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{outline:2px solid var(--accent)}
+#v-intake-review .icpipe .evbox{cursor:pointer;min-width:160px}#v-intake-review .icpipe .evbox[aria-pressed=true]{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}   /* #341 item 7: one selected look in Intake: the soft fill and the 2 px accent line (a row: above and below) */
 #v-intake-review .icpipe .ar{align-self:center;color:var(--muted)}
 #v-intake-review .icsub{font-size:var(--fs-xs);color:var(--muted)}
 #v-intake-review .icboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}#v-intake-review .iccol h2{font-size:var(--fs-md);margin:0 0 8px}
 #v-intake-review .iccard{padding:10px 12px;margin:0 0 8px}#v-intake-review .iccard .t{font-weight:600}
 #v-intake-review .icsplit{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:16px;margin:12px 0;align-items:start}#v-intake-review .icdet{padding:14px 16px}
 /* #325 Intake: a meeting's state chip, and the work items nested under their minutes */
-#v-intake-review .irchip{display:inline-flex;align-items:center;gap:6px;padding:1px 10px 1px 8px;border-left:3px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk);color:var(--ink);font-size:var(--fs-xs);font-weight:500;vertical-align:middle}
+#v-intake-review .irchip{display:inline-flex;align-items:center;gap:6px;padding:1px 10px 1px 8px;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--sunk);color:var(--ink);font-size:var(--fs-xs);font-weight:500;vertical-align:middle}
 #v-intake-review .irchip .i{width:14px;height:14px;flex:none}
-#v-intake-review .irchip.check{border-left-color:var(--accent);background:var(--accent-soft)}
-#v-intake-review .irchip.done{border-left-color:var(--ok);background:var(--ok-soft)}
+#v-intake-review .irchip.check{border-color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .irchip.done{border-color:var(--ok);background:var(--ok-soft)}
 #v-intake-review tr.mchild.irkid td.title{padding-left:48px} #v-intake-review tr.mchild.irkid td.title::before{left:32px}
 #v-intake-review tr.icsubhead.child.irkid td{padding-left:48px}
 #v-intake-review .irkidsbar{margin-top:4px;font-size:var(--fs-xs)} #v-intake-review .irkidscaret{display:inline-block;width:1em}
@@ -4215,8 +4219,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
 #v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
 #v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:var(--fs-md);font-weight:600}
-#v-intake-review tr.icopen td{background:var(--accent-soft)!important;border-top:2px solid var(--accent)}
-#v-intake-review tr.mchild td:first-child,#v-intake-review tr.icsubhead.child td:first-child{box-shadow:inset 5px 0 0 var(--accent)}#v-intake-review tr.mchild td.title{padding-left:20px}
+#v-intake-review tr.icopen td,#v-intake-review tr.hl td,#v-intake-review tr.sel td{background:var(--accent-soft)!important;box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
+#v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
 /* #232 (v2.6): Intake never scrolls sideways, at 900 as at 1440 (the old Upload files table needed 809px in a 731px frame). As #271 did
@@ -4244,10 +4248,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* ===== #232-B Intake and Review: the proposal rows (v2.5.0). The locked mockup's classes, the app's tokens only. ===== */
 #v-intake-review tr.irprop td.title{padding-top:10px;padding-bottom:10px}
-#v-intake-review .icchg{font-size:var(--fs-lg);line-height:var(--lh-22);font-weight:600;color:var(--ink);margin:2px 0}
+#v-intake-review .icchg{font-size:var(--fs-md);line-height:var(--lh-22);font-weight:600;   /* #341 item 2 (Alan, 24-10-2026): 14 px like the title; emphasis by weight, not size */ color:var(--ink);margin:2px 0}
 #v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
 #v-intake-review .icchg .icsrc{font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
-#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);border-left:3px solid var(--accent);padding-left:10px;margin:4px 0}
+#v-intake-review .icsrc{display:flex;align-items:baseline;justify-content:space-between;gap:12px} #v-intake-review .icsrc .srclink{flex:none;margin-left:auto}   /* #341: the link at the right edge, the text keeps the left */
+#v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);padding-left:10px;margin:4px 0}
 #v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 #v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
 /* #232-B (release 2.6): an update proposal in the peek shows the whole item with the changed fields highlighted (the locked mockup's .chg, .updiff and a pending activity line) */
@@ -4270,6 +4275,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #askBtn[data-st=done] .asklife,#askBtn[data-st=stopped] .asklife{display:block;animation:asklife var(--life,30s) linear forwards}
 #askBtn[data-st=stopped] .asklife{background:var(--muted)}
 @keyframes asklife{to{transform:scaleX(0)}}
+#vsAskBtn .asklab{display:inline}   /* #341 item 14: the search's ask button says what it is */
 .asklab{display:none;margin:0 6px 0 6px;font-weight:600}   /* the right margin keeps the last letter clear of the mark */ #askBtn[data-st] .asklab{display:inline}
 #askBtn[data-st=done]{border-color:var(--ok)} #askBtn[data-st=failed]{border-color:var(--bad)}
 :root[data-reduced] #askBtn .asklife,:root[data-motion="reduce"] #askBtn .asklife{animation:none}   /* the line holds still; the 30 s timer still hides it */
@@ -4308,7 +4314,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people .plintro{margin:4px 0 14px}
 #v-people #peopleTbl td{vertical-align:middle}
 #v-people #peopleTbl th:not(.num){text-align:left}
-#v-people #peopleTbl tr.nr td:first-child{box-shadow:inset 2px 0 0 var(--warn)}
+
 #v-people #peopleTbl td.title{white-space:nowrap}
 #v-people #peopleTbl .pj a{color:var(--accent);white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:nowrap;text-align:right}
@@ -4322,12 +4328,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
 #v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
-#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl :is(th,td)[data-col=org]{min-width:112px} #v-people #peopleTbl :is(th,td)[data-col=role]{min-width:92px}   /* org and role keep whole words; only an address or a project name breaks */ #v-people #peopleTbl th{white-space:normal}
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl :is(th,td)[data-col=org]{min-width:104px} #v-people #peopleTbl :is(th,td)[data-col=role]{min-width:84px}   /* #341: 16 px less in all (Organisation 104, Role 84), so the table fits its box at 900 px with room to spare on a wide fallback font (the "Risks and issues" heading is a word wider than "RAID") */   /* org and role keep whole words; only an address or a project name breaks */ #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
 @media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }
-@media (max-width:1100px){ #v-people #peopleTbl th.num{white-space:normal} #v-people #peopleTbl td.title{min-width:112px} #v-people #peopleTbl :is(th,td).num,#v-people #peopleTbl td.mgract{padding-left:5px;padding-right:5px} }   /* #343 M1: the count headings wrap by word, so Organisation and Role keep their room at 900px */   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
+@media (max-width:1100px){ #v-people #peopleTbl th.num{white-space:normal} #v-people #peopleTbl td.title{min-width:100px} #v-people #peopleTbl :is(th,td).num,#v-people #peopleTbl td.mgract{padding-left:5px;padding-right:5px} }   /* #343 M1: the count headings wrap by word, so Organisation and Role keep their room at 900px */   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
 /* #360: People's Display menu sits under its button like Work's, and its group rows are Work's */
 #v-people .toolbar>.ddisp .dispmenu{left:auto;right:0;transform-origin:top right}
 #v-people #peopleTbl tr.wgh td{cursor:pointer}   /* the email is in the person's record; the room goes to the counts */
@@ -4353,8 +4359,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 /* ===== NEW (#241 Work items v2, dev/sprints/work-items-v2-brief.md; mockup dev/mockups/work-items-v2-mockup.html): the .tg tag chip,
    the row densities .cmp (40 px) and .cmf (57 px, today's two lines), the density switch (a .seg.ico), the row's status and priority
    marks (.wkm) and the peek's client-visible switch and badge. Tokens and the app's own classes only. Row height only: no width. ===== */
-#workTbl td.title .wkm{display:inline-flex;align-items:center;gap:2px;margin-right:6px;vertical-align:-3px}
-#workTbl td.title .wkm svg{width:16px;height:16px;flex:none}
+#workTbl td.title .wkm{display:contents}   /* #341 item 6: only the screen-reader words are left */
 .tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;margin-left:6px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500;white-space:nowrap;vertical-align:1px}
 .tg svg{width:12px;height:12px;flex:none}
 .tg[data-tg=cv]{background:var(--accent-soft);color:var(--accent)}
@@ -4371,3 +4376,32 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 
 /* #356: the one line and button when Intake has nothing to decide */
 .irnext{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
+
+/* ===== #341 item 10: one link style in a People row. The name, the projects and the counts were three looks (dotted, accent, bare);
+   they are now the app's one in-table link: the text's own colour, a dotted underline, accent and solid on hover or focus. ===== */
+#v-people #peopleTbl :is(td.title a.plink2,.pj a,.pcode.plink,td.num a.cntl){color:inherit;text-decoration:underline dotted;text-underline-offset:3px}
+#v-people #peopleTbl :is(td.title a.plink2,.pj a,.pcode.plink,td.num a.cntl):is(:hover,:focus-visible){color:var(--accent);text-decoration:underline}
+
+/* ===== NEW (#341 item 1): no side tabs. A callout, a status note or a quote used to carry a thick coloured stripe on one edge; it now has
+   a full thin border (or none, for a quote) and a small icon at its start, so the kind is told by a shape and not by a colour alone.
+   Three icons only: information, caution, quote. Drawn with a mask in the text's own colour. ===== */
+:root{--ic-info:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 7.6v.4'/%3E%3C/svg%3E");--ic-alert:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2.5 20h19z'/%3E%3Cpath d='M12 10v4M12 17v.5'/%3E%3C/svg%3E");--ic-quote:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 8H6v5h4v-1M10 13c0 3-1 4-4 5M19 8h-4v5h4v-1M19 13c0 3-1 4-4 5'/%3E%3C/svg%3E")}
+:is(.genrewrite,.hfirst,.pk-alert,.drcard,.unote,.evq,.pk-ask,.mv-explain.warn,.evidence.warn,.msg.a.cant,.curtext blockquote,.rted blockquote,:is(.msg.md,.mdv) blockquote,.evsent,.rfsrc,#v-intake-review .icq){position:relative;padding-left:34px}
+:is(.genrewrite,.hfirst,.pk-alert,.drcard,.unote,.evq,.pk-ask,.mv-explain.warn,.evidence.warn,.msg.a.cant,.curtext blockquote,.rted blockquote,:is(.msg.md,.mdv) blockquote,.evsent,.rfsrc,#v-intake-review .icq,.aisug)::before{content:"";position:absolute;left:11px;top:11px;width:16px;height:16px;background:var(--accent);-webkit-mask:var(--ic-info) center/contain no-repeat;mask:var(--ic-info) center/contain no-repeat}
+.aisug{padding-left:34px}
+:is(.pk-ask,.mv-explain.warn,.evidence.warn,.msg.a.cant)::before{background:var(--warn);-webkit-mask-image:var(--ic-alert);mask-image:var(--ic-alert)}
+:is(.curtext blockquote,.rted blockquote,:is(.msg.md,.mdv) blockquote,.evsent,.rfsrc,#v-intake-review .icq)::before{top:5px;background:var(--muted);-webkit-mask-image:var(--ic-quote);mask-image:var(--ic-quote)}
+/* ===== end NEW (#341 item 1) ===== */
+/* #328 Intake: how sure the project match is. Icon + word + colour, never colour alone; tokens only. */
+#v-intake-review .mchip{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:2px 0}
+#v-intake-review .mlv{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);font-weight:500;padding:1px 8px;border-radius:var(--r-sm);border:1px solid var(--line)}
+#v-intake-review .mlv .i{width:14px;height:14px}
+#v-intake-review .mlv[data-irmatch="matched"]{color:var(--ok);background:var(--ok-soft)}
+#v-intake-review .mlv[data-irmatch="likely"]{color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .mlv[data-irmatch="unsure"]{color:var(--warn);background:var(--warn-soft)}
+#v-intake-review .mcands{display:inline-flex;flex-wrap:wrap;gap:4px 10px}
+#v-intake-review .moffer{flex-basis:100%;font-size:var(--fs-xs);color:var(--muted)}
+
+/* #341 (People fit): under 1100 px the column headings are set a little tighter (.04em, not .08em) so the table keeps spare width on a wide
+   fallback font (the "Risks and issues" heading is a word wider than the old "RAID"). */
+@media (max-width:1100px){ #v-people #peopleTbl th{letter-spacing:.04em} }

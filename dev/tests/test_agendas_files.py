@@ -152,9 +152,9 @@ class FilesTree(LiveBrowserCase):
     def test_the_other_shortcuts_are_unchanged(self):
         b = self.b
         b.eval("go('files')")
-        b.wait("document.querySelector('#fquick')")
+        b.wait("document.querySelector('#fmBtn')")
         self.assertEqual(b.eval("FILES.filter(f=>f.f==='minutes'||f.f==='transcripts').length>=0"), True)
-        b.eval("document.querySelector('#fquick [data-q=\"week\"]').click()")
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=week]').click(); })()")
         self.assertFalse(b.eval("FILES.filter(f=>f.f==='agendas'&&f.date>=WEEKSTART&&(f.f==='minutes'||f.f==='transcripts')).length"))
 
 

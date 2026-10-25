@@ -76,7 +76,7 @@ export function ProjectPeople({ code, match = true }) {
       <PeopleTools L={here} F={F} s={s} ids={IDS} onChange={redraw} />
       <PeopleApplied F={F} s={s} ids={IDS} count={count} onChange={redraw} />
       <div class="tbl"><table class="mgr" id="psPeople" aria-label="People on this project"><thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Organisation · role</th><th scope="col">Aliases</th>
-        <th scope="col" class="num">Actions</th><th scope="col" class="num">RAID</th><th scope="col"><span class="vh">Actions on the person</span></th></tr></thead>
+        <th scope="col" class="num">Actions</th><th scope="col" class="num">Risks and issues</th><th scope="col"><span class="vh">Actions on the person</span></th></tr></thead>
         <tbody id="psPeopleRows">{shown.length ? shown.map(x => <PsPersonRow key={x.n} x={x} code={code} />)
           : <tr><td class="sub" colSpan={7}>{here.length ? "Nobody matches." : "Nobody owns an item of this project yet."}</td></tr>}</tbody></table></div>
       {noneShown.length ? <div id="psUnas">

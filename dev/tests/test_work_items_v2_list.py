@@ -100,23 +100,23 @@ class ListV2(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelectorAll('#workBoard .cmp, #workBoard .cmf, #workBoard .wkm, #workBoard .tg').length"), 0)
 
     # ── marks and tags ──
-    def test_status_and_priority_marks_beside_the_columns_with_words(self):
+    def test_status_and_priority_words_only_no_glyphs_before_the_title(self):
         b = self.open_work()
         rows = b.eval("""[...document.querySelectorAll('#workTbl tbody tr[data-row]')].map(r=>({id:r.dataset.row,
           marks:r.querySelectorAll('td.title .wkm svg').length, words:(r.querySelector('td.title .wkm .vh')||{}).textContent,
           st:r.querySelector('td[data-f=st]').firstChild.textContent.trim(), pr:r.querySelector('td[data-f=pr]').firstChild.textContent.trim()}))""")
         self.assertTrue(rows)
         for r in rows:
-            self.assertEqual(r["marks"], 2, r)
+            self.assertEqual(r["marks"], 0, r)    # #341 item 6: the glyphs are gone, the words stay
             self.assertEqual(r["words"], f"{r['st']}, {r['pr']} priority: ", r)
         self.assertEqual(b.eval("[...document.querySelectorAll('#workTbl thead th[data-col]')].map(t=>t.dataset.col)"), ["t", "o", "due", "pr", "st"])
         b.click("#dispBtn")
         self.assertTrue(b.eval("document.getElementById('dprop-st').checked && document.getElementById('dprop-pr').checked"))
-        b.click("#dprop-pr")                                                                          # hiding the column keeps the mark
+        b.click("#dprop-pr")                                                                          # hiding the column keeps the words
         b.wait("!document.querySelector('#workTbl thead th[data-col=pr]')")
-        self.assertEqual(b.eval("document.querySelectorAll('#workTbl tbody tr[data-row] td.title .wkm svg').length"), 2 * len(rows))
+        self.assertEqual(b.eval("document.querySelectorAll('#workTbl tbody tr[data-row] td.title .wkm svg').length"), 0)
         self.open_work("decisions")                                                                    # a decision has a status only
-        self.assertTrue(b.eval("[...document.querySelectorAll('#workTbl tbody tr[data-row]')].every(r=>r.querySelectorAll('td.title .wkm svg').length===1)"))
+        self.assertTrue(b.eval("[...document.querySelectorAll('#workTbl tbody tr[data-row]')].every(r=>r.querySelectorAll('td.title .wkm svg').length===0)"))
 
     def test_client_visible_items_carry_a_tag(self):
         b = self.open_work()

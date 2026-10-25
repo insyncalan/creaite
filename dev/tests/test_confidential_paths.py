@@ -1,8 +1,8 @@
-"""Leak fix (2.6.5 backport; Cap's M1): a confidential meeting gets no project code on any path that matches calendar meetings.
+"""#362 (Wanda's review, MEDIUM 1): a confidential meeting gets no project code on any path that matches calendar meetings.
 
 Run: python3 dev/tests/test_confidential_paths.py   (no browser, no model)
 One test per path, each with the title "[DEF] x" and sensitivity confidential (and the private one where it applies):
-the set-aside lists, the hub records, the next-day list and "Note for this meeting" (capture.meeting).
+the set-aside lists, the Prep entry, the hub records, the next-day list and "Note for this meeting" (capture.meeting).
 """
 import json
 import sys
@@ -29,11 +29,15 @@ class ConfidentialPaths(unittest.TestCase):
         self.assertEqual(later[0]["p"], "DEF")
 
     def test_prep_entry(self):
-        """Prep is Alan's own screen: a confidential meeting keeps its project there (Shape and the tracker items need it) but
-        never an attendee, place or body; a private or personal one has no brief at all."""
+        """The Prep entry shows no project for a confidential meeting unless Alan chose it (a remembered series); a private or
+        personal one has no brief at all."""
         ctx = {"projects": PROJECTS, "remembered": {}, "history": [], "items": None, "ms_names": {}, "vips": {}, "today": today()}
         _, rec = bd.prep_entry(EV, today(), ctx)
-        self.assertEqual((rec["p"], rec["how"]), ("DEF", "matched"))
+        self.assertEqual((rec["p"], rec["how"]), (None, "confidential"))
+        _, chosen = bd.prep_entry(EV, today(), {**ctx, "remembered": {bd.series_of(EV["title"]): "DEF"}})
+        self.assertEqual((chosen["p"], chosen["how"]), ("DEF", "remembered"))
+        _, normal = bd.prep_entry({**EV, "sensitivity": "normal"}, today(), ctx)
+        self.assertEqual(normal["p"], "DEF")
         self.assertIsNone(bd.prep_entry({**EV, "sensitivity": "private"}, today(), ctx))
         self.assertIsNone(bd.prep_entry({**EV, "sensitivity": "personal"}, today(), ctx))
 
@@ -54,8 +58,14 @@ class ConfidentialPaths(unittest.TestCase):
             r = capture.meeting(day, "10:00", "[DEF] x", PROJECTS)
             self.assertEqual((r["code"], r["how"], r["with"]), (None, "confidential", []))
             self.assertNotIn("DEF", json.dumps(r).replace("[DEF] x", ""))
+            # #343: only a project Alan chose (a remembered series) counts for a confidential meeting; "No project" stays none
+            ser = bd.series_of("[DEF] x")
+            r = capture.meeting(day, "10:00", "[DEF] x", PROJECTS, {ser: "DEF"})
+            self.assertEqual((r["code"], r["how"]), ("DEF", "remembered"))
+            self.assertIsNone(capture.meeting(day, "10:00", "[DEF] x", PROJECTS, {ser: "_portfolio"})["code"])
+            self.assertIsNone(capture.meeting(day, "10:00", "[DEF] x", PROJECTS, {})["code"])   # a guess from the title shows nothing
             bd.saved_calendar_days = lambda: {day: [dict(EV, sensitivity="normal")]}
-            self.assertEqual(capture.meeting(day, "10:00", "[DEF] x", PROJECTS)["code"], "DEF")
+            self.assertEqual(capture.meeting(day, "10:00", "[DEF] x", PROJECTS)["code"], "DEF")   # not confidential: still preselected
             bd.saved_calendar_days = lambda: {day: [dict(EV, sensitivity="private")]}
             self.assertIsNone(capture.meeting(day, "10:00", "[DEF] x", PROJECTS))
         finally:

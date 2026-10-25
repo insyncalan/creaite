@@ -1,0 +1,35 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e6..2292ae70 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1138,6 +1138,19 @@ def csp_report_route(handler):
+ # ===== end BL-255 =====
+ 
+ 
++def _offered_domain(domain):
++    """#328 review M2: whether `domain` is an email domain of an attendee of a meeting in the saved calendar, the only place an
++    offer comes from (meeting_match.offer_signal). Plain code; reads the saved calendar only."""
++    import build_dashboard
++    days = build_dashboard.saved_calendar_days()
++    for evs in days.values():
++        for ev in evs if isinstance(evs, list) else []:
++            for a in ev.get("attendees") or []:
++                if str((a.get("email") if isinstance(a, dict) else a) or "").lower().rpartition("@")[2] == domain:
++                    return True
++    return False
++
++
+ class Handler(BaseHTTPRequestHandler):
+     server_version = "creaite"
+ 
+@@ -1581,6 +1594,10 @@ class Handler(BaseHTTPRequestHandler):
+                                                                            "stakeholder") \
+                 or not value or len(value) > 120 or "|" in value or "\n" in value:
+             return self.send(400, {"ok": False, "message": "Not a signal that can be learnt"})
++        if kind == "domain" and not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+", value.lower()):
++            return self.send(400, {"ok": False, "message": "A domain signal is one plain host name"})     # #328 review M2
++        if kind == "domain" and not _offered_domain(value.lower()):
++            return self.send(400, {"ok": False, "message": "That domain isn't on a meeting in the saved calendar"})   # bound to an offer
+         with LOCK:
+             rc, out = run("propose.py", "learn", code, kind, value)
+             return self.send(200, {"ok": rc == 0, "message": out})

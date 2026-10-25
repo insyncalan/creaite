@@ -54,7 +54,7 @@ class FileRows(IntakeBase):
         t = self.text(VTT)
         self.assertIn("Added today · Likely project: Example Programme", t)              # the project by its name
         self.assertIn("File ready · Teams transcript · 1 KB", t)
-        self.assertIn("Transcript · It will be turned into minutes, then checked for work items.", t)
+        self.assertNotIn("It will be turned into minutes", t)                              # #341 item 8: a .vtt is always a transcript, so the List row is one line and says no more
         self.assertEqual(self.buttons(VTT)[0], "process:Make minutes")
         self.assertNotIn("It is minutes", t)                                               # a .vtt is always a transcript: no switch
         self.assertIn("It is minutes", self.text(TRN))                                     # any other transcript can be switched
@@ -135,7 +135,11 @@ class FileRows(IntakeBase):
         b = self.b
         self.stage_stub()
         label = lambda: b.eval("document.querySelector('[data-ira=processall]').textContent")  # noqa: E731
-        self.assertEqual(label(), "Process all ready (5)")                          # ABC Steering, Weekly sync 12, the two transcripts and the minutes
+        # #328: Weekly sync 12 names no project (Not sure), so Process all ready skips it and lists it; the rest are ABC Steering, the two
+        # transcripts and the minutes
+        self.assertEqual(label(), "Process all ready (4)")
+        self.assertEqual(b.eval("document.querySelector('[data-irheld]').textContent"),
+                         "Skipped 1 meeting until you pick a project: Weekly sync 12.")
         self.assertEqual(b.eval("document.querySelector('[data-irleft]').textContent"),
                          "1 left out of Process all ready: private, confidential, not sure what it is or name not allowed.")       # Plan.docx
         self.patch("Weekly sync 12", confidential=True, p=None)
@@ -279,7 +283,7 @@ class Round2(IntakeBase):
     def test_a_vtt_has_no_switch_and_is_always_a_transcript(self):
         b = self.b
         self.assertFalse(b.eval(f"!!{self.row(VTT)}.querySelector('[data-ira=ftype]')"))
-        self.assertIn("Transcript · It will be turned into minutes", b.eval(f"{self.row(VTT)}.innerText"))
+        self.assertNotIn("It will be turned into minutes", b.eval(f"{self.row(VTT)}.innerText"))     # #341 item 8: a .vtt's List row is one line; the meaning is in the Two panes' detail
         self.assertTrue(b.eval("D.intake_review.meetings.find(m=>m.title==='%s').fixed" % VTT))
         b.eval("(m=>{ irChooseKind(m,'minutes'); irFileKinds.value={...irFileKinds.value, [m.path]:{k:'minutes',size:m.size,day:m.day}}; })(D.intake_review.meetings.find(m=>m.title==='%s'))" % VTT)
         self.assertEqual(b.eval("irFileKind(D.intake_review.meetings.find(m=>m.title==='%s'))" % VTT), "transcript")   # even a choice written by hand

@@ -99,7 +99,7 @@
           <div class="vshint sub" id="vsHint" data-codeok>For example: risks ABC last month, or what did Sara say about UAT?</div>
           <div class="vschips" id="vsChips" aria-live="polite"></div><div class="sub" id="vsNote" aria-live="polite"></div><div id="vsAnswer" hidden></div><div id="vsResults" hidden></div></div></div>
         <div class="files" style="margin-top:14px"><div class="tree" id="tree"></div>
-          <div><div class="fbar"><div class="views" id="fquick" style="margin:0"></div><span class="dd fmwrap"><button type="button" class="ib bd fbtn" id="fmBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="fmenu" aria-label="Filter" data-tip="Filter"><svg data-ic="funnel" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu left fmenu" id="fmenu" role="dialog" aria-label="Filter files"></div></span><span style="flex:1"></span><span class="sub" id="filesCount" aria-live="polite"></span><button class="btn" id="filesRefresh">Refresh</button></div>
+          <div><div class="fbar"><span class="dd fmwrap"><button type="button" class="ib bd fbtn" id="fmBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="fmenu" aria-label="Filter" data-tip="Filter"><svg data-ic="funnel" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu left fmenu" id="fmenu" role="dialog" aria-label="Filter files"></div></span><span style="flex:1"></span><span class="sub" id="filesCount" aria-live="polite"></span><button class="btn" id="filesRefresh">Refresh</button></div>
             <div class="wapplied" id="fchips" hidden></div>
             <div class="tbl" id="filesTbl"></div><p class="sub"><span id="filesAt">File list as of the last build.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p></div></div>
       </div></section>
@@ -117,7 +117,6 @@
         <h1>Settings</h1>
         <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select><p class="sub setmoved" id="setMoved">Looking for People, Workstreams or Archive? People are on the People page; workstreams, archive and each project's client report are in that project's settings.</p></div>
         <div id="settingsBody"></div></div>
-        <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly, with a backup and a log entry.</p>
       </div></section>
       <section class="view" id="v-help" hidden><div class="hp-shell"><div class="hp-search" id="helpSearch" role="search"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg><input id="helpQ" type="search" placeholder="Search Help: a job, a button, a word" aria-label="Search Help" autocomplete="off"><kbd>/</kbd></div><div class="tabhost" id="helpTabsHost"></div><div id="helpResults" class="hp-results" hidden></div><div id="helpPane" role="tabpanel"></div></div></section>
@@ -136,6 +135,7 @@
   <div class="chs" id="chSub"></div>
   <label class="chcont" id="chContL" hidden><input type="checkbox" id="chCont"> Continue this chat (keeps the whole thread: slower and costs more)</label>
   <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Check mail and Teams</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
+  <div class="vh" id="mcLive" role="status" aria-live="polite"></div><!-- #358: the mail check's places, read when they change; inside #chat, outside #chLog -->
   <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
   <div class="chlong" id="chLong" role="region" aria-label="Long chat" hidden><span id="chLongText"></span><span class="chlongact"><button type="button" class="mini" id="chLongGo">Continue fresh with a summary</button><button type="button" class="mini" id="chLongNo">Not now</button></span></div>
   <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>

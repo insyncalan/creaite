@@ -177,7 +177,7 @@ class People(Base):
         b = self.b
         self.open("people")
         heads = b.eval("[...document.querySelectorAll('#psPeople thead th')].map(t=>t.textContent.trim())")
-        self.assertEqual(heads[:6], ["Name", "Email", "Organisation · role", "Aliases", "Actions", "RAID"])
+        self.assertEqual(heads[:6], ["Name", "Email", "Organisation · role", "Aliases", "Actions", "Risks and issues"])
         self.assertIn("Sara Example", self.rows())
         self.assertNotIn("Mia Hale", self.rows(), "on no project: in the quiet group, not the table")
         sara = b.eval("[...document.querySelector('#psPeopleRows tr[data-pn=\"Sara Example\"]').children].map(c=>c.textContent.trim())")

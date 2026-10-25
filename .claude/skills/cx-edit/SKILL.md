@@ -5,7 +5,7 @@ description: creaite plain-English changes. Changes or adds tracker items, proje
 
 # cx-edit
 
-Turn a plain-English instruction into a staged, approved change. It is written only on the next "apply".
+Turn a plain-English instruction into a staged, approved change. It is written only on the next "apply", or "save" (the same step: "save" counts only as the whole message ("save", "save ABC" or "save all"), only after a list of approved items shown in this session, never for a note, a setting or a draft; otherwise ask. Before running `tracker.py apply` for "save", first say "Saving n approved items: <IDs>").
 
 **Projects by name (BL-101):** refer to a project by its full name in everything Alan reads (summaries, tables, messages, file names, drafts). The short code appears only inside a work item's ID (`ABC-A-003`) and in a command he can type; `tracker.project_label(code)` gives the name.
 

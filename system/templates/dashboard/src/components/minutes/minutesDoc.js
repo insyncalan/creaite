@@ -113,14 +113,23 @@ const FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
 const DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
 const FIG_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
+/** The day and month said in words, side by side ("20th of November", "November 20th"; "may" in "we may need 5" is a verb, not May).
+    When the speaker also says a year there, it must be the date's own year; no year said is not held against the line. */
+function saidInWords(low, d, word, year) {
+  if (!word) return false;
+  const day = `0?${d}(?:st|nd|rd|th)?`, yr = `(?:,?\\s*(\\d{4})\\b)?`;
+  const re = [new RegExp(`\\b${day}\\s+(?:of\\s+)?${word}\\b${yr}`, "g"), new RegExp(`\\b${word}\\s+${day}\\b${yr}`, "g")];
+  for (const r of re) for (const m of low.matchAll(r)) if (!m[1] || m[1] === year) return true;
+  return false;
+}
+
 /** #333: the figures a line says that its turn doesn't. A date shown as 20-11-2026 is one figure and is said when the turn has
     its day and month in words ("20th of November") or in numbers; it is never split into 20, 11 and 2026.
     @param {string} text @param {string} said the turn's words @returns {string[]} */
 export function figuresMissing(text, said) {
   const low = String(said || "").toLowerCase(), out = new Set();
-  const rest = String(text || "").replace(DATE_FIG, (all, d, m) => {
-    const word = FIG_MONTHS[+m - 1] || "", day = new RegExp(`\\b0?${+d}(?:st|nd|rd|th)?\\b`);
-    if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
+  const rest = String(text || "").replace(DATE_FIG, (all, d, m, y) => {
+    if (!low.includes(all) && !saidInWords(low, +d, FIG_MONTHS[+m - 1] || "", y)) out.add(all);
     return " ";
   });
   for (const f of new Set(rest.match(FIGURE) || [])) if (!said.includes(f)) out.add(f);

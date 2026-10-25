@@ -82,10 +82,12 @@ class IntakeSide(IntakeBase):
         b = self.b
         self.stage_stub()
         label = b.eval("document.querySelector('[data-ira=processall]').textContent")
-        self.assertEqual(label, "Process all ready (2)")             # ABC Steering and Weekly sync 12
+        self.assertEqual(label, "Process all ready (1)")             # ABC Steering; #328: Weekly sync 12 names no project, so it is skipped and listed
+        self.assertEqual(b.eval("document.querySelector('[data-irheld]').textContent"),
+                         "Skipped 1 meeting until you pick a project: Weekly sync 12.")
         b.click('[data-ira="processall"]')
-        b.wait("ASKED.length===2 && irBusy.value.length===0 && document.querySelector('[data-ira=processall]').textContent==='Process all ready (0)'", 40)
-        self.assertEqual(sorted(q for q, _ in b.eval("ASKED")), sorted([f"process inbox/{DAY} ABC Steering.vtt", f"process inbox/{DAY} Weekly sync 12.vtt"]))
+        b.wait("ASKED.length===1 && irBusy.value.length===0 && document.querySelector('[data-ira=processall]').textContent==='Process all ready (0)'", 40)
+        self.assertEqual([q for q, _ in b.eval("ASKED")], [f"process inbox/{DAY} ABC Steering.vtt"])
         self.assertTrue(b.eval("document.querySelector('[data-ira=processall]').disabled"))
 
     # -- Later and Not needed

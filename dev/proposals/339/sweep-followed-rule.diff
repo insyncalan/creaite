@@ -1,0 +1,23 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e..3efca03 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2245,7 +2245,8 @@ KIND_PROMPTS = {"sweep": (
+     "exactly as the skill says. It only stages proposals for Review: never apply, approve, reject or undo anything, never "
+     "change a project file, and never act in Microsoft 365 (no sending, deleting or changing anything). Alan started it, so no "
+     "CONFIRM line is needed. Run each creaite script on its own, exactly `system/scripts/run <name>.py …`; write any input file "
+-    "with the Write tool in system/staging/drafts/ first. Never quote a message's text. End with the sweep's one-line summary.")}
++    "with the Write tool in system/staging/drafts/ first. Never quote a message's text. End with the sweep's one-line summary."
++    + VIP_PRIVATE_RULE)}
+ # ===== #264: Intake's Process, its own guarded run kind =====
+ # Pressing Process in Intake (POST /api/intake/process) starts the kind "process" under the guard hook's mode "process" (reach.py
+ # process_gate): it may read, draft the minutes and stage them for exactly the Intake files the server checked; it never applies,
+@@ -2353,7 +2354,7 @@ PANEL_SWEEP_PROMPT = (
+     "undo anything, never run propose.py stage, never change a project file, and never act in Microsoft 365 (no sending, "
+     "deleting or changing anything). No CONFIRM line is needed. Run each creaite script on its own, exactly "
+     "`system/scripts/run <name>.py …`; write any input file with the Write tool in system/staging/drafts/ first. Never quote a "
+-    "message's text. End with the sweep's one-line summary and \"n items staged for Review\".")
++    "message's text. End with the sweep's one-line summary and \"n items staged for Review\"." + VIP_PRIVATE_RULE)
+ PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
+ # ===== end BL-309 =====
+ # The file writers are denied by name too: an empty allow list doesn't stop the vault's .claude/settings.json allow rules (Edit

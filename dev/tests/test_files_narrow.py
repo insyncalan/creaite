@@ -46,14 +46,14 @@ class FilesNarrow(LiveBrowserCase):
         b.resize(width, 700)
         b.wait(f"innerWidth==={width}")
         b.eval("go('files')")
-        b.wait("document.querySelector('#fquick [data-q=\"archived\"]')")
-        b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
+        b.wait("document.querySelector('#fmBtn')")
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=archived]').click(); })()")
         b.wait("document.querySelector('#filesTbl [data-moveback]')")
+        b.eval("if(document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click()")      # the View choice leaves the Filter menu open; close it so it is not over the table
 
-    def test_at_320_the_folder_list_never_draws_over_the_archived_table(self):
+    def test_at_900_the_folder_list_never_draws_over_the_archived_table(self):
         b = self.b
-        self.archived(320)
-        b.wait("document.documentElement.classList.contains('railicons')")
+        self.archived(900)      # desktop and 900 px only (Alan, 15-10-2026): the old 320 px case is retargeted here, where the folder list stacks above the table
         for row in range(4):     # scroll each archived row to the top of the window in turn, as a person scrolling down would
             b.eval(f"document.querySelectorAll('#filesTbl tr[data-fp]')[{row}]?.scrollIntoView({{block:'start'}})")
             b.pump(0.1)
@@ -83,7 +83,7 @@ class FilesNarrow(LiveBrowserCase):
         locs = b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp] td.x:first-of-type, #filesTbl tr[data-fp] td:nth-child(2)')].map(t=>t.textContent)")
         self.assertIn("Portfolio › minutes", locs)
         for chip in ("all", "week"):
-            b.eval(f"document.querySelector('#fquick [data-q=\"{chip}\"]').click()")
+            b.eval(f"(()=>{{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value={chip}]').click(); }})()")
             self.assertNotIn("_portfolio", b.eval("document.getElementById('v-files').innerText"), chip)
         b.eval("document.querySelector('#tree [data-p=\"_portfolio\"]').click()")
         self.assertEqual(b.eval("document.querySelector('#tree [data-p=\"_portfolio\"]').firstChild.textContent"), "Portfolio")

@@ -167,12 +167,14 @@ def _project_of(d, m):
     """(code, chosen) of a meeting's Prep brief record. #279: "No project" is the saved value "_portfolio", distinct from nothing
     chosen (""). A remembered code that is no project any more (unknown, removed, archived) counts as not chosen: the picker
     asks again, and the page still builds, in the all-projects view.
-    Leak fix (dev/proposals/leakfix/PERSISTED-PATHS.md): everything written or sent for a meeting takes its project from here
-    (context(): the page's Agendas folder, prep-pages.json, the stored content, the research prompt, Shape, the agenda and
-    the one-pager drafts). A confidential meeting's project is therefore only ever one Alan chose (a remembered series, how
-    "remembered"); a guess (matched, portfolio, unsure) stays on the screen and is not chosen, so the page is the all-projects
+    #362 (persisted-paths proof, dev/proposals/362/PERSISTED-PATHS.md): everything that is written or sent for a meeting takes its
+    project from here (context(): the page's Agendas folder, prep-pages.json, the stored content, the research prompt, Shape,
+    the agenda and the one-pager drafts). A confidential meeting's project is therefore only ever one Alan chose (a remembered
+    series, how "remembered"); a guess (matched, likely) stays on the screen and is not chosen, so the page is the all-projects
     view and files in the portfolio folder until he picks the project."""
     code = m.get("p") or ""
+    if m.get("how") == "likely":                          # #328: a Likely guess is never a chosen project
+        return "_portfolio", False
     if (m.get("invite") or {}).get("confidential") and m.get("how") != "remembered":
         return "_portfolio", False
     chosen = code == "_portfolio" or any(p["code"] == code for p in d.get("projects") or []) if code else False

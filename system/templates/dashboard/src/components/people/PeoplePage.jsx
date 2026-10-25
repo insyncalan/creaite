@@ -20,7 +20,7 @@ import { addPerson, inRegister, missingFlag, namedIn, newFilter, personPasses, r
 import { Count, Dash, DisplayButton, NameCell, PeopleApplied, PeopleTools, openPersonForm, peopleWord, peoplePlural, useFields } from "./PeopleParts.jsx";
 import { Icon } from "../Icon.jsx";
 import { bindPeopleDisplay } from "./PeopleDisplay.js";
-import { PD_COLS, PD_SORTS, pdColumns, pdGroup, pdKey } from "../../core/peopleDisplay.js";
+import { PD_COLS, PD_SORTS, pdColumns, pdGroup, pdKey, pdPrune } from "../../core/peopleDisplay.js";
 import { pdSave, pdState, pdSyncSort } from "../../stores/peopleDisplay.js";
 
 /** @typedef {import("../../stores/peopleRegister.js").PersonRow} PersonRow */
@@ -93,7 +93,7 @@ function PlRow({ x, cols }) {
     role: <td key="role" data-col="role"><Dash v={x.role} /></td>,
     proj: <td key="proj" data-col="proj"><span class="pj">{x.on.length ? x.on.map((c, i) => <span key={c}>{i ? " " : ""}<span class="pcode plink" data-proj={c} role="link" tabindex={0} title={`Open ${pName(c)}`}>{pName(c)}</span></span>) : <Dash />}</span></td>,
     oa: <td key="oa" data-col="oa" class="num"><Count n={x.oa.length} label={`${peoplePlural(x.oa.length, "open action")} owned by ${nm}`} nav="actions:open:" extra={{ o: plOwners(x.oa) }} /></td>,
-    or: <td key="or" data-col="or" class="num"><Count n={x.or.length} label={`${peoplePlural(x.or.length, "open RAID item")} owned by ${nm}`} nav="raid:open:" extra={{ o: plOwners(x.or) }} /></td>,
+    or: <td key="or" data-col="or" class="num"><Count n={x.or.length} label={`${(x.or.length === 1 ? "1 open risk or issue" : `${x.or.length} open risks and issues`)} owned by ${nm}`} nav="raid:open:" extra={{ o: plOwners(x.or) }} /></td>,
     dw: <td key="dw" data-col="dw" class="num"><Count n={x.dw.length} label={`${peoplePlural(x.dw.length, "decision")} waiting on ${nm}`} nav="decisions:pending:" extra={{ o: plOwners(x.dw) }} /></td>,
     late: <td key="late" data-col="late" class={`num${x.late ? " late" : ""}`}><Count n={x.late} label={`${peoplePlural(x.late, "overdue item")} owned by ${nm}`} nav="all:open:"
       extra={{ st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: plOwners(late) }} /></td>,
@@ -159,7 +159,8 @@ function rowsOf(L, st, cols) {
 export function PeoplePage(_props) {
   pdSyncSort();     /* #360: the sort is read from this browser once, and saved after a change */
   const s = PLST.s, tab = ptabOf(shared.PTAB), st = pdState(), cols = pdColumns(st);
-  const all = registerRows(), F = useFields(all, s, {}), hit = all.filter(x => personPasses(x, F, s));
+  const all = registerRows(); if (pdPrune(st, all, pName)) pdSave();   /* #341 hardening: folds of groups nobody is in any more are dropped */
+  const F = useFields(all, s, {}), hit = all.filter(x => personPasses(x, F, s));
   const so = sortOf(), f = SORTS[so.col], dir = so.dir === "asc" ? 1 : -1;
   const L = hit.filter(IN_TAB[tab]).sort((a, b) => (a.me ? -1 : b.me ? 1 : 0)   /* you first, always */ || (() => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * dir; })() || a.n.localeCompare(b.n));
   const need = all.filter(IN_TAB.att).length;

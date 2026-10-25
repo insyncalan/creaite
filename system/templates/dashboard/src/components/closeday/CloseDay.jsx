@@ -12,6 +12,7 @@
    approves, rejects or applies anything; the server keeps references only (dev/sprints/BL-295-server.md). Text only through JSX.
    The Close the day door (BL-270) and ⌘K open it through openCloseDay(); its state lives here while the page is open. */
 import { render } from "preact";
+import { cdNow, cdSourceOf } from "../../core/closeDayRows.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import { Dialog } from "../Dialog.jsx";
@@ -36,7 +37,7 @@ import { dcIcon } from "../../ask.js";
 /** @typedef {{key: string, state: string, run?: string|null, path?: string|null, message?: string|null}} PrepItem */
 /** @typedef {{ok: boolean, message?: string, now: string, last_sweep?: string, day: any, catchup: CatchupPublic,
     loose: LooseEnd[], tomorrow: Tomorrow, prep: {items: PrepItem[], running: boolean}}} Card */
-/** @typedef {{status: string, message: string, state: string|null, run: string|null, label: string, reached: number, ended?: string|null,
+/** @typedef {{status: string, message: string, state: string|null, run: string|null, label: string, done: number[], steps: number, ended?: string|null,
     found: {ref: string, type: string, t: string, p?: string|null, project?: string|null}[]}} Catchup */
 /** @typedef {{at: string, counts: {review: number, first: number, left: number, prep: number},
     open: {review: {file: string, ref: number|string}[], work: string[], intake: boolean}}} Closed */
@@ -44,7 +45,7 @@ import { dcIcon } from "../../ask.js";
 export const CD_STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"];
 const PLACES = [["review", "Review now"], ["first", "First thing tomorrow"], ["leave", "Leave"]];
 const SOURCES = ["Mail", "Teams chats", "Teams channels", "Matching to projects"];
-const READING = ["Reading mail", "Reading Teams chats", "Reading Teams channels", "Matching to projects"];
+const WORKING = "Working through the sources";   // a claim about order only, so it never names one source as being read now
 const SHOWN = 8;                       // Loose ends: the first eight, then "and n more"
 const POLL = 1500;                     // ms between status reads while the catch-up runs or waits
 
@@ -61,19 +62,6 @@ export function openCloseDay() {
     render(<CloseDay />, host);
   }
   cdOpen.value = true;
-}
-
-/** Which of SOURCES a run's step line is reading (its index), or -1 for another step. Labels are the server's describe_tool,
-    or (BL-326: the catch-up is a run creaite started) its plain_step words.
-    @param {string} label */
-export function cdSourceOf(label) {
-  const l = String(label || "").toLowerCase();
-  if (/calendar|read resource|a meeting, a message or a chat/.test(l)) return -1;
-  if (/channel/.test(l)) return 2;
-  if (/teams|chat message|list chats/.test(l)) return 1;
-  if (/email|outlook|mail/.test(l)) return 0;
-  if (/sweep\.py stage|people map|propose\.py|staging what the sweep found|mapping names/.test(l)) return 3;
-  return -1;
 }
 
 /** The ← → keys move only when focus isn't in a field. @param {EventTarget | null} t */
@@ -101,7 +89,7 @@ function CatchUp({ cu, last, onStop, onSkip, onAgain }) {
           <button type="button" class="mini" data-cdskip="1" onClick={onSkip}>Skip</button>
         </div>
         {running ? <ol class="cdsrc" aria-label="Sources">{SOURCES.map((s, i) =>
-          <li class={i < cu.reached ? "done" : i === cu.reached ? "now" : ""}>{s}</li>)}</ol> : null}
+          <li class={cu.done.includes(i) ? "done" : i === cdNow(cu) ? "now" : ""}>{s}</li>)}</ol> : null}
         <p class="sub">It runs while you read on. It only adds suggestions to Review; nothing is saved, and nothing changes in
           Microsoft 365.</p>
       </div>
@@ -274,7 +262,7 @@ export function CloseDay() {
   const [places, setPlaces] = useState(/** @type {Record<string, string>} */ ({}));
   const [all, setAll] = useState(false);
   const [prep, setPrep] = useState(/** @type {Set<string>} */ (new Set()));
-  const [cu, setCu] = useState(/** @type {Catchup} */ ({ status: "", message: "", state: null, run: null, label: "", reached: 0, found: [] }));
+  const [cu, setCu] = useState(/** @type {Catchup} */ ({ status: "", message: "", state: null, run: null, label: "", done: [], steps: 0, found: [] }));
   const [closed, setClosed] = useState(/** @type {Closed | null} */ (null));
   const [pending, setPending] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -313,7 +301,8 @@ export function CloseDay() {
         let ev; try { ev = JSON.parse(part.slice(6)); } catch (e) { continue; }
         if (ev.type === "step") {
           const s = cdSourceOf(ev.label);
-          if (s >= 0) setCu(u => ({ ...u, reached: Math.max(u.reached, s), label: READING[Math.max(u.reached, s)] }));
+          setCu(u => ({ ...u, steps: u.steps + 1, done: s >= 0 && !u.done.includes(s) ? [...u.done, s] : u.done,
+            label: s >= 0 ? WORKING : u.label }));
         }
       }
     }
@@ -335,7 +324,7 @@ export function CloseDay() {
     const r = await api("/api/day/catchup", force ? { force: true } : {});
     if (!r.ok) { setCu(u => ({ ...u, status: "cant", message: oneLine(r.message) || "The last check of mail and Teams couldn't start." })); return; }
     const pub = r.catchup || {}, run = r.run && r.run.id || pub.run && pub.run.id || null;
-    setCu(u => ({ ...u, status: r.status, message: r.message || "", state: pub.state || null, run, ended: pub.ended, reached: force ? 0 : u.reached,
+    setCu(u => ({ ...u, status: r.status, message: r.message || "", state: pub.state || null, run, ended: pub.ended, done: force ? [] : u.done, steps: force ? 0 : u.steps,
       label: force ? "" : u.label, found: force ? [] : u.found }));
     if (run && (pub.state === "running" || r.status === "start")) attach(run);
     else if (pub.state === "done") status();                               // ended earlier today: what it found

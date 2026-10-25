@@ -237,6 +237,26 @@ def json_report(days=JSON_DAYS, usage_file=None, context_file=None, skills_dir=N
 # ===== end #238 =====
 
 
+def print_runs(rows, days, label=None, kind=None, today=None) -> int:
+    """#339: one line per run for a label and kind (counts only): the figures part A is measured by (a typed sweep is label "chat",
+    kind "sweep"; start_tokens is what it loaded before its first turn, cost_usd what it cost)."""
+    today = today or _today()
+    first = (today - timedelta(days=days - 1)).isoformat()
+    keep = [r for r in rows if first <= str(r["at"])[:10] <= today.isoformat()
+            and (not label or r.get("label") == label) and (not kind or r.get("kind") == kind)]
+    if not keep:
+        print("No runs recorded in that time.")
+        return 0
+    print(f"{'At':<17}{'Kind':<10}{'Label':<10}{'Start tokens':>13}{'Cost $':>9}")
+    for r in keep:
+        print(f"{str(r['at'])[:16]:<17}{str(r.get('kind', '')):<10}{str(r.get('label', '')):<10}"
+              f"{r.get('start_tokens', 0):>13}{r.get('cost_usd', 0):>9.4f}")
+    starts = [r.get("start_tokens", 0) for r in keep]
+    print(f"{len(keep)} runs, start tokens median {round(statistics.median(starts))} max {max(starts)}, "
+          f"${sum(r.get('cost_usd', 0) for r in keep):.2f} in all.")
+    return 0
+
+
 def main(argv=None) -> int:
     """Print the report."""
     ap = argparse.ArgumentParser()
@@ -244,7 +264,11 @@ def main(argv=None) -> int:
     ap.add_argument("--file")
     ap.add_argument("--json", action="store_true", help="print the Usage tab's figures as JSON (counts only; 14 days unless --days)")
     ap.add_argument("--context-file", help="with --json: the context-size record (default system/staging/context-size.jsonl)")
+    ap.add_argument("--label", help="#339: list each run with this label (e.g. chat) one per line: start_tokens and cost_usd")
+    ap.add_argument("--kind", help="with --label: only this kind (e.g. sweep, a typed sweep is label chat, kind sweep)")
     a = ap.parse_args(argv)
+    if a.label or a.kind:
+        return print_runs(load(a.file), a.days or 7, a.label, a.kind)
     if a.json:
         print(json.dumps(json_report(a.days or JSON_DAYS, a.file, a.context_file), separators=(",", ":")))
         return 0

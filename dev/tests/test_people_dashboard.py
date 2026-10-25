@@ -204,7 +204,7 @@ class PeopleDashboardTests(unittest.TestCase):
 
     def test_counts_right_aligned_one_zero_style(self):
         r = self.r
-        self.assertEqual(r["numStyle"], ["right", "right", "none"])                          # #190
+        self.assertEqual(r["numStyle"], ["right", "right", "underline"])                     # #190 right-aligned; #341 item 10: a count that opens a list has the one dotted link style
         for row in r["peopleRows"] + r["noneRows"]:
             self.assertNotIn("—", row[5:9])                                                   # a zero is 0, never a dash (#248: the counts follow Email and Projects)
 
@@ -734,7 +734,7 @@ class PeopleTabsTests(LiveBrowserCase):
         self.assertNotIn("Jane Doe", self.names())                                                # a made decision alone does not
         self.assertNotIn("Lee Closed", self.names())
         heads = b.eval("[...document.querySelectorAll('#peopleTbl thead th')].map(t=>t.textContent.replace(/[▲▼]/g,'').trim())")
-        self.assertEqual(heads, ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "RAID", "Decisions", "Overdue", "Actions on the person"])   # #248: the register's columns
+        self.assertEqual(heads, ["Name", "Email", "Organisation", "Role", "Projects", "Actions", "Risks and issues", "Decisions", "Overdue", "Actions on the person"])   # #248: the register's columns
         n_work = len(self.rows())
         self.tab("none")
         none = {r[0].replace(" needs details", ""): r[1:] for r in self.rows()}

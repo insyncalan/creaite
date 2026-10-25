@@ -4,7 +4,7 @@ The page behaviour (Intake first screen, Next job, People Display menu, the calm
 branches' own tests (test_intake_first_screen_340, test_next_job_356, test_people_display, test_calm_save_357,
 test_design_fixes_343_browser) and in the gate; this file checks the release is cut and that each change is in the tree.
 
-   1  version     VERSION is a version the tooling accepts and is 2.6.5
+   1  version     VERSION is a version the tooling accepts and is 2.6.5 or later (2.6.6 contains 2.6.5)
    2  notes       What's new has the 2.6.5 section above 2.6.4, mentioning every issue of the scope; the plain notes and the sheet exist
    3  guides      both guides carry 2.6.5 and no 2.6.4 string
    4  guarded     no guarded file differs from the v2.6.4 release and the 2.6.4 chain list is unchanged (2.6.4b has no chain of its own)
@@ -45,18 +45,21 @@ def tree(sub):
 def git(*a):
     return subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True)
 
+KIND = {n: "scriptable" for n in range(1, 14)}
+LIVE_ONLY = {}
+
 
 class V265(unittest.TestCase):
     def test_c01_version(self):
         v = read("VERSION").strip()
         self.assertRegex(v, r"^\d+\.\d+\.\d+$")
-        self.assertEqual(v, "2.6.5")
+        self.assertGreaterEqual(tuple(map(int, v.split("."))), (2, 6, 5))  # 2.6.6 contains 2.6.5; test_v267 pins its own string
 
     def test_c02_notes(self):
         wn = read("system/templates/help/whats-new.md")
         heads = re.findall(r"^## creaite (\d+\.\d+\.\d+)\s*$", wn, re.M)
-        self.assertEqual(heads[:2], ["2.6.5", "2.6.4"])
-        sec = wn.split("## creaite 2.6.4\n")[0]
+        self.assertEqual(heads[heads.index("2.6.5"):][:2], ["2.6.5", "2.6.4"])
+        sec = wn.split("## creaite 2.6.4\n")[0].split("## creaite 2.6.5\n")[1]
         for n in ("340", "343", "355", "356", "357", "359", "360"):
             self.assertIn(f"(#{n})", sec, f"What's new does not mention #{n}")
         self.assertTrue((REPO / "dev/release-notes/2.6.5-plain.md").exists())
@@ -65,14 +68,16 @@ class V265(unittest.TestCase):
     def test_c03_guides(self):
         for g in ("guide-first-day.html", "guide-how-to.html"):
             t = read(f"system/templates/{g}")
-            self.assertIn("creaite 2.6.5 ·", t)
+            self.assertRegex(t, r"creaite 2\.6\.[5-9] ·")   # 2.6.5 or a later 2.6 (test_v267 pins 2.6.7)
             self.assertNotIn("2.6.4", t)
 
     def test_c04_guarded_unchanged(self):
         if git("rev-parse", "-q", "--verify", "v2.6.4").returncode:
             self.skipTest("no v2.6.4 tag here")
         d = git("diff", "--name-only", "v2.6.4", "HEAD", "--", *GUARDED).stdout.split()
-        self.assertEqual(d, [], f"guarded files changed since 2.6.4: {d}")
+        # 2.6.7 landed the guarded chain (live_server.py) and the #347 rules text; those two files may differ, nothing else may
+        landed = ["system/creaite-rules.md", "system/scripts/live_server.py"] if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 7) else []
+        self.assertEqual(sorted(d), landed, f"guarded files changed since 2.6.4: {d}")
         old = [x for x in git("show", "v2.6.4:dev/proposals/GUARDED-2.6.4.chain").stdout.splitlines() if x and not x.startswith("#")]
         new = [x for x in read("dev/proposals/GUARDED-2.6.4.chain").splitlines() if x and not x.startswith("#")]
         self.assertEqual(old, new, "the 2.6.4 chain list changed")
@@ -113,7 +118,7 @@ class V265(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr[-1500:])
 
     def test_c12_not_in_scope(self):
-        sec = read("system/templates/help/whats-new.md").split("## creaite 2.6.4\n")[0]
+        sec = read("system/templates/help/whats-new.md").split("## creaite 2.6.4\n")[0].split("## creaite 2.6.5\n")[-1]
         self.assertNotRegex(sec, r"\(#(341|362)\)")
 
     def test_c13_confidential_leak_fix(self):

@@ -65,6 +65,26 @@
    "count": 1,
    "text": "Apply"
   },
+  "core/mailCheck.js | proposal | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | stage | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | sweep | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | sweep | c01586240876": {
+   "count": 1,
+   "text": "Sweep mail and Teams since the last sweep"
+  },
+  "core/mailCheck.js | sweep | d914230b225a": {
+   "count": 1,
+   "text": "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for t"
+  },
   "core/page.js | path | 04747237af0a": {
    "count": 1,
    "text": "cd {} && python3 system/scripts/live_server.py"
@@ -121,33 +141,25 @@
    "count": 1,
    "text": "Help isn’t available: system/templates/help.md is missing."
   },
-  "help.md | apply | 04ffda537ee1": {
+  "help.md | apply | 1913b241187e": {
    "count": 1,
-   "text": "Or say: `review` `approve minutes for the ABC steering` `9 is DEF` `minutes 3 is DEF` `reject 4 as a"
-  },
-  "help.md | apply | 1c3039c19fbb": {
-   "count": 1,
-   "text": "In ask creaite or Claude Code: `sweep`, `process new minutes`, `review`, `apply`, `undo last apply`,"
+   "text": "Or say: `undo last save` (`undo last apply` also works)"
   },
   "help.md | apply | 1e9248c4c1ea": {
    "count": 1,
    "text": "7. **Right-click** any action, RAID item or decision (a row or card in Work, Mine, a person's page, "
   },
-  "help.md | apply | 217e7ff20ec2": {
-   "count": 1,
-   "text": "| `review` · `apply` | Go through what's pending, then write the approved items to your project reco"
-  },
-  "help.md | apply | 979cf54596e2": {
-   "count": 1,
-   "text": "Or say: `undo last apply`"
-  },
-  "help.md | apply | a7c26e48ceaa": {
-   "count": 1,
-   "text": "As you type in ask creaite, suggestions appear from your skills and commands, with project codes, op"
-  },
-  "help.md | apply | cde2094ee6fb": {
+  "help.md | apply | 37b961d8c5a7": {
    "count": 1,
    "text": "Or say: `move ABC-A-002 to fri` `Omar owns the SOW action` (ask creaite shows the change and waits f"
+  },
+  "help.md | apply | 4c8e4f0a9ea3": {
+   "count": 1,
+   "text": "| `review` · `save` | Go through what's pending, then save the approved items to your project record"
+  },
+  "help.md | apply | 849c542499ba": {
+   "count": 1,
+   "text": "Or say: `review` `approve minutes for the ABC steering` `9 is DEF` `minutes 3 is DEF` `reject 4 as a"
   },
   "help.md | path | 1087727fb25e": {
    "count": 1,
@@ -229,10 +241,6 @@
    "count": 1,
    "text": "- **Typing check is your go-ahead:** a message that is only a check (`sweep`, `sweep mail for ABC`, "
   },
-  "help.md | sweep | 1c3039c19fbb": {
-   "count": 1,
-   "text": "In ask creaite or Claude Code: `sweep`, `process new minutes`, `review`, `apply`, `undo last apply`,"
-  },
   "help.md | sweep | 23223909065a": {
    "count": 1,
    "text": "2. **Catch up.** If the last check is more than 30 minutes old, a catch-up check of your Inbox, Sent"
@@ -241,17 +249,21 @@
    "count": 1,
    "text": "- **Addresses:** each tab (`#settings/essentials`, `#settings/work`, `#settings/advanced`, `#setting"
   },
-  "help.md | sweep | 5fc532d1b42e": {
+  "help.md | sweep | 3e4e269a3847": {
    "count": 1,
-   "text": "| `sweep` | Outlook and Teams since the last check become suggestions. From 07:00, until it has run "
+   "text": "| `check my mail` | Outlook and Teams since the last check become suggestions (`sweep` also works). "
+  },
+  "help.md | sweep | 6dcf91908328": {
+   "count": 1,
+   "text": "In ask creaite or Claude Code: `check my mail`, `process new minutes`, `review`, `save`, `undo last "
   },
   "help.md | sweep | 72cecfdcba4a": {
    "count": 1,
    "text": "Or say: `ignore calendar invites starting with ToDo in the sweep` `stop ignoring humancapital`"
   },
-  "help.md | sweep | dffcbbe873be": {
+  "help.md | sweep | 82350dbe1eb5": {
    "count": 1,
-   "text": "Or say: `sweep` to run the check again at any time."
+   "text": "Or say: `check my mail` to run the check again at any time (`sweep` also works)."
   },
   "live_server.py | apply | 012b122af3a3": {
    "count": 1,

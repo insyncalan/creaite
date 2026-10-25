@@ -1646,8 +1646,7 @@ class Handler(BaseHTTPRequestHandler):
         images = req.get("images") or []
         if not (isinstance(images, list) and len(images) <= ASK_IMAGE_MAX and all(ask_image_files(i) for i in images)):
             return self.send(400, {"ok": False, "message": f"Up to {ASK_IMAGE_MAX} attached images that have been uploaded"})
-        run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
-            else f"r-{secrets.token_hex(6)}"
+        run_id = request_run_id(req)
         if req.get("permfile"):                           # BL-141: a permission file is changed on the one card, never by a run
             return self.send(400, {"ok": False, "message": "Permission files are changed on the approval card now: ask creaite again."})
         held = budget_gate(req)                           # #334: this week's AI budget (confirm or stop, by setting)
@@ -1659,13 +1658,27 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(409, {"ok": False, "busy": True, "run": busy.summary(),
                                        "message": "ask creaite is still working on the last request."})
             try:
-                sweep = panel_sweep(message, images, req.get("confirmed"))      # BL-309: the server decides, from the words
-                run = Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images, sweep=sweep,
-                          fresh=fresh_session(req))
+                run = self.panel_run(req, message, images, run_id)              # BL-309: the server decides, from the words
             except (OSError, ValueError) as e:                  # #327 B: a NUL in a stored message makes Popen raise ValueError
                 return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e}). Is `claude` installed and "
                                                                f"signed in?"})
-        return self.follow(run, numbered=self.numbered())
+        if run is None:                                   # #339 A: a typed refresh the calendar run refused: already answered
+            return None
+        return self.follow(run, numbered=self.numbered())     # outside START_LOCK: queue_after needs it before the run is done
+
+    def panel_run(self, req, message, images, run_id):
+        """#339 A: the run a typed request starts (START_LOCK held, nothing else running): the calendar run for "refresh
+        calendar", else the chat or sweep run (BL-309). None when the calendar run was refused and the 409 (a sweep running, the
+        plain sentence) or 400 (the precheck's own reason) has been sent. It does not follow the run: the caller does, after
+        releasing the lock."""
+        if panel_kind(message, images, req.get("confirmed")) == "calendar":
+            run, said = calendar_run(run_id)
+            if said:
+                busy = said == SWEEP_RUNNING_SAYS
+                self.send(409 if busy else 400, {"ok": False, "message": said, "busy": busy})
+            return run
+        return Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images,
+                   sweep=panel_sweep(message, images, req.get("confirmed")), fresh=fresh_session(req))
 
     def here(self, req):
         """POST /api/here: the open page's "still here" every 10 seconds; keeps a launcher-started server running (BL-86)."""
@@ -2245,7 +2258,8 @@ KIND_PROMPTS = {"sweep": (
     "exactly as the skill says. It only stages proposals for Review: never apply, approve, reject or undo anything, never "
     "change a project file, and never act in Microsoft 365 (no sending, deleting or changing anything). Alan started it, so no "
     "CONFIRM line is needed. Run each creaite script on its own, exactly `system/scripts/run <name>.py …`; write any input file "
-    "with the Write tool in system/staging/drafts/ first. Never quote a message's text. End with the sweep's one-line summary.")}
+    "with the Write tool in system/staging/drafts/ first. Never quote a message's text. End with the sweep's one-line summary."
+    + VIP_PRIVATE_RULE)}
 # ===== #264: Intake's Process, its own guarded run kind =====
 # Pressing Process in Intake (POST /api/intake/process) starts the kind "process" under the guard hook's mode "process" (reach.py
 # process_gate): it may read, draft the minutes and stage them for exactly the Intake files the server checked; it never applies,
@@ -2323,7 +2337,8 @@ PANEL_SWEEP_WORDS = re.compile(
 # capitals or holds a digit; a short lower-case one (abc) is accepted unless it is a common word; anything else is a plain chat.
 PANEL_SWEEP_FOR = re.compile(r"\bfor ([a-z][a-z0-9]{2,6})\b", re.I)
 PANEL_SWEEP_COMMON = frozenset({"the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"})
-PANEL_SWEEP_NOT = re.compile(r"\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\b", re.I)
+# #347: "save" is a second instruction too (Alan's plain word for apply); a thread subject may not carry it
+PANEL_SWEEP_NOT = re.compile(r"\b(?:and|then|also|plus|apply|save|approve|reject|undo|stage|confirm|delete|send|close)\b", re.I)
 
 
 def panel_sweep_code_ok(code):
@@ -2346,6 +2361,59 @@ def panel_sweep(message, images=(), confirmed=None):
     return m.group("subject") is not None or all(panel_sweep_code_ok(c) for c in PANEL_SWEEP_FOR.findall(text))
 
 
+PANEL_CALENDAR_WORDS = re.compile(r"(?:please )?refresh (?:the |my )?calendar(?: now)?(?: please)?[.!]?", re.I)
+SWEEP_RUNNING_SAYS = "A mail check is running; try again when it ends."
+
+
+class CalendarRefused(OSError):
+    """#339 A: a queued "refresh calendar" the calendar run refused; its message is the plain sentence to show."""
+
+
+def panel_kind(message, images=(), confirmed=None):
+    """#339 A: the small run a panel request starts, for routing only: "calendar" for a typed "refresh calendar", "sweep" for any
+    other plain sweep, else None. panel_sweep stays as it is (the budget gate and the queue still read "refresh calendar" as a
+    sweep); this adds no exemption. Words only, never the model: the same exclusions as panel_sweep (an image, a confirmed
+    request, over 120 characters, another instruction), and a kind or mode in the request is never read."""
+    if not panel_sweep(message, images, confirmed):
+        return None
+    text = " ".join(str(message or "").split())
+    return "calendar" if PANEL_CALENDAR_WORDS.fullmatch(text) else "sweep"
+
+
+def request_run_id(req):
+    """#339 A: the run id a request names (letters, digits and hyphens, 6 to 64), else a fresh one."""
+    named = req.get("run")
+    return named if isinstance(named, str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", named) else f"r-{secrets.token_hex(6)}"
+
+
+def calendar_run(run_id):
+    """#339 A: a typed "refresh calendar" as the button's own run: its fixed prompt, no session and no chat (so nothing is carried
+    from a chat and no outside-content mark is inherited), kind "calendar", its closure kept in the day's runs chat (BL-326).
+    Returns (the Run, None), or (None, the plain sentence to show) for a sweep running or a calendar that cannot be read."""
+    import calendar_refresh
+    if sweep_running():
+        return None, SWEEP_RUNNING_SAYS
+    why = calendar_refresh.precheck()
+    if why:
+        return None, why
+    return Run(run_id, calendar_refresh.build_prompt(), None, None, None, kind="calendar", label=calendar_refresh.label(),
+               closer=calendar_refresh.closer(), lines=calendar_refresh.lines()), None
+
+
+def queued_run(item, images, session, chat):
+    """#339 A: the run a queued message starts. A queued "refresh calendar" is the calendar run; if that is refused (a sweep
+    running, a calendar that cannot be read) this raises CalendarRefused, so the queue is held like a start that failed and says
+    why (Run now answers with the sentence), and never becomes a full mail sweep. Anything else is the chat or sweep run it
+    always was (BL-309)."""
+    if panel_kind(item["text"], images) == "calendar":
+        run, said = calendar_run(f"c-{secrets.token_hex(6)}")
+        if run is None:
+            raise CalendarRefused(said)
+        return run
+    return Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
+               sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
+
+
 PANEL_SWEEP_PROMPT = (
     "You are running creaite's cx-sweep from the dashboard panel (ask creaite), headless in the vault: Alan typed a sweep "
     "request, and typing it is his confirmation to stage its proposals (BL-309). Run the cx-sweep skill now for exactly what he "
@@ -2353,7 +2421,7 @@ PANEL_SWEEP_PROMPT = (
     "undo anything, never run propose.py stage, never change a project file, and never act in Microsoft 365 (no sending, "
     "deleting or changing anything). No CONFIRM line is needed. Run each creaite script on its own, exactly "
     "`system/scripts/run <name>.py …`; write any input file with the Write tool in system/staging/drafts/ first. Never quote a "
-    "message's text. End with the sweep's one-line summary and \"n items staged for Review\".")
+    "message's text. End with the sweep's one-line summary and \"n items staged for Review\"." + VIP_PRIVATE_RULE)
 PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
 # ===== end BL-309 =====
 # The file writers are denied by name too: an empty allow list doesn't stop the vault's .claude/settings.json allow rules (Edit
@@ -2592,10 +2660,10 @@ def guard_args(run_id, mode, held, session, files=None, as_minutes=None):
 
 def run_dirs(policy, guarded):
     """A run's --add-dir folders: none for a tool-less run; the home folder too for a guarded chat or sweep (BL-141); the
-    projects folder only otherwise (#264: a Process run too)."""
+    projects folder only otherwise (#264: a Process run too). #339 A: a sweep needs only the vault and the projects folder."""
     if policy in TOOLLESS_KINDS or policy == "calendar":       # #265: the calendar refresh reads no project file
         return []
-    return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
+    return reach_dirs() if guarded and policy not in ("process", "reextract", "sweep") else extra_dirs()
 
 
 def budget_gate(req):
@@ -3345,11 +3413,11 @@ def queue_start(q, prev=None):
         chat = q["chat"] or (prev.chat or prev.session if mine else None)
         session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
         try:
-            nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
-                      sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
-        except (OSError, ValueError):
+            nxt = queued_run(item, images, session, chat)                                       # BL-309; #339 A: a queued refresh
+        except (OSError, ValueError) as e:
             q["items"].insert(0, item)
             q["held"] = True
+            q["why"] = str(e) if isinstance(e, CalendarRefused) else ""      # #339 A: a refused refresh says why (Run now)
             queue_save(q)
             return None
         q["chat"] = chat

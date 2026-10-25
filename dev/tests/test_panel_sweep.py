@@ -95,6 +95,29 @@ class Recogniser(unittest.TestCase):
                   "check my mail for all", "sweep for today", "check the last 7 days"):
             self.assertFalse(self.ls.panel_sweep(m), m)       # an ordinary word is never read as a project code
 
+    @unittest.skipUnless("check (?:my )?(?:mail" in open(REPO / "system/scripts/live_server.py").read(),
+                         "needs dev/proposals/291/live_server.py.diff applied")
+    def test_347_old_and_new_words_and_the_edges(self):
+        """#347: the plain words and the old ones both start a sweep; a second instruction never does."""
+        for m in ("check my mail", "Check my mail please", "check my mail for ABC", "check my mail for the last 7 days",
+                  "check my mail now", "sweep", "sweep mail for ABC", "sweep the last 7 days", "sweep the UAT thread",
+                  "refresh calendar"):
+            self.assertTrue(self.ls.panel_sweep(m), m)
+        for m in ("check my mail and apply", "check my mail then approve", "check my mailbox settings",
+                  "check my mail and reply to Omar", "check my mail " + "x" * 130):
+            self.assertFalse(self.ls.panel_sweep(m), m)
+
+    @unittest.skipUnless("# #347:" in open(REPO / "system/scripts/live_server.py").read(),
+                         "GUARDED: needs dev/proposals/347/live_server.py.diff applied (its marker comment is the switch)")
+    def test_347_save_in_a_thread_subject_is_not_a_sweep(self):
+        """Pinned (Cap's M1): once the #347 diff is applied its marker is in the file, and then "save" MUST be in the NOT list; taking
+        "save" out (or mangling it) turns this red, it no longer skips."""
+        self.assertIn("|save|", self.ls.PANEL_SWEEP_NOT.pattern)
+        self.assertTrue(self.ls.PANEL_SWEEP_NOT.search("the budget save"))
+        self.assertFalse(self.ls.panel_sweep("sweep the budget save thread"))
+        self.assertFalse(self.ls.panel_sweep("check my mail and save"))
+        self.assertTrue(self.ls.panel_sweep("sweep the budget thread"))       # an ordinary subject is still a sweep
+
     def test_anything_more_is_a_plain_chat(self):
         for m in ("sweep and apply", "sweep then approve everything", "sweep, then apply", "sweep; apply", "apply",
                   "sweep mail for ABC and mark ABC-A-003 done", "sweep the budget and apply thread",
@@ -182,11 +205,18 @@ class ThroughTheServer(unittest.TestCase):
         self.assertTrue(run.get("sweep"))
         self.assertEqual(run.get("kind"), "ask")                                              # still a chat, with its history
 
-    def test_2_refresh_calendar_and_a_project_sweep_are_sweeps_too(self):
-        for m in ("refresh calendar", "sweep mail for ABC"):
-            self.ask(m)
-            a = self.call(m)["args"]
-            self.assertIn("--mode sweep", a[a.index("--settings") + 1], m)
+    def test_2_a_project_sweep_is_a_sweep_and_refresh_calendar_is_the_calendar_run(self):
+        """#339 A (rewritten on purpose): "refresh calendar" is still a sweep's words (panel_sweep) but starts the small calendar
+        run, as the button does: its fixed prompt, guard mode calendar, no add-dir, and no chat or session carried."""
+        import calendar_refresh
+        self.ask("sweep mail for ABC")
+        a = self.call("sweep mail for ABC")["args"]
+        self.assertIn("--mode sweep", a[a.index("--settings") + 1])
+        self.ask("refresh calendar")
+        a = self.call(calendar_refresh.build_prompt())["args"]
+        self.assertIn("--mode calendar", a[a.index("--settings") + 1])
+        self.assertNotIn("--add-dir", a)
+        self.assertNotIn("--resume", a)
 
     def test_3_a_mixed_request_is_a_plain_chat(self):
         before = self.staged()

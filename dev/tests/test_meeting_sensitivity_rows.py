@@ -35,11 +35,28 @@ class Sensitivity(unittest.TestCase):
         self.assertTrue(b.prep_invite({"sensitivity": "CONFIDENTIAL", "body": "x"})["confidential"])
         self.assertNotIn("confidential", b.prep_invite({"sensitivity": "normal", "body": "x"}))
 
+    @staticmethod
+    def inbox_src(src=None):
+        """The text of inbox_meetings and the helpers it was split into (#328: _inbox_row reads the sensitivity, _inbox_match decides
+        the project): a test of what the Intake rows do reads all of them, so moving the call between them is fine and removing it is not."""
+        src = src if src is not None else (REPO / "system/scripts/build_dashboard.py").read_text(encoding="utf-8")
+        parts = []
+        for name in ("inbox_meetings", "_inbox_row", "_inbox_match"):
+            at = src.index(f"def {name}(")
+            parts.append(src[at:src.index("\ndef ", at + 10)])
+        return "\n".join(parts)
+
     def test_intake_rows_read_it_through_invite_clean(self):
-        src = (REPO / "system/scripts/build_dashboard.py").read_text(encoding="utf-8")
-        body = src[src.index("def inbox_meetings"):src.index("def ", src.index("def inbox_meetings") + 10)]
+        body = self.inbox_src()
         self.assertIn("invite_clean.sensitivity(ev)", body)
         self.assertNotIn('== "confidential"', body.replace('sens == "confidential"', ""))
+
+    def test_removing_the_call_from_the_helper_fails_the_check(self):
+        """Mutant: with the sensitivity call gone from the helpers, the same check must fail."""
+        src = (REPO / "system/scripts/build_dashboard.py").read_text(encoding="utf-8")
+        mutant = src.replace("sens = invite_clean.sensitivity(ev)", "sens = 'normal'")
+        self.assertNotEqual(mutant, src)
+        self.assertNotIn("invite_clean.sensitivity(ev)", self.inbox_src(mutant))
 
 
 if __name__ == "__main__":
