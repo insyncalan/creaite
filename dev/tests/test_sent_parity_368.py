@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import linktext  # noqa: E402
 from test_sent_shapes_368 import SHAPES, NEGATIVES  # noqa: E402
+from test_sent_links_368 import ROWS, LOOK_ALIKE_BUT_NOT  # noqa: E402
 
 JS = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src" / "core" / "linkText.js"
 EXTRA = ["<p>17-10-2026: Chased Sara by email.</p>", "Waiting\r\n17-10-2026: Chased Sara by email.\r\nNext",
@@ -29,7 +30,8 @@ EXTRA = ["<p>17-10-2026: Chased Sara by email.</p>", "Waiting\r\n17-10-2026: Cha
          "Caf\u00e9 r\u00e9sum\u00e9 \u0928\u092e\u0938\u094d\u0924\u0947 \u0391\u0392\u0393 \u041f\u0440\u0438\u0432\u0435\u0442\n17-10-2026: Chased Sara by email.\nCaf\u00e9 again",
          "Caf\u00e9 \u041f\u0440\u0438\u0432\u0435\u0442. 17-10-2026: Chased Sara by email.",
          "<p>Caf\u00e9 \u0928\u092e\u0938\u094d\u0924\u0947</p><p>17-10-2026: Chased Sara by email.</p>"]
-FIX = ["Keep this\n" + v + "\nand this" for v in SHAPES.values()] + list(SHAPES.values()) + NEGATIVES + EXTRA
+FIX = (["Keep this\n" + v + "\nand this" for v in SHAPES.values()] + list(SHAPES.values()) + NEGATIVES + EXTRA + list(ROWS.values()) + LOOK_ALIKE_BUT_NOT + ["Keep [this](https://example.com)\n" + v + "\nand *this*" for v in ROWS.values()]
+       + ["Waiting. [17-10-2026](https://example.com): Chased Sara by email."])
 SCRIPT = """import(%s).then(m=>{const f=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(JSON.stringify(f.map(t=>[m.sentHas(t),m.sentStrip(t)])));})"""
 
 
@@ -71,6 +73,16 @@ class Parity(unittest.TestCase):
             got = self.mutant(old, new)
             self.assertFalse(got[SHAPES[shape]][0], shape)
 
+    def test_link_mark_and_bar_mutants_are_caught(self):
+        got = self.mutant("cuts.push([o, o + 1], [w1, o + m[0].length]);", "")
+        for k in ("link on the last word", "link on the date", "link on the verb", "link with an address the export refuses"):
+            self.assertFalse(got[ROWS[k]][0], k)
+        got = self.mutant('SENT_MARKS.includes(ch) ? "" :', "")
+        for k in ("escaped hyphens", "emphasis inside the verb", "emphasis inside by"):
+            self.assertFalse(got[ROWS[k]][0], k)
+        got = self.mutant('ch === "|" ? " " :', "")
+        self.assertFalse(got[ROWS["table cells"]][0])
+
     def test_entity_mutant_is_caught(self):
         got = self.mutant("(_, s) => sentRef(s)", '(_, s) => "&" + s')
         for t in ("<p>17-10-2026: Chased Sara by&#32;email.</p>", "<p>17-10-2026&#58; Chased Sara by email.</p>"):
@@ -81,7 +93,7 @@ class Parity(unittest.TestCase):
         t = want + "\n17-10-2026: Chased Sara by email.\nCaf\u00e9 again"
         self.assertEqual(linktext.sent_strip(t), want + "\nCaf\u00e9 again")
         self.assertEqual(dict(zip(FIX, run_js()))[t][1], want + "\nCaf\u00e9 again")
-        got = self.mutant("const plain = sentPlain(text), { form, at } = sentMap(plain);", "const plain = sentMap(sentPlain(text)).form, { form, at } = sentMap(plain);")
+        got = self.mutant("const plain = sentPlain(text), { form, at } = sentMap(plain),", "const plain = sentMap(sentPlain(text)).form, { form, at } = sentMap(plain),")
         self.assertNotEqual(got[t][1], want + "\nCaf\u00e9 again", "rewriting the field in its normalised form must be seen")
 
     def test_numeric_references_decode_as_python_does(self):
@@ -181,7 +193,7 @@ class Timing(unittest.TestCase):
     def test_js(self):
         import time
         t0 = time.time()
-        script = """import(%s).then(m=>{const t=["17-10-2026: chased ".repeat(55000),"17-10-2026: chased\\n".repeat(55000),"x".repeat(1e6)," ".repeat(1e6),"12 ".repeat(330000),"17-10-2026: Asked "+"a".repeat(1e6)];for(const x of t){m.sentHas(x);m.sentStrip(x);}console.log('ok');})"""
+        script = """import(%s).then(m=>{const t=["17-10-2026: chased ".repeat(55000),"17-10-2026: chased\\n".repeat(55000),"x".repeat(1e6)," ".repeat(1e6),"12 ".repeat(330000),"17-10-2026: Asked "+"a".repeat(1e6),"[a](https://example.com) ".repeat(40000),"[".repeat(5e5),"*_".repeat(5e5),"\\\\".repeat(1e6),"\u00e9".repeat(5e5)+"x".repeat(5e5),"[a](".repeat(250000)];for(const x of t){m.sentHas(x);m.sentStrip(x);}console.log('ok');})"""
         r = subprocess.run(["node", "-e", script % json.dumps(JS.as_uri())], capture_output=True, text=True, timeout=60)
         self.assertEqual(r.stdout.strip(), "ok", r.stderr[-300:])
         self.assertLess(time.time() - t0, 30)

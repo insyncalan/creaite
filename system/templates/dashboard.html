@@ -12220,22 +12220,54 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     if (SENT_TAGS.test(t47)) t47 = sentUnescape(t47.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, ""));
     return t47.replace(/ /g, " ");
   };
+  var SENT_MARKS = "*_~`\\", SENT_FRONT = "*_~`\\| 	";
+  var SENT_RUN = /[\x20-\x29\x2b-\x5b\x5d-\x5e\x61-\x7b\x7d\t\n]+/y;
+  var SENT_ONE = /* @__PURE__ */ new Map();
+  var sentNormOne = (c5) => {
+    let r4 = SENT_ONE.get(c5);
+    if (r4 === void 0) {
+      if (SENT_ONE.size > 2e4) SENT_ONE.clear();
+      r4 = sentNormal(c5);
+      SENT_ONE.set(c5, r4);
+    }
+    return r4;
+  };
+  var sentLinkPieces = (plain) => {
+    const cuts = [], starts = [];
+    if (plain.includes("](")) for (const m5 of plain.matchAll(LINK)) {
+      const o5 = m5.index, w12 = o5 + 1 + m5[1].length;
+      cuts.push([o5, o5 + 1], [w12, o5 + m5[0].length]);
+      starts.push([o5 + 1, w12, o5]);
+    }
+    return { cuts, starts };
+  };
   var sentMap = (plain) => {
-    const out = [], at2 = [], run = /[\x20-\x7e\t\n]+/y;
-    let pos = 0;
+    const { cuts } = sentLinkPieces(plain), out = [], at2 = [];
+    let pos = 0, ci2 = 0;
     while (pos < plain.length) {
-      run.lastIndex = pos;
-      const m5 = run.exec(plain);
-      if (m5) {
-        out.push(m5[0]);
-        for (let k5 = 0; k5 < m5[0].length; k5++) at2.push(pos + k5);
-        pos += m5[0].length;
+      if (ci2 < cuts.length && pos >= cuts[ci2][0]) {
+        pos = Math.max(pos, cuts[ci2][1]);
+        ci2++;
         continue;
       }
-      const ch2 = String.fromCodePoint(plain.codePointAt(pos)), n4 = sentNormal(ch2);
-      out.push(n4);
-      for (let k5 = 0; k5 < n4.length; k5++) at2.push(pos);
-      pos += ch2.length;
+      const limit = ci2 < cuts.length ? cuts[ci2][0] : plain.length, seg = cuts.length ? plain.slice(pos, limit) : plain;
+      let k5 = cuts.length ? 0 : pos;
+      const base = pos - k5;
+      while (k5 < seg.length) {
+        SENT_RUN.lastIndex = k5;
+        const m5 = SENT_RUN.exec(seg);
+        if (m5) {
+          out.push(m5[0]);
+          for (let j5 = 0; j5 < m5[0].length; j5++) at2.push(base + k5 + j5);
+          k5 += m5[0].length;
+          continue;
+        }
+        const ch2 = String.fromCodePoint(seg.codePointAt(k5)), n4 = SENT_MARKS.includes(ch2) ? "" : ch2 === "|" ? " " : sentNormOne(ch2);
+        out.push(n4);
+        for (let j5 = 0; j5 < n4.length; j5++) at2.push(base + k5);
+        k5 += ch2.length;
+      }
+      pos = limit;
     }
     return { form: out.join(""), at: at2 };
   };
@@ -12244,8 +12276,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function sentStrip(text) {
     if (!text) return String(text == null ? "" : text);
-    const plain = sentPlain(text), { form, at: at2 } = sentMap(plain);
-    const spans = [...form.matchAll(new RegExp(SENT_SRC, "gi"))].map((m5) => [at2[m5.index], at2[m5.index + m5[0].length - 1] + 1]);
+    const plain = sentPlain(text), { form, at: at2 } = sentMap(plain), { starts } = sentLinkPieces(plain);
+    const spans = [];
+    for (const m5 of form.matchAll(new RegExp(SENT_SRC, "gi"))) {
+      let a5 = at2[m5.index];
+      const w6 = starts.find(([w02, w12]) => a5 >= w02 && a5 < w12);
+      if (w6) a5 = w6[2];
+      while (a5 > 0 && SENT_FRONT.includes(plain[a5 - 1]) && (!spans.length || a5 - 1 >= spans[spans.length - 1][1])) a5--;
+      const e4 = m5.index + m5[0].length;
+      spans.push([a5, e4 < form.length ? at2[e4] : plain.length]);
+    }
     if (!spans.length) return String(text);
     let t47 = "", last = 0;
     for (const [a5, b5] of spans) {

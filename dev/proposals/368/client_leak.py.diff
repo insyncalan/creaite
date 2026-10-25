@@ -1,5 +1,5 @@
 diff --git a/system/scripts/client_leak.py b/system/scripts/client_leak.py
-index 48ac63aa..fb594e0c 100644
+index 48ac63aa..45952ab3 100644
 --- a/system/scripts/client_leak.py
 +++ b/system/scripts/client_leak.py
 @@ -223,7 +223,7 @@ def text_findings(con, code, text, skip=()):
@@ -11,7 +11,7 @@ index 48ac63aa..fb594e0c 100644
      for word in INTERNAL_WORDS:
          if word in low:
              found.append(f"contains “{word}”")
-@@ -234,12 +234,12 @@ def text_findings(con, code, text, skip=()):
+@@ -234,12 +234,13 @@ def text_findings(con, code, text, skip=()):
      return found + unreadable_findings(raw)
  
  
@@ -22,7 +22,8 @@ index 48ac63aa..fb594e0c 100644
      found = _memory_findings(code, low)
      import linktext                                            # #153: an "I sent it" line is internal
 -    if linktext.sent_has(as_shown(text)):
-+    if linktext.sent_has(as_shown(text)) or linktext.sent_has(text) or (raw is not None and linktext.sent_has(raw)):   # #368: fail closed, any form
++    forms = {as_shown(text), text} | ({raw} if raw is not None else set())     # #368: fail closed, any form, each string once
++    if any(linktext.sent_has(f) for f in forms):
          found.append("a chase log line (a dated 'Chased/Emailed/Asked … by email') is internal")
      try:                                                       # BL-94's floor
          found += _label_findings(con, code, text, low, ids)
