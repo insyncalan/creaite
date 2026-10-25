@@ -4,10 +4,10 @@ branch's own tests and the gate; this file checks the notes and the sheet, and t
    1  notes      What's new has a 2.6.7 section above 2.6.6 mentioning #328; the plain notes and the sheet exist
    2  public     the public text names Matched, Likely, Not sure, Process all ready and the skipped list; no real names
    3  l4         the "Remember <domain>" offer is marked L4 in a comment in the notes file, not in the What's new text
-   4  guarded    #347 and #339 are only inside a GUARDED comment, in the notes file and in What's new; both comments are closed
-   5  sheet      the sheet has the Process all ready, confidential, single-row, chip and L4 checks, and marks the GUARDED ones
+   4  chain      the chain landed: #347 and #339 are plain visible text in the notes file and in What's new, no GUARDED marker is left, comments are closed
+   5  sheet      the sheet has the Process all ready, confidential, single-row, chip, L4, #347/#339 and two small-fix checks (13 in all)
    6  tooling    dev/tools/whats_new.py finds the 2.6.7 section
-   7  version    VERSION is a version the tooling accepts (the bump to 2.6.7 is the cut's job, not this file's)
+   7  version    VERSION is 2.6.7
 
 Run (from the repository root):  python3 dev/tests/handchecks/test_v267.py
 """
@@ -60,20 +60,21 @@ class V267(unittest.TestCase):
         self.assertNotIn("L4", read("system/templates/help/whats-new.md"))
         self.assertIn("Remember <domain> for <project>?", read("dev/release-notes/2.6.7-plain.md"))
 
-    def test_c04_guarded_only_in_comment(self):
+    def test_c04_chain_wording_is_plain_text(self):
         for p in ("system/templates/help/whats-new.md", "dev/release-notes/2.6.7-plain.md"):
             t = read(p).split("## creaite 2.6.6\n")[0]
             self.assertEqual(t.count("<!--"), t.count("-->"), f"{p}: an unclosed comment")
-            self.assertIn("<!-- GUARDED: only if the 2.6.7 chain lands", t)
+            self.assertNotIn("GUARDED", unguarded(t), f"{p}: a GUARDED marker is visible")
+            self.assertNotIn("GUARDED", t, f"{p}: a GUARDED marker is left")
             for w in ("check my mail", "undo last save", "refresh calendar", "(#347)", "(#339)"):
-                self.assertNotIn(w, unguarded(t), f"{p}: {w!r} is outside the GUARDED comment")
-                self.assertIn(w, t)
+                self.assertIn(w, unguarded(t), f"{p}: {w!r} is not visible text")
 
     def test_c05_sheet(self):
         s = read("dev/handchecks/v2.6.7.md")
-        for w in ("Process all ready", "confidential", "Single-row Process", "chip", "L4", "GUARDED", "Remember <domain>"):
+        for w in ("Process all ready", "confidential", "Single-row Process", "chip", "L4", "check my mail", "undo last save", "refresh calendar", "Waiting to be saved", "may need 5", "Remember <domain>"):
             self.assertIn(w, s)
-        self.assertGreaterEqual(len(re.findall(r"(?m)^\d+\. \*\*", s)), 10)
+        self.assertNotIn("GUARDED", s)
+        self.assertEqual(len(re.findall(r"(?m)^\d+\. \*\*", s)), 13)
 
     def test_c06_tooling(self):
         sys.path.insert(0, str(REPO / "dev/tools"))
@@ -82,7 +83,9 @@ class V267(unittest.TestCase):
         self.assertTrue(whats_new.has("2.6.7"))
 
     def test_c07_version(self):
-        self.assertRegex(read("VERSION").strip(), r"^\d+\.\d+\.\d+$")
+        self.assertEqual(read("VERSION").strip(), "2.6.7")
+        for g in ("guide-first-day.html", "guide-how-to.html"):
+            self.assertIn("creaite 2.6.7 ·", read(f"system/templates/{g}"))
 
 
 if __name__ == "__main__":

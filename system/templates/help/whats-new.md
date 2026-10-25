@@ -13,7 +13,6 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - **Process all ready is careful.** It processes only meetings that are Matched or remembered. It lists the Likely and Not sure ones it skipped, so you pick a project for each first. Confidential meetings are counted, never named. (#328)
 - **A single Process is unchanged.** Pressing Process on one row, even a Likely one, still processes that meeting. (#328)
 
-<!-- GUARDED: only if the 2.6.7 chain lands. Everything between this line and the closing marker needs the guarded server changes (#347 words, #339 routing) and Alan's approval of the exact diffs. Delete the whole block if they do not land; otherwise remove only the two marker comments.
 ### Plainer words in the chat
 - **Say what you mean.** "check my mail" runs the mail and Teams check, "save" saves what you approved, and "undo last save" undoes the last save. The older words still work. (#347)
 - **"save" is careful.** On its own it counts as your go-ahead only straight after a review list in the same session. (#347)
@@ -21,7 +20,6 @@ What changed for you in each release of creaite, newest first. Written in plain 
 ### Lighter runs
 - **"refresh calendar" is its own run.** Typed in ask creaite, it reads your calendar without a mail check, so it is quicker. If a queued refresh is turned down, the reason is kept and shown. (#339)
 - **The mail check still follows the people you follow,** and no longer reads your home folder. (#339)
-END OF GUARDED -->
 
 - Update from the release zip as usual.
 - Reload any dashboard tab that was open before the update.

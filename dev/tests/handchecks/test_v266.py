@@ -47,7 +47,7 @@ class V266(unittest.TestCase):
     def test_c01_version(self):
         v = read("VERSION").strip()
         self.assertRegex(v, r"^\d+\.\d+\.\d+$")
-        self.assertEqual(v, "2.6.6")
+        self.assertGreaterEqual(tuple(map(int, v.split("."))), (2, 6, 6))   # 2.6.7 contains 2.6.6
 
     def test_c02_notes(self):
         wn = read("system/templates/help/whats-new.md")
@@ -64,14 +64,16 @@ class V266(unittest.TestCase):
     def test_c03_guides(self):
         for g in ("guide-first-day.html", "guide-how-to.html"):
             t = read(f"system/templates/{g}")
-            self.assertIn("creaite 2.6.6 ·", t)
+            self.assertRegex(t, r"creaite 2\.6\.[6-9] ·")   # 2.6.6 or later (test_v267 pins 2.6.7)
             self.assertNotRegex(t, r"creaite 2\.6\.[0-5] ·")
 
     def test_c04_guarded_unchanged(self):
         if git("rev-parse", "-q", "--verify", "v2.6.4").returncode:
             self.skipTest("no v2.6.4 tag here")
         d = git("diff", "--name-only", "v2.6.4", "HEAD", "--", *GUARDED).stdout.split()
-        self.assertEqual(d, [], f"guarded files changed since 2.6.4: {d}")
+        # 2.6.7 landed the guarded chain (live_server.py) and the #347 rules text; those two files may differ, nothing else may
+        landed = ["system/creaite-rules.md", "system/scripts/live_server.py"] if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 7) else []
+        self.assertEqual(sorted(d), landed, f"guarded files changed since 2.6.4: {d}")
 
     def test_c05_341_structure(self):
         r = run_test("dev/tests/test_v265_341_structure.py")
