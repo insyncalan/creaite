@@ -2,6 +2,36 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.7
+
+2.6.7 contains all of 2.6.6. The headline: Intake tells you how sure it is about each meeting's project, and Process all ready no longer guesses.
+
+### Intake and the project for a meeting
+- **How sure creaite is.** Each meeting row carries a chip: Matched, Likely or Not sure, with the reason in a few words (for example "Project code in the title" or "Same series as before"). You see it in List, Board and Two panes. (#328)
+- **Not sure rows offer the likely projects.** Up to three project buttons sit on the row. Choosing one saves the choice for that series, so the next meeting in it is Matched. (#328)
+- **Remember a sender's domain.** After you choose a project, creaite asks once: "Remember <domain> for <project>?". Yes saves it, so later meetings from that domain are matched. (#328)
+- **Process all ready is careful.** It processes only meetings that are Matched or remembered. It lists the Likely and Not sure ones it skipped, so you pick a project for each first. Confidential meetings are counted, never named. (#328)
+- **A single Process is unchanged.** Pressing Process on one row, even a Likely one, still processes that meeting. (#328)
+
+<!-- GUARDED: only if the 2.6.7 chain lands. Everything between this line and the closing marker needs the guarded server changes (#347 words, #339 routing) and Alan's approval of the exact diffs. Delete the whole block if they do not land; otherwise remove only the two marker comments.
+### Plainer words in the chat
+- **Say what you mean.** "check my mail" runs the mail and Teams check, "save" saves what you approved, and "undo last save" undoes the last save. The older words still work. (#347)
+- **"save" is careful.** On its own it counts as your go-ahead only straight after a review list in the same session. (#347)
+
+### Lighter runs
+- **"refresh calendar" is its own run.** Typed in ask creaite, it reads your calendar without a mail check, so it is quicker. If a queued refresh is turned down, the reason is kept and shown. (#339)
+- **The mail check still follows the people you follow,** and no longer reads your home folder. (#339)
+END OF GUARDED -->
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+- Open Intake with a few meetings and read the chips.
+
+### Good to know
+- A meeting whose title has a project code, or a series you remembered, is Matched. A meeting you have not placed before is Likely or Not sure.
+- Process all ready skips Likely and Not sure meetings on purpose; choose a project and they join the next run.
+- For a confidential meeting you still choose the project yourself.
+
 ## creaite 2.6.6
 
 2.6.6 contains all of 2.6.5 (also called 2.6.4b). The headline: a mail check now tells you what it is doing, a meeting can no longer be filed under the wrong project, and a round of design decisions makes the screens quieter and plainer.
