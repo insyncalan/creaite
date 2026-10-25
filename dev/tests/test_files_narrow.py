@@ -49,6 +49,7 @@ class FilesNarrow(LiveBrowserCase):
         b.wait("document.querySelector('#fmBtn')")
         b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=archived]').click(); })()")
         b.wait("document.querySelector('#filesTbl [data-moveback]')")
+        b.eval("if(document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click()")      # the View choice leaves the Filter menu open; close it so it is not over the table
 
     def test_at_320_the_folder_list_never_draws_over_the_archived_table(self):
         b = self.b
