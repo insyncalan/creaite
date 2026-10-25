@@ -1,0 +1,18 @@
+# DRAFT: the guarded chain for 2.6.7 (nothing is applied; dev/tests/guarded_chain.py does not know it yet: a fifth spec, CHAIN5_SHA256
+# and the 2.6.6 release commit as its base are added only on Alan's say). One diff per line, in landing order (dev/proposals/guarded-2.6.7-summary.md).
+# Guarded files only: system/scripts/live_server.py. The rules, skills and test diffs below the line are ordinary commits.
+#
+# #347: "check my mail", "save", "undo last save" (words only; "save" is apply only as the whole message, after a shown list)
+dev/proposals/347/live_server.py.diff
+# #339: a typed "refresh calendar" starts the small calendar run (followed outside the start lock; a refused queued refresh holds the queue and says why)
+dev/proposals/339/calendar-route.diff
+# #339: a sweep run reads the vault and the projects folder, not the home folder
+dev/proposals/339/sweep-no-home.diff
+# #339: both sweep prompts end with the followed-people rule
+dev/proposals/339/sweep-followed-rule.diff
+#
+# Not guarded (separate commits, after the chain; the rules wording needs Alan's yes, its "(Alan's decision pending)" is dropped then):
+#   dev/proposals/347/creaite-rules.md.diff, dev/proposals/339/creaite-rules.diff   (one rules commit)
+#   dev/proposals/347/skills.diff, dev/proposals/339/tests-pins.diff                (ordinary commits)
+# The page change for the typed refresh (ask.js typedCalendar, built dashboard.html) goes in the same step as the chain and the pins,
+# or test_mail_check and the pinned tests are red in between.
