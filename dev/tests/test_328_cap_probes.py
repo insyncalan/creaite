@@ -28,9 +28,12 @@ P = [{"code": "ABC", "name": "Harbour Upgrade"}, {"code": "DEF", "name": "Orchar
 ACT = (REPO / "system/templates/dashboard/src/components/intakeReview/actions.js").read_text()
 
 
-def needs_project(row):
-    """The page's own Process-all-ready rule (irNeedsProject), run in Node on a row."""
+def needs_project(row, mutate=None):
+    """The page's own Process-all-ready rule (irNeedsProject), run in Node on a row (`mutate`: (old, new) applied to its text first)."""
     line = [ln for ln in ACT.splitlines() if ln.startswith("export const irNeedsProject")][0].replace("export const", "const", 1)
+    if mutate:
+        assert mutate[0] in line, mutate[0]
+        line = line.replace(*mutate, 1)
     js = f"{line}\nconsole.log(JSON.stringify(irNeedsProject({json.dumps(row)})));"
     return json.loads(subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout)
 
@@ -112,13 +115,35 @@ class PortfolioRows(Base):
         self.assertTrue(needs_project({**base, "level": "unsure"}))
         self.assertTrue(needs_project({**base, "level": "weird"}))
         self.assertFalse(needs_project({**base, "level": "matched"}))
-        self.assertFalse(needs_project({**base, "p": "_portfolio"}))
+        self.assertTrue(needs_project({**base, "p": "_portfolio", "how": "portfolio"}))         # #328 M2: a guessed portfolio row waits
+        self.assertTrue(needs_project({**base, "p": "_portfolio"}))
+        self.assertFalse(needs_project({**base, "p": "_portfolio", "how": "remembered"}))      # Alan's own no-project choice runs
         self.assertFalse(needs_project({**base, "src": "upload"}))            # a file has no project guess
 
     def test_PORTFOLIO_mutant(self):
         m = mutate_bd('match = {} if private or code == "_portfolio" else', 'match = {} if private or how == "portfolio" else')
         self.assertEqual(m._inbox_match("Weekly sync", {"attendees": []}, False, False, P, {"weekly sync": "_portfolio"})[:2],
                          (None, "unsure"))                                    # the gap without the fix
+
+
+class RememberedSeriesVersusAttendeeOnPrep(Base):
+    """#328 M1 (Cap): the Prep, hub and Today paths give the same answer as Intake: unsure, never the remembered project."""
+
+    def test_M1_mutant_the_early_return_leaks(self):
+        m = mutate_bd('return (None, "unsure") if a["level"] == "unsure" and a["cands"] else (code, how)', 'return code, how')
+        ev = {"title": "Weekly sync", "attendees": [{"email": "a@orchard.example"}]}
+        self.assertEqual(m.prep_match_ev("Weekly sync", ev, P, {"weekly sync": "ABC"}), ("ABC", "remembered"))
+        self.assertEqual(bd.prep_match_ev("Weekly sync", ev, P, {"weekly sync": "ABC"}), (None, "unsure"))
+        own = {"title": "Weekly sync", "attendees": [{"email": "a@harbourco.example"}]}        # its own client's attendee: still remembered
+        self.assertEqual(bd.prep_match_ev("Weekly sync", own, P, {"weekly sync": "ABC"}), ("ABC", "remembered"))
+
+
+class GuessedPortfolio(Base):
+    def test_M2_mutant_the_old_rule_lets_a_guessed_portfolio_row_through(self):
+        row = {"src": "calendar", "private": False, "confidential": False, "p": "_portfolio", "how": "portfolio"}
+        old = ('(m.p === "_portfolio" ? m.how !== "remembered" : m.level !== "matched")', 'm.p !== "_portfolio" && m.level !== "matched"')
+        self.assertFalse(needs_project(row, old))                               # the gap without the fix
+        self.assertTrue(needs_project(row))
 
 
 class LikelyIsNotChosen(Base):

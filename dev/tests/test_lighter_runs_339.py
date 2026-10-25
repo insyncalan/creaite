@@ -208,12 +208,19 @@ class Behaviour(unittest.TestCase):
         for ok in ("refresh calendar", "Refresh the calendar", "please refresh my calendar now.", "refresh my calendar please!"):
             self.assertEqual(ls.panel_kind(ok), "calendar", ok)
             self.assertTrue(ls.panel_sweep(ok), ok)                          # the budget gate and the queue still exempt it
-        for ok in ("sweep", "sweep mail for ABC", "check my mail", "sweep the UAT plan thread"):
+        for ok in ("sweep", "sweep mail for ABC", "check my mail", "sweep the UAT plan thread", "sweep the refresh calendar thread"):
             self.assertEqual(ls.panel_kind(ok), "sweep", ok)
         for no in ("refresh calendar and apply", "refresh calendar for ABC", "refreshing calendar", "x" * 130, "tell me about it"):
             self.assertIsNone(ls.panel_kind(no), no)
         self.assertIsNone(ls.panel_kind("refresh calendar", images=["a.png"]))
         self.assertIsNone(ls.panel_kind("refresh calendar", confirmed="Add action"))
+
+    def test_panel_kind_needs_the_whole_message_to_be_the_calendar_words(self):
+        """#339 M1: a sweep whose words merely contain "refresh calendar" is a sweep. Pinned against search in place of fullmatch."""
+        self.assertEqual(self.ls.panel_kind("sweep the refresh calendar thread"), "sweep")
+        mutant = module(SRC.replace("PANEL_CALENDAR_WORDS.fullmatch(text)", "PANEL_CALENDAR_WORDS.search(text)", 1))
+        self.assertNotEqual(SRC, SRC.replace("PANEL_CALENDAR_WORDS.fullmatch(text)", "PANEL_CALENDAR_WORDS.search(text)", 1))
+        self.assertEqual(mutant.panel_kind("sweep the refresh calendar thread"), "calendar")      # the gap without fullmatch
 
     def test_a_typed_refresh_starts_the_calendar_run_with_its_fixed_prompt_and_no_chat(self):
         import calendar_refresh
