@@ -97,9 +97,16 @@ class Glued(unittest.TestCase):
 
 
 class KeyAlone(unittest.TestCase):
-    def test_key_alone_in_an_item_or_cell_takes_the_next_line(self):
-        for text, v in KEY_ROWS:
-            self.assertNotIn(v, I.invite_text(text), text)
+    """bare22 (Cap): "Key" alone in a list item or cell is no longer a hard label (a RAG legend must keep its lines). The loss of that
+    protection is a known limit: a list "Key" followed by a value in a list can leak. These rows pin the limit."""
+
+    def test_a_rag_key_legend_keeps_its_lines(self):
+        for t in ("RAG status\n- Key\n- Red: blocked\n- Amber: at risk\nAOB", "Key\nRed: blocked\nAmber: at risk\nAOB"):
+            self.assertEqual(I.invite_text(t), t, t)
+
+    def test_the_lost_protection_is_pinned_as_a_limit(self):
+        for t in ("- Key\n- ZQ7742", "1. Key\n2. ZQ7742", "> Key\n> ZQ7742", "Agenda\n- Key\n- 4417\nAOB"):
+            self.assertEqual(I.invite_text(t), t, t)
 
     def test_ordinary_key_lines_stay(self):
         for t in ("- Key milestones\n- Budget", "- Key dates\n- 4417 Main Street review", "1. Key risks\n2. Hiring", "Key milestones\nBudget",
@@ -108,7 +115,7 @@ class KeyAlone(unittest.TestCase):
 
     def test_the_documented_limits_stay_and_are_pinned(self):
         self.assertEqual(I.invite_text("Key\n- hunter"), "Key\n- hunter")            # unmarked Key, word-only value in a list
-        self.assertEqual(I.invite_text("Meeting ID hunterxyz"), "Meeting ID hunterxyz")   # a word-only value after a bare ID label
+        self.assertEqual(I.invite_text("Meeting ID hunterxyz"), "")      # bare22: a label plus a short phrase is a qualified label: it goes
 
 
 class Exempt(unittest.TestCase):
@@ -139,7 +146,6 @@ class Exempt(unittest.TestCase):
 def key_fuzz_body(rnd, n, html):
     """List-heavy: Key (or a glued label) as a list item or cell, its value as the next item, among safe agenda items."""
     marks = ["- ", "* ", "• ", "1. ", "2) ", "a) ", "> ", "| "]
-    vals = [f"{rnd.randint(1000, 9999)}{n:05d}", f"ZQ{n:05d}", f"{rnd.randint(100, 999)} {rnd.randint(100, 999)} {n:03d}", f"H{n % 9}K{n:05d}"]
     safe = ["Lunch at 12:30", "Room 4", "Item 12", "Budget review", "Key milestones", "25-10-2026", "Hiring plan", "Q3 plan"]
     items, values = [], []
 
@@ -150,12 +156,8 @@ def key_fuzz_body(rnd, n, html):
     for _ in range(rnd.randint(2, 6)):
         pick = rnd.random()
         if pick < 0.35:
-            put("Key")
-            if rnd.random() < 0.3:
-                put(rnd.choice(["Please enter", "https://example.org/join/x"]))
-            v = rnd.choice(vals)
-            put(v)
-            values.append(v)
+            put("Key")      # bare22: a "Key" item is not a label any more; its next item is an ordinary agenda item
+            put(rnd.choice(safe))
         elif pick < 0.55:
             lab = rnd.choice(["Token", "Secret", "OTP", "API key", "PIN", "Zoom ID", "Meeting ID", "Host key", "Passcode"])
             v = rnd.choice([f"{rnd.randint(100, 9999)}{n:05d}", f"ZQ{n:05d}", f"H{n % 9}K{n:05d}"])
@@ -211,19 +213,6 @@ class Mutants(unittest.TestCase):
     def test_glued_value_must_have_a_digit(self):
         m = mutant("(?=[^\\W_]*\\d)(?=[^\\W_]*[^\\W\\d_])", "(?=[^\\W_]*[^\\W\\d_])")
         self.assertTrue([t for t in ("Tokenise", "Pinot", "Optical", "Secretary") if m.is_secret(t)])
-
-    def test_key_item_rule_off(self):
-        m = mutant('rf"|{KEY_ITEM}|{QUALIFIED_ALONE}", re.I)', 'rf"|(?!)|{QUALIFIED_ALONE}", re.I)')
-        self.assertTrue(leaks(m, [r for r in KEY_ROWS if r[1] in ("hunter", "ZQ7742")]))
-
-    def test_key_item_without_table_cells_and_quotes(self):
-        m = mutant("\\u25e6|>]|", "\\u25e6]|")
-        self.assertTrue(leaks(m, [("> Key\n> ZQ7742", "ZQ7742")]))
-
-    def test_key_item_that_takes_every_word(self):
-        m = mutant("(?:keys?)[\\s|*_~`:]*$", "(?:\\w+)[\\s|*_~`:]*$")
-        self.assertNotEqual(m.invite_text("- Hiring plan\n- Budget"), "- Hiring plan\n- Budget")     # the mutant removes agenda lines; the real rule does not
-        self.assertEqual(I.invite_text("- Hiring plan\n- Budget"), "- Hiring plan\n- Budget")
 
     def test_exemption_widened_to_a_prefix_match_leaks_passcode_tokens(self):
         m = mutant("and not _CODE_LIKE.fullmatch(w)", "and not _CODE_LIKE.match(w)")

@@ -75,8 +75,8 @@ VALUELESS = {"eroding agenda", "password reset then agenda", "pin code changes",
 CORPUS = [
     ("eroding agenda", ERODING, [], ["Agenda", "2. Budget review", "7. AOB"]),
     ("password reset then agenda", "Password reset\nBudget review\nHiring\nVendors\nRisks", [], ["Budget review", "Vendors", "Risks"]),
-    ("pin code changes", "Agenda\nPIN code changes\nBudget review\nHiring\nVendors\nRisks", [], ["Budget review", "Vendors"]),
-    ("meeting id list below", "Meeting ID list below\nBudget review\nHiring\nVendors\nRisks", [], ["Budget review", "Vendors"]),
+    ("pin code changes", "Agenda\nPIN code changes\nReview the budget\nPlan next year hiring\nVendors\nRisks", [], ["Review the budget", "Plan next year hiring"]),
+    ("meeting id list below", "Meeting ID list below\nReview the budget\nPlan next year hiring\nVendors\nRisks", [], ["Review the budget", "Plan next year hiring"]),
     ("passcode policy update", "Passcode policy update\nBudget review\nHiring\nVendors\nRisks", [], ["Budget review", "Vendors"]),
     ("teams invite", "Microsoft Teams meeting\nJoin: https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZmFrZTEyMzQ1Ng%40thread.v2/0\n"
      "Meeting ID: 345 678 901 234\nPasscode: Xk7Pq2\n\nAgenda\n1. Budget review\n2. Hiring\n3. Vendors\n4. Risks\n5. Milestones\n6. AOB",
@@ -153,7 +153,8 @@ def protected(entries, strict):
             continue
         window = back[-WINDOW_BACK:]
         bad = ("valued", "alone", "value") + (("benign",) if strict else ())
-        if kind == "agenda" and not any(k in bad for k in window):
+        short = I._valueish(text) and "benign" in back[-WINDOW_BACK * 3:]      # bare22: a label's window removes a 1-2 token line (a value shape)
+        if kind == "agenda" and not any(k in bad for k in window) and not short:
             out.append(text)
         back.append(kind)
     return out

@@ -166,22 +166,28 @@ LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_N
 _ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
 _ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
 _QUIET = r"[\s?~*`_]*"                                        # "Passcode?", "Passcode ?~": a question mark or markdown after a label
-# bare20: "Key" ALONE in a list item or a table cell ("- Key", "1. Key", "* Key", "| Key |", "> Key") is a hard label, like Passcode: the
-# next lines go whatever they hold. A bare "Key" line with no marker keeps the older digit rule only (known limit: "Key" then "- hunter").
-KEY_ITEM = (r"^\s*(?:(?:[-*\u2022\u2013\u2014\u00b7\u25aa\u25cf\u25e6|>]|\d{1,3}[.)]|[A-Za-z][.)]|[ivxlcIVXLC]{2,5}[.)])\s*)+"
-            r"(?:keys?)[\s|*_~`:]*$")
-# bare21 (Cap #369, HIGH): a QUALIFIED hard label stands alone too: the label, then a qualifier that starts with a function word and has at
-# most four more words ("for dial-in", "to join", "for the weekly call") and/or a bracketed group ("(Teams)", "(organiser only)"), then a
-# separator or the end of the line. Its value is on the next lines, as for an unqualified label. A word that is not a function word right
-# after the label ("Passcode policy review") is not a qualifier, so those lines behave as before.
-_QFUNC = r"(?:for|to|of|on|at|in|via|by|from|when|if|used|only|per|during|with|as)"
-_QUAL = (rf"(?:\s*[(\[](?!\d{{1,3}}[)\]])[^()\[\]\n]{{0,60}}[)\]]"      # a word with a digit is a value, not a qualifier
-         rf"|\s+{_QFUNC}(?![\w-])(?:\s+[^\W\d_](?:[^\W\d_]|['’-])*){{0,4}})")
-QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w){_QUAL}{{1,2}}(?:{_ALONE_TAIL})?{_QUIET}$"
-LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
-                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
-                         rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$"
-                         rf"|{KEY_ITEM}|{QUALIFIED_ALONE}", re.I)
+# bare22: "Key" alone in a list item or cell is NOT a hard label any more (a RAG legend "Key" must keep its lines). Known limit: a list
+# "- Key" followed by "- ZQ7742" leaks the value; an unmarked "Key" line still takes a following number (the digit rule).
+# bare21/bare22 (Cap #369, HIGH): a QUALIFIED hard label stands alone too: the label, then ANY short phrase of up to five plain words
+# ("required", "below", "for dial-in", "- Teams", "for the weekly call") and/or a bracketed group ("(Teams)"), then a
+# separator or the end of
+# the line. A word with a digit never counts as a qualifier word, so "Passcode required 4417" stays a same-line value. Its value is on the
+# next lines, as for an unqualified label; because every hard window now removes only value-looking lines (_valueish), a wide net is cheap.
+# the bare hard labels (not Key, Code or Access alone: "Key milestones" is an agenda line)
+_QBARE = r"secrets?|tokens?|otp|api[\s-]*keys?"
+_QWORD = r"[^\W\d_](?:[^\W\d_]|['\u2019-])*"
+_QBRACKET = r"\s*[(\[](?!\d{1,3}[)\]])[^()\[\]\n]{0,60}[)\]]"      # a word with a digit is a value, not a qualifier
+_QDASH = r"[-\u2013\u2014]"
+_QPHRASE = rf"(?:\s*{_QDASH}\s+|\s*\|\s*|\s+){_QWORD}(?:\s+(?:{_QDASH}\s+)?{_QWORD}){{0,4}}"      # "is - Zoom", "- Teams"
+_QUAL = rf"(?:{_QBRACKET}(?:{_QPHRASE})?(?:{_QBRACKET})?|{_QPHRASE}(?:{_QBRACKET})?)"
+# "Password reset": a finished soft phrase, not a qualifier
+_SOFT_RUN = rf"(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))+[\s.,;!?*_~`]*$"
+QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_QBARE})(?!\w)(?!{_SOFT_RUN}){_QUAL}(?:{_ALONE_TAIL})?{_QUIET}$"
+_ALONE_PLAIN = (rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
+                rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
+                rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$")
+LABEL_ALONE = re.compile(rf"{_ALONE_PLAIN}|{QUALIFIED_ALONE}", re.I)
+_LABEL_ALONE_PLAIN = re.compile(_ALONE_PLAIN, re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
@@ -437,7 +443,13 @@ def _lines(t):
 def _alone(line):
     """Whether a dropped line is a label with no value (its value is on a later line): a label and a separator, or a header of two or more
     labels ("Meeting ID | Code")."""
-    return _link_label(line) or any(LABEL_ALONE.search(v) or _only_labels(v) for v in _views(_MARK.sub(" ", line)))
+    return _link_label(line) or any(_label_alone(v) or _only_labels(v) for v in _views(_MARK.sub(" ", line)))
+
+
+def _label_alone(view):
+    """A label with no value after it. A qualified label ("Passcode required") on a line that holds a digit already carries its value
+    ("Meeting ID 12 - Passcode abcdefg"): the line goes, but no value is still to come."""
+    return bool(_LABEL_ALONE_PLAIN.search(view) or (LABEL_ALONE.search(view) and not re.search(r"\d", _LIST_STRIP.sub("", view))))
 
 
 _FILLER = re.compile(r"(?:[\W_]|\b(?:and|und|et|is|are|or)\b)+")
@@ -453,6 +465,7 @@ def _views_of(ln):
     return _views(_MARK.sub(" ", ln))
 
 
+WEAK_MAX = 4                                # instruction lines or sentences a label standing alone lets through before its value
 WINDOW = 3                                  # lines (blank ones do not count) that go after a line that ends a label phrase
 
 
@@ -506,15 +519,21 @@ _YEAR = r"(?:19|20)\d\d"
 _SEP = r"[-/.]"
 _Y2 = rf"(?:{_YEAR}|\d\d)"
 _TIME = r"(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:\s?[ap]\.?m\.?)?|(?:1[0-2]|0?[1-9])\s?[ap]\.?m\.?"
-_SOFT_DATE_TIME = re.compile(
-    rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
-    rf"|(?<![\w])(?:{_DAY}(?:st|nd|rd|th)?\s+{_MONTH}\.?(?:,?\s+{_YEAR})?|{_MONTH}\.?\s+{_DAY}(?:st|nd|rd|th)?(?:,?\s+{_YEAR})?)(?![\w])"
-    rf"|(?<![\d:.])(?:{_TIME})(?![\d:])", re.I)
+_DATE_PART = (rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
+              rf"|(?<![\w])(?:{_DAY}(?:st|nd|rd|th)?\s+{_MONTH}\.?(?:,?\s+{_YEAR})?"
+              rf"|{_MONTH}\.?\s+{_DAY}(?:st|nd|rd|th)?(?:,?\s+{_YEAR})?)(?![\w])")
+_SOFT_DATE_TIME = re.compile(rf"{_DATE_PART}|(?<![\d:.])(?:{_TIME})(?![\d:])", re.I)
+_DATE_ONLY = re.compile(_DATE_PART, re.I)
 # bare21: id_number takes out only VALID dates (day 1-31, month 1-12, year 19xx/20xx or two digits) and times, so 987-65-4321,
 # 123-45-6789 and 1234-56-7890 are numbers (IDs), not dates; a real date or time is still not a number.
 _DATE_TIME = re.compile(
     rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
     r"|\b\d{1,2}:\d{2}(?::\d{2})?\b")
+
+
+# bare22: after a hard label's stop-label ("Meeting ID.") a line with a date-shaped thing is a value whatever its validity (12-11-2026,
+# 12-11-26, 31-02-2026, 12-31-2026, 11-12-2026 10:00): dates are exempt ONLY under soft headings. A bare time (12:30) is not date-shaped.
+_DATE_SHAPED = re.compile(r"(?<![\w.:/-])\d{1,4}([-/.])\d{1,2}\1\d{2,4}(?![\w])")
 
 
 def _looks_like_value(line, dates_ok=False):
@@ -571,6 +590,20 @@ def _link_label(line):
     return any(_KEY_ALONE.fullmatch(v.strip(" \t*_~`")) for v in _views(_MARK.sub(" ", line)))
 
 
+def _date_ish(text):
+    """Whether a line holds anything shaped like a date (valid or not), or a month-name date."""
+    return bool(_DATE_SHAPED.search(text) or _DATE_ONLY.search(text))
+
+
+def _valueish(ln):
+    """bare22: whether a line can be the value of a hard label: one or two tokens (after its list marker), or a line that holds a number, a
+    date-shaped thing, a hex string or a token mixing letters and digits. A sentence of three or more plain words ("IT will issue on day
+    one") is not a value and stays."""
+    rest = _LIST_STRIP.sub("", re.sub(r"^[\s_*~`>#|]+", "", ln.strip())).strip(" \t|*_~`>")
+    words = [w for w in rest.split() if re.search(r"[^\W_]", w)]
+    return len(words) <= 2 or _looks_like_value(ln) or _date_ish(rest)
+
+
 def _weak_phrase(ln):
     """Whether a line is two or more plain words with no number, ID or mixed token in them: an instruction, not a value."""
     return len(ln.split()) >= 2 and not _looks_like_value(ln)
@@ -596,6 +629,8 @@ class _Reader:
 
     def __init__(self):
         self.kept, self.window, self.pending, self.digit_wait, self.anchors = [], 0, 0, False, []
+        self.weak_kept = False
+        self.dw_age = 0                            # instruction lines the "Meeting ID." wait has let through
         self.age = 0                               # weak phrases ("Please enter") a standing label has already let through
         self.soft = []                             # the open soft windows: [lines left, the kept heading that opened it]
 
@@ -606,17 +641,18 @@ class _Reader:
             self.kept.append(ln)               # a blank or symbols-only line is transparent: any number, for a label alone as for a window
             return
         value = self._takes_number(ln, dropped)
-        reach = self.window > 0 or value                           # a hard window or a value rule reaches this line
+        valueish = dropped or _valueish(ln)                        # bare22: a hard label's window removes only value-looking lines
+        reach = (self.window > 0 and valueish) or value            # a hard window or a value rule reaches this line
         self._tombstone(reach)
         kind = _label_kind(ln, dropped)
         heading = kind == "leads"                  # a heading is not the value of a label standing alone: it opens its own window
         soft = self._soft_step(ln, dropped, reach)
-        consumed = (self.pending > 0 and not heading) or reach or dropped or soft
+        consumed = (self.pending > 0 and not heading and valueish) or reach or dropped or soft
         self._advance(ln, dropped or soft or heading, kind, consumed, reach, value)
 
     def _takes_number(self, ln, dropped):
         """The "Meeting ID." rule: the next line with a digit is the value (not a removed line, not one a label standing alone takes)."""
-        return self.digit_wait and not dropped and not self.pending and id_number(ln)
+        return self.digit_wait and not dropped and not self.pending and (id_number(ln) or _date_ish(ln))
 
     def _tombstone(self, reach):
         if self.anchors and reach:
@@ -643,19 +679,30 @@ class _Reader:
 
     def _pend(self, ln, removed):
         """"Passcode:" / "Please enter" / "4417": an instruction is not the value, the number after it is (twice at most)."""
-        if self.pending > 0 and not removed and self.age < WINDOW - 1 and _weak_phrase(ln):
+        if self.pending > 0 and not removed and self.age < WEAK_MAX and _weak_phrase(ln):
             self.age += 1
         else:
             self.pending, self.age = _pending_after(ln, removed, self.pending), 0
+
+    def _wait_after(self, ln, kind, consumed, value):
+        """Whether the "Meeting ID." wait goes on after this line. It lives across any number of removed lines and across a kept finished
+        phrase (that a later soft window may remove), and across an instruction line ("Please enter") twice at most; a value ends it."""
+        stop = _ends_on_key_and_stop(ln)
+        weak = bool(self.digit_wait and not consumed and kind != "leads" and self.dw_age < WEAK_MAX and _weak_phrase(ln))
+        self.weak_kept = weak and not _valueish(ln)      # a sentence let through is not part of the label chain (it is never tombstoned)
+        self.dw_age = 0 if stop else self.dw_age + weak
+        return stop or bool((consumed or kind == "leads" or weak) and self.digit_wait and not value)
 
     def _advance(self, ln, removed, kind, consumed, reach, value):
         self.window = WINDOW if kind == "open" else (max(self.window - 1, 0) if consumed else 0)
         self._pend(ln, removed)
         # a "Meeting ID." rule stays alive across a removed line (a link, a passcode line) until its number comes or an ordinary line does
-        self.digit_wait = _ends_on_key_and_stop(ln) or bool(consumed and self.digit_wait and not value)
+        self.digit_wait = self._wait_after(ln, kind, consumed, value)
         if not consumed:
             self.kept.append(_MARK.sub("", ln))
-            self.anchors = [*self.anchors, len(self.kept) - 1] if (kind == "open" or self.digit_wait) else []      # a chain of label lines
+            if not self.weak_kept:
+                chain = kind == "open" or self.digit_wait      # a chain of label lines
+                self.anchors = [*self.anchors, len(self.kept) - 1] if chain else []
             if kind == "leads":
                 self.soft.append([WINDOW, len(self.kept) - 1])      # a kept, finished phrase: the next three lines are looked at
         elif not reach and not (consumed and self.digit_wait):
