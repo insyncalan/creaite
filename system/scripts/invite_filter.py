@@ -401,7 +401,8 @@ def _scrub_lines(lines):
 
 def _tidy_blanks(lines):
     """No leading blank line, no two blank lines in a row, no trailing blank line (the anchor layer can empty a block between blanks).
-    Only drops blank lines, so the result is still a subsequence of its input; the scrub does the same, which keeps both orders idempotent."""
+    Only drops blank lines, so the result is still a subsequence of its input;
+    the scrub does the same, which keeps both orders idempotent."""
     out = []
     for ln in lines:
         if ln.strip() or (out and out[-1].strip()):
