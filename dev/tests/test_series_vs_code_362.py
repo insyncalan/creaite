@@ -4,8 +4,8 @@ Defect in build_dashboard.prep_match (and series_of, which strips [CODE] tags to
 as project ABC, then "[DEF] Weekly sync" returns ("ABC", "remembered"), and minutes would be processed under ABC. prep_match is the
 one matcher behind Intake (meetings_rows), Today, the Prep entry, the week line, capture.py and minutes.py (intake_process).
 
-The cases that show the defect are marked expected failures: the fix is Stark's. When it lands they turn into "unexpected success";
-remove the marker then. The cases that already hold are plain tests and must stay green. Engine only: no browser, no vault.
+The fix landed in 2.6.6 (v265-362), so the cases that showed the defect are plain tests now, with the ones that already held.
+Engine only: no browser, no vault.
 
 Run: python3 dev/tests/test_series_vs_code_362.py
 """
@@ -19,8 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import build_dashboard as bd  # noqa: E402
 
-WHY = "Team Cap #362: a remembered series beats a project code in the title; fix is Stark's"
-FIXME = unittest.expectedFailure       # reason: WHY
+WHY = "Team Cap #362: a remembered series must not beat a project code in the title"
 
 PROJECTS = [{"code": "ABC", "name": "Alpha Programme"}, {"code": "DEF", "name": "Delta Programme"}]
 SERIES = bd.series_of("Weekly sync")           # the key every title below forms: "weekly sync"
@@ -40,7 +39,6 @@ class SeriesVersusTitleCode(unittest.TestCase):
         self.assertEqual(bd.series_of("[DEF] Weekly sync"), SERIES)
 
     # ---- the defect
-    @FIXME
     def test_a_different_project_code_in_the_title_is_not_overruled_by_the_memory(self):
         """Remembered "[ABC] Weekly sync" as ABC; "[DEF] Weekly sync" must not come back as ABC, remembered. Today it returns
         ("ABC", "remembered") (a bare (code, how) pair: the function has no shape for "not sure, with both candidates" yet). The
@@ -50,12 +48,10 @@ class SeriesVersusTitleCode(unittest.TestCase):
         self.assertNotEqual((code, how), ("ABC", "remembered"), WHY)
         self.assertTrue(code == "DEF" or (code is None and how == "unsure"), f"DEF was lost: {(code, how)}")
 
-    @FIXME
     def test_the_code_in_a_different_case_counts_too(self):
         code, how = match("[def] Weekly sync")
         self.assertNotEqual((code, how), ("ABC", "remembered"), WHY)
 
-    @FIXME
     def test_two_codes_in_one_title_are_not_settled_silently_by_the_memory(self):
         code, how = match("[ABC][DEF] Weekly sync")
         self.assertNotEqual((code, how), ("ABC", "remembered"), WHY)
