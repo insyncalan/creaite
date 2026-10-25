@@ -178,9 +178,9 @@ FOLLOW_ROWS = ["Password reset for staff", "Code of conduct training", "Code rev
                "Password change update", "PIN entry redesign", "Secret manager rollout", "Code freeze planning", "Code standards workshop"]
 # A value on the NEXT line of an invite body (round 3). Each is judged with invite_text only.
 NEXT_LINE = [
-    ("nl-finished", "Password reset\nhunter", "hunter"),
-    ("nl-finished-pin", "PIN entry\nswordfish", "swordfish"),
-    ("nl-blank", "Password reset\n\n\nhunter", "hunter"),
+    ("nl-finished", "Password reset\n4417", "4417"),
+    ("nl-finished-pin", "PIN entry\n4417", "4417"),
+    ("nl-blank", "Password reset\n\n\n4417", "4417"),
     ("nl-function", "Password reset for\nhunter", "hunter"),
     ("nl-hyphen", "Password reset for -\nhunter", "hunter"),
     ("nl-en-dash", "Password reset for \u2013\nhunter", "hunter"),
@@ -192,17 +192,17 @@ NEXT_LINE = [
     ("nl-slash", "Password reset /\nhunter", "hunter"),
     ("nl-pipe", "Password reset |\nhunter", "hunter"),
     ("nl-after-sep-no-function", "Password reset \u2013\nhunter", "hunter"),
-    ("nl-code", "Code review\nswordfish", "swordfish"),
-    ("nl-token", "Token refresh\nabcdq", "abcdq"),
-    ("w-the-plan", "Password reset\nthe plan\nhunter", "hunter"),                          # round 4: plain lines do not end the wait
-    ("w-rollout-update", "Password reset\nrollout\nupdate\nhunter", "hunter"),
-    ("w-sync", "Password reset\nsync\nhunter", "hunter"),
-    ("w-staff-training", "Password reset\nstaff training\nhunter", "hunter"),
-    ("w-blanks-5", "Password reset\n\n\n\n\n\nhunter", "hunter"),                      # blank lines are transparent
-    ("w-blanks-between", "Password reset\nplan\n\n\n\nsync\n\n\n\nhunter", "hunter"),
+    ("nl-code", "Code review\n4417", "4417"),
+    ("nl-token", "Token refresh\n4417", "4417"),
+    ("w-the-plan", "Password reset\nthe plan\n4417", "4417"),                          # round 4: plain lines do not end the wait
+    ("w-rollout-update", "Password reset\nrollout\nupdate\n4417", "4417"),
+    ("w-sync", "Password reset\nsync\n4417", "4417"),
+    ("w-staff-training", "Password reset\nstaff training\n4417", "4417"),
+    ("w-blanks-5", "Password reset\n\n\n\n\n\n4417", "4417"),                      # blank lines are transparent
+    ("w-blanks-between", "Password reset\nplan\n\n\n\nsync\n\n\n\n4417", "4417"),
     ("w-open-then-plain", "Password reset for\nplan\nsync\nhunter", "hunter"),
     ("w-sep-then-plain", "Password reset \u2013\nplan\nsync\nhunter", "hunter"),
-    ("w-restart", "Password reset\nplan\nPIN entry\nsync\nplan\nhunter", "hunter"),        # a label line inside the window starts it again
+    ("w-restart", "Password reset\nplan\nPIN entry\nsync\nplan\n4417", "4417"),        # a label line inside the window starts it again
     ("a-blanks-3", "Passcode:\n\n\n\nhunter", "hunter"),                                   # round 5: a label alone, any number of blank lines
     ("a-blanks-5", "Passcode:\n" + "\n" * 5 + "hunter", "hunter"),
     ("a-blanks-20", "Passcode:\n" + "\n" * 20 + "hunter", "hunter"),
@@ -341,9 +341,23 @@ NEXT_LINE = [
 AGENDA_TABLE = "Agenda\n{}\n1. Training dates\n2. Sign-off\n3. Reporting line\n4. AOB"
 CAP_HEADINGS = ["Code review", "Code freeze", "Code of conduct", "Dress code", "Secret Santa", "Password policy", "Password reset", "Code",
                 "Key decisions", "ID badges", "Staff ID cards", "Meeting ID changes"]
+SOFT_LIMITS = [      # KNOWN LIMIT (Alan's option B): a word-only secret typed under a SOFT heading stays; the digit twins of these rows are in NEXT_LINE
+    ('nl-finished', 'Password reset\nhunter', 'hunter'),
+    ('nl-finished-pin', 'PIN entry\nswordfish', 'swordfish'),
+    ('nl-blank', 'Password reset\n\n\nhunter', 'hunter'),
+    ('nl-code', 'Code review\nswordfish', 'swordfish'),
+    ('nl-token', 'Token refresh\nabcdq', 'abcdq'),
+    ('w-the-plan', 'Password reset\nthe plan\nhunter', 'hunter'),
+    ('w-rollout-update', 'Password reset\nrollout\nupdate\nhunter', 'hunter'),
+    ('w-sync', 'Password reset\nsync\nhunter', 'hunter'),
+    ('w-staff-training', 'Password reset\nstaff training\nhunter', 'hunter'),
+    ('w-blanks-5', 'Password reset\n\n\n\n\n\nhunter', 'hunter'),
+    ('w-blanks-between', 'Password reset\nplan\n\n\n\nsync\n\n\n\nhunter', 'hunter'),
+    ('w-restart', 'Password reset\nplan\nPIN entry\nsync\nplan\nhunter', 'hunter'),
+]
 # After a leading heading ("Password reset"): these look like a value and go (the heading with them); these stay
-NEXT_LINE_LOST = ["Room 4", "Plan", "Agenda: budget", "hunter", "the plan", "Vendors", "Budget review"]
-NEXT_LINE_KEPT = ["Team standup at 10", "Review and update", "1. Training dates", "- Sign-off", "a) Reporting line", "Visitors must sign in at reception",
+NEXT_LINE_LOST = ["4417", "ZQ7742", "987 654 321", "deadbeef01", "hunter2"]
+NEXT_LINE_KEPT = ["Room 4", "Plan", "Agenda: budget", "hunter", "the plan", "Vendors", "Budget review", "Team standup at 10", "Review and update", "1. Training dates", "- Training dates", "a) Reporting line", "Visitors must sign in at reception",
                   "We agree the plan.", "Sprint planning for the platform team"]
 
 # Ordinary text with no label near it stays whatever it holds.
@@ -468,12 +482,33 @@ for _rid, _text, _val in NEXT_LINE:
 
 class Controls(unittest.TestCase):
     def test_agenda_table(self):
-        """Cap's acceptance table: a heading with four numbered items keeps all of them; only a heading whose window removed a line goes."""
+        """Cap's acceptance table (numbered, and the same lines unnumbered): under a soft heading nothing word-only is removed and the
+        heading stays (Alan's option B); fixed point."""
         for h in CAP_HEADINGS:
-            body = AGENDA_TABLE.format(h)
-            out = I.invite_text(body)
-            self.assertEqual(out, body, h)                                       # nothing removed: the heading stays too
-            self.assertEqual(I.invite_text(out), out, h)
+            for body in (AGENDA_TABLE.format(h), AGENDA_TABLE.format(h).replace("1. ", "").replace("2. ", "").replace("3. ", "").replace("4. ", "")):
+                self.assertEqual(I.invite_text(body), body, h)
+                self.assertEqual(I.invite_text(I.invite_text(body)), body, h)
+
+    def test_hard_labels_keep_the_full_rule(self):
+        """A hard label (Passcode, PIN, Meeting ID, Access code, with a separator, alone, glued or hyphenated) removes the next lines whatever
+        they hold, a list item included; a soft heading does not (see test_the_known_limit_a_word_only_secret_under_a_soft_heading)."""
+        for lab in ("Passcode:", "PIN", "Meeting ID:", "Access code:", "Host key:", "Pass code -"):
+            for v in ("hunter", "- hunter", "1. hunter", "\u2022 hunter", "a) hunter", "<li>hunter</li>"):
+                out = I.invite_text("Welcome\n" + lab + "\n" + v)
+                self.assertNotIn("hunter", out, lab + " " + v)
+                self.assertEqual(I.invite_text(out), out)
+
+    def test_the_known_limit_a_word_only_secret_under_a_soft_heading(self):
+        """KNOWN LIMIT (Alan's option B, #369): "Password reset" then "hunter" (also as a list item, a one-word line, <li>) stays: it cannot
+        be told from an agenda line. A line with a number, an ID or a mixed token under the same heading goes, with the heading."""
+        for v in ("hunter", "- hunter", "1. hunter", "\u2022 hunter", "a) hunter", "i) hunter", "1) hunter", "\u2013 hunter"):
+            self.assertIn("hunter", I.invite_text("Agenda\nPassword reset\n" + v), v)
+        self.assertIn("hunter", I.invite_text("Agenda\n<ul><li>Password reset</li><li>hunter</li></ul>"))
+        for v in ("4417", "ZQ7742", "987 654 321", "deadbeef01", "hunter2"):
+            for m in ("", "- ", "1. ", "\u2022 ", "a) ", "i) ", "1) ", "\u2013 ", "<li>"):
+                body = "Agenda\nPassword reset\n" + m + v + ("</li>" if m == "<li>" else "")
+                self.assertNotIn(v, I.invite_text(body), body)
+                self.assertEqual(I.invite_text(I.invite_text(body)), I.invite_text(body))
 
     def test_after_a_leading_heading_value_looking_lines_go_and_the_rest_stays(self):
         for ln in NEXT_LINE_LOST:
@@ -501,21 +536,12 @@ class Controls(unittest.TestCase):
             self.assertNotIn(li, out)
             self.assertEqual(I.invite_text(out), out)
 
-    def test_a_word_only_bullet_value_after_a_heading_is_the_accepted_limit(self):
-        """DECISION (#369, bare19): "- hunter" or "<li>hunter</li>" after "Password reset" cannot be told from an agenda item
-        ("- Budget", "1. Intro", "<li>Hiring</li>"): both are one or two plain words in a list. Removing them would delete real agenda
-        items after every heading like "Code review" or "Password reset". So a word-only bulleted line stays (E1 in 2.6.9 replaces the
-        label approach). Only bullets with a digit or ID shape are removed (see test_a_bulleted_id_after_a_heading_goes)."""
-        self.assertIn("hunter", I.invite_text("Agenda\n<ul><li>Password reset</li><li>hunter</li></ul>"))
-        self.assertIn("hunter", I.invite_text("Agenda\nPassword reset\n- hunter"))
-        self.assertIn("Intro", I.invite_text("Key,\n1. Intro"))
-
     def test_times_dates_and_small_numbers_are_not_ids(self):
         """A label that ends in a stop takes the next number; a time, a date, a room number or "Item 12" is not an ID value."""
         for ln in ("Lunch at 12:30", "25-10-2026", "2026-10-25", "Room 4", "Item 12", "Room 204", "Starts 10:00", "Version 3.2", "Call me on 12 Oct"):
             body = "Bring your staff ID.\n" + ln
             self.assertEqual(I.invite_text(body), body, ln)
-            body = "Meeting ID.\n" + ln + "\nNext"
+            body = "Please bring your ID.\n" + ln + "\nNext"
             self.assertEqual(I.invite_text(body), body, ln)
         self.assertEqual(I.invite_text("Bring your staff ID.\nLunch at 12:30"), "Bring your staff ID.\nLunch at 12:30")
         for ln in ("4417", "1234 5678", "987 654 321", "987-654-321", "123456789"):
@@ -532,12 +558,16 @@ class Controls(unittest.TestCase):
         for t in ("ID badges", "Idaho 1234", "Pinterest 2026"):
             self.assertEqual(I.scrub(t, 140), t, t)
 
+    def test_soft_heading_word_only_secrets_are_the_pinned_limit(self):
+        for rid, text, val in SOFT_LIMITS:
+            self.assertIn(val, I.invite_text("Agenda: budget\n" + text + "\nEnd").lower(), rid)
+
     def test_a_value_two_lines_below_goes_four_lines_below_stays(self):
         """The window reaches the three lines after the heading (blank lines do not count). Within it a value-looking line goes even after a
         plain one; the fourth line after the heading is out of reach: a known limit."""
-        self.assertNotIn("hunter", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\nhunter\n1. Training dates"))
-        self.assertNotIn("hunter", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\n\n\nWe agree.\nhunter"))
-        self.assertIn("hunter", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\nWe agree.\nSee the notes below\nhunter"))
+        self.assertNotIn("4417", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\n4417\n1. Training dates"))
+        self.assertNotIn("4417", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\n\n\nWe agree.\n4417"))
+        self.assertIn("4417", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\nWe agree.\nSee the notes below\n4417"))
 
     def test_lines_far_from_a_label_are_untouched(self):
         self.assertEqual(I.invite_text("Agenda: budget\nTeam standup at 10\nEnd"), "Agenda: budget\nTeam standup at 10\nEnd")
@@ -715,7 +745,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue(any(b.startswith("rv-") for b in bad), bad)
 
     def test_punctuation_check_off(self):
-        bad = fails(mutant('bad = (rf"(?:\\s*{SEPRUN}|', 'bad = (rf"(?:(?!)|'))
+        bad = fails(mutant('bad = (rf"(?:\\s*{tag}{SEPRUN}|', 'bad = (rf"(?:(?!)|'))
         self.assertTrue(any(b in ("rv-21:title", "rv-22:title", "rv-26:title", "rv-27:title") or b.startswith(("rv-21", "rv-26")) for b in bad), bad)
 
     def next_line_bad(self, m):
@@ -746,25 +776,16 @@ class Mutants(unittest.TestCase):
         self.assertIn("h-restart", self.next_line_bad(m))
 
     def test_value_looking_test_removed(self):
-        """Back to dropping every line of the window (no value-looking test): plain agenda lines go with the value."""
-        m = mutant("    return len(tokens) <= 2", "    return True")
-        body = "Welcome\nCode review\nTeam standup at 10\n1. Training dates"
+        m = mutant("    return bool(tokens) and (_strong_value", "    return False and (_strong_value")
+        self.assertIn("4417", m.invite_text("Welcome\nPassword reset\n4417"))
+        self.assertNotIn("4417", I.invite_text("Welcome\nPassword reset\n4417"))
+
+    def test_word_only_lines_made_values_is_caught(self):
+        """Back to dropping word-only lines under a soft heading (the old rule): agenda lines go, so this row would fail."""
+        m = mutant("    return bool(tokens) and (_strong_value", "    return bool(tokens) or (_strong_value")
+        body = "Welcome\nPassword reset\nTeam standup at 10\n1. Training dates"
         self.assertEqual(I.invite_text(body), body)
-        self.assertNotIn("Team standup at 10", m.invite_text(body))
-
-    def test_list_marker_exemption_removed(self):
-        m = mutant("    if rest != t:                                  # a bulleted line", "    if False:")
-        self.assertNotEqual(m.invite_text(AGENDA_TABLE.format("Dress code")), AGENDA_TABLE.format("Dress code"))
-
-    def test_three_plain_words_exemption_removed(self):
-        m = mutant("    return len(tokens) <= 2", "    return True if tokens else False")
-        self.assertNotIn("Team standup at 10", m.invite_text("Welcome\nPassword reset\nTeam standup at 10"))
-
-    def test_sentence_exemption_removed(self):
-        m = mutant('    if len(tokens) >= 2 and rest[-1:] in ".!?":\n        return False\n', "")
-        body = "Welcome\nPassword reset\nWe agree.\n1. Training dates"
-        self.assertIn("We agree.", I.invite_text("Welcome\nCode review\nWe agree.\n1. Training dates"))
-        self.assertNotIn("We agree.", m.invite_text(body))
+        self.assertNotEqual(m.invite_text(body), body)
 
     def test_blank_line_cap_restored(self):
         bad = self.next_line_bad(mutant_with_cap())
@@ -843,10 +864,6 @@ class Mutants(unittest.TestCase):
         m = mutant("    t = _DATE_TIME.sub(\" \", line)\n", "    t = _DATE_TIME.sub(\" \", line)\n    return bool(re.search(r\"\\d\", line))\n")
         self.assertNotEqual(m.invite_text("Bring your staff ID.\nLunch at 12:30"), "Bring your staff ID.\nLunch at 12:30")
 
-    def test_bullets_that_never_count_are_caught(self):
-        m = mutant("        return strong and len(tokens) <= 3", "        return False")
-        self.assertIn("4417", m.invite_text("Agenda\nPassword reset\n- 4417"))
-
     def test_glued_label_rule_removed_is_caught(self):
         m = mutant("|ids?)(?=\\d{{3,}})", "|ids?)(?=(?!))")
         for t in ("PIN4417", "ID123456789", "Pwd4417"):
@@ -905,6 +922,81 @@ class Mutants(unittest.TestCase):
 
     def test_fail_open_when_allow_list_is_everything(self):
         self.assertNotEqual(fails(mutant("(?:(?!(?:{okx})(?![\\w-]))\\w", "(?:(?!)\\w")), [])
+
+
+
+RERUN_GONE = [      # (body, the value that must not survive): Team Cap's rerun of #369 (bare19)
+    ("Passcode?\nhunter", "hunter"), ("Passcode ?~\nhunter", "hunter"), ("PIN--4417", "4417"), ("PIN- - 4417", "4417"),
+    ("Passcode- - - - - 4417", "4417"), ("PIN\xad4417", "4417"), ("PIN\u09034417", "4417"), ("-Passcode: 4417", "4417"),
+    ("Passcode4417", "4417"), ("PIN\u200b4417", "4417"), ("Passcode:\nPlease enter\n4417", "4417"), ("PIN\nPlease enter\n4417", "4417"),
+    ("Meeting ID:\nPlease enter\n4417", "4417"), ("Pass code:\nPlease enter\n4417", "4417"), ("Host key:\nPlease enter\n4417", "4417"),
+    ("Webinar ID:\nPlease enter\n4417", "4417"), ("[![Passcode](i.png)](https://e.org)\n4417", "4417"), ("[Passcode](u){.cls}\n4417", "4417"),
+    ("[Token](https://example.org/a)\nabcdefgh", "abcdefgh"), ("Meeting # number\n4417", "4417"), ("Meeting#\n4417", "4417"),
+    ("Key\n4417", "4417"), ("Key\xad\n4417", "4417"), ("Key_\n4417", "4417"),
+]
+RERUN_FIELDS = ["ABC steering PIN4417", "Weekly Passcode4417", "ABC sync Passcode55012387", "Weekly Zoom Meeting ID4417",
+                "Tom Reyes - <i><b>PIN</b> = 4417</i>"]
+RERUN_KEPT = ["Code review \u2013 ABC", "Token refresh \u2013 ABC", "Code review - ABC"]
+RERUN_ADDRESSES = ["pin.sharma@example.org", "key@example.org", "code.lee@example.org", "token@example.org", "otp.team@example.org",
+                   "secret.santa@example.org"]
+
+
+class Rerun(unittest.TestCase):
+    def test_values_go_and_the_result_is_a_fixed_point(self):
+        for body, v in RERUN_GONE:
+            out = I.invite_text(body)
+            self.assertNotIn(v, out, body)
+            self.assertEqual(I.invite_text(out), out, body)
+
+    def test_short_fields_lose_the_value(self):
+        for t in RERUN_FIELDS:
+            out = I.scrub(t, 140)
+            self.assertNotIn("4417", out, t)
+            self.assertNotIn("55012387", out, t)
+
+    def test_controls_keep_their_text(self):
+        for t in RERUN_KEPT:
+            self.assertEqual(I.scrub(t, 140), t)
+        self.assertEqual(I.invite_text("Secret Santa\nBudget \u00a310\nDraw on Friday"), "Secret Santa\nBudget \u00a310\nDraw on Friday")
+        for body in ("Bring your staff ID.\nLunch at 12:30", "Please bring your ID.\nRoom 4\nItem 12"):
+            self.assertEqual(I.invite_text(body), body)
+
+    def test_label_like_organiser_addresses_are_kept(self):
+        for a in RERUN_ADDRESSES:
+            row = {"id": "1", "start": "09:00", "end": "10:00", "title": "Sync", "organiser": "A B", "organiser_email": a,
+                   "attendees": [{"email": a}], "sensitivity": "normal", "body": ""}
+            out = I.clean_row(row)
+            self.assertEqual(out.get("organiser_email"), a)
+            self.assertEqual([p["name"] for p in out.get("attendees", [])], [a])
+        self.assertNotIn("organiser_email", I.clean_row({"id": "1", "organiser_email": "host@zoom.us", "sensitivity": "normal"}))
+        self.assertNotIn("organiser_email", I.clean_row({"id": "1", "organiser_email": "pin4417@example.org", "sensitivity": "normal"}))
+
+
+class RerunMutants(unittest.TestCase):
+    def leaks(self, mod, rows=None):
+        return [b for b, v in (rows or RERUN_GONE) if v in mod.invite_text(b)]
+
+    def test_each_new_rule_is_pinned(self):
+        for old, new, expect in (
+                ("_QUIET = r\"[\\s?~*`_]*\"", "_QUIET = r\"[\\s]*\"", "Passcode?\nhunter"),
+                ("rf\"-(?:[\\s-]+|", "rf\"-(?:\\s+|", "PIN--4417"),
+                ("split += [d for d in", "split += [] and [d for d in", "-Passcode: 4417"),
+                ("_MDLINK.sub(r\" \\1 \", _MDLINK.sub(r\" \\1 \", _DOUBLE.sub(r\"[\\1]\", s)))", "_MDLINK.sub(r\" \\1 \", _DOUBLE.sub(r\"[\\1]\", s))", "[![Passcode](i.png)](https://e.org)\n4417"),
+                ("(?:\\{[^{}\\n]{0,100}\\})?\")", "\")", "[Passcode](u){.cls}\n4417"),
+                ("or _KEY_ALONE.fullmatch(v.strip(", "or False and _KEY_ALONE.fullmatch(v.strip(", "Key\n4417"),
+                ("self.age < WINDOW - 1 and _weak_phrase(ln)", "False", "Passcode:\nPlease enter\n4417"),
+                ("\\s*#(?:\\s*(?:number|no\\.?))?|\"", "\\s*#|\"", "Meeting # number\n4417")):
+            m = mutant(old, new)
+            self.assertIn(expect, self.leaks(m, [r for r in RERUN_GONE if r[0] == expect]), old)
+
+    def test_link_label_and_address_rules_are_pinned(self):
+        m = mutant("    if not (_MARK.search(line) or _MDLINK.search(line)):\n        return False\n", "    return False\n")
+        self.assertIn("[Key](https://example.org/a)\nabcdefgh", self.leaks(m, [("[Key](https://example.org/a)\nabcdefgh", "abcdefgh")]))
+        self.assertNotIn("abcdefgh", I.invite_text("[Key](https://example.org/a)\nabcdefgh"))
+        m = mutant("    if _PLAIN_ADDRESS.fullmatch(a):\n        return not (HOSTS.search(a) or SCHEME.search(a))\n", "")
+        self.assertEqual(m.clean_row({"id": "1", "organiser_email": "key@example.org", "sensitivity": "normal"}).get("organiser_email"), None)
+        m = mutant("(?-i:[A-Z][A-Z0-9]{1,6})", "(?!)")
+        self.assertEqual(m.scrub("Code review \u2013 ABC", 140), "")
 
 
 if __name__ == "__main__":

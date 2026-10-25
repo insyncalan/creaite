@@ -49,12 +49,13 @@ def survivors(mod):
     n, bad = 0, []
     for forms in COMBOS:
         for v in VALUES:
+            if forms[-1] in FINISHED and not any(c.isdigit() for c in v):
+                continue           # KNOWN LIMIT (Alan's option B): a word-only secret right under a soft heading stays
             fill = ["123 456"] * max(sum(f in ALONE for f in forms) - 1, 0)       # a label alone has a value of its own: the last is v
             cases = [("lines", g, mod.invite_text("Agenda: budget\n" + g.join(forms) + g + g.join([*fill, v]) + "\nEnd")) for g in GAPS]
             cases.append(("td", "", mod.invite_text("<td>" + "</td><td>".join(forms) + "</td><td>" + "</td><td>".join([*fill, v]) + "</td>")))
             cases.append(("td-rows", "", mod.invite_text("<table>" + "".join(f"<tr><td>{f}</td></tr>" for f in (*forms, *fill, v)) + "</table>")))
-            if not any(f in FINISHED for f in forms):                  # a bullet after a finished heading is a known limit (a list marker)
-                cases.append(("li", "", mod.invite_text("<ul><li>" + "</li><li>".join(forms) + "</li><li>" + "</li><li>".join([*fill, v]) + "</li></ul>")))
+            cases.append(("li", "", mod.invite_text("<ul><li>" + "</li><li>".join(forms) + "</li><li>" + "</li><li>".join([*fill, v]) + "</li></ul>")))
             cases.append(("field", "", mod.scrub(" ".join(forms) + " " + v, 140)))
             for kind, gap, out in cases:
                 n += 1
@@ -223,7 +224,7 @@ class Sweep(unittest.TestCase):
     def test_the_dash_sweep_sees_a_missing_rule(self):
         """Mutant: the glued-dash rule removed."""
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
-        old = '-(?:\\s+|(?!(?:{GLUE_OK})(?![\\w-])))[^\\W_]"'
+        old = '-(?:[\\s-]+|(?!(?:{GLUE_OK})(?![\\w-])))[^\\W_]"'
         self.assertIn(old, src)
         spec = importlib.util.spec_from_loader("invite_clean_noglue", loader=None)
         mod = importlib.util.module_from_spec(spec)

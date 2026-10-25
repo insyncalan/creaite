@@ -23,13 +23,10 @@ after a finished label phrase ("password reset") drops the next three lines, on 
    - test_unlabelled_line_after_a_valueless_label_survives: only a secret opens the window, a valueless label does not: the agenda
      erosion, so it is an expected failure until the window is fixed.
 
-Brought into 2.6.8 as Team Cap wrote it, with every FIXME mark removed (all the idempotence tests pass), except two marked ACCEPTED LIMIT:
-Under the narrower rule (Jarvis, 25-10) two tests still fail, for a good reason, and carry `expectedFailure` with the reason, their
-assertions untouched: test_unlabelled_line_after_a_valueless_label_survives (about 110 of 2000 bodies) and the "password reset then agenda"
-corpus entry. Both have an UNMARKED line of one or two words ("Budget review", "Hiring", "Vendors") within three lines of a heading that
-leads with a label phrase ("Password reset"); such a line looks exactly like a value ("hunter"), which must go on the first pass. Numbered
-and bulleted lines, lines of three or more plain words and sentences stay. Cap's acceptance table (heading plus four numbered items)
-passes: test_invite_clean_bare.AgendaTable. All idempotence tests pass.
+Brought into 2.6.8 as Team Cap wrote it, with every FIXME mark removed. Under Alan's option B (bare19: after a soft heading only a line
+with a number, an ID or a mixed letters-and-digits token goes; a word-only line stays) the two tests that carried `expectedFailure`
+(test_unlabelled_line_after_a_valueless_label_survives and the "password reset then agenda" corpus entry) pass, assertions untouched,
+and are unmarked. All idempotence tests pass.
 All data is made up. Seed 369; the whole file takes a few seconds.
 """
 import json
@@ -277,7 +274,6 @@ class InviteTextProperty(unittest.TestCase):
     def test_the_eroding_agenda_keeps_its_unlabelled_lines(self):
         self.assertEqual(lost(I.invite_text(ERODING), ["Agenda", "2. Budget review", "3. Hiring", "4. Vendors", "5. Risks", "6. Milestones", "7. AOB"]), [])
 
-    @unittest.expectedFailure      # ACCEPTED LIMIT (#369, 25-10): unmarked lines of one or two words after a leading heading look like a value
     def test_corpus_with_a_valueless_label_is_idempotent_and_keeps_its_lines(self):
         failed = []
         for name, body, _secrets, keep in CORPUS:
@@ -323,7 +319,6 @@ class InviteTextProperty(unittest.TestCase):
         bad = [x for x in bad if x[1]]
         self.assertEqual((len(bad), bad[:2]), (0, []), "a line with no label and no label before it was removed")
 
-    @unittest.expectedFailure      # ACCEPTED LIMIT (#369, 25-10): unmarked lines of one or two words after a leading heading look like a value
     def test_unlabelled_line_after_a_valueless_label_survives(self):
         bad = [(b, lost(cleaned(b)[0], protected(es, strict=False))) for b, es in GENERATED]
         bad = [x for x in bad if x[1]]

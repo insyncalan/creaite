@@ -54,16 +54,16 @@ class Agenda(unittest.TestCase):
             self.assertEqual(seen[1], seen[2], body)
             self.assertEqual(seen[1], seen[5], body)
 
-    def test_the_leading_phrase_costs_exactly_what_the_notes_say(self):
-        """Unmarked one- or two-word lines within three lines of a leading heading look like a value and go with it; later lines stay."""
-        once = I.invite_text(LEADING)
-        self.assertEqual(once, "Agenda\nRisks\nMilestones\nAOB")
-        self.assertEqual(I.invite_text(AGENDA.replace("IT update: password reset", "Password reset")), "Agenda\n"
-                         "2. Budget review\n3. Hiring\n4. Vendors\n5. Risks\n6. Milestones\n7. AOB".replace("2. Budget review\n3. Hiring\n4. Vendors\n", "1. Password reset\n2. Budget review\n3. Hiring\n4. Vendors\n"))
+    def test_the_leading_phrase_costs_nothing_for_word_only_lines(self):
+        """Alan's option B: after a soft heading only a line with a number, an ID or a mixed token goes; the agenda is untouched."""
+        self.assertEqual(I.invite_text(LEADING), LEADING)
+        body = AGENDA.replace("IT update: password reset", "Password reset")
+        self.assertEqual(I.invite_text(body), body)
 
     def test_the_value_still_goes_on_the_first_pass(self):
-        for body in ("Password reset\nhunter", "Password reset\nthe plan\nhunter", "Code of conduct\nrollout\nupdate\nxk7q"):
-            self.assertNotIn(body.split("\n")[-1], I.invite_text("Agenda\n" + body), body)
+        for body in ("Password reset\n4417", "Password reset\nthe plan\nxk7q9", "Code of conduct\nrollout\nupdate\nxk7q9",
+                     "Password reset\n- 4417", "Password reset\n1. 987 654 321"):
+            self.assertNotIn(body.split("\n")[-1].split(" ", 1)[-1], I.invite_text("Agenda\n" + body), body)
 
 
 def corpus():
@@ -257,7 +257,7 @@ class Mutants(unittest.TestCase):
 
     def test_without_the_heading_tombstone_pass_two_removes_more(self):
         """A heading whose window removed a line must go with it: kept, the lines past the first window shift into a later pass."""
-        body = "Agenda\nPassword reset\nhunter\nHere is a plan for you\nHere is more text now\nvalue1x"
+        body = "Agenda\nPassword reset\n4417\nHere is a plan for you\nHere is more text now\nvalue1x"
         once = I.invite_text(body)
         self.assertEqual(I.invite_text(once), once)
         m = self.mutated("                self.kept[window[1]] = None    # a line of the heading's window", "                pass    # a line of the heading's window")
@@ -283,7 +283,7 @@ class Mutants(unittest.TestCase):
 
     def test_without_the_leading_rule_a_line_ending_in_the_phrase_opens_a_window(self):
         m = self.mutated("return not _PROSE.search(before) and len(before.split()) <= 3", "return True")
-        body = "Agenda\nIT update: password reset\nBudget review\nHiring\nVendors"
+        body = "Agenda\nIT update: password reset\n4417\nHiring\nVendors"
         self.assertEqual(I.invite_text(body), body)
         self.assertNotEqual(m.invite_text(body), body)
 
