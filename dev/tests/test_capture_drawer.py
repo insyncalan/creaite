@@ -412,6 +412,22 @@ class Drawer(LiveBrowserCase):
         self.assertNotIn("guessed", got[1])
         self.assertEqual(b.errors, [])
 
+    def test_typing_in_an_unchosen_confidential_meeting_note_never_guesses_a_project(self):
+        """#343 M1 (the open path, typing): the guess is async, so wait past it. Typing a project's code and a stakeholder's name into
+        the note of an unchosen confidential meeting leaves Project empty and the reason free of "guessed"."""
+        b = self.b
+        b.eval("go('today')")
+        b.eval("openCapture({meeting:{day:TODAY,start:'16:00',title:'[ABC] Redundancy talks'}})")
+        b.wait("!document.getElementById('capDrawer').hidden&&document.getElementById('capTitle').value==='[ABC] Redundancy talks'", 10)
+        b.wait("document.activeElement===document.getElementById('capBody')&&/Follow-ups/.test(edValue(document.getElementById('capBody')))", 5)
+        b.pump(0.3)                                                                  # the drawer moves the cursor to the end a frame later
+        b.type("ABC go-live and Omar Ali")
+        b.pump(1.5)                                                                  # past the 600 ms wait and the async guess
+        self.assertIn("ABC go-live and Omar Ali", b.eval("edValue(document.getElementById('capBody'))"))
+        self.assertEqual(b.eval("document.getElementById('capProj').value"), "")
+        self.assertNotIn("guessed", b.eval("document.getElementById('capWhy').textContent"))
+        self.assertEqual(b.errors, [])
+
     def test_resumed_meeting_draft_without_a_project_never_guesses(self):
         """#343 (resume gap): a kept Working session draft with no project stays unselected after typing, confidential or not."""
         b = self.b
