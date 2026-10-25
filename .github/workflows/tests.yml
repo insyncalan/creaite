@@ -41,9 +41,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  plan:
+    # Dev speed (ci-free-plan): size the matrix to the plan's concurrent-job limit (GitHub Free: 20) so a run uses all of it and never
+    # queues behind itself. dev/tools/ci_plan.py: 17 Python 3.14 shards + 3 for 3.9, or 14 + 3 + 3 when the macOS job also runs.
+    # This job ends before the shards start, and "Tests passed" starts after they end, so neither counts against the limit.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - id: plan
+        env:
+          MACOS: ${{ (startsWith(github.head_ref || github.ref_name, 'release-') || (github.event_name == 'workflow_dispatch' && github.event.inputs.macos == 'true')) && '1' || '' }}
+        run: python3 dev/tools/ci_plan.py ${MACOS:+--macos}
+
   tests:
-    name: ${{ matrix.os }} · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/${{ matrix.python == '3.9' && 3 || 12 }}
-    runs-on: ${{ matrix.os }}
+    needs: plan
+    name: ubuntu-24.04 · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/${{ matrix.shards }}
+    runs-on: ubuntu-24.04      # not ubuntu-latest: it became 26.04 on 21-10-2026, which has no Python 3.9 (the floor)
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -51,20 +69,7 @@ jobs:
       # by side, so the wait is the slowest shard (the exclude drops 3.9's shards 4 to 12). Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
       # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
       # The "Tests passed" job below is green only if every shard is.
-      matrix:
-        os: [ubuntu-24.04]      # not ubuntu-latest: it became 26.04 on 21-10-2026, which has no Python 3.9 (the floor)
-        python: ["3.9", "3.14"]
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        exclude:
-          - {python: "3.9", shard: 4}
-          - {python: "3.9", shard: 5}
-          - {python: "3.9", shard: 6}
-          - {python: "3.9", shard: 7}
-          - {python: "3.9", shard: 8}
-          - {python: "3.9", shard: 9}
-          - {python: "3.9", shard: 10}
-          - {python: "3.9", shard: 11}
-          - {python: "3.9", shard: 12}
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}      # include: one entry per job: python, shard, shards, scope (ci_plan.py)
     steps:
       - uses: actions/checkout@v5
         with:
@@ -91,8 +96,8 @@ jobs:
           FILES: ${{ github.event.inputs.files }}
           JOBS: 4
           SHARD: ${{ matrix.shard }}
-          SHARDS: ${{ matrix.python == '3.9' && 3 || 12 }}
-          SCOPE: ${{ matrix.python == '3.9' && '--quick' || '' }}
+          SHARDS: ${{ matrix.shards }}
+          SCOPE: ${{ matrix.scope }}
         run: |
           if [ -n "$FILES" ]; then
             # named files: shard 1 runs them, the others have nothing to do

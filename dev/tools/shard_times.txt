@@ -1,4 +1,3 @@
-# "test_x.py seconds" from a real CI run, read by dev/tools/run_tests.py (--shard). Lines starting with # are ignored.
 # Refreshed 25-10-2026 from the Python 3.14 shard jobs (1/12 to 12/12) of run 40154289412 (v264b-release PR #39, 12 shards at -j 4): the lines "OK file.py (Ns)".
 # One file serves both Python versions (3.9 runs the quick tier, about 0.4 times as long, so the ratios hold). Per-file times under the shard's own parallel load, so a shard's sum is several times its wall time; only the ratios matter.
 # 19 file(s) were not in that run's logs and keep their previous time: test_355_followups.py, test_calm_save_357.py, test_ci_plan.py, test_confidential_end_to_end.py, test_confidential_paths.py, test_confidential_persisted.py, test_design_fixes_343_browser.py, test_lighter_runs_339.py, test_mail_check.py, test_meeting_chip.py, test_meeting_match.py, test_next_job_356.py, test_people_display.py, test_process_all_project.py, test_title_centre_click.py, test_title_code_wins.py, test_v265_341_hardening.py, test_v265_341_structure.py, test_v265_plain_words.py. Files in neither count as 30 s.
@@ -317,7 +316,6 @@ test_item_history.py 201
 test_item_history_route.py 16
 test_item_links.py 283
 test_keys_chip.py 14
-test_lighter_runs_339.py 30
 test_link_renderers.py 63
 test_link_text.py 107
 test_live_server.py 46
@@ -329,13 +327,10 @@ test_live_updates_page.py 101
 test_log_hygiene.py 41
 test_looks_like.py 76
 test_lost_click.py 209
-test_mail_check.py 30
 test_malformed_note.py 34
 test_markdown_views.py 19
 test_match_check_project_code.py 11
 test_match_internal_race.py 114
-test_meeting_chip.py 30
-test_meeting_match.py 30
 test_meeting_sensitivity_rows.py 1
 test_meetings.py 60
 test_milestone_resize_301.py 13
@@ -444,7 +439,6 @@ test_prep_shape.py 171
 test_prep_updates.py 86
 test_prep_view.py 154
 test_probably_done.py 115
-test_process_all_project.py 30
 test_processed_filed_307.py 1
 test_profile_312.py 174
 test_project_names.py 56
@@ -570,8 +564,6 @@ test_sweep_lock.py 47
 test_tab_title.py 6
 test_tiptap_pin.py 1
 test_tiptap_roundtrip.py 8
-test_title_centre_click.py 30
-test_title_code_wins.py 30
 test_today_brief.py 71
 test_today_days.py 20
 test_today_days_ui.py 123
@@ -597,9 +589,6 @@ test_usage_reviews_browser.py 53
 test_usage_wiring.py 7
 test_ux172_clarity.py 8
 test_ux_sweep_fixes.py 22
-test_v265_341_hardening.py 30
-test_v265_341_structure.py 30
-test_v265_plain_words.py 30
 test_vault_cleanup.py 3
 test_vendor_preact.py 1
 test_vendor_tiptap.py 1
