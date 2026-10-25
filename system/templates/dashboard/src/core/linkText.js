@@ -65,16 +65,40 @@ export function linkWrite(words, href) {
   return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
 }
 
-/* ===== #153 ===== the dated "I sent it" lines (17-10-2026: Chased Sara by email (reminder 1); ...) are internal: they never go into an email body.
-   The same recognition as linktext.sent_strip in Python: a date, a colon, Chased / Emailed / Asked, a name, "by email" or "by message", at the start of
-   a line (after an optional bullet) or after the end of a sentence; ordinary text such as "We chased the supplier" never matches. */
-const SENT_NORM = t => String(t == null ? "" : t).replace(/[​‌‍⁠﻿]/g, "").replace(/ /g, " ").replace(/\r\n?/g, "\n");
+/* ===== #153, #368 ===== the dated "I sent it" lines (17-10-2026: Chased Sara by email (reminder 1); ...) are internal: they never go into an email body.
+   The same rule as linktext.sent_strip in Python (dev/tests/test_sent_parity_368.py feeds both the same fixtures): fail closed. The text is read on its
+   plain form (simple HTML as lines, CRLF as LF, then the form edit_ai.normal makes: NFKC, invisible characters gone, marks gone, look-alike dashes and
+   letters plain), in any case and spacing, anywhere on a line, a date in either order, the name allowed to break over one line. The date, its colon,
+   the verb and "by email|message" must all be there, so ordinary prose that only says "chased" or "asked" never matches. A line left empty by the cut
+   is dropped. */
+const SENT_NL = "\\n\\r\\v\\f\\u0085\\u2028\\u2029";
+const SENT_DATE = "(?:\\d{2}\\s*-\\s*\\d{2}\\s*-\\s*\\d{4}|\\d{4}\\s*-\\s*\\d{2}\\s*-\\s*\\d{2})";
+const SENT_SRC = `(?<!\\d)${SENT_DATE}\\s*:\\s*(?:chased|emailed|asked)\\s+(?:[^${SENT_NL}]*?(?:\\r\\n|[${SENT_NL}])[ \\t]*)?[^${SENT_NL}]*?\\bby\\s+(?:email|message)\\b[^${SENT_NL}]*`;
+const SENT_CUT = "\uE000";
 const SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
-const SENT_LINE = /(?:^[ \t]*(?:[-*•–][ \t]*)?|(?<=[.!?;])[ \t]+)(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}):[ \t]+(?:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?:email|message)\b[^\n]*$/im;
+const SENT_LOOK = {"А":"A","В":"B","Е":"E","К":"K","М":"M","Н":"H","О":"O","С":"C","Т":"T","Х":"X","а":"a","е":"e","о":"o","с":"c","х":"x","р":"p","і":"i","ѕ":"s","ԁ":"d","у":"y","Α":"A","Β":"B","Ε":"E","Ζ":"Z","Η":"H","Κ":"K","Μ":"M","Ν":"N","Ο":"O","Τ":"T","Υ":"Y","Χ":"X","ο":"o","ν":"v","ι":"i"};
+const SENT_UNSEEN = new RegExp("[\\p{Cf}\\u00ad\\u034f\\u115f\\u1160\\u17b4\\u17b5\\u180b-\\u180f\\u3164\\ufe00-\\ufe0f\\uffa0\\ufff0-\\ufff8\\u{e0000}-\\u{e0fff}\\u0000-\\u0008\\u000e-\\u001f\\u007f-\\u0084\\u0086-\\u009f]", "gu");
+const sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "g");
+const sentLook = t => t.replace(/[\u2010-\u2015\u2212\ufe58\ufe63\uff0d]/g, "-").replace(sentLookRe, c => SENT_LOOK[c]);
+const SENT_LINEISH = new RegExp("[\\u000b\\u000c\\u001c-\\u001e\\u0085]", "g");
+const sentUnseen = t => t.replace(SENT_LINEISH, "\n").replace(SENT_UNSEEN, "").replace(/⠀/g, " ");
+const sentUnmark = t => t.normalize("NFKD").replace(/\p{M}/gu, "");
+const sentNormal = t => {
+  t = sentLook(sentUnmark(sentLook(sentUnseen(t))));
+  t = sentLook(sentUnseen(t.normalize("NFKC")));
+  return t.replace(/\p{Nd}/gu, c => { let x = c.codePointAt(0), d = 0; while (/\p{Nd}/u.test(String.fromCodePoint(x - 1))) { x--; d++; } return String(d % 10); });
+};
+const sentPlain = text => {
+  let t = String(text == null ? "" : text).replace(/\r\n?/g, "\n");
+  if (SENT_TAGS.test(t)) t = t.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  return sentNormal(t.replace(/ /g, " "));
+};
+/** Whether a text holds an "I sent it" line. @param {unknown} text */
+export function sentHas(text) { return new RegExp(SENT_SRC, "i").test(sentPlain(text)); }
 /** @param {unknown} text */
 export function sentStrip(text) {
-  let t = SENT_NORM(text);
-  if (SENT_TAGS.test(t)) t = t.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-  if (!SENT_LINE.test(t)) return String(text == null ? "" : text);
-  return t.split("\n").map(l => [l, l.replace(SENT_LINE, "")]).filter(([l, c]) => c === l || c.trim()).map(x => x[1]).join("\n").replace(/^\n+|\n+$/g, "").trim();
+  if (!text) return String(text == null ? "" : text);
+  const t = sentPlain(text);
+  if (!new RegExp(SENT_SRC, "i").test(t)) return String(text);
+  return t.replace(new RegExp(SENT_SRC, "gi"), SENT_CUT).split("\n").filter(l => !(l.includes(SENT_CUT) && !l.replace(/[\uE000 \t\-*•–]/g, ""))).map(l => l.replaceAll(SENT_CUT, "")).join("\n").trim();
 }
