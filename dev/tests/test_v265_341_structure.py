@@ -93,6 +93,7 @@ class PeopleFit(unittest.TestCase):
         self.assertIn("[data-col=role]{min-width:84px}", CSS)
         self.assertIn("[data-col=proj]{min-width:90px}", CSS)
         self.assertIn("#v-people #peopleTbl td.title{min-width:100px}", CSS)
+        self.assertIn("@media (max-width:1100px){ #v-people #peopleTbl th{letter-spacing:.04em} }", CSS)   # 26 px spare at 900 px on Verdana
 
 
 class AudienceSwitch(unittest.TestCase):
