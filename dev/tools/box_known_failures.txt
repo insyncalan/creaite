@@ -1,0 +1,6 @@
+# Test files that fail on a Hetzner box and pass in CI (Ubuntu x86 on GitHub). "New failure" in candidate_run.sh means a failure NOT on this list.
+# Format: file | where (all, arm, ccx33, load) | why. Keep it short and honest; delete a line when its cause is fixed. Wanda, 26-10-2026.
+test_rail_icon_size.py | all | fails alone on the CAX41, CCX23 and CCX33; CI Ubuntu x86 passes it (main push run 40206720866): Chrome, fonts or viewport on the boxes
+test_update.py | arm | the dashboard build cannot run on aarch64 until the esbuild linux-arm64 pin (dev-esbuild-arm64) is in v268-release
+test_reports_page.py | ccx33 | fails alone on the CCX33 only (passed on the CAX41 and CCX23); cause not understood
+test_notes_delete.py | load | fails under load on the CCX33 and passes alone; run_tests counts that as passing and lists it
