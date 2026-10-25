@@ -84,5 +84,22 @@ class Persisted(unittest.TestCase):
         self.assertNotIn('"DEF"', text)
 
 
+class OnePager(unittest.TestCase):
+    """The Prep popup's "Draft the one-pager" buttons ask ask creaite for `steerco one-pager <code>` with the entry's project,
+    and the draft is filed in that project's Steerco folder on approval: for a confidential meeting only a project Alan chose."""
+
+    def test_buttons_hidden_for_a_guessed_confidential_project(self):
+        root = Path(__file__).resolve().parents[2] / "system/templates"
+        for src in ((root / "dashboard/src/projects.js").read_text(), (root / "dashboard.html").read_text()):
+            self.assertIn("guessed", src)
+            self.assertRegex(src, r'\w+\.invite\s*&&\s*\w+\.invite\.confidential\)\s*&&\s*\w+\.how\s*!==\s*"remembered"\s*&&\s*\w+\.how\s*!==\s*"chosen"')
+            self.assertRegex(src, r"if\s*\(\w+\s*&&\s*code\s*&&\s*!guessed\s*&&\s*code\s*!==")
+
+    def test_the_rule_matches_the_server_side(self):
+        # the same meeting: the server treats a guess as unchosen, so the screen must not offer a project-named draft
+        self.assertEqual(prep_page._project_of(D, entry("matched")), ("_portfolio", False))
+        self.assertEqual(prep_page._project_of(D, entry("remembered")), ("DEF", True))
+
+
 if __name__ == "__main__":
     unittest.main()
