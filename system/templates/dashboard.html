@@ -74080,6 +74080,7 @@ ${d5.text}`);
     const c5 = ch2.codePointAt(0) ?? 0;
     return MC_SPACE_CODES.has(c5) || c5 >= 8192 && c5 <= 8202;
   };
+  var mcNormalise = (text) => mcSplitSpaces(text || "").join(" ");
   var mcSplitSpaces = (text) => {
     const out = [];
     let cur = "";
@@ -76154,7 +76155,7 @@ ${d5.text}`);
     }
     if (!res.ok && shared.RUN && shared.RUN.ctl) shared.RUN.ctl.abort();
   }
-  var typedCalendar = (q5, confirmed) => !confirmed && !SENDIMG.length && /^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(String(q5 || "").trim().replace(/\s+/g, " "));
+  var typedCalendar = (q5, confirmed) => !confirmed && !SENDIMG.length && /^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(mcNormalise(q5));
   var askLive = async function(q5, confirmed) {
     const id2 = `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
@@ -82454,6 +82455,7 @@ Next: `;
         "mcIsRun",
         "mcLine",
         "mcNew",
+        "mcNormalise",
         "mcPlaces",
         "mcStep",
         "mcStepText",
