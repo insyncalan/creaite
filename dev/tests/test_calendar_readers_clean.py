@@ -79,12 +79,13 @@ class Readers(unittest.TestCase):
 
 
 class Mutants(unittest.TestCase):
-    def test_clean_calendar_off_leaks_in_every_reader(self):
+    def test_gateway_clean_off_leaks_in_every_reader(self):
         v, _cal = vault(self)
-        f = v.root / "system/scripts/invite_clean.py"
+        f = v.root / "system/scripts/calendar_gateway.py"                  # #375 S4: the readers' clean-up is the gateway's now
         src = f.read_text(encoding="utf-8")
-        self.assertIn("def clean_calendar(cal):", src)
-        f.write_text(src.replace("def clean_calendar(cal):", "def clean_calendar(cal):\n    return cal", 1), encoding="utf-8")
+        old = "    if not is_stamped(row):\n        return clean_row(row)"
+        self.assertIn(old, src)
+        f.write_text(src.replace(old, "    if not is_stamped(row):\n        return dict(row)", 1), encoding="utf-8")
         leaked = [n for n, code in READERS.items() if "swordfish" in run(v, code).stdout.lower() or "rtyu" in run(v, code).stdout.lower()]
         self.assertTrue(leaked, "no reader noticed clean_calendar being switched off")
 

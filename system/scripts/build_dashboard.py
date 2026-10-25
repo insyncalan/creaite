@@ -26,6 +26,7 @@ import review  # noqa: E402  (classification shared with cx-review: bulk rule, n
 import minutes_record  # noqa: E402  (#275: the Track column on Review's rows)
 from docx_tools import md_normalise  # noqa: E402  (Current state is Markdown, BL-22, BL-47)
 import propose  # noqa: E402  (register learning checks, BL-28)
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 import invite_clean  # noqa: E402  (#232: a meeting's sensitivity, fail closed)
 
 TEMPLATE = paths.TEMPLATES / "dashboard.html"
@@ -2040,7 +2041,7 @@ def workstream_leads(con):
 def calendar(projects):
     """Alan's meetings saved by the sweep (Today's day view), each tagged with a project whose code or name it mentions."""
     try:
-        cal = invite_clean.read_calendar(paths.CALENDAR)
+        cal = calendar_gateway.read("day")
     except (OSError, ValueError):
         return None
     for events in (cal.get("days") or {}).values():
@@ -2606,7 +2607,7 @@ def prep(settings, projects, file_list, today, items=None, con=None):
 def saved_calendar_days():
     """calendar.json's {"YYYY-MM-DD": [event, …]} with every invite detail (prep reads them), or {} without one."""
     try:
-        return invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
+        return calendar_gateway.read("prep_panel").get("days") or {}
     except (OSError, ValueError, AttributeError):
         return {}
 
@@ -2912,7 +2913,7 @@ def inbox_meetings(settings, projects, today):
     calendar) has id null and can't be picked until the calendar is refreshed."""
     start = meetings_start(settings, today)
     try:
-        cal = invite_clean.read_calendar(paths.CALENDAR)
+        cal = calendar_gateway.read("day")
     except (OSError, ValueError):
         return {"fetched": None, "from": start.isoformat(), "rows": [], "cleared": [], "later": []}
     entries = cleared_load(settings, today)
@@ -3222,7 +3223,7 @@ def calendar_days(d, now):
             out.append(rec)
         day += timedelta(days=1)
     try:
-        fetched = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("fetched")
+        fetched = calendar_gateway.read("meta").get("fetched")
     except (OSError, ValueError, AttributeError):  # read a moment ago by calendar_span; gone since: no fetch time
         fetched = None
     return {"first": span[0].isoformat(), "last": line_end.isoformat(), "read_to": span[1].isoformat(), "today": today.isoformat(),

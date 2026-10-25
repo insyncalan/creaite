@@ -42,7 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import linktext  # noqa: E402
 import paths  # noqa: E402
-import invite_clean  # noqa: E402  (2.6.8: a saved calendar is cleaned again when it is read)
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 import tracker  # noqa: E402
 
 sys.modules.setdefault("drafts", sys.modules[__name__])     # run as a script, report.py's `import drafts` is this same module
@@ -1298,7 +1298,7 @@ def minutes_file(files):
 def calendar_event(req):
     """The saved calendar's entry for the meeting (by its ID, else its day, start and title), or {}."""
     try:
-        days = invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
+        days = calendar_gateway.read("agenda").get("days") or {}
     except (OSError, ValueError):
         return {}
     for day, evs in days.items():
@@ -1690,7 +1690,7 @@ def _source_meeting(src):
 def _meeting_attendees(day, title):
     """The saved calendar's attendees for that meeting (its day, the title matched loosely), [] when it isn't there."""
     try:
-        days = invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
+        days = calendar_gateway.read("day").get("days") or {}
     except (OSError, ValueError, AttributeError):
         return []
     want = words(title)

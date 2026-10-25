@@ -548,11 +548,14 @@ def rules_imported():
     return True, "CLAUDE.md imports system/creaite-rules.md"
 
 
+PURE_MODULES = ("invite_filter.py", "invite_blocks.py")      # #375 E1: text in, text out; no file, so no location
+
+
 def scripts_use_paths():
     """Check every script imports paths.py, the one place locations are defined."""
     bad = []
     for s in (paths.ROOT / "system" / "scripts").glob("*.py"):
-        if s.name == "paths.py":
+        if s.name == "paths.py" or s.name in PURE_MODULES:
             continue
         if not re.search(r"^import paths\b", s.read_text(encoding="utf-8"), re.M):
             bad.append(s.name)
