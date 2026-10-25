@@ -233,3 +233,23 @@ Closed by Jarvis/Alan: second layer on the body (yes, minimal, section 1 rule 7)
 2. **Cap**: confirm the names `calendar_gateway.read(purpose)` / `view(ev, purpose)`, `invite_filter.keep_lines/keep_indices/drop_labelled_values` and the per-row `clean` key before writing the oracle.
 3. **Alan**: the 1,500-character cap is per stored body; the 400 and 600 excerpts are cut from it. Agreed?
 4. **Alan/Jarvis**: the hard-label list for the second layer (section 1 rule 7) is short and fixed; any label to add or remove before S1b starts?
+
+## 7. File format of `system/staging/calendar.json` (as written from 2.6.9)
+
+```
+{ "fetched": "<text>", "to": "<text>", "clean": 1,
+  "days": { "YYYY-MM-DD": [ { <row>, "clean": 1 }, ... ] } }
+```
+
+* **Row keys** are `calendar_gateway.ROW_KEYS` (the same list as `invite_clean.ROW_KEYS`), plus the row stamp `"clean": CLEAN` (an int). A
+  row without the stamp, with a lower one, or with a wrongly typed field is filtered in memory on every read and rewritten stamped by the next
+  sweep or start-up rescrub.
+* **Top-level `"clean"`** (the file stamp) is written by `sweep.calendar` and `sweep.rescrub_calendar` (`stamp_calendar` does the same in the
+  gateway). It records that the writer stamped every row; it is NOT trusted by any reader (a row is judged by its own stamp, because a merge
+  can mix rows). Every reader goes through `calendar_gateway.read(purpose)`, which returns only `fetched`, `to` and `days`, so the extra key
+  never reaches a consumer. The only direct readers are `calendar_gateway.read_raw` (the writers: the sweep's held-day merge and the rescrub,
+  which need the stamps), the `stat`-only cache stamps in `live_server.py` and `calendar_refresh.outcome` (modification time only). Tests that
+  compare whole-file keys: `test_calendar_gateway.py` and `test_calendar_writers_stamp.py` (expect the four keys on a written file) and
+  `test_calendar_clean_idempotence.py` / `test_calendar_shapes.py` (expect three keys from `read` / `clean_calendar`, which drop it).
+* **Default filter:** every production path runs composition D (`scrub_raw_first`). The strict E1-only mode (`filter_text`, anchors and shape
+  gate with the second layer, no scrub) is a test mode; `test_e1_default_is_d.py` pins this.
