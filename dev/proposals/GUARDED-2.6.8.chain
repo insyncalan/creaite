@@ -8,4 +8,7 @@ dev/proposals/365/live_server-365-tools.diff
 dev/proposals/365/tests-pins.diff
 # #365 tools delta tests (pending Alan's word)
 dev/proposals/365/tests-tools.diff
+# #365 follow-up delta: CLAUDE.md, bounded search, id pinned (pending Alan's re-approval)
+dev/proposals/365/live_server-365-followup.diff
+dev/proposals/365/tests-followup.diff
 # #368: dev/proposals/368/<file>.diff to be added when it lands
