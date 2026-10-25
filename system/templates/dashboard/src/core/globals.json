@@ -577,6 +577,7 @@
    "mcEnd",
    "mcFileStamp",
    "mcFound",
+   "mcIsAsk",
    "mcIsRun",
    "mcLine",
    "mcNew",
