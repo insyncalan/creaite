@@ -16,10 +16,10 @@ from live_browser import LiveBrowserCase  # noqa: E402
 PROBE = """(()=>{
   const q=s=>[...document.querySelectorAll(s)], cs=e=>getComputedStyle(e);
   const probe=document.createElement('span'); probe.style.color='var(--accent)'; document.body.appendChild(probe);
-  const link=cs(probe).color, muted=(probe.style.color='var(--muted)', cs(probe).color); probe.remove();
+  const link=(probe.style.color='var(--ink)', cs(probe).color), muted=(probe.style.color='var(--muted)', cs(probe).color); probe.remove();   /* #341 item 10: one link style in a People row, the text's own (ink) colour with a dotted underline */
   const links=q('#peopleTbl td .pcode.plink'), tds=q('#peopleTbl tbody tr:first-child td');
   return {n:links.length, link, muted, body:cs(q('#peopleTbl tbody td')[1]).fontSize,
-    links:links.map(e=>({color:cs(e).color, size:cs(e).fontSize, weight:cs(e).fontWeight, text:e.textContent})),
+    links:links.map(e=>({deco:cs(e).textDecorationLine+' '+cs(e).textDecorationStyle, color:cs(e).color, size:cs(e).fontSize, weight:cs(e).fontWeight, text:e.textContent})),
     others:tds.slice(0,3).map(td=>{const s=cs(td); return [s.fontSize,s.fontWeight,s.color]})}})()"""
 
 
@@ -44,7 +44,8 @@ class PeopleProjectLinks(LiveBrowserCase):
                 self.assertGreater(r["n"], 0, tag)
                 self.assertNotEqual(r["link"], r["muted"], tag)
                 for l in r["links"]:
-                    self.assertEqual(l["color"], r["link"], (tag, l))              # the link colour, not the muted one
+                    self.assertEqual(l["color"], r["link"], (tag, l))              # the row's one link colour (ink), not the muted one
+                    self.assertEqual(l["deco"], "underline dotted", (tag, l))      # and the one dotted underline (#341 item 10)
                     self.assertEqual(l["size"], r["body"], (tag, l))               # the table's body size
                     self.assertEqual(l["weight"], "500", (tag, l))
                 for row in measure.contrast(b, "#peopleTbl td .pcode.plink"):
