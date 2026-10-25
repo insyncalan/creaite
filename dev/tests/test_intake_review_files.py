@@ -279,7 +279,7 @@ class Round2(IntakeBase):
     def test_a_vtt_has_no_switch_and_is_always_a_transcript(self):
         b = self.b
         self.assertFalse(b.eval(f"!!{self.row(VTT)}.querySelector('[data-ira=ftype]')"))
-        self.assertIn("Transcript · It will be turned into minutes", b.eval(f"{self.row(VTT)}.innerText"))
+        self.assertNotIn("It will be turned into minutes", b.eval(f"{self.row(VTT)}.innerText"))     # #341 item 8: a .vtt's List row is one line; the meaning is in the Two panes' detail
         self.assertTrue(b.eval("D.intake_review.meetings.find(m=>m.title==='%s').fixed" % VTT))
         b.eval("(m=>{ irChooseKind(m,'minutes'); irFileKinds.value={...irFileKinds.value, [m.path]:{k:'minutes',size:m.size,day:m.day}}; })(D.intake_review.meetings.find(m=>m.title==='%s'))" % VTT)
         self.assertEqual(b.eval("irFileKind(D.intake_review.meetings.find(m=>m.title==='%s'))" % VTT), "transcript")   # even a choice written by hand
