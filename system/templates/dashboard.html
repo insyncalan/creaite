@@ -76157,7 +76157,7 @@ ${d5.text}`);
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl, void 0, typedCalendar(q5, confirmed));
+      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl, void 0, typedCalendar(q5, confirmed) ? "guess" : void 0);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -76700,6 +76700,9 @@ ${d5.text}`);
   }
   async function askStream(url, body2, confirmed, ctl, ended, plain, opts) {
     let res, outcome = "done";
+    const asked2 = plain;
+    let guessing = plain === "guess";
+    if (guessing) plain = true;
     const live = !ended;
     shared.MCEND = "";
     const startIso = nowIso();
@@ -76753,7 +76756,7 @@ ${d5.text}`);
       rbCancel();
       const j5 = await res.json().catch(() => ({}));
       const b5 = j5.budget || {};
-      if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, plain);
+      if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, asked2);
       await say(oneLine(j5.message || "This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/, ""));
       return;
     }
@@ -76815,6 +76818,10 @@ ${d5.text}`);
         }
         if (ev.seq && runId2 && !(opts && ev.seq <= opts.skip)) shared.SHOWN = { run: runId2, seq: ev.seq };
         if (opts && opts.skip && ev.seq && ev.seq <= opts.skip && ev.type !== "step") continue;
+        if (guessing && ev.type === "step") {
+          guessing = false;
+          if (ev.label === MC_MARKER) plain = false;
+        }
         if (plain && !PLAINEV.includes(ev.type)) {
           if (ev.type === "stopped") outcome = "stopped";
           else if (ev.type === "error") outcome = "failed";
