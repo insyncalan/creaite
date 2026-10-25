@@ -133,6 +133,60 @@ class Cache(unittest.TestCase):
         self.assertNotIn("4321", run(v, code).stdout)
 
 
+class Unlocked(unittest.TestCase):
+    """The clean-up never skips: when the calendar lock cannot be had it cleans without it (writing only if the file is unchanged since
+    it was read) and logs that it did."""
+
+    def check(self, v, cal, prelude, wait="0.3"):
+        r = run(v, "import sweep\n" + prelude + "\nprint(sweep.rescrub_calendar(wait=" + wait + "))")
+        self.assertEqual(r.returncode, 0, r.stderr[-300:])
+        self.assertGreaterEqual(int(r.stdout.strip().splitlines()[-1]), 1)
+        self.assertNotIn("4321", cal.read_text(encoding="utf-8"))                         # cleaned, not skipped
+        logs = "".join(f.read_text(encoding="utf-8", errors="ignore") for f in (v.root / "system/logs").glob("debug-*.log"))
+        self.assertIn("clean-up ran without the lock", logs)
+        self.assertNotIn("4321", logs)
+
+    def test_lock_held_by_another_process(self):
+        v, cal = vault(self)
+        holder = subprocess.Popen([sys.executable, "-c", "import sys, fcntl, time\nsys.path.insert(0, 'system/scripts')\nimport sweep\n"
+                                   "sweep.CAL_LOCK.parent.mkdir(parents=True, exist_ok=True)\nf = open(sweep.CAL_LOCK, 'w')\n"
+                                   "fcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\ntime.sleep(6)"],
+                                  cwd=v.root, stdout=subprocess.PIPE, text=True)
+        self.addCleanup(holder.kill)
+        self.assertEqual(holder.stdout.readline().strip(), "held")
+        self.check(v, cal, "")
+
+    def test_unwritable_lock_path(self):
+        v, cal = vault(self)
+        self.check(v, cal, "from pathlib import Path\nsweep.CAL_LOCK = Path('/dev/null/nowhere/calendar.lock')")
+
+    def test_no_fcntl(self):
+        v, cal = vault(self)
+        self.check(v, cal, "import sys\nsys.modules['fcntl'] = None")
+
+    def test_a_save_made_meanwhile_is_not_overwritten_without_the_lock(self):
+        v, cal = vault(self)
+        prelude = ("import sys, json\nsys.modules['fcntl'] = None\nreal = sweep.invite_clean.clean_calendar\nstate = {'n': 0}\n"
+                   "def late(c):\n    if state['n'] == 0:\n        state['n'] = 1\n"
+                   "        sweep.paths.CALENDAR.write_text(json.dumps({'days': {'2026-10-27': [{'id': 'n1', 'start': '08:00', 'end': '09:00',"
+                   " 'title': 'NEWER Passcode: 4321 swordfish', 'sensitivity': 'normal'}]}}))\n    return real(c)\n"
+                   "sweep.invite_clean.clean_calendar = late")
+        run(v, "import sweep\n" + prelude + "\nprint(sweep.rescrub_calendar(wait=0.1))")
+        flat = cal.read_text(encoding="utf-8")
+        self.assertIn("2026-10-27", flat)                                                # the newer save was kept...
+        self.assertNotIn("4321", flat)                                                   # ...and cleaned on the retry
+
+    def test_mutant_fallback_removed_leaves_the_file_raw(self):
+        v, cal = vault(self)
+        f = v.root / "system/scripts/sweep.py"
+        src = f.read_text(encoding="utf-8")
+        old = "        if not got:\n            for _ in range(5):"
+        self.assertIn(old, src)
+        f.write_text(src.replace(old, "        if False:\n            for _ in range(5):", 1), encoding="utf-8")
+        run(v, "import sweep, sys\nsys.modules['fcntl'] = None\nprint(sweep.rescrub_calendar(wait=0.1))")
+        self.assertIn("4321", cal.read_text(encoding="utf-8"))                           # raw: what the fallback prevents
+
+
 class Mutants(unittest.TestCase):
     def mutated(self, old, new):
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")

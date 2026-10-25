@@ -24,6 +24,8 @@
 
 **Saved calendars.** A saved meeting keeps only the fields the sweep writes (title, place, times, organiser, invite text, attendees, attachment names and a few flags); anything else in an old or foreign file (a description, a join link, a note at the top, a row that is not a meeting) is dropped when the file is cleaned and when it is read. The clean-up and a sweep's save take the same lock, so neither loses the other's write. A cleaned calendar is kept in memory while the file is unchanged, so repeated reads are fast.
 
+**Details for the release note (Romanoff).** The saved-calendar clean-up always runs: if the calendar lock cannot be had within a few seconds (another process holds it, the lock file cannot be written, or the system has no file locking) it cleans without the lock and writes only if the file has not changed since it was read, and says so in the debug log. The read-side cache is keyed on modified time, size and inode; a rewrite that restores all three would be served the earlier CLEANED content, which is stale but never a leak. Day keys that are not YYYY-MM-DD dates and extra fields on attendees are dropped by design. The daily backup zips and their OneDrive copies keep an earlier raw `calendar.json` for their retention period.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
