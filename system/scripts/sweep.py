@@ -770,6 +770,7 @@ def rescrub_calendar():
     later save holds. Rewritten atomically and only when something changed; clean_row cleans a cleaned row to itself. Returns the
     number of meetings changed."""
     try:
+        stamp = paths.CALENDAR.stat().st_mtime_ns
         cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
         days = cal.get("days")
     except (OSError, ValueError, AttributeError):
@@ -782,7 +783,7 @@ def rescrub_calendar():
             new = [invite_clean.clean_row(r) if isinstance(r, dict) else r for r in rows]
             changed += sum(1 for a, b in zip(rows, new) if a != b)
             days[day] = new
-    if changed:
+    if changed and paths.CALENDAR.stat().st_mtime_ns == stamp:       # a sweep that saved meanwhile wins: nothing is overwritten
         paths.write_text_atomic(paths.CALENDAR, json.dumps(cal, indent=1, ensure_ascii=False))
         debuglog.info("sweep", f"calendar: {changed} saved meeting(s) cleaned again with today's rules")
     return changed

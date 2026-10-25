@@ -69,10 +69,11 @@ _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]
 # word straight after the label is looked at; "Password reset hunter" keeps "hunter" (not covered, see the test file).
 BARE_NEXT = (
     (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord",
-     ("reset", "policy", "manager", "management", "expiry", "rotation")),   # "Password reset", "Password policy", a manager tool
+     ("reset", "policy", "manager", "management", "expiry", "rotation", "audit", "change")),   # "Password reset", "Password policy", a manager tool
     (r"pin(?:\s*(?:code|number|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
     (r"codes?",                                                               # "Code review", "Code of conduct", "Source code repository"
-     ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover")),
+     ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover", "walkthrough",
+      "standards")),
 )
 _BARE_NEXT = "|".join(rf"(?:{lab})(?![\w-])\s+[\"'(\[]?(?!(?:{'|'.join(ok)})(?![\w-]))[^\W_]" for lab, ok in BARE_NEXT)
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"

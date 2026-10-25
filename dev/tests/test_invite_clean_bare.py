@@ -65,6 +65,10 @@ ALLOWED = [
     ("password-management", "Password management plan", ("password", "management")),
     ("password-expiry", "Password expiry changes", ("password", "expiry")),
     ("password-rotation", "Password rotation plan", ("password", "rotation")),
+    ("password-audit", "Password audit findings", ("password", "audit")),          # a security review topic
+    ("password-change", "Password change process", ("password", "change")),
+    ("code-walkthrough", "Code walkthrough", ("code", "walkthrough")),
+    ("code-standards", "Code standards workshop", ("code", "standards")),
     ("pin-entry", "PIN entry redesign", ("pin", "entry")),                          # a screen
     ("pin-pad", "PIN pad supplier call", ("pin", "pad")),                           # a device
     ("code-review", "Code review", ("code", "review")),
@@ -177,7 +181,7 @@ class Controls(unittest.TestCase):
         self.assertEqual(sum(len(ok) for _l, ok in I.BARE_NEXT), len(ALLOWED))
 
     def test_allow_list_is_short(self):
-        self.assertLessEqual(sum(len(ok) for _l, ok in I.BARE_NEXT), 20)
+        self.assertLessEqual(sum(len(ok) for _l, ok in I.BARE_NEXT), 20)   # never "for", "the", "all" or other function words
 
     def test_not_covered_is_still_so(self):
         """Pins the gaps the release notes name; if one closes, move its row to BARE."""
