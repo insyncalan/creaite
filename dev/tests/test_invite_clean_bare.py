@@ -518,7 +518,7 @@ class Mutants(unittest.TestCase):
 
     def test_function_word_exemption(self):
         """Any word allowed after the first listed word (the exemption widened to everything) lets the round-2 examples through."""
-        bad = fails(mutant('words = "|".join((*ok, *BARE_FOLLOW))', 'words = r"\\w+"'))
+        bad = fails(mutant('words = "|".join(bare_words(ok))', 'words = r"\\w+"'))
         self.assertTrue(any(b.startswith("rv-") for b in bad), bad)
 
     def test_punctuation_check_off(self):

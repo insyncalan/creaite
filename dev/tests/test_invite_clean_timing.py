@@ -58,6 +58,37 @@ def paths_of(mod, text, run):
     yield "alone", mod._alone, (text,)
 
 
+def duplicates(mod):
+    """(label, word) for every word the built alternation of a label would hold twice (or that its own list repeats)."""
+    out = []
+    for lab, ok in mod.BARE_NEXT:
+        for name, words in (("ok", ok), ("built", mod.bare_words(ok))):
+            seen = set()
+            for w in words:
+                if w in seen:
+                    out.append((lab, name, w))
+                seen.add(w)
+    out += [("BARE_FOLLOW", "list", w) for w in set(mod.BARE_FOLLOW) if mod.BARE_FOLLOW.count(w) > 1]
+    return out
+
+
+ALL_WORDS = sorted({w for _l, ok in I.BARE_NEXT for w in ok} | set(I.BARE_FOLLOW))
+LABELS = ["Code", "Password", "PIN", "Token", "Secret", "OTP", "API key", "Pw", "Passcode:", "Key:", "Meeting ID"]
+
+
+class Structure(unittest.TestCase):
+    def test_no_alternative_is_built_twice(self):
+        dup = duplicates(I)
+        self.assertEqual(dup, [], f"a word is listed twice for a label: {dup} (a repeated group over it takes exponential time)")
+
+    def test_the_overlap_that_exists_is_handled(self):
+        """'of' and 'review' really are in both lists for Code today: bare_words() must list them once."""
+        overlap = {(lab, w) for lab, ok in I.BARE_NEXT for w in ok if w in I.BARE_FOLLOW}
+        self.assertTrue(overlap)
+        for lab, ok in I.BARE_NEXT:
+            self.assertEqual(len(I.bare_words(ok)), len(set(I.bare_words(ok))), lab)
+
+
 class Timing(unittest.TestCase):
     def test_long_runs_after_every_label(self):
         slow, n = [], 0
@@ -71,12 +102,44 @@ class Timing(unittest.TestCase):
         self.assertGreater(n, 3000)
         self.assertEqual(slow[:6], [], f"{len(slow)} of {n} calls took more than {LIMIT} s")
 
+    def test_repeated_words_after_every_label(self):
+        """60 repeats of EACH allowed or follow word after every label, as a title (scrub) and as a body (invite_text, is_secret), on one
+        line and one word per line."""
+        slow, n = [], 0
+        for lab, word in itertools.product(LABELS, ALL_WORDS):
+            for shape, text in (("line", lab + " " + (word + " ") * 60), ("lines", lab + " " + "\n".join([word] * 60))):
+                for name, fn, args in (("scrub", I.scrub, (text, 140)), ("invite_text", I.invite_text, (text,)),
+                                       ("is_secret", I.is_secret, (text,))):
+                    took, _out = timed(fn, *args)
+                    n += 1
+                    if took > LIMIT:
+                        slow.append((round(took, 3), name, shape, lab, word))
+        self.assertGreater(n, 3000)
+        self.assertEqual(slow[:6], [], f"{len(slow)} of {n} calls took more than {LIMIT} s")
+
+    def test_repeat_one_token_fuzz(self):
+        """Any one token repeated up to 80 times, after a label or alone (seed 232)."""
+        rnd = random.Random(232)
+        tokens = [*ALL_WORDS, *LABELS, ".", ":", "-", "\u2013", "|", "/", "(", "!", "?", ",", ";", "\u2026", "\n", "<td>", "</td>", "<li>", " ", "is"]
+        slow = []
+        for _ in range(2500):
+            tok, n = rnd.choice(tokens), rnd.randint(2, 80)
+            lead = rnd.choice(["", "Password ", "Code ", "PIN ", "Passcode:\n", "Token ", "<td>Key</td>"])
+            sep = rnd.choice([" ", "", "\n"])
+            text = lead + sep.join([tok] * n)
+            for fn, args in ((I.scrub, (text, 140)), (I.invite_text, (text,)), (I.is_secret, (text,))):
+                took, _out = timed(fn, *args)
+                if took > LIMIT:
+                    slow.append((round(took, 3), tok, n, lead))
+        self.assertEqual(slow[:5], [])
+
     def test_seeded_fuzz(self):
         rnd = random.Random(232)
         alphabet = [".", ":", " ", "!", "?", ";", ",", "…", "-", "Password", "PIN", "Passcode", "Key", "Meeting ID", "reset", "\n", "<td>", "x"]
         slow = []
         for _ in range(1500):
-            text = "".join(rnd.choice(alphabet) for _ in range(rnd.randint(20, 200)))[:200]
+            atoms = [rnd.choice(alphabet) * (rnd.randint(1, 30) if rnd.random() < 0.2 else 1) for _ in range(rnd.randint(20, 120))]   # a repeated atom
+            text = "".join(atoms)[:400]
             for fn, args in ((I.scrub, (text, 140)), (I.invite_text, (text,))):
                 took, _out = timed(fn, *args)
                 if took > LIMIT:
@@ -103,5 +166,34 @@ class Timing(unittest.TestCase):
             ALARM = keep
 
 
+class DuplicateMutant(unittest.TestCase):
+    """A duplicate word re-added (the dedupe removed, 'of' and 'review' are in both lists for Code) must be caught by the structure test
+    and by the timing check, quickly."""
+
+    def mutated(self):
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = "    return tuple(dict.fromkeys((*ok, *BARE_FOLLOW)))"
+        self.assertIn(old, src)
+        src = src.replace(old, "    return (*ok, *BARE_FOLLOW)", 1).replace('okx = "|".join(dict.fromkeys(ok))', 'okx = "|".join(ok)', 1)
+        spec = importlib.util.spec_from_loader("invite_clean_dup", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src, "invite_clean_dup", "exec"), mod.__dict__)
+        return mod
+
+    def test_structure_test_sees_it(self):
+        self.assertIn(("(?:codes?)" if False else "codes?", "built", "of"), duplicates(self.mutated()))
+
+    def test_timing_check_sees_it(self):
+        global ALARM
+        keep, ALARM = ALARM, 2.0
+        try:
+            with self.assertRaises(TimeoutError):
+                timed(self.mutated().scrub, "Code " + "of " * 34, 140)
+        finally:
+            ALARM = keep
+
+
 if __name__ == "__main__":
     unittest.main()
+

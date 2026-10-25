@@ -102,9 +102,16 @@ BARE_FUNCTION = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a",
 
 
 
+def bare_words(ok):
+    """The words that may stand after the first allowed word of a label: its own and BARE_FOLLOW, each ONCE and in order. A word in
+    both lists would match two ways in the repeated group below, and the match time would double with every repeat ("Code of of of
+    ..." took seconds); dev/tests/test_invite_clean_bare.py checks that the built list has no duplicate."""
+    return tuple(dict.fromkeys((*ok, *BARE_FOLLOW)))
+
+
 def _bare_next(lab, ok):
-    okx = "|".join(ok)
-    words = "|".join((*ok, *BARE_FOLLOW))                                       # what may stand after the first allowed word
+    okx = "|".join(dict.fromkeys(ok))
+    words = "|".join(bare_words(ok))                                            # what may stand after the first allowed word
     run = rf"(?:\s+(?:{words})(?![\w-]))*"
     bad = (rf"(?:\s*{SEPRUN}|\s*[,;.!?]+\s*[\w\"'(\[]|\s+(?!(?:{words})(?![\w-]))[\w\"'(\[])")
     sep = SEPRUN                                                                 # straight after the label too
