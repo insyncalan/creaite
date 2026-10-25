@@ -27,7 +27,7 @@ class Scrub(unittest.TestCase):
     def test_subset_up_to_blank_lines(self):
         for b in BODIES:
             conv = set(B.to_lines(b) if B.looks_like_html(b) else b.replace("\r\n", "\n").split("\n"))
-            for ln in F.filter_text_with_scrub(b).split("\n"):
+            for ln in F.filter_text_with_scrub(b, order="anchors_first").split("\n"):
                 self.assertTrue(ln == "" or ln in conv, (b, ln))
 
     def test_idempotent(self):

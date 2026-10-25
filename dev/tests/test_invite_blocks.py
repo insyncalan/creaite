@@ -45,7 +45,7 @@ def block_of(lines, needle):
     for line in lines:
         if line == "":
             idx += 1
-        elif line == needle:
+        elif line == needle or needle in line.split(" | "):
             return idx
     return None
 
@@ -140,7 +140,7 @@ class Fixtures(unittest.TestCase):
             lines = B.to_lines(body)
             for keep in meta["must_keep"]:
                 with self.subTest(name=name, line=keep):
-                    self.assertIn(keep, lines)
+                    self.assertIsNotNone(block_of(lines, keep), lines)
 
     def test_hidden_and_script_secrets_are_dropped_here(self):
         # everything else planted is for the filter (invite_filter) to remove; only markup and hidden content go in to_lines
@@ -159,13 +159,13 @@ class Layouts(unittest.TestCase):
         for name, kind, a, b in LAYOUTS:
             lines = B.to_lines(fx[name][0])
             with self.subTest(name=name, kind=kind, a=a, b=b):
-                self.assertIn(a, lines)
-                self.assertIn(b, lines)
+                self.assertIsNotNone(block_of(lines, a), lines)
+                self.assertIsNotNone(block_of(lines, b), lines)
                 self.assertTrue((together if kind == "together" else apart)(lines, a, b), lines)
 
-    def test_every_table_cell_of_a_data_table_is_one_block(self):
+    def test_every_row_of_a_data_table_is_one_line(self):
         lines = B.to_lines("<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr><tr><td>e</td><td>f</td></tr></table>")
-        self.assertEqual(lines, ["a", "b", "c", "d", "e", "f"])
+        self.assertEqual(lines, ["a | b", "c | d", "e | f"])
 
     def test_layout_table_is_cut_per_cell(self):
         lines = B.to_lines("<table><tr><td><p>one</p><p>two</p></td><td>three</td></tr></table>")
@@ -173,7 +173,7 @@ class Layouts(unittest.TestCase):
 
     def test_nested_table_makes_the_outer_a_layout_table(self):
         lines = B.to_lines("<table><tr><td>x</td><td><table><tr><td>y</td><td>z</td></tr></table></td></tr></table>")
-        self.assertEqual(lines, ["x", "", "y", "z"])
+        self.assertEqual(lines, ["x", "", "y | z"])
 
     def test_single_cell_table_is_layout(self):
         self.assertEqual(B.to_lines("<table><tr><td><p>a</p><p>b</p></td></tr></table>"), ["a", "", "b"])
@@ -377,19 +377,24 @@ class Mutants(unittest.TestCase):
         self.red("m2", mock.patch.object(B, "_is_layout", lambda t: False))
 
     def test_m3_rows_are_cut(self):
-        def cut(em, layout):
+        orig = B._render_row
+
+        def cut(row, em):
+            orig(row, em)
             em.line_break()
             em.want_blank = True
-        self.red("m3", mock.patch.object(B, "_row_break", cut))
+        self.red("m3", mock.patch.object(B, "_render_row", cut))
 
     def test_m4_cells_are_cut(self):
-        orig = B._render_cell
-
-        def cut(cell, em, layout):
-            orig(cell, em, layout)
-            em.line_break()
-            em.want_blank = True
-        self.red("m4", mock.patch.object(B, "_render_cell", cut))
+        def cut(row, em):
+            for cell in row.kids:
+                if not isinstance(cell, str) and cell.tag in B.CELLS:
+                    for x in B._cell_lines(cell):
+                        em.line_break()
+                        em.text(x)
+                        em.line_break()
+                    em.want_blank = True
+        self.red("m4", mock.patch.object(B, "_render_row", cut))
 
     def test_m5_blocks_are_never_cut(self):
         self.red("m5", mock.patch.object(B._Emit, "block_break", B._Emit.line_break))

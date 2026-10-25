@@ -7,9 +7,9 @@ Pure plain code, standard library only (html.parser). No I/O, no regular express
 
 Why: flattening table cells first is what split a label from its value in #369. Here the tree is cut into blocks BEFORE it is flattened:
 
-  * a data table (no nested table, more than one cell, no cell with two or more paragraphs or lists) is ONE block: every cell and every
-    row is a line of that block, so a label and its value (same cell, next cell, next row, a header row and the first cell of the
-    next row) stay together;
+  * a data table (no nested table, more than one cell, no cell with two or more paragraphs or lists) is ONE block: every ROW is one line of
+    that block (cells joined by ' | ', header rows too; a row with a multi-line cell keeps one line per cell line), so a label and
+    its value (same cell, next cell, next row, a header row and the next row) stay together;
   * a layout table (a table around other content) is cut: each cell is its own run of blocks;
   * p, h1-h6, blockquote, ul/ol (nested lists stay in the outer list's block), pre, hr and a table start and end a block;
   * div, li, tr, td, br and unknown tags start a new LINE; two or more br in a row (an empty line) end the block;
@@ -345,6 +345,46 @@ def _render_text(s, em):
         em.text(s.replace("\n", " "))
 
 
+def _cell_lines(cell):
+    """One cell of a data table as its lines (more than one when the cell holds a br or a block)."""
+    if cell.hidden:
+        return []
+    sub = _Emit()
+    sub.nobreak = 1
+    _render_kids(cell, sub)
+    sub.line_break()
+    return [x for x in sub.out if x]
+
+
+def _render_row(row, em):
+    """A data table's row as ONE line, cells joined by ' | ' (a label and its value, or a header row, stay on one line).
+    A row with a cell of two or more lines (label br value) keeps one line per cell line, as before."""
+    cells = []
+    multi = False
+    extra = []
+    for cell in row.kids:
+        if isinstance(cell, str):
+            if cell.strip():
+                cells.append(" ".join(cell.split()))
+        elif cell.tag in CELLS:
+            ls = _cell_lines(cell)
+            if len(ls) > 1:
+                multi = True
+            cells.extend(ls)
+        else:
+            extra.append(cell)
+    em.line_break()
+    if multi:
+        for c in cells:
+            em.text(c)
+            em.line_break()
+    elif cells:
+        em.text(" | ".join(cells))
+        em.line_break()
+    for node in extra:
+        _render(node, em)
+
+
 def _render_table(table, em):
     em.block_break()
     layout = _is_layout(table)
@@ -356,16 +396,19 @@ def _render_table(table, em):
             em.text(child)
             em.line_break()
         elif child.tag == "tr":
-            _row_break(em, layout)
-            for cell in child.kids:
-                if isinstance(cell, str):
-                    em.line_break()
-                    em.text(cell)
-                    em.line_break()
-                elif cell.tag in CELLS:
-                    _render_cell(cell, em, layout)
-                else:
-                    _render(cell, em)
+            if layout:
+                _row_break(em, layout)
+                for cell in child.kids:
+                    if isinstance(cell, str):
+                        em.line_break()
+                        em.text(cell)
+                        em.line_break()
+                    elif cell.tag in CELLS:
+                        _render_cell(cell, em, layout)
+                    else:
+                        _render(cell, em)
+            else:
+                _render_row(child, em)
         elif child.tag in CELLS:
             _row_break(em, layout)
             _render_cell(child, em, layout)
