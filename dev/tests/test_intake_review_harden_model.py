@@ -85,7 +85,11 @@ class Confidential(unittest.TestCase):
 
     def test_inbox_meetings_reads_the_calendars_sensitivity(self):
         import inspect
-        self.assertIn("sensitivity", inspect.getsource(bd.inbox_meetings))
+        # #328: inbox_meetings was split; its row helper reads the sensitivity, so the check reads them together
+        src = "\n".join(inspect.getsource(f) for f in (bd.inbox_meetings, bd._inbox_row, bd._inbox_match))
+        self.assertIn("sensitivity", src)
+        mutant = src.replace("invite_clean.sensitivity(ev)", "'normal'")        # mutant: without the call the check must fail
+        self.assertNotIn("sensitivity", mutant)
 
 
 if __name__ == "__main__":
