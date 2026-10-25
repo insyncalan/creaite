@@ -2601,7 +2601,8 @@ def prep_entry(ev, day, ctx):
     # prep_page._project_of (#362): a guess (title code, name, keyword, attendees) gives p None and how "confidential", so the
     # Prep header says "Choose the project" and he picks it once. Table: dev/proposals/362/PERSISTED-PATHS.md.
     #   Today / Prep popup and page, Week ahead   screen        chosen only (this entry)
-    #   Agendas page file, prep-pages.json, stored content, research prompt, Shape, agenda, one-pager   through prep_page.context: chosen only
+    #   Agendas page file, prep-pages.json, stored content, research prompt, Shape, agenda, one-pager
+    #     (all through prep_page.context)   chosen only
     #   hub records, next-day list, aside lists, day_close, capture.meeting   p None
     #   dashboard.html / history snapshots   local only, hold what the screen holds
     s = series_of(ev["title"])
