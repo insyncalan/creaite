@@ -145,6 +145,10 @@
    "count": 1,
    "text": "7. **Right-click** any action, RAID item or decision (a row or card in Work, Mine, a person's page, "
   },
+  "help.md | apply | 979cf54596e2": {
+   "count": 1,
+   "text": "Or say: `undo last apply`"
+  },
   "help.md | path | 1087727fb25e": {
    "count": 1,
    "text": "3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.comma"

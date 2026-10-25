@@ -567,8 +567,10 @@ Where: The message bar · Activity
 
 1. Straight after a change, press **Undo** in the message at the bottom.
 2. Later on, **Activity** lists every change: Undo there reverses the latest save, and ticking older lines and pressing **Undo n** puts back just those changes (anything changed since is left as it is).
-3. For anything older, ask in ask creaite. Every save is logged, so it can be reversed.
+3. For anything older, say the phrase below. Every save is logged, so it can be reversed.
 4. A file ask creaite changed: **Activity › What ask creaite changed** lists the last seven days, each with its tier (Ordinary, Sensitive or High-risk) and **Undo**.
+
+Or say: `undo last apply`
 
 ## Update creaite
 
