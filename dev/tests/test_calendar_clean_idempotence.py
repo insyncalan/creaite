@@ -277,7 +277,6 @@ class InviteTextProperty(unittest.TestCase):
     def test_the_eroding_agenda_keeps_its_unlabelled_lines(self):
         self.assertEqual(lost(I.invite_text(ERODING), ["Agenda", "2. Budget review", "3. Hiring", "4. Vendors", "5. Risks", "6. Milestones", "7. AOB"]), [])
 
-    @unittest.expectedFailure      # ACCEPTED LIMIT (#369, NOTES-2.6.8.md): see CONFLICT below
     def test_corpus_with_a_valueless_label_is_idempotent_and_keeps_its_lines(self):
         failed = []
         for name, body, _secrets, keep in CORPUS:
@@ -323,7 +322,6 @@ class InviteTextProperty(unittest.TestCase):
         bad = [x for x in bad if x[1]]
         self.assertEqual((len(bad), bad[:2]), (0, []), "a line with no label and no label before it was removed")
 
-    @unittest.expectedFailure      # ACCEPTED LIMIT (#369, NOTES-2.6.8.md): see CONFLICT below
     def test_unlabelled_line_after_a_valueless_label_survives(self):
         bad = [(b, lost(cleaned(b)[0], protected(es, strict=False))) for b, es in GENERATED]
         bad = [x for x in bad if x[1]]

@@ -18,6 +18,7 @@ All values are made up.
 """
 import importlib.util
 import json
+import random
 import sys
 import unittest
 from pathlib import Path
@@ -125,6 +126,65 @@ class Rows(unittest.TestCase):
         self.assertEqual((changed_second, same_bytes, same_held), (0, True, True))
 
 
+AGENDA_LINES = ["Budget review", "Hiring plan", "Vendors", "Risks", "Milestones", "AOB", "Roadmap update", "Q3 forecast", "Next steps",
+                "1. Welcome", "2. Budget review", "3. Supplier terms", "Notes: bring laptops", "Café opening hours"]
+STOP_LABELS = ["Meeting ID.", "Zoom ID!", "Key,", "Conference ID?", "Webinar ID;", "Meeting ID\u2026"]
+ALONE_LABELS = ["Passcode:", "Meeting ID:", "PIN -", "Password \u2013", "Host key:", "Access code is"]
+REMOVED = ["https://teams.microsoft.com/l/meetup-join/19%3ameeting_abcDEF", "https://example.zoom.us/j/81234567890?pwd=abc", "Passcode: abcd",
+           "Dial-in: +44 20 7946 0958,,55123987#", "Join Microsoft Teams Meeting"]
+FUZZ_BODIES = 40000
+
+
+def fuzz_body(rnd, n):
+    """(body, values): units of [label, 0 to 2 removed lines, value] among agenda lines. The values must not survive the first pass."""
+    lines, values = [], []
+    for _ in range(rnd.randint(2, 7)):
+        pick = rnd.random()
+        if pick < 0.45:
+            lines.append(rnd.choice(AGENDA_LINES))
+        elif pick < 0.7:
+            lines += [rnd.choice(STOP_LABELS), *rnd.sample(REMOVED, rnd.randint(0, 2)), f"{rnd.randint(1000, 9999)} {n:05d}"]
+            values.append(lines[-1])
+        elif pick < 0.9:
+            lines += [rnd.choice(ALONE_LABELS), *(["_____"] if rnd.random() < 0.2 else []), f"zq{n:05d}x"]
+            values.append(lines[-1])
+        else:
+            lines.append(rnd.choice(["Password reset", "Code of conduct", "IT update: password reset"]))
+        lines += [""] * rnd.choice((0, 0, 1, 3))
+    return "\n".join(lines), [v for v in values if v.strip("_")]
+
+
+class Fuzz(unittest.TestCase):
+    def test_forty_thousand_bodies_reach_a_fixed_point_with_no_value_after_pass_one(self):
+        rnd = random.Random(369)
+        bad_fixed, bad_value = [], []
+        for n in range(FUZZ_BODIES):
+            body, values = fuzz_body(rnd, n)
+            once = I.invite_text(body)
+            if I.invite_text(once) != once:
+                bad_fixed.append(body)
+            if any(v in once for v in values):
+                bad_value.append(body)
+        self.assertEqual((len(bad_fixed), bad_fixed[:1]), (0, []), f"{len(bad_fixed)} bodies are not a fixed point after one pass")
+        self.assertEqual((len(bad_value), bad_value[:1]), (0, []), f"{len(bad_value)} bodies keep a value after one pass")
+
+    def test_the_reviewers_examples(self):
+        for body, values in (("Meeting ID.\nhttps://teams.microsoft.com/l/meetup-join/x\n1234", ["1234"]), ("Meeting ID.\nPasscode: abc\n1234", ["1234"]),
+                             ("Key,\nPasscode: abc\n1. Intro", ["Intro"]), ("Zoom ID!\nDial-in: +44 20 7946 0958,,1234#\n55 66", ["55 66"]),
+                             ("Passcode:\n_____\nZQ7742", ["ZQ7742"]), ("Passcode:\n\u2500\u2500\u2500\n\u2022 ZQ7742", ["ZQ7742"]),
+                             ("Passcode:\n=====\n.....\n-----\n|||||\nZQ7742", ["ZQ7742"])):
+            once = I.invite_text(body)
+            self.assertEqual(I.invite_text(once), once, body)
+            for v in values:
+                self.assertNotIn(v, once, body)
+
+    def test_the_fuzz_is_not_trivial(self):
+        rnd = random.Random(369)
+        sample = [fuzz_body(rnd, n) for n in range(300)]
+        self.assertTrue(any(len(v) >= 2 for _b, v in sample))
+        self.assertTrue(any(I.invite_text(b) != b for b, _v in sample))
+
+
 class Mutants(unittest.TestCase):
     def mutated(self, old, new):
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
@@ -140,6 +200,17 @@ class Mutants(unittest.TestCase):
         seen = passes(m.invite_text, LEADING, 3)
         self.assertNotEqual(seen[1], seen[2])
         self.assertTrue(any(m.invite_text(m.invite_text(b)) != m.invite_text(b) for b in CORPUS))
+
+    def test_digit_wait_dropped_by_a_removed_line_leaks_and_is_not_a_fixed_point(self):
+        m = self.mutated("self.digit_wait = _ends_on_key_and_stop(ln) or bool(dropped and self.digit_wait and not value)", "self.digit_wait = _ends_on_key_and_stop(ln)")
+        body = "Meeting ID.\nPasscode: abc\n1234"
+        once = m.invite_text(body)
+        self.assertIn("1234", once)                                       # the value stays after pass 1...
+        self.assertNotEqual(m.invite_text(once), once)                    # ...and pass 2 removes it
+
+    def test_a_line_of_underscores_is_content_in_the_mutant(self):
+        m = self.mutated('not re.search(r"[^\\W_]", ln))', 'not re.search(r"\\w", ln))')
+        self.assertIn("ZQ7742", m.invite_text("Passcode:\n_____\nZQ7742"))
 
     def test_without_the_leading_rule_the_agenda_line_eats_its_neighbours(self):
         m = self.mutated("or (not dropped and any(_label_leads(v) for v in views))", "or (not dropped and any(_BARE_END.search(v) for v in views))")

@@ -52,8 +52,9 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
 
 # ---- keys: passcodes, PINs, meeting IDs, dial-in numbers ----
 # ONE separator class for every label path (a label alone, a bare label, a phrase that stops): any punctuation or symbol (Unicode
-# P* and S*, and the rest of what is neither a letter, a digit nor a space) except a sentence end (. , ; ! ?).
-BARE_SEPARATORS = r"[^\w\s.,;!?]"
+# P* and S*, and the rest of what is neither a letter, a digit nor a space) except a sentence end (. , ; ! ?) and the markdown wrappers
+# (* ~ `), which are read as spaces in their own view (_DECORATION): "**Password reset**" is a phrase, not a label and a separator.
+BARE_SEPARATORS = r"[^\w\s.,;!?*~`]"
 # A separator, with at most ONE sentence-end mark in front of it ("Password.:", "Passcode?:"). Longer runs of marks are first read as one
 # ellipsis (a separator itself): _views() does that before any pattern is tried (_SE_RUN), so no pattern needs a repeated group
 # round a repeated mark, and none can backtrack catastrophically (2.6.8 review: ". " x 60 froze the old nested form).
@@ -145,7 +146,8 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"   # "Code! 4417"
-                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})-(?:\s+|(?!(?:{GLUE_OK})(?![\w-])))[^\W_]"  # "Passcode-4417"
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})"       # "Passcode-4417", "Passcode- 4417"
+                   rf"-(?:\s+|(?!(?:{GLUE_OK})(?![\w-])))[^\W_]"
                    rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])ids?\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
                    rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d\S*\d\S*\d"   # "ID 4417": 3 digits
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
@@ -414,11 +416,32 @@ def _label_leads(view):
     return not _PROSE.search(before) and len(before.split()) <= 3
 
 
-def _label_line(ln, dropped):
-    """Whether this line ends a bare label phrase whose value may follow: a phrase that stops on a function word or a separator
-    (a removed line too), or (a line that is kept) a finished phrase such as "Password reset" that leads the line."""
-    views = _views_of(ln)
-    return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_label_leads(v) for v in views))
+def _label_kind(ln, dropped):
+    """"open" when this line ends a bare label phrase that stops on a function word or a separator (a removed line too): the lines after
+    it are its value; "leads" when it is a kept, finished phrase that leads its line ("Password reset"): a value may follow; else ""."""
+    views = _views(_DECORATION.sub(" ", _MARK.sub(" ", ln)))          # wrappers read as spaces: "**Password reset**" is the phrase
+    if any(_BARE_OPEN.search(v) for v in views):
+        return "open"
+    return "leads" if not dropped and any(_label_leads(v) for v in views) else ""
+
+
+_LIST_MARKER = re.compile(r"^\s*(?:\d{1,3}[.)]|[A-Za-z][.)]|[-*\u2022\u2013\u2014\u00b7])\s")
+
+
+def _looks_like_value(line):
+    """Whether a line after a valueless label looks like a value rather than an agenda item: never a numbered or bulleted line; yes for 4 or
+    more digits, a token that mixes letters and digits, or a long hex-like string; never a sentence (two words or more, ending in . ! ?);
+    else yes for one or two tokens and no for three or more plain words."""
+    t = line.strip()
+    if _LIST_MARKER.match(re.sub(r"^[\s_*~`>#]+", "", t)):
+        return False
+    tokens = t.split()
+    if sum(c.isdigit() for c in t) >= 4 or any(re.search(r"[^\W\d_]", w) and re.search(r"\d", w) for w in tokens) \
+            or any(re.fullmatch(r"[0-9a-fA-F]{8,}", w) for w in tokens):
+        return True
+    if len(tokens) >= 2 and t[-1:] in ".!?":
+        return False
+    return len(tokens) <= 2
 
 
 _LABEL_TOKEN = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])|(?<![\w-])ids?(?![\w-])"
@@ -444,11 +467,15 @@ def _pending_after(ln, dropped, pending):
 
 
 class _Reader:
-    """The state of invite_text: the lines kept so far, the open window of a label phrase, the labels standing alone whose value is
-    still to come, and the kept label line (the anchor) that an ordinary line removed after it would make a tombstone of."""
+    """The state of invite_text: the lines kept so far; the hard window of a label phrase that stops on a function word or a separator
+    (the next three lines are its value); the soft window of a finished phrase that leads its line ("Password reset"), which removes only
+    the lines among the next three that LOOK like a value; the labels standing alone whose value is still to come; and the "Meeting ID."
+    rule that takes the next number. A kept label line whose window removed a line is removed too (a tombstone), so a later pass finds
+    no label and removes nothing more; a label line whose window removed nothing stays."""
 
     def __init__(self):
-        self.kept, self.window, self.pending, self.digit_wait, self.anchor = [], 0, 0, False, None
+        self.kept, self.window, self.pending, self.digit_wait, self.anchors = [], 0, 0, False, []
+        self.soft = []                             # the open soft windows: [lines left, the kept heading that opened it]
 
     def feed(self, ln, tail, glue):
         """Take the next line (and the end of the piece before it, with the glue between them)."""
@@ -456,24 +483,48 @@ class _Reader:
         if not ln or (not dropped and not re.search(r"[^\W_]", ln)):
             self.kept.append(ln)               # a blank or symbols-only line is transparent: any number, for a label alone as for a window
             return
-        value = self.digit_wait and bool(re.search(r"\d", ln))     # "Meeting ID." then "987 654 321": the number is the value
-        reach = self.window > 0 or value                           # a window or a value rule reaches this line
-        if self.anchor is not None and reach:
-            self.kept[self.anchor] = None      # a line was removed after this label line: the label goes too (idempotence)
-            self.anchor = None
-        consumed = self.pending > 0 or reach or dropped
-        self._advance(ln, dropped, _label_line(ln, dropped), consumed, reach, value)
+        value = self.digit_wait and not dropped and bool(re.search(r"\d", ln))     # "Meeting ID." then "987 654 321": the value
+        reach = self.window > 0 or value                           # a hard window or a value rule reaches this line
+        self._tombstone(reach)
+        soft = self._soft_step(ln, dropped, reach)
+        consumed = self.pending > 0 or reach or dropped or soft
+        self._advance(ln, dropped or soft, _label_kind(ln, dropped), consumed, reach, value)
 
-    def _advance(self, ln, dropped, label, consumed, reach, value):
-        self.window = WINDOW if label else (max(self.window - 1, 0) if consumed else 0)
-        self.pending = _pending_after(ln, dropped, self.pending)
+    def _tombstone(self, reach):
+        if self.anchors and reach:
+            for at in self.anchors:            # a line was removed after these label lines: the labels go too (idempotence)
+                self.kept[at] = None
+            self.anchors = []
+
+    def _soft_step(self, ln, dropped, reach):
+        """The soft windows look at this line: every line counts towards the three of each, except a label line that a later value may
+        remove (it would vanish and shift the count). A line a window removes, or any line another rule removes inside it, takes that
+        window's heading with it. Returns whether a window itself removed the line (it looks like a value)."""
+        if not self.soft:
+            return False
+        taken = dropped or reach or self.pending > 0
+        label = not taken and (_label_kind(ln, False) == "open" or _ends_on_key_and_stop(ln))
+        looks = not taken and not label and _looks_like_value(ln)
+        for window in self.soft:
+            if not label:
+                window[0] -= 1
+            if taken or looks:
+                self.kept[window[1]] = None    # a line of the heading's window was removed (by any rule): the heading goes too
+        self.soft = [w for w in self.soft if w[0] > 0]
+        return looks
+
+    def _advance(self, ln, removed, kind, consumed, reach, value):
+        self.window = WINDOW if kind == "open" else (max(self.window - 1, 0) if consumed else 0)
+        self.pending = _pending_after(ln, removed, self.pending)
         # a "Meeting ID." rule stays alive across a removed line (a link, a passcode line) until its number comes or an ordinary line does
-        self.digit_wait = _ends_on_key_and_stop(ln) or bool(dropped and self.digit_wait and not value)
-        if consumed:
-            self.anchor = self.anchor if reach else None
-        else:
+        self.digit_wait = _ends_on_key_and_stop(ln) or bool(removed and self.digit_wait and not value)
+        if not consumed:
             self.kept.append(_MARK.sub("", ln))
-            self.anchor = len(self.kept) - 1 if (label or self.digit_wait) else None
+            self.anchors = [*self.anchors, len(self.kept) - 1] if (kind == "open" or self.digit_wait) else []      # a chain of label lines
+            if kind == "leads":
+                self.soft.append([WINDOW, len(self.kept) - 1])      # a kept, finished phrase: the next three lines are looked at
+        elif not reach and not (removed and self.digit_wait):
+            self.anchors = []                  # (a removed line between "Meeting ID." and its number keeps the chain)
 
 
 def invite_text(body):
