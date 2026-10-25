@@ -36,3 +36,5 @@
 - labels in scripts without rules: Greek (Κωδικός), Hebrew (סיסמה), Hindi (पासवर्ड), Thai (รหัสผ่าน) and Russian "Контрольный код" followed by a plain word;
 - "şifre hunterxyz" and "Şifre" (Turkish) with a plain word on the same or the next line;
 - "Meeting ID" followed by a plain word with no digit and no separator ("Meeting ID hunterxyz").
+- a character that expands to more than four characters, or a symbol, INSIDE a label word ("P㈝IN: hunter", "P#IN: hunter") breaks the label (not a regression);
+- reading a saved calendar of hundreds of hostile rows with 20,000-character bodies still takes seconds (a saved body is cut to 20,000 characters before it is cleaned again; real invites are far smaller and are not affected).

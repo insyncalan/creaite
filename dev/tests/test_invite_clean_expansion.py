@@ -83,6 +83,39 @@ class Timing(unittest.TestCase):
         self.assertEqual(slow[:6], [])
 
 
+class SavedBody(unittest.TestCase):
+    """clean_row cuts a saved body to BODY_MAX before cleaning (a saved body is already that short, so nothing changes for a real row)."""
+
+    @staticmethod
+    def rows(n, body):
+        return {"days": {"2026-10-26": [{"id": str(i), "start": "09:00", "end": "10:00", "title": "t", "sensitivity": "normal", "body": body}
+                                       for i in range(n)]}}
+
+    def test_a_real_saved_body_is_unchanged(self):
+        body = "Agenda: budget\n" + "Review the plan with the team\n" * 100
+        self.assertLess(len(body), I.BODY_MAX)
+        self.assertEqual(I.clean_row({"id": "e", "start": "09:00", "end": "10:00", "title": "t", "sensitivity": "normal", "body": body})["body"], body.strip())
+
+    def test_hostile_rows_are_bounded(self):
+        for ch in ("\u2474", "\ufb03", "a "):
+            took, out = T.timed(I.clean_calendar, self.rows(5, ch * 60000))
+            self.assertLess(took, 3.0, repr(ch))
+            self.assertLessEqual(len(out["days"]["2026-10-26"][0].get("body", "")), I.BODY_MAX)
+
+    def test_without_the_cut_it_is_slower(self):
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = 'or "")[:BODY_MAX])'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_nocut", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, 'or ""))', 1), "invite_clean_nocut", "exec"), mod.__dict__)
+        data = self.rows(3, "\u2474" * 60000)
+        with_cut, _o = T.timed(I.clean_calendar, data)
+        without, _o = T.timed(mod.clean_calendar, data)
+        self.assertGreater(without, 2 * with_cut)
+
+
 class Mutant(unittest.TestCase):
     def test_no_replacement_before_the_expansion_trips_the_alarm(self):
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")

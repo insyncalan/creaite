@@ -454,7 +454,7 @@ def clean_row(row):
         out.update({k: v for k, v in row.items() if k not in out and k not in ("body", "attachments", "attendees")},
                    where=scrub(row.get("where"), 80), sensitivity="normal",
                    organiser=(scrub(org, 80) or False) if isinstance(org, str) else bool(org))
-        body = invite_text(row.get("body"))
+        body = invite_text(str(row.get("body") or "")[:BODY_MAX])        # a saved body is already cut to BODY_MAX: a longer one is not ours
         files, people = _clean_names(row)
         out.update({k: v for k, v in (("body", body), ("attachments", files), ("attendees", people)) if v})
     return out
