@@ -16,7 +16,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-DIFF = REPO / "dev/proposals/369/live_server-rescrub.diff"
+DIFFS = [REPO / "dev/proposals/369/live_server-rescrub-v2.diff", REPO / "dev/proposals/369/live_server-rescrub.diff"]
+DIFF = DIFFS[0]                  # v2 takes the server's job lock; v1 (6cdba005...) is kept for the record
 sys.path.insert(0, str(HERE))
 from test_tracker import Vault  # noqa: E402
 
@@ -30,11 +31,16 @@ def patched_vault(test, diff_text=None):
     v = Vault()
     test.addCleanup(v.cleanup)
     live = v.root / "system/scripts/live_server.py"
-    if "def calendar_rescrub_job" not in live.read_text(encoding="utf-8"):
-        d = v.root / "369.diff"
-        d.write_text(diff_text if diff_text is not None else DIFF.read_text(encoding="utf-8"), encoding="utf-8")
-        r = subprocess.run(["patch", "-p1", "-s", "-d", str(v.root), "-i", str(d)], capture_output=True, text=True)
-        test.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+    if "def calendar_rescrub_job" in live.read_text(encoding="utf-8"):         # the checkout already carries a diff: take it off first,
+        for old in DIFFS:                                                       # so the changed copies below are applied to the original
+            r = subprocess.run(["patch", "-R", "-p1", "-s", "-f", "-d", str(v.root), "-i", str(old)], capture_output=True, text=True)
+            if r.returncode == 0:
+                break
+        test.assertNotIn("def calendar_rescrub_job", live.read_text(encoding="utf-8"), "could not take the applied diff off")
+    d = v.root / "369.diff"
+    d.write_text(diff_text if diff_text is not None else DIFF.read_text(encoding="utf-8"), encoding="utf-8")
+    r = subprocess.run(["patch", "-p1", "-s", "-d", str(v.root), "-i", str(d)], capture_output=True, text=True)
+    test.assertEqual(r.returncode, 0, r.stdout + r.stderr)
     cal = v.root / "system/staging/calendar.json"
     cal.parent.mkdir(parents=True, exist_ok=True)
     cal.write_text(json.dumps({"fetched": "2026-10-20 08:00", "days": {"2026-10-26": [OLD]}}), encoding="utf-8")
@@ -69,6 +75,18 @@ class Rescrub(unittest.TestCase):
         self.assertEqual(r.stdout.strip().splitlines()[-1], "None")
         self.assertEqual(cal.read_bytes(), before)                        # byte for byte
 
+    def test_the_job_holds_the_server_lock_and_skips_when_it_is_taken(self):
+        v, cal = patched_vault(self)
+        before = cal.read_bytes()
+        r = run(v, "assert live_server.LOCK.acquire(blocking=False)\ntry:\n    print(live_server.calendar_rescrub_job())\n"
+                   "finally:\n    live_server.LOCK.release()\nprint(live_server.calendar_rescrub_job())")
+        self.assertEqual(r.returncode, 0, r.stderr[-300:])
+        first, second = r.stdout.strip().splitlines()[-2:]
+        self.assertEqual(first, "None")                                   # a restore (or another job) holds the lock: nothing is touched
+        self.assertIn("1 saved meeting", second)                          # and the next pass, with the lock free, cleans
+        self.assertNotEqual(cal.read_bytes(), before)
+        self.assertEqual(run(v, "print(live_server.LOCK.acquire(blocking=False))").stdout.strip().splitlines()[-1], "True")        # released
+
     def test_an_exception_never_stops_the_server(self):
         v, cal = patched_vault(self)
         r = run(v, "def boom():\n    raise RuntimeError('x')\nsweep.rescrub_calendar = boom\nprint(live_server.calendar_rescrub_job())")
@@ -99,6 +117,13 @@ class Mutants(unittest.TestCase):
         (v.root / ".creaite-dev").write_text("", encoding="utf-8")
         run(v, "live_server.calendar_rescrub_job()")
         self.assertNotIn("swordfish", cal.read_text(encoding="utf-8").lower())      # the sample was rewritten: what the guard prevents
+
+    def test_job_without_the_lock_runs_over_a_restore(self):
+        old = "+    if not LOCK.acquire(blocking=False):\n+        return None"
+        v, cal = patched_vault(self, self.mutated(old, "+    if False:\n+        return None"))
+        before = cal.read_bytes()
+        run(v, "assert live_server.LOCK.acquire(blocking=False)\ntry:\n    live_server.calendar_rescrub_job()\nfinally:\n    live_server.LOCK.release()")
+        self.assertNotEqual(cal.read_bytes(), before)                     # rewritten while the lock was held: what the lock prevents
 
     def test_hook_without_its_call_fails(self):
         v, cal = patched_vault(self, self.mutated("+        n = sweep.rescrub_calendar()", "+        n = 0"))
