@@ -101,4 +101,6 @@
 
 **Unreadable calendar reply.** An unreadable calendar reply is discarded (there is nothing to retry from): the raw draft never stays in staging and never reaches the backup zip (Cap #378, pinned by `test_v268_calendar_draft_leak`).
 
+**Measured cost of bare20 (reviewer).** Of 111 ordinary titles, 26 go to "Meeting" because a label word is glued to digits or letters (for example Pinterest2026, Secretary2026 briefing, Keynote2025, Token2049 conference, Code2040 event, Keyboard101 training, Access2026 review, ID123 badge). Product names are kept (iPhone15, Win11, Python3, COVID19, ISO27001, Office365, GPT4). Agenda loss is 11 of 74 lines; the new losses are "Keynote2025 prep" and a numbered "1. Key" item, which hides what follows. This fails closed: a title or line is lost rather than a value shown. E1 (2.6.9) replaces the label approach.
+
 **Fuzz.** 70,000 list-heavy bodies (Key items, glued labels, bullets, numbered, quotes, cells, `<li>`) plus 30,000 from the older list generator and the existing 40,000 + 40,000: 0 non-fixed-points, 0 values after pass one.
