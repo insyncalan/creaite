@@ -3,7 +3,7 @@ branch's own tests and the gate; this file checks the notes and the sheet, and t
 
    1  notes      What's new has a 2.6.7 section above 2.6.6 mentioning #328; the plain notes and the sheet exist
    2  public     the public text names Matched, Likely, Not sure, Process all ready and the skipped list; no real names
-   3  l4         the "Remember <domain>" offer is marked L4 in a comment in the notes file, not in the What's new text
+   3  l4         the "Remember <domain>" offer is in the notes and What's new, with no pending comment left (Alan approved L4 with the chain)
    4  chain      the chain landed: #347 and #339 are plain visible text in the notes file and in What's new, no GUARDED marker is left, comments are closed
    5  sheet      the sheet has the Process all ready, confidential, single-row, chip, L4, #347/#339 and two small-fix checks (13 in all)
    6  tooling    dev/tools/whats_new.py finds the 2.6.7 section
@@ -56,7 +56,7 @@ class V267(unittest.TestCase):
 
     def test_c03_l4_comment(self):
         t = read("dev/release-notes/2.6.7-plain.md")
-        self.assertRegex(t, r"<!-- L4, pending Alan's sign-off")
+        self.assertNotRegex(t, r"(?i)pending Alan's sign-off")        # approved with the 2.6.7 chain: no pending comment is left
         self.assertNotIn("L4", read("system/templates/help/whats-new.md"))
         self.assertIn("Remember <domain> for <project>?", read("dev/release-notes/2.6.7-plain.md"))
 
