@@ -5,6 +5,7 @@ Run: python3 dev/tests/test_lighter_runs_339.py      (quick tier)
 Structure checks read live_server.py as text. Tests that need the patches run on a throwaway copy with them applied (nothing in this
 tree is touched) and are GUARDED skips once the tree has them (they then run on the tree itself).
 """
+import ast
 import contextlib
 import io
 import os
@@ -41,19 +42,25 @@ def scratch(files):
     return d
 
 
-def landed(diff, files):
-    """Whether this diff is already in the tree (its reverse applies), decided per diff: a landing of only some of them is fine."""
-    d = scratch(files)
-    try:
-        return git_apply(d, diff, "--reverse", "--check").returncode == 0
-    finally:
-        shutil.rmtree(d, True)
+# Whether a diff has landed is read from a marker in the file it changes, never by reverse-applying it: once landed, any later edit
+# inside its hunks would make a reverse check fail and the module die at import (Cap, M1). A diff with no marker is applied to a
+# copy, and if it then does not apply the failure says so.
+MARKERS = {
+    "calendar-route.diff": lambda s: "def panel_kind(" in s,
+    "sweep-no-home.diff": lambda s: re.search(r'not in \("process", "reextract", "sweep"\)', s) is not None,
+    "sweep-followed-rule.diff": lambda s: re.search(r'one-line summary\."\s*\+ VIP_PRIVATE_RULE\)\}', s) is not None,
+}
+
+
+def text(rel):
+    return (REPO / rel).read_text(encoding="utf-8")
 
 
 LIVE_REL = ["system/scripts/live_server.py"]
 PIN_REL = [f"dev/tests/{n}.py" for n in PIN_FILES]
-PENDING = [f for f in DIFFS if not landed(f, LIVE_REL)]          # the ones still to apply to a copy
-PINS_LANDED = landed(PINS, PIN_REL)
+PENDING = [f for f in DIFFS if not MARKERS[f.name](text(LIVE_REL[0]))]          # the ones still to apply to a copy
+PINS_LANDED = "#339 A (rewritten on purpose)" in text("dev/tests/test_panel_sweep.py")
+RULES_LANDED = 'a typed "refresh calendar" starts the small calendar run' in text("system/creaite-rules.md")
 
 
 def patched_source():
@@ -62,13 +69,22 @@ def patched_source():
     try:
         for f in PENDING:
             r = git_apply(d, f)
-            assert r.returncode == 0, f"{f.name}: {r.stderr}"
+            assert r.returncode == 0, f"{f.name} is not in the tree (no marker) and does not apply to it: {r.stderr}"
         return (d / LIVE_REL[0]).read_text(encoding="utf-8")
     finally:
         shutil.rmtree(d, True)
 
 
 SRC = patched_source()
+
+
+def fn_src(name, src=None):
+    """The source of the function or method called `name` (found by name in the syntax tree, not by position or line)."""
+    src = src or SRC
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+            return ast.get_source_segment(src, node)
+    raise AssertionError(f"{name} is not in live_server.py")
 
 
 def module(src=None):
@@ -134,7 +150,7 @@ class PatchesApply(unittest.TestCase):
     def test_the_rules_diff_applies_to_creaite_rules(self):
         d = scratch(["system/creaite-rules.md"])
         self.addCleanup(shutil.rmtree, d, True)
-        if git_apply(d, RULES, "--reverse", "--check").returncode == 0:
+        if RULES_LANDED:
             self.skipTest("GUARDED: the rules diff has landed")
         self.assertEqual(git_apply(d, RULES, "--check").returncode, 0)
         self.assertIn("typed \"refresh calendar\"", RULES.read_text(encoding="utf-8"))
@@ -164,9 +180,12 @@ class Behaviour(unittest.TestCase):
                 self.sent = (code, body)
 
             def follow(self, run, **kw):
+                # the run is followed (streamed until it ends) OUTSIDE the start lock: queue_after needs the lock to start the
+                # next queued message before the run is done, so holding it while following deadlocks the server (Cap, H1)
+                self.lock_held = self_ls.START_LOCK.locked()
                 self.followed = run
 
-            calendar_start = self_ls.Handler.calendar_start
+            panel_run = self_ls.Handler.panel_run
 
         return H()
 
@@ -205,6 +224,7 @@ class Behaviour(unittest.TestCase):
         self.assertEqual(a[1], calendar_refresh.build_prompt())               # never the typed words
         self.assertEqual(a[2:5], (None, None, None))                          # no session, no chat, no confirmation
         self.assertIsNotNone(getattr(h, "followed", None))
+        self.assertFalse(h.lock_held, "followed while START_LOCK was held: a queued message would deadlock the server")
 
     def test_a_sweep_running_is_a_409_with_the_plain_sentence_and_no_run(self):
         h, runs = self.ask({"message": "refresh calendar"}, sweep=True)
@@ -258,6 +278,7 @@ class Behaviour(unittest.TestCase):
             self.assertIsNone(out)
             self.assertTrue(q["held"])
             self.assertEqual([i["text"] for i in q["items"]], ["refresh calendar"])   # the item is put back
+            self.assertEqual(q["why"], self.ls.SWEEP_RUNNING_SAYS if sweep else why)  # and the reason is kept for Run now
 
     def test_a_queued_sweep_is_still_a_sweep(self):
         q, runs, out = self.queue(text="sweep")
@@ -281,20 +302,27 @@ class Behaviour(unittest.TestCase):
             self.assertTrue(prompt.endswith(rule), name)
 
     def test_the_budget_gate_still_reads_panel_sweep(self):
-        gate = SRC[SRC.index("def budget_gate("):SRC.index("CARRY_TURNS")]
-        self.assertIn('panel_sweep(req.get("message")', gate)
+        self.assertIn('panel_sweep(req.get("message")', fn_src("budget_gate"))
 
     def test_calendar_is_a_known_kind(self):
         for needle in ('KIND_ARGS["calendar"]', '"calendar": "calendar"'):
             self.assertIn(needle, SRC)
 
-    def test_ask_and_queue_text_routes(self):
-        ask = SRC[SRC.index("    def ask(self, req):"):SRC.index("sweep = panel_sweep(message")]
-        self.assertIn('panel_kind(message, images, req.get("confirmed")) == "calendar"', ask)
-        q = SRC[SRC.index("def queued_run("):SRC.index("PANEL_SWEEP_PROMPT = (")]
+    def test_ask_and_queue_routes(self):
+        self.assertIn('panel_kind(message, images, req.get("confirmed")) == "calendar"', fn_src("panel_run"))
+        self.assertIn("self.panel_run(", fn_src("ask"))
+        q = fn_src("queued_run")
         self.assertIn('panel_kind(item["text"], images) == "calendar"', q)
-        self.assertIn("raise OSError(said)", q)                                 # refused: the queue holds
-        self.assertIn("queued_run(item, images, session, chat)", SRC[SRC.index("def queue_start("):SRC.index("def queue_after(")])
+        self.assertIn("raise CalendarRefused(said)", q)                          # refused: the queue holds and says why
+        self.assertIn("queued_run(item, images, session, chat)", fn_src("queue_start"))
+
+    def test_the_run_is_followed_outside_the_start_lock(self):
+        """Static twin of the stub's lock check (Cap H1): no follow() call sits inside a `with START_LOCK` in ask()."""
+        tree = ast.parse(fn_src("ask").replace("    def ask", "def ask", 1) if fn_src("ask").startswith("    ") else fn_src("ask"))
+        withs = [n for n in ast.walk(tree) if isinstance(n, ast.With) and "START_LOCK" in ast.dump(n.items[0].context_expr)]
+        self.assertTrue(withs)
+        for w in withs:
+            self.assertNotIn("follow", ast.dump(w), "ask() follows a run inside the start lock")
 
     def test_usage_report_lists_a_label_and_kind_per_run(self):
         import usage_report
