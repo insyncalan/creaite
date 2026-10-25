@@ -950,7 +950,8 @@ export function drawPrep(){ popupRev.value++; { const key=prepKey(shared.PREPEV,
     +(ws.length?sec("Early warnings",[...ws.filter(w=>rk(w.k,w.id)),...ws.filter(w=>!rk(w.k,w.id))],w=>`<div ${wOpen(w)} tabindex="0">${wflag(w.k,w.id)}${pc(w)}${w.k==="projects"?"":esc(w.id)+" · "}${esc(wItem(w))}<span class="sub">${esc(w.text)}</span>${why(w.k,w.id)}</div>`,"",""):"")
     +prepReports(code,all,sec,pc)+'</div>'); })();
   { const m=prepOf(shared.PREPEV)||{}, code=m.p, body=$("#prepBody");
-    if(body&&code&&code!=="_portfolio"&&isSteering(shared.PREPEV&&shared.PREPEV.title)&&!body.querySelector(".steerlink")){
+    const guessed=!!(m.invite&&m.invite.confidential)&&m.how!=="remembered"&&m.how!=="chosen";   /* #362: a guess never names the project of a confidential meeting in a draft */
+    if(body&&code&&!guessed&&code!=="_portfolio"&&isSteering(shared.PREPEV&&shared.PREPEV.title)&&!body.querySelector(".steerlink")){
     const bar=`<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer()?"":"; needs creaite to be running"})</span></p>`;
     addHTML(body,"afterbegin",raw(bar)); } }   /* BL-92 */
   { const m=prepOf(shared.PREPEV)||{}, code=m.p, body=$("#prepBody"); if(body&&code&&!body.querySelector("#prepDecs")){
