@@ -2,7 +2,8 @@
 
 Run: python3.14 dev/tools/esbuild.py -- --bundle main.js --format=iife
 
-It downloads esbuild's native binary for this machine (`@esbuild/darwin-arm64`, `@esbuild/linux-x64` or `@esbuild/linux-arm64`, version PINNED)
+It downloads esbuild's native binary for this machine (`@esbuild/darwin-arm64`, `@esbuild/linux-x64` or
+`@esbuild/linux-arm64`, version PINNED)
 as the npm registry's tarball with urllib, checks the tarball against the SHA-256 written below, unpacks only
 `package/bin/esbuild` into dev/.cache/esbuild/ and runs it with the arguments after `--`. No Node, no npm. A tarball whose
 hash differs is refused and nothing is written. The build imports it: `binary()` returns the path, `run(args)` runs it.
