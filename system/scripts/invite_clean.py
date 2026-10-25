@@ -42,7 +42,9 @@ HOSTS = re.compile(
 SCHEME = re.compile(r"(?<![\w-])(?:tel|sip|sips|callto|msteams|zoommtg|zoomus|webex|webexteams|skype|facetime|gotomeeting):", re.I)
 URL = re.compile(r"(?:\b[a-z][a-z0-9+.-]{1,12}://|\bwww\.)\S+|\b(?:[a-z0-9-]{1,63}\.){1,8}[a-z]{2,24}(?::\d+)?/\S*", re.I)
 KEYED = re.compile(r"[?&;#/](?:pwd|passcode|passwd|pass|password|pin|tk|token|key|secret|sig|signature|auth|code|access_token|otp|"
-                   r"mtid|meetingid|meetingnumber|conferenceid|confid|jid)=", re.I)
+                   r"mtid|meetingid|meetingnumber|conferenceid|confid|jid|mpwd|"
+                   r"(?:meeting|conf|conference|user|session|room|host|join|webinar)[_-]?(?:pwd|passwd|password|passcode|pin|pass)|"
+                   r"[a-z]{0,12}pwd)=", re.I)
 JOINPATH = re.compile(r"/(?:j|join|joinme|meet|meeting|meetings|webinar|conference|room|rooms|call|invite|video)(?:[/?#]|$)|/\d{9,}",
                       re.I)
 JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*meeting|meeting\s*link|online\s*meeting|"
@@ -62,17 +64,19 @@ _SE_RUN = re.compile(r"[.,;!?](?:\s*[.,;!?])+")                                 
 # letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
 _VAL = rf"(?:\s*(?:{SEPRUN}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
 _EVERYWHERE = (r"pass[\s-]*codes?|pass[\s-]*phrases?|pass[\s-]*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
-               r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
+               r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pins?[\s-]*codes?|"
                r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
                r"codice\s+(?:di\s+(?:accesso|partecipazione)|riunione)|password\s+(?:della\s+)?riunione|"
                r"one[- ]time[\s-]*(?:pass)?codes?|conference\s+bridge|"
                r"(?:host|moderator|presenter|security|entry|access|meeting|participant|attendee|guest)[\s-]*keys?|"
                r"(?:access|participant|conference|attendee|host|meeting|moderator|presenter|guest|security|entry|"
                r"dial[- ]?in|audio|phone|call[- ]?in|room|webinar|panell?ist|leader)[\s-]*(?:code|pin)s?")
-_WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
-               r"clave\s+de\s+acceso|pw|pswd|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
-               r"(?:meeting|webinar|event|session|conference|call|phone\s+conference|zoom|room|mtg|teams|webex)[\s-]*(?:id|number|no\.?)|"
-               r"(?:meeting|zoom|room|mtg)\s*#|join(?:ing)?\s+(?:with\s+)?id")
+_WITH_VALUE = (r"pass[\s-]*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
+               r"clave\s+de\s+acceso|pw|pswd|pins?(?:[\s-]*(?:codes?|numbers?|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
+               r"(?:meeting|webinar|event|session|conference|conf|meet|video|goto|gotomeeting|call|phone\s+conference|zoom|room|mtg|teams|"
+               r"webex)"
+               r"[\s-]*(?:ids?|numbers?|no\.?)(?:\s+(?:number|no\.?))?|"
+               r"(?:meeting|webinar|conference|conf|event|session|zoom|room|mtg|meet|video|goto)\s*#|join(?:ing)?\s+(?:with\s+)?id")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
 # v2.6.8 (k26-b-bare, Full review x2): after these labels the next word IS the value even with no digit and no capital ("Password
 # swordfish", "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta", "Token abcd"). Fail closed, and as a whole phrase: every
@@ -82,15 +86,15 @@ _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]
 # ("Password , hunter"). "Password reset", "Password reset request", "Code of conduct" stay; "Password reset for hunter",
 # "Password reset for new hires", "PIN entry: swordfish", "Code of the swordfish" go. Tests: dev/tests/test_invite_clean_bare.py.
 BARE_NEXT = (
-    (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|pw|pswd",
+    (r"pass[\s-]*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|pw|pswd",
      ("reset", "policy", "manager", "management", "expiry", "rotation", "audit", "change")),
-    (r"pin(?:\s*(?:code|number|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
+    (r"pins?(?:[\s-]*(?:codes?|numbers?|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
     (r"codes?",                                                               # "Code review", "Code of conduct", "Source code repository"
      ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover", "walkthrough", "standards")),
     (r"tokens?", ("expiry", "rotation", "refresh", "economy", "economics", "ring")),   # "Token refresh", "Token Ring"
     (r"secrets?", ("management", "manager", "rotation", "santa")),            # "Secret santa", "Secrets management"
     (r"otp", ("setup", "rollout", "enrolment")),
-    (r"api\s+keys?", ("rotation", "management", "review")),
+    (r"api[\s-]*keys?", ("rotation", "management", "review")),
 )
 BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or", "request", "requests", "process", "plan",
                "planning", "workshop", "session", "review", "rollout", "update", "changes", "findings", "redesign", "supplier", "call",
@@ -137,12 +141,14 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"   # "Code! 4417"
-                   rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])id\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
+                   rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])ids?\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
+                   rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d"      # "ID 4417", "ID - 4417"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-_ALONE_ITEM = rf"(?:\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"                                  # a separator, "is" or "are"
+# a footnote mark "(1)", a separator run, "_", "is" or "are"
+_ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
 _ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?\s*$"
-                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS})(?![\w-]){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
+                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?![\w-]){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
@@ -186,7 +192,8 @@ def normal(text, marks=False):
                    or unicodedata.category(c) not in ("Cf", "Cc", "Co"))
 
 
-_KEEP_MARKS = ("\u3099", "\u309a")                    # kana voicing marks belong to the letter (パスコード): they are kept
+_KEEP_MARKS = ("\u3099", "\u309a")
+_INVISIBLE = frozenset("\u3164\u115f\u1160\uffa0\u2800\u17b4\u17b5")                  # fillers that draw nothing
 
 
 def skeleton(text):
@@ -194,7 +201,8 @@ def skeleton(text):
     "Piń", "Passwörd"; NFKC would COMPOSE e + U+0301 first, leaving nothing to strip), recomposed (Hangul, kana), Arabic tatweel removed,
     escapes and URL encoding decoded. Only a copy used for matching: the text that is kept is never changed by this."""
     d = unicodedata.normalize("NFKD", _bounded(normal(text)))
-    kept = (c for c in d if (unicodedata.category(c) not in ("Mn", "Me") or c in _KEEP_MARKS) and c != "ـ")
+    kept = ("-" if unicodedata.category(c) == "Pd" else c for c in d
+            if (unicodedata.category(c) not in ("Mn", "Me", "Mc") or c in _KEEP_MARKS) and c != "ـ" and c not in _INVISIBLE)
     t = unicodedata.normalize("NFC", "".join(kept))
     for _ in range(3):
         u = unquote(htmllib.unescape(t))
@@ -214,7 +222,9 @@ def _ellipsis(m):
     return m.group() if set(m.group().replace(" ", "").replace("\t", "").replace("\n", "")) == {","} else "\u2026"
 
 
-_MDLINK = re.compile(r"\[([^\[\]]{0,200})\]\([^()\s]{0,500}\)")                  # [Passcode](http://x): the text is the label
+# [Passcode](http://x), [Passcode](u "t"), [Passcode][1]: the text is the label
+_MDLINK = re.compile(r"\[([^\[\]]{0,200})\](?:\([^()\n]{0,500}\)|\[[^\[\]\n]{0,100}\])")
+_DOUBLE = re.compile(r"\[\[([^\[\]]{0,200})\]\]")                                  # [[Meeting ID]](url): one pair of brackets
 _DECORATION = re.compile(r"[_*~`]+")                                          # markdown emphasis and underscores: read as a space
 
 
@@ -227,7 +237,7 @@ def _views(text):
     s = _SPACED.sub("PIN", s)
     s = _SE_RUN.sub(_ellipsis, s)
     out = []
-    linked = _MDLINK.sub(r" \1 ", s)                       # a markdown link read as its text: [Passcode](http://x) is the label Passcode
+    linked = _MDLINK.sub(r" \1 ", _DOUBLE.sub(r"[\1]", s))        # a markdown link read as its text
     bases = ([linked] if linked != s else []) + [s]
     for base in [_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases:
         out.append(base)
@@ -304,22 +314,36 @@ def _strip_blocks(t):
     return "".join(out) + t[i:]
 
 
+_TAG_START = re.compile(r"<(html|body|div|p|br|span|table|a|td|th|tr|li|ul|ol|h[1-6]|b|i|u|em|strong|font|wbr|code|o:p)\b|<!--", re.I)
+_INLINE = r"span|b|i|u|em|strong|font|a|small|big|sup|sub|mark|wbr|code|kbd|abbr|cite|q|s|del|ins|bdi|bdo|label|o:p|v:\w{1,20}"
+
+
+def _strip_tags(t):
+    """HTML removed from a text: script, style and head blocks and comments gone, line breaks kept, inline tags without a gap (so
+    "Pass<b>code</b>" and "P<wbr>asscode" are one word), any other tag a space. Every pattern is bounded."""
+    t = _strip_blocks(t)
+    t = re.sub(r"<!--.{0,2000}?-->", "", t, flags=re.S)
+    t = re.sub(r"(?i)<a\b([^<>]{0,2000})>", _anchor, t)
+    t = re.sub(r"(?i)<br\s{0,20}/?>|</(p|div|li|tr|h\d)>", "\n", t)
+    t = re.sub(r"(?i)<li\b[^<>]{0,2000}>", "\n- ", t)
+    t = re.sub(rf"(?i)</?(?:{_INLINE})\b[^<>]{{0,2000}}>", "", t)
+    return re.sub(r"<[^<>]{1,2000}>", " ", t)
+
+
 def plain_text(body):
-    """An invite body as text: HTML removed (inline tags without a gap, so "Pass<b>code</b>" is one word), entities decoded.
-    Every pattern here is bounded (no tag is searched past 2000 characters), so a crafted body cannot stall it."""
+    """An invite body as text: HTML removed (inline tags without a gap, so "Pass<b>code</b>" is one word), entities decoded, and tags that
+    were written as entities (&lt;b&gt;) removed too. Every pattern here is bounded (no tag is searched past 2000 characters), so a
+    crafted body cannot stall it."""
     t = normal(str(body or "")[:RAW_MAX])
-    if re.search(r"<(html|body|div|p|br|span|table|a|td|th|tr|li|ul|ol|h[1-6]|b|i|u|em|strong|font)\b", t, re.I):
-        t = _strip_blocks(t)
-        t = re.sub(r"(?i)<a\b([^<>]{0,2000})>", _anchor, t)
-        t = re.sub(r"(?i)<br\s{0,20}/?>|</(p|div|li|tr|h\d)>", "\n", t)
-        t = re.sub(r"(?i)<li\b[^<>]{0,2000}>", "\n- ", t)
-        t = re.sub(r"(?i)</?(span|b|i|u|em|strong|font|a|small|big|sup|sub|mark)\b[^<>]{0,2000}>", "", t)
-        t = re.sub(r"<[^<>]{1,2000}>", " ", t)
+    if _TAG_START.search(t):
+        t = _strip_tags(t)
     for _ in range(3):
         u = htmllib.unescape(t)
         if u == t:
             break
         t = u
+        if _TAG_START.search(t):
+            t = _strip_tags(t)                     # escaped markup: "&lt;b&gt;Passcode&lt;/b&gt;" is the tag it spells
     return normal(t, marks=True).replace("\r\n", "\n").replace("\r", "\n")
 
 
@@ -347,8 +371,18 @@ def _lines(t):
 
 
 def _alone(line):
-    """Whether a dropped line is a label with no value (its value is on a later line)."""
-    return any(LABEL_ALONE.search(s) for s in _views(_MARK.sub(" ", line)))
+    """Whether a dropped line is a label with no value (its value is on a later line): a label and a separator, or a header of two or more
+    labels ("Meeting ID | Code")."""
+    return any(LABEL_ALONE.search(v) or _only_labels(v) for v in _views(_MARK.sub(" ", line)))
+
+
+_FILLER = re.compile(r"(?:[\W_]|\b(?:and|und|et|is|are|or)\b)+")
+
+
+def _only_labels(view):
+    """Whether a line is nothing but two or more labels and the words and marks between them."""
+    found = _LABEL_TOKEN.findall(view)
+    return len(found) >= 2 and not _FILLER.sub("", _LABEL_TOKEN.sub(" ", view))
 
 
 def _views_of(ln):
@@ -378,8 +412,9 @@ def _label_line(ln, dropped):
     return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_label_leads(v) for v in views))
 
 
-_LABEL_TOKEN = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?<![\w-])id(?![\w-])|(?:{_OTHER_ALPHABETS})", re.I)
-_KEY_STOP = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])\s*[.,;!?\u2026]+\s*$", re.I)
+_LABEL_TOKEN = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])|(?<![\w-])ids?(?![\w-])"
+                          rf"|(?:{_OTHER_ALPHABETS})", re.I)
+_KEY_STOP = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS}|ids?)(?![\w-])\s*[.,;!?\u2026]+\s*$", re.I)
 
 
 def _label_count(ln):

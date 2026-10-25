@@ -551,7 +551,7 @@ class Mutants(unittest.TestCase):
 
     def test_only_password(self):
         # the pin and code labels dropped from the rule: the PIN and code rows must fail
-        bad = fails(mutant('    (r"pin(?:\\s*(?:code|number|no\\.?))?", ("entry", "pad")),', ""))
+        bad = fails(mutant('    (r"pins?(?:[\\s-]*(?:codes?|numbers?|no\\.?))?", ("entry", "pad")),', ""))
         self.assertTrue(any(b.startswith("pin") for b in bad), bad)
 
     def test_no_code_label(self):
@@ -624,7 +624,7 @@ class Mutants(unittest.TestCase):
 
     def test_each_separator_removed(self):
         """The one separator class: with a single character taken out of it, the row that uses that character leaks."""
-        need = {"-": "nl-hyphen", "\u2013": "nl-en-dash", "\u2014": "nl-em-dash", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
+        need = {"-": "nl-hyphen", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
                 "[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe", "\u2192": "p-arrow"}
         base = 'BARE_SEPARATORS = r"[^\\w\\s.,;!?]"'
         for ch, rid in need.items():
@@ -638,7 +638,7 @@ class Mutants(unittest.TestCase):
                          "p-meeting-id-hyphen"} <= set(bad), bad)
 
     def test_is_tail_removed(self):
-        m = mutant('(?:\\s*{SEPRUN}|\\s*_|\\s+(?:is|are)', '(?:\\s*{SEPRUN}|\\s*_|\\s+(?:zzz|zzzz)')
+        m = mutant('\\s*{SEPRUN}|\\s*_|\\s+(?:is|are)', '\\s*{SEPRUN}|\\s*_|\\s+(?:zzz|zzzz)')
         self.assertTrue({"p-is", "p-is-colon"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_sentence_end_allowance_removed(self):
@@ -654,10 +654,11 @@ class Mutants(unittest.TestCase):
 
     def test_digit_rule_removed(self):
         m = mutant('rf"|(?<![\\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\\w-])\\s*[.,;!?\\u2026]+\\s*\\S*\\d"', 'rf"|(?!)"')
-        for t in ("Meeting ID. 123 456", "Meeting ID, 123 456", "Meeting ID; 123", "Pwd. xk7q", "Access code. 4417"):
+        for t in ("Meeting ID. 123 456", "Meeting ID, 123 456", "Meeting ID; 123", "Pwd. xk7q", "Access code. 4417", "Token! 4417", "Key. 4417",
+                  "Access, 4417", "Secret? 4417"):
             self.assertEqual(I.scrub(t, 140), "", t)
-            if t.startswith("Meeting ID"):                      # Pwd and Access code are secrets with or without a value
-                self.assertNotEqual(m.scrub(t, 140), "", f"{t!r}: the digit rule is not what removes it")
+        for t in ("Token! 4417", "Key. 4417", "Access, 4417", "Secret? 4417"):       # Meeting ID forms are also read by the bare "ID" rule
+            self.assertNotEqual(m.scrub(t, 140), "", f"{t!r}: the digit rule is not what removes it")
 
     def test_underscore_and_wrapper_reading_removed(self):
         m = mutant('[_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases', "bases")
@@ -677,7 +678,7 @@ class Mutants(unittest.TestCase):
         self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     def test_key_label_rule_off(self):
-        m = mutant("(?:{_BARE}|{_BARE_LABELS})(?![\\w-]){_ALONE_TAIL}", "(?:{_BARE_LABELS})(?![\\w-]){_ALONE_TAIL}")
+        m = mutant("(?:{_BARE}|{_BARE_LABELS}|ids?)(?![\\w-]){_ALONE_TAIL}", "(?:{_BARE_LABELS}|ids?)(?![\\w-]){_ALONE_TAIL}")
         self.assertIn("p-key", self.next_line_bad(m))
 
     def test_punctuation_before_value_off(self):

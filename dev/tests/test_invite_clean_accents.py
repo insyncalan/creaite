@@ -168,7 +168,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue(sweep_survivors(m)[1])
 
     def test_mark_strip_removed(self):
-        m = self.mutated('(unicodedata.category(c) not in ("Mn", "Me") or c in _KEEP_MARKS)', "True")
+        m = self.mutated('(unicodedata.category(c) not in ("Mn", "Me", "Mc") or c in _KEEP_MARKS)', "True")
         self.assertTrue(self.leaks(m))
 
     def test_markdown_link_reading_removed(self):
