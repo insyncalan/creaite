@@ -91,6 +91,72 @@ class Shapes(unittest.TestCase):
         self.assertEqual(run(v, "import sweep\nprint(sweep.rescrub_calendar())").stdout.strip(), "0")        # then nothing to do
 
 
+class Recurrence(unittest.TestCase):
+    """The recurrence is free text (Cap, 18:57): calendar_row scrubbed nothing, and a passcode in it was written to calendar.json."""
+
+    def row(self, text, mod=None):
+        import sweep
+        return (mod or sweep).calendar_row({"id": "r1", "title": "Weekly sync", "recurrence": text}, "09:00", "10:00", False)
+
+    def test_a_secret_in_the_recurrence_is_gone_on_the_first_save(self):
+        for text in ("RRULE Passcode 9999", "weekly Meeting ID: 987 654 321", "every week, PIN 4417", "https://zoom.example.invalid/j/5550001111?pwd=ab"):
+            row = self.row(text)
+            self.assertNotIn("recurrence", row, text)
+            self.assertNotRegex(json.dumps(row), r"9999|987 654|4417|5550001111")
+
+    def test_an_ordinary_recurrence_is_kept(self):
+        for text in ("weekly", "RRULE:FREQ=WEEKLY;BYDAY=MO", "Every 2 weeks on Monday"):
+            self.assertEqual(self.row(text)["recurrence"], text)
+
+    def test_rescrub_removes_it_from_a_saved_file(self):
+        row = {"id": "a", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal", "recurrence": "RRULE Passcode 9999"}
+        v, cal = vault(self, {"fetched": "x", "to": "y", "days": {"2026-10-26": [row]}})
+        run(v, "import sweep\nprint(sweep.rescrub_calendar())")
+        self.assertNotIn("9999", cal.read_text(encoding="utf-8"))
+
+    def test_mutant_without_the_scrub_in_calendar_row(self):
+        import sweep
+        src = (SCRIPTS / "sweep.py").read_text(encoding="utf-8")
+        old = 'rec = invite_clean.scrub(ev.get("recurrence"), 40) if ev.get("recurrence") else ""'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("sweep_rec_mutant", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "sweep.py")
+        exec(compile(src.replace(old, 'rec = str(ev.get("recurrence") or "")[:40]', 1), "sweep_rec_mutant", "exec"), mod.__dict__)
+        self.assertIn("9999", json.dumps(self.row("RRULE Passcode 9999", mod)))
+        self.assertTrue(sweep)
+
+
+class OrganiserAddress(unittest.TestCase):
+    """The organiser's address is kept like an attendee's address; a passcode in the display name is not."""
+
+    def test_the_address_is_kept_and_the_name_is_scrubbed(self):
+        import sweep
+        row = sweep.calendar_row({"id": "e", "title": "Sync", "organiser": "Pat Passcode: 4417", "organiser_email": "Pat <pat.doe@client.example>",
+                                  "attendees": [{"name": "Sam", "email": "sam@client.example"}]}, "09:00", "10:00", False)
+        self.assertEqual(row["organiser_email"], "pat.doe@client.example")
+        self.assertIs(row["organiser"], False)                                        # the name carried a passcode: dropped
+        cleaned = I.clean_row(row)
+        self.assertEqual(cleaned["organiser_email"], "pat.doe@client.example")
+        self.assertEqual(I.clean_row({**row, "organiser": "Pat Doe"})["organiser"], "Pat Doe")
+
+    def test_an_address_that_carries_a_secret_is_dropped(self):
+        row = I.clean_row({"id": "e", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal",
+                           "organiser_email": "passcode-4417@client.example"})
+        self.assertNotIn("organiser_email", row)
+
+    def test_mutant_without_the_address(self):
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = '        out["organiser_email"] = addr.strip()[:254]'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_noaddr", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, "        pass", 1), "invite_clean_noaddr", "exec"), mod.__dict__)
+        self.assertNotIn("organiser_email", mod.clean_row({"id": "e", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal",
+                                                           "organiser_email": "pat.doe@client.example"}))
+
+
 class Readers(unittest.TestCase):
     def test_no_reader_fails_on_an_odd_file(self):
         v, _cal = vault(self)
@@ -131,6 +197,60 @@ class Cache(unittest.TestCase):
         v, _cal = vault(self)
         code = ("import json, invite_clean as I, paths\nI.read_calendar(paths.CALENDAR)\nprint(json.dumps(I.read_calendar(paths.CALENDAR)))")
         self.assertNotIn("4321", run(v, code).stdout)
+
+
+class Unlocked(unittest.TestCase):
+    """The clean-up never skips: when the calendar lock cannot be had it cleans without it (writing only if the file is unchanged since
+    it was read) and logs that it did."""
+
+    def check(self, v, cal, prelude, wait="0.3"):
+        r = run(v, "import sweep\n" + prelude + "\nprint(sweep.rescrub_calendar(wait=" + wait + "))")
+        self.assertEqual(r.returncode, 0, r.stderr[-300:])
+        self.assertGreaterEqual(int(r.stdout.strip().splitlines()[-1]), 1)
+        self.assertNotIn("4321", cal.read_text(encoding="utf-8"))                         # cleaned, not skipped
+        logs = "".join(f.read_text(encoding="utf-8", errors="ignore") for f in (v.root / "system/logs").glob("debug-*.log"))
+        self.assertIn("clean-up ran without the lock", logs)
+        self.assertNotIn("4321", logs)
+
+    def test_lock_held_by_another_process(self):
+        v, cal = vault(self)
+        holder = subprocess.Popen([sys.executable, "-c", "import sys, fcntl, time\nsys.path.insert(0, 'system/scripts')\nimport sweep\n"
+                                   "sweep.CAL_LOCK.parent.mkdir(parents=True, exist_ok=True)\nf = open(sweep.CAL_LOCK, 'w')\n"
+                                   "fcntl.flock(f, fcntl.LOCK_EX)\nprint('held', flush=True)\ntime.sleep(6)"],
+                                  cwd=v.root, stdout=subprocess.PIPE, text=True)
+        self.addCleanup(holder.kill)
+        self.assertEqual(holder.stdout.readline().strip(), "held")
+        self.check(v, cal, "")
+
+    def test_unwritable_lock_path(self):
+        v, cal = vault(self)
+        self.check(v, cal, "from pathlib import Path\nsweep.CAL_LOCK = Path('/dev/null/nowhere/calendar.lock')")
+
+    def test_no_fcntl(self):
+        v, cal = vault(self)
+        self.check(v, cal, "import sys\nsys.modules['fcntl'] = None")
+
+    def test_a_save_made_meanwhile_is_not_overwritten_without_the_lock(self):
+        v, cal = vault(self)
+        prelude = ("import sys, json\nsys.modules['fcntl'] = None\nreal = sweep.invite_clean.clean_calendar\nstate = {'n': 0}\n"
+                   "def late(c):\n    if state['n'] == 0:\n        state['n'] = 1\n"
+                   "        sweep.paths.CALENDAR.write_text(json.dumps({'days': {'2026-10-27': [{'id': 'n1', 'start': '08:00', 'end': '09:00',"
+                   " 'title': 'NEWER Passcode: 4321 swordfish', 'sensitivity': 'normal'}]}}))\n    return real(c)\n"
+                   "sweep.invite_clean.clean_calendar = late")
+        run(v, "import sweep\n" + prelude + "\nprint(sweep.rescrub_calendar(wait=0.1))")
+        flat = cal.read_text(encoding="utf-8")
+        self.assertIn("2026-10-27", flat)                                                # the newer save was kept...
+        self.assertNotIn("4321", flat)                                                   # ...and cleaned on the retry
+
+    def test_mutant_fallback_removed_leaves_the_file_raw(self):
+        v, cal = vault(self)
+        f = v.root / "system/scripts/sweep.py"
+        src = f.read_text(encoding="utf-8")
+        old = "        if not got:\n            for _ in range(5):"
+        self.assertIn(old, src)
+        f.write_text(src.replace(old, "        if False:\n            for _ in range(5):", 1), encoding="utf-8")
+        run(v, "import sweep, sys\nsys.modules['fcntl'] = None\nprint(sweep.rescrub_calendar(wait=0.1))")
+        self.assertIn("4321", cal.read_text(encoding="utf-8"))                           # raw: what the fallback prevents
 
 
 class Mutants(unittest.TestCase):

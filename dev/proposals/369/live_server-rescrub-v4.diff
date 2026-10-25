@@ -1,0 +1,58 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index be2dcd0f..bd929e88 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -8082,6 +8082,41 @@ def usage_context_job():
+         return None
+ 
+ 
++CALENDAR_RETRY = 300                    # seconds: a skipped clean-up is tried again after this, not after the hour
++_CALENDAR_RETRY = [None]
++
++
++def calendar_rescrub_retry():
++    """Try the calendar clean-up again in CALENDAR_RETRY seconds (one timer at a time; a daemon, so it never keeps the server open)."""
++    timer = _CALENDAR_RETRY[0]
++    if timer is not None and timer.is_alive() and timer is not threading.current_thread():      # (called from its own timer, that one is alive and done)
++        return
++    _CALENDAR_RETRY[0] = threading.Timer(CALENDAR_RETRY, calendar_rescrub_job)
++    _CALENDAR_RETRY[0].daemon = True
++    _CALENDAR_RETRY[0].start()
++
++
++def calendar_rescrub_job():
++    """2.6.8: the saved calendar put through today's cleaning (sweep.rescrub_calendar), at start-up and on each pass of the daily job, so
++    this server's own readers never see an entry an earlier version saved with a value. Logs counts only. Never raises. Not in the
++    development repository. It does not run while a restore or another job holds the server's job lock; it tries again within
++    CALENDAR_RETRY seconds (an early daily zip must not hold the raw file for an hour). The job lock is NOT held during the clean: the
++    calendar's own file lock (sweep.calendar_lock) guards the file against a sweep's save."""
++    if (paths.ROOT / ".creaite-dev").exists():
++        return None                                      # the development repository keeps its sample calendar as it is
++    if not LOCK.acquire(blocking=False):
++        calendar_rescrub_retry()
++        return None
++    LOCK.release()
++    try:
++        import sweep
++        n = sweep.rescrub_calendar()
++        return f"calendar: {n} saved meeting(s) cleaned again" if n else None
++    except Exception as e:  # noqa: BLE001  fail safe: the server and the daily job go on
++        swallowed("calendar-rescrub", e)
++        return None
++
++
+ def backup_daily_job():
+     """One pass of the daily backup steps, then (BL-10) the daily archiving; returns what they said (or why they didn't run)."""
+     if (paths.ROOT / ".creaite-dev").exists():
+@@ -8104,9 +8139,11 @@ def backup_daily_job():
+ 
+ def backup_timer():
+     """The daily backup job (and BL-10's archiving after it) a minute after start-up, then every hour (each step once a day)."""
++    calendar_rescrub_job()                               # at start-up, before the first minute's wait
+     time.sleep(60)
+     while True:
+         try:
++            calendar_rescrub_job()
+             for line in backup_daily_job():
+                 if debuglog is not None:
+                     debuglog.info("backup", line[:200])

@@ -809,25 +809,50 @@ def _changed_rows(old, new):
     return n or 1
 
 
-def rescrub_calendar(wait=20.0):
+def _stamp(path):
+    st = path.stat()
+    return st.st_mtime_ns, st.st_size, st.st_ino
+
+
+def _clean_calendar_file(locked):
+    """One pass: read, clean, write when something changed. Returns (changed rows, retry): with the lock held the write is certain; without
+    it the file is looked at again right before the write, and a file that changed meanwhile is not overwritten (retry)."""
+    try:
+        before = _stamp(paths.CALENDAR)
+        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0, False
+    new = invite_clean.clean_calendar(cal)
+    if new == cal:
+        return 0, False
+    if not locked:
+        try:
+            if _stamp(paths.CALENDAR) != before:
+                return 0, True                       # a sweep saved meanwhile: clean its file instead
+        except OSError:
+            return 0, False
+    changed = _changed_rows(cal if isinstance(cal, dict) else {}, new)
+    paths.write_text_atomic(paths.CALENDAR, json.dumps(new, indent=1, ensure_ascii=False))
+    return changed, False
+
+
+def rescrub_calendar(wait=3.0):
     """2.6.8: the saved calendar put through today's cleaning (session start, and the live server's start and daily job): a meeting
     saved by an earlier version that kept a value the rules now remove, or any key, row, day or note that is not a meeting's, is cleaned in
     every day, not only the past ones a later save holds. Done under the calendar lock, which a sweep's save also takes, so neither
-    loses the other's write; rewritten atomically and only when something changed. Returns the number of meetings changed (0 when
-    nothing changed, the file is not readable, or the lock could not be taken)."""
+    loses the other's write. It NEVER skips: when the lock cannot be had within `wait` seconds (held by another process, an unwritable
+    lock path, no fcntl) it cleans without the lock, writing only if the file is unchanged since it was read (up to five tries), and
+    says so in the debug log. Rewritten atomically and only when something changed. Returns the number of meetings changed."""
     with calendar_lock(wait) as got:
+        changed, retry = _clean_calendar_file(locked=got) if got else (0, True)
         if not got:
-            return 0
-        try:
-            cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return 0
-        new = invite_clean.clean_calendar(cal)
-        if new == cal:
-            return 0
-        changed = _changed_rows(cal if isinstance(cal, dict) else {}, new)
-        paths.write_text_atomic(paths.CALENDAR, json.dumps(new, indent=1, ensure_ascii=False))
-    debuglog.info("sweep", f"calendar: {changed} saved meeting(s) cleaned again with today's rules")
+            for _ in range(5):
+                changed, retry = _clean_calendar_file(locked=False)
+                if not retry:
+                    break
+            debuglog.info("sweep", f"calendar: clean-up ran without the lock ({changed} saved meeting(s) changed)")
+    if changed:
+        debuglog.info("sweep", f"calendar: {changed} saved meeting(s) cleaned again with today's rules")
     return changed
 
 
@@ -1243,8 +1268,9 @@ def invite_details(ev, confidential=False):
     addr = address_of(ev.get("organiser_email"))
     if addr:
         out["organiser_email"] = addr
-    if ev.get("recurrence"):
-        out["recurrence"] = str(ev["recurrence"])[:40]
+    rec = invite_clean.scrub(ev.get("recurrence"), 40) if ev.get("recurrence") else ""        # free text: scrubbed like the title
+    if rec:
+        out["recurrence"] = rec
     if confidential:
         return out
     body = invite_text(ev.get("body"))

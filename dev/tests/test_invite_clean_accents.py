@@ -27,14 +27,15 @@ SCRIPTS = HERE.parents[1] / "system" / "scripts"
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(SCRIPTS))
 import invite_clean as I  # noqa: E402
-from test_invite_clean_timing import ALARM, timed  # noqa: E402,F401
+from test_invite_clean_timing import ALARM, LIMIT, timed  # noqa: E402,F401
 
-LIMIT = 0.2
 # (text, value) as a title; every one must come back without the value
 REVIEWER_TITLES = [("Pásscode: 1234", "1234"), ("Piń: 1234", "1234"), ("Passcodé: hunter", "hunter"),
                    ("Passwörd hunter", "hunter"), ("Pàssword hunter", "hunter"), ("Sécret hunter", "hunter"),
                    ("Passcodě: hunter", "hunter"), ("Passcodė: hunter", "hunter"), ("Passcodȩ: hunter", "hunter"),
-                   ("Påsscode: hunter", "hunter"), ("Passcodé: 4417", "4417"), ("ṔIN: 4417", "4417")]
+                   ("Påsscode: hunter", "hunter"), ("Passcodé: 4417", "4417"), ("ṔIN: 4417", "4417"),
+                   ("PI\u0903N: 4417", "4417"), ("Meeting I\u0903D: 987 654 321", "987 654 321"), ("Passw\u0903ord: hunter2x", "hunter2x"),
+                   ("Pa\u3164sscode: 4417", "4417"), ("Meeting\u2800ID: 4417", "4417")]
 REVIEWER_BODIES = [("PIŃ\nkqzxyw\nok", "kqzxyw"), ("Tokeń\nabcdef\nok", "abcdef"), ("[Passcode](http://x.example.invalid)\nhunter\nok", "hunter"),
                    ("[Meeting ID](http://x.example.invalid): 987 654 321", "987 654 321"), ("Pásscode:\nhunter\nok", "hunter")]
 OTHER_ALPHABETS = [("パスコード: 4417", "4417"), ("비밀번호: 4417", "4417"), ("Пароль: 4417", "4417"),
@@ -168,7 +169,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue(sweep_survivors(m)[1])
 
     def test_mark_strip_removed(self):
-        m = self.mutated('(unicodedata.category(c) not in ("Mn", "Me") or c in _KEEP_MARKS)', "True")
+        m = self.mutated('(unicodedata.category(c) not in ("Mn", "Me", "Mc") or c in _KEEP_MARKS)', "True")
         self.assertTrue(self.leaks(m))
 
     def test_markdown_link_reading_removed(self):
