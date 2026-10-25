@@ -1,0 +1,23 @@
+{
+ "expected_lines": [
+  "Design crit: bring one screen you are unsure about.",
+  "",
+  "Joining instructions",
+  "Google Meet link",
+  "https://meet.example.org/abc-defg-hij",
+  "Join by phone",
+  "(GB) +44 20 3000 1111",
+  "PIN: 4417 8812 3#",
+  "More phone numbers",
+  "Invitation from Google Calendar. You are receiving this email because you are an attendee."
+ ],
+ "planted_secrets": [
+  "abc-defg-hij",
+  "4417 8812 3",
+  "+44 20 3000 1111",
+  "4417881231"
+ ],
+ "must_keep": [
+  "Design crit: bring one screen you are unsure about."
+ ]
+}

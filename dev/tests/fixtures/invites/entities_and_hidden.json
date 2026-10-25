@@ -1,0 +1,18 @@
+{
+ "expected_lines": [
+  "Q&A session – bring questions ‹in writing>.",
+  "",
+  "Café opens at 08:30 in Atlas room.",
+  "",
+  "Pass­code: 9411 20"
+ ],
+ "planted_secrets": [
+  "4455667788",
+  "5566778899",
+  "9411 20"
+ ],
+ "must_keep": [
+  "Q&A session – bring questions ‹in writing>.",
+  "Café opens at 08:30 in Atlas room."
+ ]
+}

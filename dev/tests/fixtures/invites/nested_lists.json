@@ -1,0 +1,25 @@
+{
+ "expected_lines": [
+  "Release readiness check.",
+  "",
+  "Scope",
+  "Feature flags reviewed",
+  "Rollback plan",
+  "Owner: Mei Tan",
+  "Join details",
+  "Link: https://rooms.example.org/r/readiness",
+  "Code: 3390 2258",
+  "",
+  "Open actions",
+  "Decisions needed"
+ ],
+ "planted_secrets": [
+  "https://rooms.example.org/r/readiness",
+  "3390 2258"
+ ],
+ "must_keep": [
+  "Release readiness check.",
+  "Open actions",
+  "Decisions needed"
+ ]
+}

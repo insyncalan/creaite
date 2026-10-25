@@ -1,0 +1,22 @@
+{
+ "expected_lines": [
+  "Réunion de pilotage du programme: points de décision, risques.",
+  "",
+  "Code d’accès : 4​4​17 88​12",
+  "",
+  "Раsscоde: ４４１７ ８８１２",
+  "",
+  "Lien: https://réunions.example.org/salle/9912",
+  "",
+  "Prochaine étape: valider le budget de Zoë."
+ ],
+ "planted_secrets": [
+  "4​4​17 88​12",
+  "４４１７ ８８１２",
+  "https://réunions.example.org/salle/9912"
+ ],
+ "must_keep": [
+  "Réunion de pilotage du programme: points de décision, risques.",
+  "Prochaine étape: valider le budget de Zoë."
+ ]
+}
