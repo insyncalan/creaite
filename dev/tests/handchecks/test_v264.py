@@ -16,10 +16,10 @@ diff, and is to be confirmed against the plain notes.
    8  #292  Walk Today, Work, Intake, Files, Activity, Projects, a cockpit, People and every Settings tab: no file path, script name, "sweep"
          or Tier 2 word (proposal, staged, vault, live server, extract) in the words on screen
    9  #293  Help: the key renamed words are there and the old ones are gone
-  10  #292  A change to an item that waits for Save does not say "Saved for Review"                   EXPECTED FAILURE (H2)
+  10  #292  A change to an item that waits for Save does not say "Saved for Review"                   fixed on v267-handfix
   11  #293  Chat commands: the old words still start the same jobs; the plain ones are taught
   12  #333  The figure check: a date shown as 20-11-2026 is said by "20th of November"; a different day is flagged
-  13  #333  The figure check: a wrong year with the day and month in words is flagged                  EXPECTED FAILURE (L5)
+  13  #333  The figure check: a wrong year with the day and month in words is flagged                  fixed on v267-handfix
   14  #333  Another project's item is marked a possible duplicate only on a close match
   15  #333  The toast counts the items the apply wrote, not the rows ticked                           EXPECTED FAILURE (deferred, guarded)
   16  #345  expect on every deciding route: reject, Approve instead, repeat, retarget and Approve minutes refuse a missing or stale one
@@ -648,7 +648,6 @@ class Item264(HandcheckCase):
     """Check 10. A vault of its own: the edit stages a change."""
     own_vault = True
 
-    @known("Team Cap H2: panel.js pkLast (and pkSaving) says 'Saved for Review' for an edit that is already approved and waits for the Save button")
     def test_c10_an_edit_that_waits_for_save_does_not_say_saved_for_review(self):
         """10. (#292) Change the priority of an open work item: the panel says the change is waiting to be saved ("1 change waiting to be
         saved … Nothing is saved until you press Save"), and the header does not say "Saved for Review" while nothing is saved."""
@@ -697,7 +696,6 @@ class Figures264(HandcheckCase):
         self.assertEqual(self.figs("Budget 45 by 20-11-2026", "40, the 20th of November"), ["45"])
         self.note(12, "20th of November and November 20 say 20-11-2026; the 21st and 'soon' do not; 45 against 40 is flagged")
 
-    @known("Team Cap L5: figuresMissing never checks the year when the day and month are said in words; 'may' (the verb) counts as the month")
     def test_c13_a_wrong_year_with_the_day_and_month_in_words_is_flagged(self):
         """13. (#333) A date whose day and month the transcript says in words but whose year it does not say is not taken as said:
         20-11-2027 against "the 20th of November" (the page's date has a year the speaker never gave) is flagged, and so is 05-05-2026
