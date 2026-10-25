@@ -203,6 +203,7 @@ def start(as_json=False, force=False):
         print("Development repo (.creaite-dev): session-start rules skipped.")
         return 0
     t = sweep.now()
+    sweep.rescrub_calendar()                             # 2.6.8: a calendar saved by an earlier version, cleaned again
     notes = []                                           # BL-323: the zip, OneDrive copy, Tidy up and restore check lines
     out = {"backup": backup_today(t, notes.append), "backup_notes": notes, "archive": archive_today(), "sweep": sweep.due_info(),
            "reminders": reminders(t), "status": status(),

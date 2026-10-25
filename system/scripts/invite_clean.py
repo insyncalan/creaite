@@ -63,11 +63,23 @@ _WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|c
                r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
                r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
+# v2.6.8 (k26-b-bare): after these labels the next word IS the value even with no digit and no capital ("Password swordfish",
+# "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta"). Fail closed: any word follows = a value, except the few ordinary
+# words below, each the second word of a common phrase (tests: dev/tests/test_invite_clean_bare.py, one per entry). Only the
+# word straight after the label is looked at; "Password reset hunter" keeps "hunter" (not covered, see the test file).
+BARE_NEXT = (
+    (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord",
+     ("reset", "policy", "manager", "management", "expiry", "rotation")),   # "Password reset", "Password policy", a manager tool
+    (r"pin(?:\s*(?:code|number|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
+    (r"codes?",                                                               # "Code review", "Code of conduct", "Source code repository"
+     ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover")),
+)
+_BARE_NEXT = "|".join(rf"(?:{lab})(?![\w-])\s+[\"'(\[]?(?!(?:{'|'.join(ok)})(?![\w-]))[^\W_]" for lab, ok in BARE_NEXT)
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
-LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
+LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"

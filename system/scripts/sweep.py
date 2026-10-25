@@ -764,6 +764,30 @@ def keep_held_past_days(days, start_day, today_day):
     return dict(sorted(days.items()))
 
 
+def rescrub_calendar():
+    """2.6.8: the saved calendar put through today's cleaning once (session start): a meeting saved by an earlier version that kept a
+    value the rules now remove (a password or PIN word with no digit, k26-b-bare) is cleaned in every day, not only the past ones a
+    later save holds. Rewritten atomically and only when something changed; clean_row cleans a cleaned row to itself. Returns the
+    number of meetings changed."""
+    try:
+        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        days = cal.get("days")
+    except (OSError, ValueError, AttributeError):
+        return 0
+    if not isinstance(days, dict):
+        return 0
+    changed = 0
+    for day, rows in days.items():
+        if isinstance(rows, list):
+            new = [invite_clean.clean_row(r) if isinstance(r, dict) else r for r in rows]
+            changed += sum(1 for a, b in zip(rows, new) if a != b)
+            days[day] = new
+    if changed:
+        paths.write_text_atomic(paths.CALENDAR, json.dumps(cal, indent=1, ensure_ascii=False))
+        debuglog.info("sweep", f"calendar: {changed} saved meeting(s) cleaned again with today's rules")
+    return changed
+
+
 def organiser_of(ev):
     """True when Alan organised the event, else the organiser's name (or False)."""
     org = ev.get("organiser")
