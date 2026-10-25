@@ -1,6 +1,6 @@
 ---
 name: cx-sweep
-description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
+description: creaite mail and Teams sweep. Searches Outlook (Inbox, Sent Items) and Teams (chats, channels) for project-related messages since the last sweep and proposes actions, decisions, risks and issues for review (and promises, when settings promises.from_sweep is on). Use when Alan says "check my mail", "check my mail for <CODE>", "check my mail for the last N days" (these exact forms only; any other mail question, such as "find the invoice from Bob", is a read-only search, not a sweep), "sweep", "sweep mail", "sweep mail for ABC", "sweep the last 7 days", "sweep the [subject] thread", "refresh calendar", and automatically at session start when the daily sweep is due (creaite rule in CLAUDE.md).
 ---
 
 # cx-sweep
@@ -25,6 +25,8 @@ Read these first:
 | Trigger | Window |
 |---------|--------|
 | "sweep" or "sweep mail" | Since the last successful sweep (`system/staging/last-sweep.txt`) |
+| "check my mail" | The same as "sweep" (the plain words; both work) |
+| "check my mail for ABC", "check my mail for the last 7 days" | The same as "sweep mail for ABC" and "sweep the last 7 days" |
 | "sweep mail for ABC" | Since the last sweep (never further back than `sweep.max_lookback_days`, 3), project ABC only. Does not advance the timestamp |
 | "sweep mail for the last 7 days" | The stated window. Does not advance the timestamp |
 | "sweep the <subject> thread" | That thread. Does not advance the timestamp |
