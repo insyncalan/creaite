@@ -2525,6 +2525,19 @@ def prep_match(title, projects, remembered):
     return (hits.pop(), "matched") if hits else (None, "unsure")
 
 
+def ev_project(ev, title, projects, remembered):
+    """Leak fix: the project code a calendar entry may show: none for a confidential one (fails closed), else the saved guess or
+    the brief's match."""
+    if invite_clean.sensitivity(ev) == "confidential":
+        return None
+    return ev.get("p") or prep_match(title, projects, remembered)[0]
+
+
+def ev_shown_p(ev):
+    """Leak fix: an entry's saved project, none for a confidential one."""
+    return None if invite_clean.sensitivity(ev) == "confidential" else ev.get("p")
+
+
 def prep(settings, projects, file_list, today, items=None, con=None):
     """{"meetings": {"HH:MM|title": {series, p, how, since, last, day, invite, rank}}, "series": remembered} for today's
     meetings, and tomorrow's keyed "YYYY-MM-DD|HH:MM|title" (BL-98). rank: the work items the invite makes relevant,
@@ -2560,7 +2573,7 @@ def saved_calendar_days():
 def prep_entry(ev, day, ctx):
     """(key, record) of one meeting's Prep brief entry, or None for a private or untitled one. The key is "HH:MM|title" today,
     "YYYY-MM-DD|HH:MM|title" any other day. ctx: {projects, remembered, history, items, ms_names, vips, today}."""
-    if ev.get("private") or not ev.get("title"):
+    if invite_clean.sensitivity(ev) == "private" or not ev.get("title"):      # fail closed: "personal" or an odd value too
         return None
     s = series_of(ev["title"])
     code, how = prep_match(ev["title"], ctx["projects"], ctx["remembered"])
@@ -3049,8 +3062,9 @@ def _ir_aside_files(files, aside):
 def _ir_aside_lists(meetings, files, aside):
     """(later, not_needed): the meetings and uploaded files set aside, with their reason and note."""
     keep = ("key", "day", "start", "end", "title", "p", "private")
-    later = [{**{k: m.get(k) for k in keep}, "since": m.get("later_since")} for m in meetings.get("later") or []]
-    not_needed = [{**{k: m.get(k) for k in keep}, "reason": m.get("reason") or "", "note": m.get("note") or ""}
+    row = lambda m: {**{k: m.get(k) for k in keep}, **({"p": None} if m.get("confidential") else {})}  # noqa: E731  leak fix
+    later = [{**row(m), "since": m.get("later_since")} for m in meetings.get("later") or []]
+    not_needed = [{**row(m), "reason": m.get("reason") or "", "note": m.get("note") or ""}
                   for m in meetings.get("cleared") or []]
     later_files, gone_files = _ir_aside_files(files, aside)
     return later + later_files, not_needed + gone_files
@@ -3914,11 +3928,11 @@ def meeting_hub(settings, projects, today, cal, actions, raid, decisions, folder
     for day, events in ((cal or {}).get("days") or {}).items():
         for ev in events if isinstance(events, list) else []:
             title = str(ev.get("title") or "")
-            if ev.get("all_day") or ev.get("private") or not title or ("private" not in ev and title == "Busy" and not ev.get("where")):
+            if ev.get("all_day") or invite_clean.sensitivity(ev) == "private" or not title or ("private" not in ev and title == "Busy" and not ev.get("where")):
                 continue
             eid = str(ev.get("id") or "") or None
             key = f"calendar:{eid}" if eid else f"cal:{day}|{ev.get('start', '')}|{title}"
-            code = ev.get("p") or prep_match(title, projects, remembered)[0]
+            code = ev_project(ev, title, projects, remembered)
             r = get(key, title=title, day=day, start=ev.get("start") or "", end=ev.get("end") or "", eid=eid)
             r["invite"], r["teams"] = True, bool(ev.get("teams"))
             if code and code in {p["code"] for p in projects} and code not in r["p"]:
@@ -4225,10 +4239,10 @@ def day_close(settings, con, today, cal):
              for r in (prep_page._registry() or {}).values()}
     meets = []
     for ev in ((cal or {}).get("days") or {}).get(nxt.isoformat()) or []:
-        if ev.get("all_day") or ev.get("private"):
+        if ev.get("all_day") or invite_clean.sensitivity(ev) == "private":
             continue
         slot = f"{ev.get('start', '')}|{ev.get('title', '')}"
-        meets.append({"start": ev.get("start") or "", "end": ev.get("end") or "", "title": ev.get("title") or "", "p": ev.get("p"),
+        meets.append({"start": ev.get("start") or "", "end": ev.get("end") or "", "title": ev.get("title") or "", "p": ev_shown_p(ev),
                       "id": ev.get("id"), "prep": (nxt.isoformat(), slot) in pages})
     meets.sort(key=lambda m: m["start"])
     days = day_closed_load()

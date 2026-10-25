@@ -335,7 +335,10 @@ def meeting(day, start, title, projects, remembered=None, me=""):
     import build_dashboard
     evs = build_dashboard.saved_calendar_days().get(day) or []
     ev = next((e for e in evs if e.get("title") == title and (not start or e.get("start") == start)), None)
-    if not ev or ev.get("private"):
+    sens = build_dashboard.invite_clean.sensitivity(ev) if ev else "private"
+    if sens == "private":
         return None
+    if sens == "confidential":                           # leak fix: title and date only; no project, no people
+        return {"title": title, "date": day, "with": [], "code": None, "how": "confidential"}
     code, how = build_dashboard.prep_match(title, projects, remembered or {})
     return {"title": title, "date": day, "with": _attendees(ev, me), "code": code or None, "how": how}
