@@ -87,6 +87,7 @@ except ImportError:
         main = staticmethod(lambda script, fn, *a: fn(*a))
 import tracker  # noqa: E402
 import extraction  # noqa: E402  (sprint-drafts-extraction)
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 import invite_clean  # noqa: E402  (#265 review M1, M2: what a saved invite may keep)
 
 LOCK = paths.STAGING / "sweep.lock"
@@ -653,7 +654,7 @@ def calendar_fetch_from(today=None):
     today = today or now().date()
     start = calendar_window(today)[0]
     try:
-        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        data = calendar_gateway.read("meta")
     except (OSError, ValueError):
         return start
     try:
@@ -668,7 +669,7 @@ def calendar_span(today=None):
     """(first day, last day) the saved calendar holds now, as dates, or None without one (BL-293): calendar_window(), its last
     day cut to the day the calendar was read to (#318: its "to"; a calendar saved before that, seven days after its fetch)."""
     try:
-        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        data = calendar_gateway.read("meta")
         data.get("fetched")
     except (OSError, ValueError, AttributeError):
         return None
@@ -872,7 +873,7 @@ def spec_meetings(spec):
 def saved_meetings_from(day):
     """#265 review L4: how many meetings the saved calendar holds on `day` (YYYY-MM-DD) or later."""
     try:
-        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+        held = calendar_gateway.read("meta").get("days") or {}
     except (OSError, ValueError, AttributeError):
         return 0
     if not isinstance(held, dict):
