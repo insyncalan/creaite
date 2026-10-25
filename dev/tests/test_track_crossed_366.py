@@ -125,6 +125,15 @@ class RowlessPromise(ma.Base):
         self.assertEqual(self.promise_decision(), "pending")
         self.assertEqual(r["waiting"], [2], r)
 
+    def test_review_py_approve_on_the_minutes_never_registers_the_promise(self):
+        rows = json.loads(self.v.run("list", "--json", script="review.py").stdout)
+        n = next(r["n"] for r in rows if r["file"] == self.name and r["ref"] == "meeting")
+        self.v.run("approve", str(n), script="review.py")
+        self.v.run("apply", ok=False)
+        self.assertIn("Draft the cutover runbook", [a["description"] for a in self.v.rows("actions")], "control: the ticked row")
+        self.assertNotIn("Send the vendor's rate card", self.promises())
+        self.assertEqual(self.promise_decision(), "pending")
+
     def test_mutant_without_the_row_check_the_promise_is_registered(self):
         """Proof the tests above see the leak: take track_rowed out of this vault's own review.py (never the repo's)."""
         script = self.v.root / "system/scripts/review.py"
