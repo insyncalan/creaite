@@ -2,6 +2,10 @@
 # Base: origin/main at the 2.6.8 cut (apply on the release commit).
 # #365: a transcript load that never got the calendar event: per-result debug log, the day-window search with one retry, and the check/load kind prompt (no CLAUDE.md, no session start)
 dev/proposals/365/live_server-365.diff
+# #365 tools delta (pending Alan's word)
+dev/proposals/365/live_server-365-tools.diff
 # #365 tests for the above (a new test file)
 dev/proposals/365/tests-pins.diff
+# #365 tools delta tests (pending Alan's word)
+dev/proposals/365/tests-tools.diff
 # #368: dev/proposals/368/<file>.diff to be added when it lands

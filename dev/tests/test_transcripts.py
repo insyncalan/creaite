@@ -457,6 +457,27 @@ class NoEventSaysWhy(unittest.TestCase):
         job, msg = self.finish(("read_resource", "calendar:///events/ev-1", "plain words", False))
         self.assertTrue(job.diagnosis().endswith("event read: unreadable"))
 
+    def test_a_neighbour_read_first_does_not_fail_the_asked_event(self):      # M1: the day-window search lists the whole day
+        other = dict(event(), id="ev-2", subject="Another meeting")
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-2", json.dumps(other), False),
+                               ("read_resource", "calendar:///events/ev-1", json.dumps(event()), False))
+        self.assertIsNotNone(job.event)
+        self.assertFalse(job.wrong)
+        self.assertNotIn("wasn't the one asked for", msg)
+
+    def test_a_neighbour_read_after_it_changes_nothing(self):
+        other = dict(event(), id="ev-2", subject="Another meeting")
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-1", json.dumps(event()), False),
+                               ("read_resource", "calendar:///events/ev-2", json.dumps(other), False))
+        self.assertIsNotNone(job.event)
+        self.assertFalse(job.wrong)
+        self.assertNotIn("wasn't the one asked for", msg)
+
+    def test_only_a_neighbour_is_still_wrong(self):
+        other = dict(event(), id="ev-2", subject="Another meeting")
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-2", json.dumps(other), False))
+        self.assertIn("wasn't the one asked for", msg)
+
     def test_a_good_event_is_unchanged(self):
         job, msg = self.finish(("read_resource", "calendar:///events/ev-1", json.dumps(event()), False))
         self.assertIsNotNone(job.event)

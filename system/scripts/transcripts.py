@@ -574,8 +574,8 @@ class Job:
         facts = event_facts(as_json(text) if not is_error else None)
         self.event_read = "error" if is_error else ("unreadable" if not facts else "ok")
         if facts.get("id") == self.id or (facts.get("id") and unquote(facts["id"]) == self.id):
-            self.event = facts
-        elif facts:
+            self.event, self.wrong = facts, False       # M1: a read of the asked event wins over a neighbour read before it
+        elif facts and self.event is None:              # ... and a neighbour read after it changes nothing
             self.wrong = True
 
     def diagnosis(self):
