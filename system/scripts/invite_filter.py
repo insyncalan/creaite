@@ -399,10 +399,36 @@ def _scrub_lines(lines):
     return [t for _, t in _scrub_pairs(lines)]
 
 
-def _label_layer(lines):
-    """Anchor layer and shape gate first, then the scrub on the surviving lines (the order measured best: 2,041 leak bodies in
-    40,000 against 2,194 when both judge the full lines and a line must pass both, see dev/proposals/375/PLAN.md section 1b)."""
-    return _scrub_lines(keep_lines(list(lines), second_layer=False))
+def _tidy_blanks(lines):
+    """No leading blank line, no two blank lines in a row, no trailing blank line (the anchor layer can empty a block between blanks).
+    Only drops blank lines, so the result is still a subsequence of its input; the scrub does the same, which keeps both orders idempotent."""
+    out = []
+    for ln in lines:
+        if ln.strip() or (out and out[-1].strip()):
+            out.append(ln)
+    while out and not out[-1].strip():
+        out.pop()
+    return out
+
+
+ORDERS = ("scrub_first", "anchors_first")
+# fewest leak bodies of the two (425 against 643 in 40,000); see dev/proposals/375/PLAN.md section 1c
+DEFAULT_ORDER = "anchors_first"
+
+
+def _label_layer(lines, order=None):
+    """The body label layer in one of two orders (both return a subsequence of the input lines, up to the scrub's own blank lines).
+
+    anchors_first: anchor layer and shape gate, then the scrub on the surviving lines (the default: fewest leaks, section 1c).
+    scrub_first: the scrub on the original converted lines, then the anchor layer and shape gate on what it kept. A label's value is
+    still there when the scrub's window runs, so the window cannot eat an innocent neighbour, and a qualified label ("PIN to follow")
+    is judged with its value present. See PLAN.md sections 1b and 1c."""
+    order = order or DEFAULT_ORDER
+    if order == "anchors_first":
+        return _scrub_lines(keep_lines(list(lines), second_layer=False))
+    if order == "scrub_first":
+        return _tidy_blanks(keep_lines(_scrub_lines(list(lines)), second_layer=False))
+    raise ValueError("order must be one of %r" % (ORDERS,))
 
 
 def _scrub_key(mod, line):
@@ -411,9 +437,12 @@ def _scrub_key(mod, line):
     return " ".join(t.split())
 
 
-def filter_text_with_scrub(text, html=None):
+def filter_text_with_scrub(text, html=None, order=None):
     """Option (c), the 2.6.9 body filter: html/blocks conversion, the anchor layer and shape gate (second_layer=False), then the
-    2.6.8 scrub (via _scrub_pairs) as the label layer on the surviving lines, then the CAP. Same conversion rules as filter_text."""
+    2.6.8 scrub (via _scrub_pairs) as the label layer on the surviving lines, then the CAP.
+    Same conversion rules as filter_text. order: see _label_layer (default DEFAULT_ORDER)."""
+    if order is not None and order not in ORDERS:
+        raise ValueError("order must be one of %r" % (ORDERS,))
     mod = _blocks_module()
     if html is None or html:
         if mod is None:
@@ -421,8 +450,8 @@ def filter_text_with_scrub(text, html=None):
                 return ""
         elif html or mod.looks_like_html(text):
             lines = mod.to_lines(text)
-            kept = _label_layer(_cut("\n".join(lines)).split("\n"))
+            kept = _label_layer(_cut("\n".join(lines)).split("\n"), order)
             return "\n".join(_capped(kept))
     if html is not False:
         text = text.replace("\r\n", "\n").replace("\r", "\n")
-    return "\n".join(_capped(_label_layer(_cut(text).split("\n"))))
+    return "\n".join(_capped(_label_layer(_cut(text).split("\n"), order)))

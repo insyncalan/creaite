@@ -82,6 +82,43 @@ Reading: (c) cuts leaks by 72% against the scrub alone (2,041 against 7,334; dig
 
 **Zoom last-paragraph block cutter.** A Zoom body of `<div>..</div><br><div>..</div>` gave no blank line between the paragraphs (a `<div>` is a line break, not a block; the lone `<br>` after it was ignored), so the last paragraph sat in the join block and was dropped with it (fixture `zoom_html` had lost "Please add retro items to the shared board beforehand."). Fix, made in `invite_blocks._Emit.br`: a lone `<br>` after a line that a `<div>`/block ended is a paragraph break (div, br, div -> blank line). Fixture `zoom_html` `must_keep` is back to the original two lines (with the fix, "Retro for the platform team..." and "Please add retro items..." are separate blocks; the closing line is kept); its `expected_lines` now show the blank lines. `test_invite_filter_scrub_layer.py` pins the cutter cases.
 
+## 1c. Results with bare22 underneath (26-10-2026)
+
+Same 40,000 bodies (8 generators x 5,000, seed 369), generators from `dev/tests/test_invite_clean_fuzz_html.py` (now in the tree via `v268-bare22`, 5ee709a4). Code: `invite_filter.filter_text_with_scrub(text, html=None, order="anchors_first"|"scrub_first")`; `DEFAULT_ORDER = "anchors_first"`. Order A = anchors/shape gate then scrub; B = scrub on the converted lines, then anchors/shape gate (blank lines tidied afterwards, otherwise 543 idempotence failures from a blank left where a block was dropped); C = both judge the full lines, a line must pass both (measured only); D = the scrub on the raw body (its own HTML handling), then the anchor layer on its output (measured only, not built).
+
+| Leak bodies of 5,000 | E1 min | scrub alone | A anchors-first | B scrub-first | C parallel | D scrub-raw, anchors |
+|---|---|---|---|---|---|---|
+| html_table | 1,545 | 299 | 378 | 640 | 458 | 299 |
+| nested_lists | 1,742 | 0 | 0 | 0 | 0 | 0 |
+| blockquote | 3,633 | 2 | 0 | 0 | 0 | 2 |
+| md_table | 3,610 | 0 | 0 | 0 | 0 | 0 |
+| mixed_invite | 1,187 | 0 | 0 | 0 | 0 | 0 |
+| qualified | 2,193 | 0 | 44 | 0 | 0 | 0 |
+| soft_dates | 535 | 3 | 3 | 3 | 3 | 3 |
+| accents | 2,984 | 0 | 0 | 0 | 0 | 0 |
+| **Total leak bodies (of 40,000)** | 17,429 | **304** | **425** | **643** | **461** | **304** |
+| Idempotence failures | 0 | 0 | 0 | 0 (after blank tidy) | 0 | 0 |
+| Leak items, digit-bearing | 16,926 | 4 | 131 | 207 | 143 | 4 |
+| Leak items, word-only | 9,724 | 309 | 319 | 478 | 348 | 309 |
+| Leaks outside the scrub's listed classes (bodies) | n/a | 0 | 155 | 196 | 133 | 0 |
+
+| Utility | E1 min | scrub alone | A | B | C | D |
+|---|---|---|---|---|---|---|
+| Fixtures, must_keep kept (of 59) | 59 | 50 | 58 | **59** | 59 | 50 |
+| Fixture planted secrets surviving | 2 | 11 | 0 | 0 | 0 | 0 |
+| Fixtures, non-secret lines kept (of 148 expected, blank and secret-bearing lines excluded) | 91 (61.5%) | 86 (58.1%) | 76 (51.4%) | **96 (64.9%)** | 77 (52.0%) | 79 (53.4%) |
+| 200-line synthetic agenda set, kept | 200 | 150 (75%) | 150 | 150 | 150 | 150 |
+| Trap lines kept (of 80) | 80 | 39 | 39 | 39 | 39 | 39 |
+
+Reading.
+- **bare22 changed the picture.** The scrub alone now leaks 304 bodies of 40,000 (7,334 before), all in its listed classes (header-row word-only values, word-only after an ID label, soft heading plus short token), and none outside them. Its agenda loss grew to 25% (162 to 150 of 200).
+- **On the fuzz corpus no E1 composition beats the scrub alone.** A, B and C each add leaks: the converted lines lose the table structure the scrub reads in the raw HTML (a label row and its value row no longer sit together), and 133 to 196 bodies leak a value outside the scrub's listed classes (mostly the html_table header-row layout with short values). Only D (scrub on the raw body first) matches the scrub on leaks; it also keeps its utility loss, so it adds nothing but the anchor layer's extra drops, which on this corpus remove no further secret.
+- **On the realistic fixtures E1 composition does clearly better than the scrub alone:** planted secrets surviving 0 against 11, and B keeps all 59 must_keep lines (scrub alone 50). B also keeps the most non-secret lines (64.9%, above E1 minimal's 61.5%, since it keeps lines the anchor layer's blocks would otherwise lose after a dropped neighbour).
+- **A against B.** A: fewer fuzz leaks (425 against 643; digit-bearing 131 against 207; outside-class bodies 155 against 196) but its 44 `qualified` leak bodies are the order defect (a qualified label such as "PIN to follow" whose value the anchor layer dropped), it loses one must_keep line (the documented `label_same_cell_br` window loss, two lines) and keeps 51% of the fixtures' non-secret lines. B: no qualified leaks, no window loss, best utility; all its extra leaks are html_table header-row bodies (640 against 378) and they are digit-bearing as often as A's. C leaks 461 and keeps 52%: no better than A.
+- **Recommendation: A stays the default (fewest leaks of the E1 orders, secrets first); B is selectable and is the choice if utility on real invites outweighs 218 extra header-row leak bodies in 40,000 synthetic ones.** Neither is better than the scrub alone on fuzz leaks. The remaining fix is in the conversion, not the order: keep a table row's cells together on one line in `invite_blocks` (`Meeting ID | Other | swordfish`), so the scrub's header-row logic sees what it sees in the raw HTML. Until then D (scrub on the raw body, then anchors) is the leak-minimal fallback, at the scrub's utility.
+
+Tests: `dev/tests/test_invite_filter_order.py` (both orders: subset up to blank lines and idempotence on the 40,000 fuzz bodies, fixtures' secrets gone and must_keep kept, default, unknown order refused, blank tidy).
+
 ## 2. Readers of calendar.json (on `v268-bare21`)
 
 | # | Reader (file:line) | Today | Needs from the gateway |
