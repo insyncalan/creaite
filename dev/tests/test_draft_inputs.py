@@ -86,12 +86,13 @@ class DraftInputs(unittest.TestCase):
         self.assertFalse(spec.exists())
         self.assertTrue((self.root / "system/staging/calendar.json").exists())          # the real calendar is a different file, kept
 
-    def test_a_calendar_that_cannot_be_read_keeps_its_input(self):
+    def test_a_calendar_that_cannot_be_read_is_still_removed(self):
+        # #369: the reply holds the raw invite text, so it is removed whatever happens (test_v268_calendar_draft_leak)
         bad = self.drafts / "calendar.json"
         bad.write_text("nope")
         r = self.script("sweep.py", "calendar", str(bad))
-        self.assertNotIn(GONE, r.stdout)
-        self.assertTrue(bad.exists())
+        self.assertIn("Can't read", r.stdout)
+        self.assertFalse(bad.exists())
 
     def test_sweep_ignore_removes_its_input_and_stdout_stays_the_json_alone(self):
         f = self.write("messages.json", {"messages": [{"kind": "mail", "subject": "ToDo list"}, {"kind": "mail", "subject": "SOW"}]})
