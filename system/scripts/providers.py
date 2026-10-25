@@ -24,7 +24,11 @@ Settings (settings-defaults.json `ai`, each in the catalogue with the reason for
 Every save goes through settings_catalogue.save (a backup and a log line per key), as every setting does.
 """
 import os
+import re
 import sys
+import urllib.error  # #132 G2: the model list (standard library)
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -144,6 +148,10 @@ class KeyStore:
         """Delete the provider's key; True when there was one."""
         raise NotImplementedError
 
+    def peek(self, provider):
+        """The provider's key, for the provider call itself only (the live server, just before it calls), or None."""
+        raise NotImplementedError
+
 
 class NotBuiltStore(KeyStore):
     """Until the keychain is built: nothing is connected and no key is taken."""
@@ -159,6 +167,10 @@ class NotBuiltStore(KeyStore):
     def remove(self, provider):
         """Delete the provider's key; True when there was one."""
         return False
+
+    def peek(self, provider):
+        """No key is ever held."""
+        return None
 
 
 class MemoryStore(KeyStore):
@@ -178,6 +190,195 @@ class MemoryStore(KeyStore):
     def remove(self, provider):
         """Delete the provider's key; True when there was one."""
         return self._keys.pop(provider, None) is not None
+
+    def peek(self, provider):
+        """The provider's key, or None."""
+        return self._keys.get(provider)
+
+
+# ── #132 G1 (proposal): the keychain store ──────────────────────────────────────────────────────────────────────────────
+# A provider's key lives in this Mac's login keychain as one generic password: service "creaite.ai.<vault id>.<provider>"
+# (the vault id is a hash of the vault's real path, so two vaults never share a key), account "creaite". It is written,
+# read and deleted through Apple's Security framework, called in this process with ctypes (standard library: nothing is
+# installed). No program is started, so the key is never on a command line (`ps`), in an environment variable, a file, a
+# log line or a backup. Only the live server constructs this store (backend(), below); no creaite script has a command
+# that reads a key, providers.py itself is never run by a model run (reach.py) and no permission rule may name it or the
+# keychain (permissions.py). `has` never reads the secret. Errors carry the keychain's status and plain words, never a key.
+KEY_CHARS = re.compile(r"[A-Za-z0-9._~+/=:-]{8,400}")      # what an API key is made of: no spaces, quotes or new lines
+KEYCHAIN_ACCOUNT = "creaite"
+NOT_FOUND, DUPLICATE = -25300, -25299                       # errSecItemNotFound, errSecDuplicateItem
+KEYCHAIN_WORDS = {
+    -25308: "The keychain is locked or couldn't ask you: unlock your Mac and try again.",          # errSecInteractionNotAllowed
+    -128: "You said no to the keychain's question, so nothing was changed.",                        # errSecUserCanceled
+    -25293: "The keychain didn't accept your Mac's password, so nothing was changed.",              # errSecAuthFailed
+    -25291: "This Mac has no login keychain to keep the key in.",                                  # errSecNotAvailable
+    -25294: "This Mac has no login keychain to keep the key in.",                                  # errSecNoSuchKeychain
+}
+
+
+class KeychainError(RuntimeError):
+    """The keychain said no: plain words and its status, never the key."""
+
+    def __init__(self, status):
+        super().__init__(KEYCHAIN_WORDS.get(status, f"The keychain couldn't do that (status {status}). Nothing was changed."))
+        self.status = status
+
+
+def vault_id(root=None):
+    """A short, stable id for this vault (its real path, hashed): part of each key's keychain service name."""
+    import hashlib
+    import paths
+    real = os.path.realpath(str(root or paths.ROOT))
+    return hashlib.sha256(real.encode("utf-8")).hexdigest()[:12]
+
+
+class SecApi:
+    """The four Security framework calls the store needs, through ctypes: add, exists (no secret read), read and delete. Each
+    takes the service and account names and answers the OSStatus (0 is success). macOS only."""
+
+    _lib = None
+
+    @classmethod
+    def lib(cls):
+        """(Security, CoreFoundation, constants), loaded once."""
+        if cls._lib is None:
+            import ctypes
+            sec = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/Security.framework/Security")
+            cf = ctypes.cdll.LoadLibrary("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+            vp = ctypes.c_void_p
+            for fn, res, args in ((cf.CFStringCreateWithCString, vp, [vp, ctypes.c_char_p, ctypes.c_uint32]),
+                                  (cf.CFDataCreate, vp, [vp, ctypes.c_char_p, ctypes.c_long]),
+                                  (cf.CFDictionaryCreate, vp, [vp, ctypes.POINTER(vp), ctypes.POINTER(vp), ctypes.c_long, vp, vp]),
+                                  (cf.CFDataGetLength, ctypes.c_long, [vp]), (cf.CFDataGetBytePtr, vp, [vp]),
+                                  (cf.CFRelease, None, [vp]), (sec.SecItemAdd, ctypes.c_int32, [vp, vp]),
+                                  (sec.SecItemCopyMatching, ctypes.c_int32, [vp, ctypes.POINTER(vp)]),
+                                  (sec.SecItemDelete, ctypes.c_int32, [vp])):
+                fn.restype, fn.argtypes = res, args
+            k = {n: vp.in_dll(sec, n).value for n in ("kSecClass", "kSecClassGenericPassword", "kSecAttrService",
+                                                       "kSecAttrAccount", "kSecAttrLabel", "kSecValueData", "kSecReturnData",
+                                                       "kSecMatchLimit", "kSecMatchLimitOne")}
+            k["true"] = vp.in_dll(cf, "kCFBooleanTrue").value
+            k["keys"] = ctypes.addressof(ctypes.c_byte.in_dll(cf, "kCFTypeDictionaryKeyCallBacks"))
+            k["values"] = ctypes.addressof(ctypes.c_byte.in_dll(cf, "kCFTypeDictionaryValueCallBacks"))
+            cls._lib = (sec, cf, k)
+        return cls._lib
+
+    def _query(self, service, account, extra=()):
+        """A CFDictionary for the item, and the CF objects to release after the call."""
+        import ctypes
+        sec, cf, k = self.lib()
+        made = [cf.CFStringCreateWithCString(None, s.encode("utf-8"), 0x08000100) for s in (service, account)]
+        pairs = [(k["kSecClass"], k["kSecClassGenericPassword"]), (k["kSecAttrService"], made[0]),
+                 (k["kSecAttrAccount"], made[1])]
+        for name, value in extra:                  # bytes: data; ("k", name): one of the constants; str: a string
+            if isinstance(value, bytes):
+                value = cf.CFDataCreate(None, value, len(value))
+                made.append(value)
+            elif isinstance(value, tuple):
+                value = k[value[1]]
+            else:
+                value = cf.CFStringCreateWithCString(None, value.encode("utf-8"), 0x08000100)
+                made.append(value)
+            pairs.append((k[name], value))
+        n = len(pairs)
+        vp = ctypes.c_void_p
+        d = cf.CFDictionaryCreate(None, (vp * n)(*[a for a, _ in pairs]), (vp * n)(*[b for _, b in pairs]), n,
+                                  k["keys"], k["values"])
+        return d, made + [d]
+
+    def _release(self, made):
+        cf = self.lib()[1]
+        for x in made:
+            if x:
+                cf.CFRelease(x)
+
+    def add(self, service, account, label, secret):
+        """SecItemAdd of a generic password."""
+        d, made = self._query(service, account, (("kSecAttrLabel", label), ("kSecValueData", secret)))
+        try:
+            return self.lib()[0].SecItemAdd(d, None)
+        finally:
+            self._release(made)
+
+    def exists(self, service, account):
+        """SecItemCopyMatching with no data asked for: whether the item is there, without reading its secret."""
+        d, made = self._query(service, account, (("kSecMatchLimit", ("k", "kSecMatchLimitOne")),))
+        try:
+            return self.lib()[0].SecItemCopyMatching(d, None)
+        finally:
+            self._release(made)
+
+    def read(self, service, account):
+        """(status, the secret's bytes or None)."""
+        import ctypes
+        sec, cf, k = self.lib()
+        d, made = self._query(service, account, (("kSecReturnData", ("k", "true")),
+                                                 ("kSecMatchLimit", ("k", "kSecMatchLimitOne"))))
+        out = ctypes.c_void_p()
+        try:
+            status = sec.SecItemCopyMatching(d, ctypes.byref(out))
+            if status != 0 or not out.value:
+                return status, None
+            return status, ctypes.string_at(cf.CFDataGetBytePtr(out), cf.CFDataGetLength(out))
+        finally:
+            self._release(made + [out.value])
+
+    def delete(self, service, account):
+        """SecItemDelete."""
+        d, made = self._query(service, account)
+        try:
+            return self.lib()[0].SecItemDelete(d)
+        finally:
+            self._release(made)
+
+
+class KeychainStore(KeyStore):
+    """Provider keys in this Mac's login keychain (the live server only)."""
+
+    def __init__(self, api=None, vault=None):
+        self.api = api or SecApi()
+        self.vault = vault or vault_id()
+
+    def service(self, provider):
+        """The keychain service name for a provider's key; ValueError for a provider that takes no key."""
+        if provider not in PROVIDERS or "key" not in PROVIDERS[provider][3] or not PROVIDERS[provider][4]:
+            raise ValueError("That provider can't be connected with a key.")
+        return f"creaite.ai.{self.vault}.{provider}"
+
+    def has(self, provider):
+        """True when the keychain holds the provider's key (its secret is not read). A keychain that can't answer (locked,
+        refused) counts as no key: the provider shows as not connected and nothing is sent to it."""
+        return self.api.exists(self.service(provider), KEYCHAIN_ACCOUNT) == 0
+
+    def put(self, provider, key):
+        """Keep the provider's key, replacing any earlier one."""
+        key = key.strip() if isinstance(key, str) else ""
+        if not KEY_CHARS.fullmatch(key):
+            raise Refused("That doesn't look like a key: check you copied just the key, with no spaces.")
+        svc = self.service(provider)
+        status = self.api.delete(svc, KEYCHAIN_ACCOUNT)
+        if status not in (0, NOT_FOUND):
+            raise KeychainError(status)
+        status = self.api.add(svc, KEYCHAIN_ACCOUNT, f"creaite AI key ({PROVIDERS[provider][0]})", key.encode("utf-8"))
+        if status != 0:
+            raise KeychainError(status)
+
+    def peek(self, provider):
+        """The provider's key, for the provider call itself, or None when there is none."""
+        status, data = self.api.read(self.service(provider), KEYCHAIN_ACCOUNT)
+        if status == NOT_FOUND:
+            return None
+        if status != 0 or data is None:
+            raise KeychainError(status)
+        return data.decode("utf-8")
+
+    def remove(self, provider):
+        """Delete the provider's key; True when there was one."""
+        status = self.api.delete(self.service(provider), KEYCHAIN_ACCOUNT)
+        if status in (0, NOT_FOUND):
+            return status == 0
+        raise KeychainError(status)
+# ── end #132 G1 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
 class Lister:
@@ -218,25 +419,143 @@ class FakeLister(Lister):
         return list(self.FOUND.get(provider, []))
 
 
+# ── #132 G2 (proposal): the model list, one HTTPS call to the provider ─────────────────────────────────────────────────
+# Test and connect asks the provider which models the key can use: one GET to a fixed host per provider (no other host is ever
+# called, and a redirect is refused, never followed), the key in one request header only (never the address), TLS verified
+# against the Mac's trusted certificates (TLS 1.2 or later), no proxy taken from the environment, a 10 second limit and at most
+# 1 MB read back. Standard library only (urllib). Errors carry the host and an HTTP status, never the key or the body: 4xx is
+# KeyRefused(status); a 3xx, a 5xx, a timeout, a TLS or network failure or an answer that isn't a model list is
+# ProviderUnreachable. The debug log gets the host and the status only.
+LIST_HOSTS = {"openai": "api.openai.com", "claude": "api.anthropic.com"}
+LIST_PATHS = {"openai": "/v1/models", "claude": "/v1/models?limit=1000"}
+ANTHROPIC_VERSION = "2023-06-01"
+LIST_TIMEOUT = 10                        # seconds
+LIST_CAP = 1_000_000                     # bytes read back at most
+LIST_MAX = 500                           # model ids kept at most
+
+
+class ProviderUnreachable(ConnectionError):
+    """The provider couldn't be asked or gave no model list: the host and plain words only."""
+
+
+def key_headers(provider, key):
+    """The one header that carries the key (and Anthropic's version header)."""
+    if provider == "claude":
+        return {"x-api-key": key, "anthropic-version": ANTHROPIC_VERSION}
+    return {"Authorization": f"Bearer {key}"}
+
+
+def _log(line):
+    """One debug log line (the host and a status, never a key); the log never stops a call."""
+    try:
+        import log as debuglog
+        debuglog.info("ai-models", debuglog.clean(line, 200))
+    except Exception:  # noqa: BLE001  the log never stops a call
+        return
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        """Never follow a redirect: urllib then raises the 3xx as an HTTPError, which the lister refuses."""
+        return None
+
+
+class HttpsLister(Lister):
+    """The real model list. `base` and `context` are for tests only (a local fake server and its certificate); creaite itself
+    always uses LIST_HOSTS over https with the system's trust store."""
+
+    def __init__(self, base=None, context=None, timeout=LIST_TIMEOUT, cap=LIST_CAP):
+        import ssl
+        self.base = dict(base or {p: f"https://{h}" for p, h in LIST_HOSTS.items()})
+        self.context = context or ssl.create_default_context()
+        self.context.minimum_version = max(self.context.minimum_version, ssl.TLSVersion.TLSv1_2)
+        self.timeout, self.cap = timeout, cap
+
+    def opener(self):
+        """urllib with no proxies from the environment, no redirects followed and this TLS context."""
+        return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect(),
+                                           urllib.request.HTTPSHandler(context=self.context))
+
+    def models(self, provider, key):
+        """The model ids the key can use."""
+        if provider not in LIST_HOSTS or provider not in self.base:
+            raise ValueError("That provider has no model list.")
+        url = self.base[provider] + LIST_PATHS[provider]
+        host = urllib.parse.urlsplit(url).hostname or "?"
+        if not url.startswith("https://"):
+            raise ProviderUnreachable(f"{host}: only https is used")
+        if not isinstance(key, str) or not KEY_CHARS.fullmatch(key):
+            raise KeyRefused(400)
+        status, body = self.fetch(url, host, key_headers(provider, key))
+        _log(f"{host} model list: {status}")
+        if status is not None and 400 <= status < 500:
+            raise KeyRefused(status)
+        if status != 200:
+            raise ProviderUnreachable(f"{host}: answered {status}")
+        return self.ids(body, host)
+
+    def fetch(self, url, host, headers):
+        """(HTTP status, at most cap + 1 bytes of the answer) for one GET; ProviderUnreachable when there is no answer."""
+        req = urllib.request.Request(url, method="GET", headers={**headers, "Accept": "application/json", "User-Agent": "creaite"})
+        try:
+            with self.opener().open(req, timeout=self.timeout) as r:
+                return r.status, r.read(self.cap + 1)
+        except urllib.error.HTTPError as e:
+            e.close()
+            return e.code, b""
+        except Exception as e:  # noqa: BLE001  network, TLS, timeout, a broken answer: never the key, never the body
+            _log(f"{host} model list: unreachable ({type(e).__name__})")
+            raise ProviderUnreachable(f"{host}: couldn't be reached ({type(e).__name__})") from None
+
+    def ids(self, body, host):
+        """The model ids in a provider's answer ({"data": [{"id": …}, …]}), at most LIST_MAX."""
+        import json
+        if len(body) > self.cap:
+            raise ProviderUnreachable(f"{host}: the answer was too large")
+        try:
+            data = json.loads(body.decode("utf-8")).get("data")
+            ids = [m["id"] for m in data if isinstance(m, dict) and isinstance(m.get("id"), str) and 0 < len(m["id"]) <= 200]
+        except Exception:  # noqa: BLE001  anything else is not a model list
+            raise ProviderUnreachable(f"{host}: the answer wasn't a model list") from None
+        return ids[:LIST_MAX]
+# ── end #132 G2 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
 def fake_mode():
-    """True when the live server was started by a test with the fake provider (never in a real vault)."""
-    return os.environ.get("CREAITE_FAKE_PROVIDERS") == "1"
+    """True when the live server was started by a test with the fake provider. #132 G10: the switch alone isn't enough; it is
+    honoured only in the development repository (.creaite-dev in the vault root) or a test's throwaway vault (inside the
+    system's temporary folder), so a stray CREAITE_FAKE_PROVIDERS=1 can never make a real vault show a fake provider."""
+    if os.environ.get("CREAITE_FAKE_PROVIDERS") != "1":
+        return False
+    import tempfile
+    import paths
+    root = Path(paths.ROOT).resolve()
+    return (root / ".creaite-dev").is_file() or Path(tempfile.gettempdir()).resolve() in root.parents
 
 
 _BACKEND = {}
 
 
 def backend():
-    """(the key store, the lister): the fakes under a test, else the not-built stand-ins. The guarded build replaces the
-    not-built pair with the keychain store and the HTTPS lister here, and nowhere else."""
+    """(the key store, the lister): the fakes under a test; on a Mac the keychain store (#132 G1) and the HTTPS model list
+    (#132 G2); else the not-built stand-ins. Only the live server calls this."""
     if not _BACKEND:
-        _BACKEND["pair"] = (MemoryStore(), FakeLister()) if fake_mode() else (NotBuiltStore(), NotBuiltLister())
+        if os.environ.get("CREAITE_FAKE_PROVIDERS") == "1" and not fake_mode():          # #132 G10
+            _log("CREAITE_FAKE_PROVIDERS ignored: this isn't the development repository or a test's vault")
+        if fake_mode():
+            _BACKEND["pair"] = (MemoryStore(), FakeLister())
+        elif sys.platform == "darwin":
+            _BACKEND["pair"] = (KeychainStore(), HttpsLister())
+        else:
+            _BACKEND["pair"] = (NotBuiltStore(), NotBuiltLister())
     return _BACKEND["pair"]
 
 
 def built():
-    """Whether connecting a provider can work at all (the fake under a test, or the real keychain once it is built)."""
-    return not isinstance(backend()[0], NotBuiltStore)
+    """Whether connecting a provider can work at all: both seams built (the fake under a test, or the keychain and the
+    provider call)."""
+    store, lister = backend()
+    return not isinstance(store, NotBuiltStore) and not isinstance(lister, NotBuiltLister)
 
 
 # ── Reading the settings ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -281,8 +600,8 @@ def connected(settings, store=None):
     key and settings hold its models."""
     store = store or backend()[0]
     saved = saved_providers(settings)
-    return [p for p in PROVIDER_ORDER if PROVIDERS[p][4] and
-            (p == "claude" or (store.has(p) and isinstance(saved.get(p), dict)))]
+    return [p for p in PROVIDER_ORDER if PROVIDERS[p][4] and          # #132 G1: settings first, so the keychain is asked only
+            (p == "claude" or (isinstance(saved.get(p), dict) and store.has(p)))]   # about a provider Alan connected
 
 
 def models_of(provider, settings, offered_only=True):
@@ -336,12 +655,18 @@ def other_connected(settings, store=None):
 
 
 # ── What the page shows ──────────────────────────────────────────────────────────────────────────────────────────────────
+def claude_auth(saved, store):
+    """How Claude signs in: "key" when settings hold a Claude key and the store has it, else "subscription". #132 G1: the
+    keychain is asked only once settings say Claude has a key."""
+    return "key" if isinstance(saved.get("models"), list) and store.has("claude") else "subscription"
+
+
 def card(pid, settings, store, conn):
     """One provider card: its words, status (connected, not, soon), how it signs in, its models and those found."""
     name, blurb, billing, how, live = PROVIDERS[pid]
     p = saved_providers(settings).get(pid) or {}
     on = pid in conn
-    auth = ("key" if store.has("claude") else "subscription") if pid == "claude" else ("key" if on else None)
+    auth = claude_auth(p, store) if pid == "claude" else ("key" if on else None)
     found = [m for m in p.get("models", []) if isinstance(m, dict) and m.get("id")] if on and pid != "claude" else []
     return {"id": pid, "name": name, "blurb": blurb, "billing": billing, "how": list(how),
             "status": "soon" if not live else "connected" if on else "not", "auth": auth,
@@ -508,6 +833,13 @@ def disconnect_changes(provider, settings, store=None):
 
 
 # ── Routing: which model a job runs on (the policy; wiring it into runs is the guarded part) ────────────────────────────
+def stepped_down(job, settings, store=None, confidential=False):
+    """The model a job steps down to at a limit: the next kind down's choice, or its recommended Claude model when the material
+    is confidential and that choice is another provider's (#132 G5)."""
+    down = chosen(STEP_DOWN[job], settings, store)
+    return JOBS[STEP_DOWN[job]]["recommended"] if confidential and not down.startswith("claude:") else down
+
+
 def route(job, settings, store=None, confidential=False, limited=False):
     """Which model a job runs on now: {model, wait, ask, why}. The rules, in order:
     - confidential material only ever goes to Claude: a non-Claude choice runs on the job's recommended model instead;
@@ -527,10 +859,53 @@ def route(job, settings, store=None, confidential=False, limited=False):
         if alt:
             return {"model": alt[0]["id"], "wait": False, "ask": False, "why": "limit: another connected model"}
     if mode == "step_down" and job in STEP_DOWN:
-        return {"model": chosen(STEP_DOWN[job], settings, store), "wait": False, "ask": False, "why": "limit: stepped down"}
+        return {"model": stepped_down(job, settings, store, confidential), "wait": False, "ask": False,
+                "why": "limit: stepped down"}
     if mode == "ask":
         return {"model": None, "wait": False, "ask": True, "why": "limit: ask"}
     return {"model": None, "wait": True, "ask": False, "why": "limit: waits for the reset"}
+
+
+# ── #132 G5 (proposal): confidential material only to Claude, decided in the server ─────────────────────────────────────
+# route() already keeps a confidential job on Claude. These make that the server's one way to pick a model: the live server
+# calls route_for (never route) for every run, and send_allowed is the gate any call to a provider other than Claude must pass
+# first (G4's direct call; none exists yet). Fail closed: a job is confidential unless the server has shown it isn't.
+SECRET_MARKS = __import__("re").compile(r"(?i)\b(confidential|restricted)\b|client-safe:\s*no")
+CONFIDENTIAL_WORDS = "Confidential material is only ever sent to Claude."
+
+
+def confidential_job(job, text="", declared=None):
+    """(confidential, why) for one job. why: "tools" (a job that uses tools reads files and mail itself, so it is Claude's
+    only), "declared" (the server found a confidential meeting or note, or a client-restricted item), "unchecked" (the call
+    site made no check: counts as confidential), "marked" (the text sent is marked confidential or restricted, or Client-safe:
+    no), or "" (declared not confidential by the server, and the text is clean)."""
+    if JOBS.get(job, {"tools": True})["tools"]:
+        return True, "tools"
+    if declared is True:
+        return True, "declared"
+    if declared is not False:
+        return True, "unchecked"
+    if SECRET_MARKS.search(text or ""):
+        return True, "marked"
+    return False, ""
+
+
+def send_allowed(model_id, confidential):
+    """The gate before any call to a provider: Refused for confidential material (or material not shown to be otherwise) to a
+    provider other than Claude."""
+    if not str(model_id or "").startswith("claude:") and confidential is not False:
+        raise Refused(CONFIDENTIAL_WORDS)
+
+
+def route_for(job, settings, text="", declared=None, store=None, limited=None):
+    """route(), with the job's confidentiality decided here from what the server knows (confidential_job), and the gate checked
+    on the answer: the server's only way to pick a model. Adds "confidential" and "confidential_why" to route's answer."""
+    conf, why = confidential_job(job, text, declared)
+    limited = limited_now() if limited is None else limited                  # #132 G6: Claude's limit, as last seen
+    out = route(job, settings, store, confidential=conf, limited=limited)
+    if out["model"]:
+        send_allowed(out["model"], conf)
+    return dict(out, confidential=conf, confidential_why=why)
 
 
 def retry_kind(job, check_notes):
@@ -539,24 +914,246 @@ def retry_kind(job, check_notes):
     return KIND_UP.get(job) if check_notes else None
 
 
+# ── #132 G4 (proposal): the direct call, for a quick edit on text the checks found clean ────────────────────────────────
+# Which features may send text to a provider other than Claude: a declared list, a feature and its options at a time. Round 2
+# declares one: AI on selected text (edit-ai), and only the options whose instruction is creaite's own words (not "Or say what
+# you want…", whose instruction is free text, and not "Make it executive", which adds the style guide). The drafts (writing) are
+# built from tracker facts, so none is declared: they stay on Claude. A tools job never leaves Claude (G5).
+CLEAN_FEATURES = {"edit-ai": ("rewrite", "shorter", "longer", "spelling", "polish", "formal", "warmer", "format", "checklist",
+                              "summary")}
+DIRECT_HOSTS = {"openai": "api.openai.com"}       # the only host a direct call goes to (G2's api.openai.com, nothing new)
+DIRECT_PATHS = {"openai": "/v1/chat/completions"}
+DIRECT_TIMEOUT = 30                               # seconds
+DIRECT_SEND = 16_000                              # characters of prompt sent at most (edit_ai's 12k of text, plus its rules)
+DIRECT_CAP = 256_000                              # bytes read back at most
+DIRECT_TOKENS = 2_000                             # the reply's length, in the provider's tokens, at most
+MODEL_ID = re.compile(r"[A-Za-z0-9._:-]{1,80}")
+
+
+def declared(feature, option, problems):
+    """What the server declares to route_for (G5) for one request: False (not confidential: it may go to the chosen provider)
+    only for a declared feature and option whose text the checks passed ([] problems); True otherwise (Claude only)."""
+    return not (option in CLEAN_FEATURES.get(feature, ()) and problems == [])
+
+
+class DirectCaller(HttpsLister):
+    """The direct call: one HTTPS POST of one prompt, no tools, no files, to DIRECT_HOSTS only, with G2's guarantees (TLS 1.2
+    or later verified, no redirect followed, no proxy from the environment, the key in one header). `base` and `context` are for
+    tests only. Errors carry the host and an HTTP status, never the key, the prompt or the reply."""
+
+    def __init__(self, base=None, context=None, timeout=DIRECT_TIMEOUT, cap=DIRECT_CAP):
+        super().__init__(base or {p: f"https://{h}" for p, h in DIRECT_HOSTS.items()}, context, timeout, cap)
+
+    def complete(self, provider, model_id, prompt, key):
+        """(the reply's text, {"in": tokens sent, "out": tokens back}) for one prompt to one of the provider's models."""
+        if provider not in DIRECT_HOSTS or provider not in self.base:
+            raise ValueError("That provider has no direct call.")
+        if not isinstance(model_id, str) or not MODEL_ID.fullmatch(model_id):
+            raise ValueError("That isn't a model id.")
+        if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > DIRECT_SEND:
+            raise ValueError("Nothing to send, or too much.")
+        url = self.base[provider] + DIRECT_PATHS[provider]
+        host = urllib.parse.urlsplit(url).hostname or "?"
+        if not url.startswith("https://"):
+            raise ProviderUnreachable(f"{host}: only https is used")
+        if not isinstance(key, str) or not KEY_CHARS.fullmatch(key):
+            raise KeyRefused(400)
+        import json
+        body = json.dumps({"model": model_id, "messages": [{"role": "user", "content": prompt}],
+                           "max_completion_tokens": DIRECT_TOKENS, "store": False}).encode("utf-8")
+        status, raw = self.post(url, host, body, key_headers(provider, key))
+        if status is not None and 400 <= status < 500:
+            _log(f"{host} direct call: {status}")
+            raise KeyRefused(status)
+        if status != 200:
+            _log(f"{host} direct call: {status}")
+            raise ProviderUnreachable(f"{host}: answered {status}")
+        text, used = self.reply(raw, host)
+        _log(f"{host} direct call: 200, {used['in']} tokens in, {used['out']} out")
+        return text, used
+
+    def post(self, url, host, body, headers):
+        """(HTTP status, at most cap + 1 bytes of the answer) for one POST; ProviderUnreachable when there is no answer."""
+        req = urllib.request.Request(url, data=body, method="POST", headers={
+            **headers, "Content-Type": "application/json", "Accept": "application/json", "User-Agent": "creaite"})
+        try:
+            with self.opener().open(req, timeout=self.timeout) as r:
+                return r.status, r.read(self.cap + 1)
+        except urllib.error.HTTPError as e:
+            e.close()
+            return e.code, b""
+        except Exception as e:  # noqa: BLE001  network, TLS, timeout: never the key, the prompt or the body
+            _log(f"{host} direct call: unreachable ({type(e).__name__})")
+            raise ProviderUnreachable(f"{host}: couldn't be reached ({type(e).__name__})") from None
+
+    def reply(self, raw, host):
+        """The first choice's text and the token counts from a chat answer."""
+        import json
+        if len(raw) > self.cap:
+            raise ProviderUnreachable(f"{host}: the answer was too large")
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            text = data["choices"][0]["message"]["content"]
+            usage = data.get("usage") or {}
+            used = {"in": int(usage.get("prompt_tokens") or 0), "out": int(usage.get("completion_tokens") or 0)}
+        except Exception:  # noqa: BLE001  anything else is not an answer
+            raise ProviderUnreachable(f"{host}: the answer wasn't a reply") from None
+        if not isinstance(text, str) or not text.strip():
+            raise ProviderUnreachable(f"{host}: the answer was empty")
+        return text, used
+
+
+class NotBuiltCaller:
+    """No direct call (off a Mac, or under the test fakes unless a test puts its own caller in): refuses."""
+
+    def complete(self, provider, model_id, prompt, key):
+        """Never called through: the route sees NotBuilt and runs Claude as before."""
+        raise NotBuilt(NOT_BUILT_WORDS)
+
+
+def caller():
+    """The direct call the live server uses: DirectCaller on a Mac, else NotBuiltCaller; NotBuiltCaller under the test fakes
+    (no test reaches a real provider), unless the test put its own in _DIRECT."""
+    if "caller" not in _DIRECT:
+        _DIRECT["caller"] = DirectCaller() if sys.platform == "darwin" and not fake_mode() else NotBuiltCaller()
+    return _DIRECT["caller"]
+
+
+_DIRECT = {}
+# ── end #132 G4 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+# ── #132 G6 (proposal): Claude's limit, seen in a run's stream, and what happens next ────────────────────────────────────
+# Claude Code (2.1.288, read from its own message formats; no real limited run was made) says a limit was hit three ways in
+# `--output-format stream-json`: a "rate_limit_event" whose rate_limit_info.status is "rejected" (with resetsAt, epoch seconds,
+# and rateLimitType: five_hour, seven_day, seven_day_opus…), an assistant message whose "error" is "rate_limit", and a result
+# with is_error whose text says so ("You've hit your limit · resets 3pm", "usage limit reached"). The first is the one relied
+# on; the others are the fallback. The server keeps the reset time in memory only (LIMIT): a later run of a text-only job
+# routes with limited=True (route_for: never confidential material to another provider), and nothing is ever retried by itself.
+LIMIT_TEXT = re.compile(r"(?i)you'?ve hit your (?:\w+ )?limit|usage limit reached|rate limit reached|session limit reached")
+LIMIT_UNKNOWN = 15 * 60                   # seconds a limit is assumed to last when Claude doesn't say when it resets
+LIMIT = {}
+LIMIT_GO = {"page": "settings", "arg": "aiModels", "label": "Open AI models"}
+
+
+def limit_signal(ev):
+    """{"resets": epoch seconds or None, "kind": the limit's type} when one stream event says Claude's limit was hit; "clear"
+    when it says Claude answers again (an allowed rate_limit_event, or a result that isn't an error); else None."""
+    if not isinstance(ev, dict):
+        return None
+    kind = ev.get("type")
+    if kind == "rate_limit_event":
+        info = ev.get("rate_limit_info") if isinstance(ev.get("rate_limit_info"), dict) else {}
+        if info.get("status") != "rejected":
+            return "clear"
+        at = info.get("resetsAt")
+        return {"resets": int(at) if isinstance(at, (int, float)) and at > 0 else None,
+                "kind": re.sub(r"[^a-z_]", "", str(info.get("rateLimitType") or ""))[:40]}
+    if kind == "assistant" and ev.get("error") == "rate_limit":
+        return {"resets": None, "kind": ""}
+    if kind == "result":
+        if ev.get("is_error") and LIMIT_TEXT.search(str(ev.get("result") or "")[:2000]):
+            return {"resets": None, "kind": ""}
+        return None if ev.get("is_error") else "clear"
+    return None
+
+
+def limit_seen(ev, now=None):
+    """Keep what one stream event says about Claude's limit (LIMIT); the signal, as limit_signal."""
+    import time
+    now = time.time() if now is None else now
+    sig = limit_signal(ev)
+    if sig == "clear":
+        LIMIT.clear()
+    elif sig:
+        resets = sig["resets"] or LIMIT.get("resets") or 0
+        LIMIT.update(resets=resets if resets > now else None, until=resets if resets > now else now + LIMIT_UNKNOWN,
+                     kind=sig["kind"] or LIMIT.get("kind", ""))
+    return sig
+
+
+def limited_now(now=None):
+    """True while Claude's limit, as last seen, hasn't reset."""
+    import time
+    return bool(LIMIT) and (time.time() if now is None else now) < LIMIT.get("until", 0)
+
+
+def reset_words(resets, now=None):
+    """When the limit resets, as Alan reads it: "at 15:00", or "on 18-10-2026 at 09:00"; "" when unknown."""
+    from datetime import datetime
+    if not resets:
+        return ""
+    at, today = datetime.fromtimestamp(resets), datetime.fromtimestamp(now) if now else datetime.now()
+    return f"at {at:%H:%M}" if at.date() == today.date() else f"on {at:%d-%m-%Y} at {at:%H:%M}"
+
+
+def with_choice(settings, choice):
+    """The settings with ai.on_limit set for one request (the Ask me card's "another model"), the file unchanged."""
+    import copy
+    out = copy.deepcopy(settings)
+    out.setdefault("ai", {})["on_limit"] = choice
+    return out
+
+
+def limit_card(job, settings, feature="", now=None):
+    """What a run that hit Claude's limit says: {line, resets, mode, offer}. `offer` (Ask me only) is "another connected model"
+    for a text-only job a direct call exists for (feature in CLEAN_FEATURES), else None. Nothing is retried by itself."""
+    resets = LIMIT.get("resets")
+    when = reset_words(resets, now)
+    head = f"Claude's limit is reached; it resets {when}." if when else "Claude's limit is reached, and it didn't say when it resets."
+    mode = setting(settings, "ai.on_limit")
+    j = JOBS.get(job) or JOBS["tools"]
+    alt = sorted((m for m in options(job, settings) if m["provider"] != "claude"), key=lambda m: -m["grade"]) \
+        if not j["tools"] and feature in CLEAN_FEATURES else []
+    tail = " Nothing was changed."
+    if mode == "step_down" and job in STEP_DOWN:
+        tail += f" Writing runs as a quick edit until then: try again to run it on {_label(chosen(STEP_DOWN[job], settings), settings)}."
+    elif mode == "other" and alt:
+        tail += f" Try again to run it on {alt[0]['label']}, unless it holds confidential material."
+    elif not (mode == "ask" and alt):
+        tail += " Jobs that use tools wait: try again then." if j["tools"] else " Try again then."
+    offer = {"choice": "other", "label": f"Run this one on {alt[0]['label']}"} if mode == "ask" and alt else None
+    return {"line": head + tail, "resets": resets, "mode": mode, "offer": offer}
+
+
+def _label(model_id, settings):
+    m = model(model_id, settings)
+    return m["label"] if m else str(model_id)
+# ── end #132 G6 ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
 # ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
 # Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
 # presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key
-# store (or the test fake) ever reaches this: the not-built lister refuses first.
-PENDING_SECONDS = 600
+# store (or the test fake) ever reaches this: the not-built lister refuses first. #132 G10: five minutes, not ten; one held key
+# per provider (a new Test drops the last); used once (take); dropped by a timer when it runs out even if nothing else
+# happens, on Disconnect of that provider, and when the server stops or restarts (forget_all); never written anywhere.
+PENDING_SECONDS = 300
 _PENDING = {}
 
 
 def hold(provider, key, ids, now=None):
     """Keep a tested key and its models until Done; returns the one-time id the page sends back."""
     import secrets
+    import threading
     import time
     now = time.time() if now is None else now
-    for k in [k for k, v in _PENDING.items() if v["until"] < now]:
+    for k in [k for k, v in _PENDING.items() if v["until"] < now or v["provider"] == provider]:     # G10: one per provider
         _PENDING.pop(k, None)
     pid = secrets.token_urlsafe(16)
     _PENDING[pid] = {"provider": provider, "key": key, "ids": list(ids), "until": now + PENDING_SECONDS}
+    timer = threading.Timer(PENDING_SECONDS, forget, (pid,))       # G10: gone when it runs out (real seconds, from now)
+    timer.daemon = True
+    timer.start()
     return pid
+
+
+def forget_all(provider=None):
+    """Drop every held key, or the provider's (#132 G10: Disconnect, server stop and restart); how many were dropped."""
+    gone = [k for k, v in list(_PENDING.items()) if provider is None or v["provider"] == provider]
+    for k in gone:
+        _PENDING.pop(k, None)
+    return len(gone)
 
 
 def take(pid, now=None):

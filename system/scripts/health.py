@@ -76,6 +76,7 @@ PLAIN = {
     "offsite_backup": ("The OneDrive backup copy is missing or out of date", "offsite"),
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
+    "claude_billing_env": ("creaite was started with a Claude key or address set", "manual"),   # #132: how to fix is in the detail
     "sweep_lock": ("A mail and Teams check looks stuck", "manual"),   # BL-328: health_fixes builds its Release
     "debug_log": ("Errors keep coming back", "manual"),
     "minutes_drafts": ("Minutes waiting in Review have lost their Word draft", "manual"),
@@ -191,6 +192,46 @@ def stopped_errors():
             for g in groups if not g["live"]]
 
 
+# ===== #132 G9 (proposal): AI models in Health =====
+AI_FIX = {"kind": "manual", "button": "How to fix", "would_run": "", "waits_for": "",
+          "how": "Settings › Essentials › AI models: Connect again, or Disconnect", "built": False}
+
+
+def ai_models(settings=None, store=None):
+    """(lines, problems) for Settings › Health: each provider's connection as settings and the key store see it, and Claude's
+    limit when it holds. Names, counts and states only: never a key (the store is only asked whether it has one, never for it).
+    Computed in the live server's own process, the only one that uses the key store (#132 G1)."""
+    import providers
+    try:
+        settings = paths.load_settings() if settings is None else settings
+        store = store or providers.backend()[0]
+        saved, lines, problems = providers.saved_providers(settings), [], []
+        lines.append("Claude: " + ("an API key in this Mac's keychain" if providers.claude_auth(saved.get("claude") or {}, store)
+                                   == "key" else "your Claude subscription"))
+        for pid in providers.PROVIDER_ORDER:
+            name, live = providers.PROVIDERS[pid][0], providers.PROVIDERS[pid][4]
+            if pid == "claude" or not live or not isinstance(saved.get(pid), dict):
+                continue
+            n = len(providers.models_of(pid, settings))
+            if store.has(pid):
+                lines.append(f"{name}: connected, {n} model{'' if n == 1 else 's'} offered; the key is in this Mac's keychain")
+            else:
+                problems.append({"id": f"ai_{pid}", "title": f"{name} is set up but this Mac's keychain has no key for it",
+                                 "check": "AI models", "severity": "warn", "fix": AI_FIX,
+                                 "detail": f"Until it is connected again, nothing is sent to {name}: Claude runs those jobs."})
+        if providers.fake_mode():
+            problems.append({"id": "ai_fake", "title": "Test providers are switched on", "check": "AI models", "severity": "warn",
+                             "detail": "CREAITE_FAKE_PROVIDERS is set: restart creaite without it.",
+                             "fix": dict(AI_FIX, how="Restart the live server (Settings › Live server)")})
+        if providers.limited_now():
+            when = providers.reset_words(providers.LIMIT.get("resets"))
+            lines.append(f"Claude's limit is reached; it resets {when}." if when else "Claude's limit is reached.")
+        return lines, problems
+    except Exception as e:  # noqa: BLE001  Health still shows doctor's checks
+        return [f"AI models couldn't be checked ({type(e).__name__})"], []
+# ===== end #132 G9 =====
+
+
 def problem(c):
     """One doctor warning or failure as Health lists it: plain words, its fix, its key and whether it may be dismissed."""
     title, kind = PLAIN.get(c.get("id"), (c.get("name", "A check"), "manual"))
@@ -214,6 +255,8 @@ def health(result=None, dismissed=None):
             fine.append(c.get("name", ""))
             continue
         problems.append(problem(c))
+    ai, ai_problems = ai_models()                                 # #132 G9
+    problems += ai_problems
     problems.sort(key=lambda p: p["severity"] != "fail")         # failures first, then warnings, each in doctor's order
     problems, gone = split_dismissed(problems, dismissed)
     archiving = [home_short(c.get("detail", "")) for c in result.get("checks") or []      # BL-10, BL-03: the last runs
@@ -221,6 +264,6 @@ def health(result=None, dismissed=None):
     backups = [f"{c.get('name', '')}: {home_short(c.get('detail', ''))}" for c in result.get("checks") or []   # BL-323
                if c.get("id") in BACKUP_LINES and c.get("status") == "pass"]
     return {"problems": problems, "dismissed": gone, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(),
-            "archiving": archiving, "backups": backups,
+            "archiving": archiving, "backups": backups, "ai": ai,                                                  # #132 G9
             "standalone": [built_fix(f) for f in health_fixes.STANDALONE],
             "read_only": bool(result.get("read_only")), "checked": datetime.now().strftime("%Y-%m-%d %H:%M")}

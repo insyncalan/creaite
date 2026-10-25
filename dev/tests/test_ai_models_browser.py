@@ -22,7 +22,7 @@ GOOD = "fake-good-browser-TESTONLY"
 ROUTES_LANDED = "/api/ai/state" in (Path(__file__).resolve().parents[2] / "system" / "scripts" / "live_server.py").read_text()
 
 
-@unittest.skipUnless(ROUTES_LANDED, "GUARDED: needs dev/proposals/132/01-live_server-ai-routes.patch (live_server.py is a guarded file)")
+@unittest.skipUnless(ROUTES_LANDED, "GUARDED: needs dev/proposals/132/02-live_server-ai.patch (live_server.py is a guarded file)")
 class AiModelsPage(LiveBrowserCase):
 
     @classmethod
