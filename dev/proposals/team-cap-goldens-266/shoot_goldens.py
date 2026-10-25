@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DEFAULT_SCREENS = ("activity,ask,cockpit,files,intake-review,milestones,people,projects,settings-advanced,settings-ai,"
+DEFAULT_SCREENS = ("today,activity,ask,cockpit,files,intake-review,milestones,people,projects,settings-advanced,settings-ai,"
                    "settings-essentials,settings-health,work")
 
 
