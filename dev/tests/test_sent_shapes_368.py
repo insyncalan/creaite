@@ -84,19 +84,19 @@ class Mutants(unittest.TestCase):
         self.assertFalse(self.with_mutant("lower case", SENT_LINE=re.compile(linktext.SENT_LINE.pattern.replace("chased", "Chased"))))
 
     def test_normalisation_mutant(self):
-        plain = lambda t: linktext._sent_norm(t)              # no edit_ai.normal
+        plain = lambda t: (t, list(range(len(t))))             # no edit_ai.normal
         for shape in ("non-breaking hyphens", "full-width colon"):
             self.assertTrue(linktext.sent_has("Note\n" + SHAPES[shape]), shape)
-            self.assertFalse(self.with_mutant(shape, _sent_form=plain), shape)
+            self.assertFalse(self.with_mutant(shape, _sent_map=plain), shape)
 
     def test_two_line_name_mutant(self):
-        one_line = re.compile(linktext.SENT_LINE.pattern.replace("(?:[^%s]*?(?:\\r\\n|[%s])[ \\t]*)?" % (linktext._NL, linktext._NL), ""))
+        one_line = re.compile(linktext.SENT_LINE.pattern.replace(linktext._NAME_BREAK, ""))
         self.assertNotEqual(one_line.pattern, linktext.SENT_LINE.pattern, "the mutant must change the pattern")
         self.assertTrue(linktext.sent_has("Note\n" + SHAPES["name over two lines"]))
         self.assertFalse(self.with_mutant("name over two lines", SENT_LINE=one_line))
 
     def test_iso_date_and_bullet_mutant(self):
-        no_iso = re.compile(linktext.SENT_LINE.pattern.replace(linktext._SENT_DATE, r"\d{2}\s*-\s*\d{2}\s*-\s*\d{4}"), re.I)
+        no_iso = re.compile(linktext.SENT_LINE.pattern.replace(linktext._SENT_DATE, r"\d{2}\s{0,50}-\s{0,50}\d{2}\s{0,50}-\s{0,50}\d{4}"), re.I)
         self.assertNotEqual(no_iso.pattern, linktext.SENT_LINE.pattern)
         self.assertFalse(self.with_mutant("bullet and ISO date", SENT_LINE=no_iso))
 

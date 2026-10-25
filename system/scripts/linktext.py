@@ -194,11 +194,14 @@ def write(words_, href):
 # a sentence before it), with a date in either order, and the name allowed to break over one line. The date, its colon, the verb and
 # "by email|message" must all be there, so ordinary prose that only says "chased" or "asked" is never matched.
 _NL = "\n\r\v\f\x85\u2028\u2029"
-_SENT_DATE = r"(?:\d{2}\s*-\s*\d{2}\s*-\s*\d{4}|\d{4}\s*-\s*\d{2}\s*-\s*\d{2})"
-SENT_LINE = re.compile(rf"(?<!\d){_SENT_DATE}\s*:\s*(?:chased|emailed|asked)\s+"
-                       rf"(?:[^{_NL}]*?(?:\r\n|[{_NL}])[ \t]*)?[^{_NL}]*?\bby\s+(?:email|message)\b[^{_NL}]*", re.I)
+_SPAN = 400                      # #368 (review): the longest name, or text before "by", one scan allows; bounds the work per date start
+_SENT_DATE = r"(?:\d{2}\s{0,50}-\s{0,50}\d{2}\s{0,50}-\s{0,50}\d{4}|\d{4}\s{0,50}-\s{0,50}\d{2}\s{0,50}-\s{0,50}\d{2})"
+_NAME_BREAK = rf"(?:[^{_NL}]{{0,{_SPAN}}}?(?:\r\n|[{_NL}])[ \t]{{0,50}})?"
+SENT_LINE = re.compile(rf"(?<!\d){_SENT_DATE}\s{{0,50}}:\s{{0,50}}(?:chased|emailed|asked)\s{{1,50}}"
+                       rf"{_NAME_BREAK}[^{_NL}]{{0,{_SPAN}}}?\bby\s{{1,50}}(?:email|message)\b[^{_NL}]*", re.I)
 _TAGS = re.compile(r"</?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>", re.I)
 _BREAKS = re.compile(r"</(?:p|li|div)>|<br\s*/?>", re.I)
+_PLAIN_RUN = re.compile(r"[\x20-\x7e\t\n]+")
 
 
 def _sent_norm(text):
@@ -210,30 +213,51 @@ def _sent_norm(text):
     return t.replace("\u00a0", " ")
 
 
-def _sent_form(text):
+def _sent_map(plain):
+    """(form, at): the plain text on edit_ai.normal's form, one character at a time, and for each character of the form the position
+    in `plain` it came from. Plain printable ASCII passes as it is, so a long text is read quickly."""
     import edit_ai
-    return edit_ai.normal(_sent_norm(text))
+    out, at, pos = [], [], 0
+    while pos < len(plain):
+        m = _PLAIN_RUN.match(plain, pos)
+        if m:
+            out.append(m.group())
+            at.extend(range(pos, m.end()))
+            pos = m.end()
+            continue
+        n = edit_ai.normal(plain[pos])
+        out.append(n)
+        at.extend([pos] * len(n))
+        pos += 1
+    return "".join(out), at
 
 
 def sent_has(text):
     """Whether a text holds an "I sent it" line, however it is spaced, cased or written."""
-    return bool(SENT_LINE.search(_sent_form(text)))
+    return bool(SENT_LINE.search(_sent_map(_sent_norm(text))[0]))
 
 
 def sent_strip(text):
-    """The text without its "I sent it" lines (and the blank lines they leave). A text without one comes back as it was; a text with
-    one comes back in the plain form the line was found in, the line cut from its date to the line's end."""
+    """The text without its "I sent it" lines (and the blank lines they leave). A text without one comes back as it was. A text with
+    one loses only that line, cut from its date to the line's end (fail closed: the rest of that line goes too); the rest keeps its own
+    characters (accents, other scripts), with HTML as lines and CRLF as LF."""
     if not text:
         return text
-    t = _sent_form(text)
-    if not SENT_LINE.search(t):
+    plain = _sent_norm(text)
+    form, at = _sent_map(plain)
+    spans = [(at[m.start()], at[m.end() - 1] + 1) for m in SENT_LINE.finditer(form)]
+    if not spans:
         return text
-    t = SENT_LINE.sub("\x00", t)
+    t, last = [], 0
+    for a, b in spans:
+        t.append(plain[last:a])
+        t.append("\x00")
+        last = b
+    t = "".join(t) + plain[last:]
     out = []
     for line in t.split("\n"):
         if "\x00" in line and not re.sub(r"[\x00 \t\-*\u2022\u2013]", "", line):
             continue                                                  # the line held only the cut line (and a bullet)
         out.append(line.replace("\x00", ""))
-    t = "\n".join(out)
-    return t.strip()
+    return "\n".join(out).strip()
 # ===== end #153 =====

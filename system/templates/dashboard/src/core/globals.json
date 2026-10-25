@@ -888,6 +888,7 @@
    "sentHas",
    "sentLog",
    "sentStrip",
+   "sentUnescape",
    "setChat",
    "setChatWidth",
    "setClientLogos",

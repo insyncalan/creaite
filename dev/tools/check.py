@@ -641,7 +641,7 @@ def sent_confusables(problems):
     import gen_linktext_confusables
     why = gen_linktext_confusables.stale()
     if why:
-        problems.append((rel(gen_linktext_confusables.OUT), 0, "GENERATED", why))
+        problems.append((rel(gen_linktext_confusables.OUT.parent), 0, "GENERATED", why))
 
 
 def vendored_tiptap(problems):

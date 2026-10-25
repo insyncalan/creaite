@@ -18,13 +18,20 @@ from test_sent_shapes_368 import SHAPES, NEGATIVES  # noqa: E402
 JS = Path(__file__).resolve().parents[2] / "system" / "templates" / "dashboard" / "src" / "core" / "linkText.js"
 EXTRA = ["<p>17-10-2026: Chased Sara by email.</p>", "Waiting\r\n17-10-2026: Chased Sara by email.\r\nNext",
          "<p>Waiting</p><p>17-10-2026: Chased Sara by email.</p>", "Keep this\n- 17-10-2026: Chased Sara by email.\nand this",
-         "17-10-2026: Chased​ Sara by em​ail.", "1٧-10-2026: Chased Sara by email.", "", "plain text only"]
+         "17-10-2026: Chased​ Sara by em​ail.", "1٧-10-2026: Chased Sara by email.", "", "plain text only",
+         # review M1: character references in HTML
+         "<p>17-10-2026: Chased Sara by&#32;email.</p>", "<p>17-10-2026: Chased Sara by&#x20;email.</p>", "<p>17-10-2026&#58; Chased Sara by email.</p>",
+         "<p>17-10-2026&colon; Chased Sara by&nbsp;email.</p>", "<p>17-10-2026: Chased Sara b&#121; &#101;mail.</p>", "<p>Fish &amp; chips &lt;b&gt;</p>",
+         # review M2: the rest keeps its own characters
+         "Caf\u00e9 r\u00e9sum\u00e9 \u0928\u092e\u0938\u094d\u0924\u0947 \u0391\u0392\u0393 \u041f\u0440\u0438\u0432\u0435\u0442\n17-10-2026: Chased Sara by email.\nCaf\u00e9 again",
+         "Caf\u00e9 \u041f\u0440\u0438\u0432\u0435\u0442. 17-10-2026: Chased Sara by email.",
+         "<p>Caf\u00e9 \u0928\u092e\u0938\u094d\u0924\u0947</p><p>17-10-2026: Chased Sara by email.</p>"]
 FIX = ["Keep this\n" + v + "\nand this" for v in SHAPES.values()] + list(SHAPES.values()) + NEGATIVES + EXTRA
-SCRIPT = """import(%s).then(m=>{const f=JSON.parse(%s);console.log(JSON.stringify(f.map(t=>[m.sentHas(t),m.sentStrip(t)])));})"""
+SCRIPT = """import(%s).then(m=>{const f=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(JSON.stringify(f.map(t=>[m.sentHas(t),m.sentStrip(t)])));})"""
 
 
 def run_js(path=JS, fix=None):
-    r = subprocess.run(["node", "-e", SCRIPT % (json.dumps(Path(path).as_uri()), json.dumps(json.dumps(FIX if fix is None else fix)))], capture_output=True, text=True, timeout=60)
+    r = subprocess.run(["node", "-e", SCRIPT % json.dumps(Path(path).as_uri())], input=json.dumps(FIX if fix is None else fix), capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
 
@@ -43,24 +50,102 @@ class Parity(unittest.TestCase):
         for v in NEGATIVES:
             self.assertEqual(got[v], [False, v], v)
 
-    def mutant(self, old, new):
+    def mutant(self, old, new, fix=None):
         s = JS.read_text()
         self.assertIn(old, s, old)
         tmp = JS.parent / "_mutant_368.js"                   # beside the module, so its imports resolve; removed at once
         tmp.write_text(s.replace(old, new))
         try:
-            return dict(zip(FIX, run_js(tmp)))
+            return dict(zip(FIX if fix is None else fix, run_js(tmp, fix)))
         finally:
             tmp.unlink()
 
     def test_mutants_are_caught(self):
-        for shape, old, new in (("upper case BY", '"i").test(sentPlain', '"").test(sentPlain'),
-                                
+        for shape, old, new in (("upper case BY", 'new RegExp(SENT_SRC, "i")', 'new RegExp(SENT_SRC, "")'),
                                 ("full-width colon", '.normalize("NFK', '.concat("NFK'),
-                                ("name over two lines", "(?:[^${SENT_NL}]*?(?:\\\\r\\\\n|[${SENT_NL}])[ \\\\t]*)?", ""),
-                                ("bullet and ISO date", "\\\\d{4}\\\\s*-\\\\s*\\\\d{2}\\\\s*-\\\\s*\\\\d{2}", "\\\\d{9}")):
+                                ("name over two lines", "const SENT_NAME_BREAK = `", "const SENT_NAME_BREAK = ``; const _unused = `"),
+                                ("bullet and ISO date", "|\\\\d{4}", "|\\\\d{9}")):
             got = self.mutant(old, new)
             self.assertFalse(got[SHAPES[shape]][0], shape)
+
+    def test_entity_mutant_is_caught(self):
+        got = self.mutant("(_, s) => sentRef(s)", '(_, s) => "&" + s')
+        for t in ("<p>17-10-2026: Chased Sara by&#32;email.</p>", "<p>17-10-2026&#58; Chased Sara by email.</p>"):
+            self.assertFalse(got[t][0], t)
+
+    def test_rest_of_the_field_keeps_its_characters(self):
+        want = "Caf\u00e9 r\u00e9sum\u00e9 \u0928\u092e\u0938\u094d\u0924\u0947 \u0391\u0392\u0393 \u041f\u0440\u0438\u0432\u0435\u0442"
+        t = want + "\n17-10-2026: Chased Sara by email.\nCaf\u00e9 again"
+        self.assertEqual(linktext.sent_strip(t), want + "\nCaf\u00e9 again")
+        self.assertEqual(dict(zip(FIX, run_js()))[t][1], want + "\nCaf\u00e9 again")
+        got = self.mutant("const plain = sentPlain(text), { form, at } = sentMap(plain);", "const plain = sentMap(sentPlain(text)).form, { form, at } = sentMap(plain);")
+        self.assertNotEqual(got[t][1], want + "\nCaf\u00e9 again", "rewriting the field in its normalised form must be seen")
+
+    def test_numeric_references_decode_as_python_does(self):
+        import hashlib
+        import html
+        parts = []
+        for n in range(0x110000):
+            parts.append(html.unescape("&#%d;" % n) + html.unescape("&#x%X;" % n) + (html.unescape("&#%d" % n) if n % 7 == 0 else ""))
+        want = hashlib.sha256("\x01".join(parts).encode("utf-8")).hexdigest()
+        script = """import(%s).then(m=>{const c=require('crypto');const p=[];for(let n=0;n<0x110000;n++){p.push(m.sentUnescape('&#'+n+';')+m.sentUnescape('&#x'+n.toString(16).toUpperCase()+';')+(n%%7===0?m.sentUnescape('&#'+n):''));}
+console.log(c.createHash('sha256').update(Buffer.from(p.join('\\x01'),'utf8')).digest('hex'));})"""
+        r = subprocess.run(["node", "-e", script % json.dumps(JS.as_uri())], capture_output=True, text=True, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr[-400:])
+        self.assertEqual(r.stdout.strip(), want)
+
+    def test_named_references_decode_as_python_does(self):
+        import html
+        import html.entities
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "dev" / "tools"))
+        import gen_linktext_confusables as g
+        named = g.entities()[0]
+        self.assertGreater(len(named), 200)
+        names = sorted(n for n in named if n.endswith(";"))
+        texts = ["&%s" % n for n in names] + ["&%sx" % n[:-1] for n in names if n[:-1] in named]
+        script = """import(%s).then(m=>{console.log(JSON.stringify(JSON.parse(require('fs').readFileSync(0,'utf8')).map(t=>m.sentUnescape(t))));})"""
+        r = subprocess.run(["node", "-e", script % json.dumps(JS.as_uri())], input=json.dumps(texts), capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr[-400:])
+        for t, got in zip(texts, json.loads(r.stdout)):
+            self.assertEqual(got, html.unescape(t), t)
+
+
+class Timing(unittest.TestCase):
+    """Review LOW 4: a long text is read in linear time (a time limit, both sides)."""
+    BIG = ["17-10-2026: chased " * 55000, "17-10-2026: chased\n" * 55000, "x" * 1000000, " " * 1000000, "12 " * 330000,
+           "17-10-2026: Asked " + "a" * 1000000]
+
+    def test_python(self):
+        import time
+        for t in self.BIG:
+            t0 = time.time()
+            linktext.sent_has(t)
+            linktext.sent_strip(t)
+            self.assertLess(time.time() - t0, 6, repr(t[:30]))
+
+    @unittest.skipUnless(shutil.which("node"), "needs Node")
+    def test_js(self):
+        import time
+        t0 = time.time()
+        script = """import(%s).then(m=>{const t=["17-10-2026: chased ".repeat(55000),"17-10-2026: chased\\n".repeat(55000),"x".repeat(1e6)," ".repeat(1e6),"12 ".repeat(330000),"17-10-2026: Asked "+"a".repeat(1e6)];for(const x of t){m.sentHas(x);m.sentStrip(x);}console.log('ok');})"""
+        r = subprocess.run(["node", "-e", script % json.dumps(JS.as_uri())], capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.stdout.strip(), "ok", r.stderr[-300:])
+        self.assertLess(time.time() - t0, 30)
+
+    @unittest.skipUnless(shutil.which("node"), "needs Node")
+    def test_dropping_the_bound_is_caught(self):
+        tmp = JS.parent / "_mutant_368.js"
+        tmp.write_text(JS.read_text().replace("const SENT_SPAN = 400;", "const SENT_SPAN = 1000000000;"))
+        script = """import(%s).then(m=>{m.sentHas("17-10-2026: chased ".repeat(55000));console.log('ok');})"""
+        try:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                subprocess.run(["node", "-e", script % json.dumps(tmp.as_uri())], capture_output=True, text=True, timeout=20)
+        finally:
+            tmp.unlink()
+
+    def test_real_lines_still_match_inside_the_bound(self):
+        self.assertTrue(linktext.sent_has("17-10-2026: Chased " + "N" * 300 + " by email."))
+        self.assertTrue(linktext.sent_has("17-10-2026: Chased Sara\nExample by email."))
 
 
 class Generated(unittest.TestCase):
