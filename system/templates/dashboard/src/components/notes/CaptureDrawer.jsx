@@ -135,11 +135,10 @@ export async function openCapture(o = {}) {
     if (viaServer()) {
       const r = await api("/api/notes/capture/start", { meeting: m });
       if (r.ok) Object.assign(n, { body: r.body || "", with: r.with || [], date: r.date || m.day, title: r.title || m.title,
-        code: r.code && P.some(p => p.code === r.code) ? r.code : "", how: r.code ? "meeting" : "", reason: r.code ? "from the meeting's title" : "" });
+        code: r.code && P.some(p => p.code === r.code) ? r.code : "", how: "meeting", reason: r.code ? "from the meeting's title" : "" });   // #343: a meeting without a project stays unselected: no guess from its title (a confidential one must not file under a guess)
       else capMsg.value = oneLine(r.message || "");
     }
     load(n);
-    if (!n.code) guess();
   } else if (o.body != null) {
     load({ ...blank(), body: o.body });
     guess();
@@ -187,10 +186,11 @@ export async function captureDone(find) {
   } finally { capBusy.value = false; }
 }
 
-/** Carry on with a draft the server kept. @param {Draft} d */
+/** Carry on with a draft the server kept. A meeting's draft (Working session) with no project stays unselected: no guess from
+ *  the title (#343, a confidential meeting must not file under a guess). @param {Draft} d */
 function resume(d) {
   load({ ...blank(), id: d.id, code: d.code === "_portfolio" ? "" : d.code || "", chosen: !!d.code && d.code !== "_portfolio",
-    how: d.code && d.code !== "_portfolio" ? "chosen" : "", reason: "", title: d.title || "", body: d.body || "",
+    how: d.code && d.code !== "_portfolio" ? "chosen" : d.template === "working-session" ? "meeting" : "", reason: "", title: d.title || "", body: d.body || "",
     template: d.template || "blank", date: d.date || "", with: d.with || [], confidential: !!d.confidential, saved: d.at || "", loaded: "" });
   requestAnimationFrame(() => { if (ed) ed.focus("end"); });
 }

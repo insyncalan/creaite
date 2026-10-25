@@ -85,6 +85,17 @@ class WorkWordsKept(unittest.TestCase):
         self.assertIn("#workTbl td.title .wkm{display:contents}", CSS)
 
 
+class PeopleFit(unittest.TestCase):
+    def test_minimum_widths_leave_room_for_the_wider_heading(self):
+        """The "Risks and issues" heading is a word wider than "RAID"; the People column minimums were trimmed (Name 100, Organisation 104,
+        Role 84 at 900 px) so the table fits its box on a wide fallback font. Project stays 90 (about nine letters)."""
+        self.assertIn("[data-col=org]{min-width:104px}", CSS)
+        self.assertIn("[data-col=role]{min-width:84px}", CSS)
+        self.assertIn("[data-col=proj]{min-width:90px}", CSS)
+        self.assertIn("#v-people #peopleTbl td.title{min-width:100px}", CSS)
+        self.assertIn("@media (max-width:1100px){ #v-people #peopleTbl th{letter-spacing:.04em} }", CSS)   # 26 px spare at 900 px on Verdana
+
+
 class AudienceSwitch(unittest.TestCase):
     def test_quieter_than_the_view_switch(self):
         self.assertIn('class="mv-seg aud" role="group" aria-label="Audience"', (DASH / "src" / "milestones.js").read_text(encoding="utf-8"))

@@ -34,7 +34,8 @@ def calendar(v):
          "attendees": [{"name": "Alan Carter"}, {"name": "Jane Doe"}, {"name": "Omar Ali"}]},
         {"start": "11:00", "end": "12:00", "title": "Dentist", "private": True},
         {"start": "14:00", "end": "15:00", "title": "Board pay review", "sensitivity": "confidential",
-         "attendees": [{"name": "Someone Secret"}]}]}}), encoding="utf-8")
+         "attendees": [{"name": "Someone Secret"}]},
+        {"start": "16:00", "end": "16:30", "title": "[ABC] Redundancy talks", "sensitivity": "confidential"}]}}), encoding="utf-8")
 
 
 def load_vault(v):
@@ -399,6 +400,39 @@ class Drawer(LiveBrowserCase):
         b.wait("document.getElementById('capDrawer').hidden", 10)
         text = (self.v.root / ABC / "notes/ABC Steering.md").read_text()
         self.assertIn(f"date: {TODAY}\nwith: [Jane Doe, Omar Ali]", text)
+
+    def test_note_for_unchosen_confidential_meeting_has_no_project(self):
+        """#343 M1: the title's "ABC" is a guess, so the drawer opens with nothing selected (and never guesses while typing)."""
+        b = self.b
+        b.eval("go('today')")
+        b.eval("openCapture({meeting:{day:TODAY,start:'16:00',title:'[ABC] Redundancy talks'}})")
+        b.wait("!document.getElementById('capDrawer').hidden&&document.getElementById('capTitle').value==='[ABC] Redundancy talks'", 10)
+        got = b.eval("[document.getElementById('capProj').value, document.getElementById('capWhy').textContent]")
+        self.assertEqual(got[0], "")
+        self.assertNotIn("guessed", got[1])
+        self.assertEqual(b.errors, [])
+
+    def test_resumed_meeting_draft_without_a_project_never_guesses(self):
+        """#343 (resume gap): a kept Working session draft with no project stays unselected after typing, confidential or not."""
+        b = self.b
+        for i, title in enumerate(("[ABC] Redundancy talks", "Budget catch-up")):
+            d = json.dumps({"id": f"resume-{i}", "code": "", "title": title, "body": "## Purpose\n", "template": "working-session",
+                            "date": TODAY, "with": [], "confidential": False})
+            b.eval(f"api('/api/notes/capture/draft', {d})")
+            b.pump(1)
+            b.eval("go('today')")
+            self.open()
+            row = f"[...document.querySelectorAll('#capDrawer .caprecent .caprow')].find(x=>x.textContent.includes({title!r}))"
+            b.wait(f"!!({row})", 10)
+            b.eval(f"({row}).click()")
+            b.wait(f"document.getElementById('capTitle').value==={title!r}", 10)
+            b.type(" Omar Ali and the data access plan")
+            b.pump(1.5)
+            self.assertEqual(b.eval("document.getElementById('capProj').value"), "")
+            self.assertNotIn("guessed", b.eval("document.getElementById('capWhy').textContent"))
+            b.key("Escape")
+            b.wait("document.getElementById('capDrawer').hidden", 10)
+        self.assertEqual(b.errors, [])
 
     def test_note_in_ask_creaite_and_new_note_in_cmdk(self):
         b = self.b
