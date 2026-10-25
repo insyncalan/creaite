@@ -29,6 +29,7 @@ Layers, in order (each decides a line from the line itself, its block or its reg
      or accepted, a false drop costs the reader a line.
   3. Second layer (drop_labelled_values), the safety net for a secret typed into prose. See that function.
 """
+import bisect
 import re
 import unicodedata
 
@@ -705,6 +706,60 @@ def _original_lines(raw):
     return _cut("\n".join(orig)).split("\n")
 
 
+_USE_BOUNDARIES = True      # test hook
+
+
+def _boundary_kinds(orig):
+    """Per original line: 0 text, 1 blank, 2 divider."""
+    out = []
+    for x in orig:
+        s = _skeleton(x)
+        out.append(1 if not s else (2 if _is_divider(s) else 0))
+    return out
+
+
+def _boundary_mark(boundary, prev, k, res):
+    """The placeholder to put between two matched lines (original indices prev and k): a divider, a blank line, or None."""
+    if prev is None or k <= prev + 1 or not res:
+        return None
+    seen = set(boundary[prev + 1:k])
+    if 2 in seen:
+        return "____"
+    return "" if (1 in seen and res[-1].strip()) else None
+
+
+def _with_boundaries(raw, out_lines):
+    """2.6.9 item 7: the scrub drops dividers and the <p>/<hr>/row boundaries when it turns HTML into text, so a join block and the
+    agenda beside it read as ONE block and the anchor layer dropped both. Each scrub line is matched (in order) to the original line
+    it came from; where the original had a divider between two matched lines a divider placeholder is put between them, where it had
+    a blank line a blank placeholder. Returns (lines, flags): flags[i] is true for a placeholder, which the caller removes again after
+    the anchor layer has judged the blocks. An unmatched line adds nothing around it (the old behaviour)."""
+    flags = [False] * len(out_lines)
+    mod = _scrub_module()
+    orig = _original_lines(raw) if (_USE_BOUNDARIES and mod is not None and out_lines) else []
+    if len(orig) < 2:
+        return list(out_lines), flags
+    where = {}
+    for k, x in enumerate(orig):
+        where.setdefault(_scrub_key(mod, x), []).append(k)
+    boundary = _boundary_kinds(orig)
+    res, fl = [], []
+    prev, j = None, 0
+    for o in out_lines:
+        cand = where.get(_scrub_key(mod, o), ()) if o.strip() else ()
+        pos = bisect.bisect_left(cand, j)
+        if pos < len(cand):
+            k = cand[pos]
+            mark = _boundary_mark(boundary, prev, k, res)
+            if mark is not None:
+                res.append(mark); fl.append(True)
+            prev, j = k, k + 1
+        elif o.strip():
+            prev = None                # an unmatched line: nothing is known about what lay between its neighbours
+        res.append(o); fl.append(False)
+    return res, fl
+
+
 def _without_orphans(raw, kept):
     """2.6.9 HIGH 1 for the raw-first order: the scrub has already removed the join block, so the anchor layer on its output cannot see
     that a block was dropped. Find the short value-only blocks that follow a dropped anchor block in the ORIGINAL lines (the orphan rule),
@@ -731,13 +786,14 @@ def _without_orphans(raw, kept):
 
 
 def _raw_first(text):
-    """Composition D: the scrub on the raw body, the anchor layer, the orphan and sentence
+    """Composition D: the scrub on the raw body, the block boundaries it removed put back for the anchor layer, the orphan and sentence
     rules, the extended label pass (repeated until nothing changes, so the result is stable), then the CAP."""
     scrub = _scrub_module()
     if scrub is None:
         return ""
     raw = text[:BODY_MAX * 5]
-    kept = _tidy_blanks(keep_lines(_cut(scrub.invite_text(raw)).split("\n"), second_layer=False, extras=True))
+    aug, flags = _with_boundaries(raw, _cut(scrub.invite_text(raw)).split("\n"))
+    kept = _tidy_blanks([aug[i] for i in keep_indices(aug, second_layer=False, extras=True) if not flags[i]])
     kept = _tidy_blanks(_without_orphans(raw, kept))
     for _ in range(4):
         before = kept

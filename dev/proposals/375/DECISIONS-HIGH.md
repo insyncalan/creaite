@@ -71,3 +71,11 @@ anchor line loses only the anchor lines and a phone label line (`M:`, `Mobile:`,
 Collateral lines lost in `phones`: 1,885 to 575 (the rest is the contact-list and Dial-in shapes, which are not signatures); the number never survives
 (`phones` leaks 0). Risk accepted: a join block that follows a sign-off line inside the same block loses only its anchor lines, not its other lines (the
 label layer and the orphan rule take values it leaves). `reply_chain` collateral unchanged (1,496: quoted/forwarded blocks are not signatures).
+
+## Item 7 (coordinator extra), HTML Meet agenda lost in D
+
+Cause confirmed: the scrub turns HTML into text without the `<hr>`/`<p>` boundaries, so a join block and the agenda read as one block. Fix in
+`invite_filter.py` (D order): each scrub line is matched back to the original (converted) line it came from, and a divider or blank placeholder is put
+where the original had one between two matched lines; the anchor layer judges blocks with them, then the placeholders are removed. Agenda lines kept on
+Meet, Teams, Zoom, Webex and GoToMeeting, plain and HTML, three positions (30 bodies, 170 agenda and note lines): 153 of 170 before, 170 of 170 after; provider leaks 0 before
+and after. Generators: `templates` isolated loss 762 to 0, `localised` 406 to 105, `html_split` 1,094 to 69, `agenda_isolated` 5,140 to 4,660; leaks unchanged.
