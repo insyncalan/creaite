@@ -4229,7 +4229,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icsubhead .icshs{color:var(--muted)}#v-intake-review .icsubhead .icshr{float:right}
 #v-intake-review .ickind{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:var(--r-pill,999px);background:var(--accent-soft);color:var(--accent);margin-right:2px}
 #v-intake-review .icmeethd{font-size:var(--fs-lg);font-weight:700;color:var(--ink)}#v-intake-review .icttl{font-size:var(--fs-md);font-weight:600}
-#v-intake-review tr.icopen td,#v-intake-review tr.hl td{background:var(--accent-soft)!important;box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
+#v-intake-review tr.icopen td,#v-intake-review tr.hl td,#v-intake-review tr.sel td{background:var(--accent-soft)!important;box-shadow:inset 0 2px 0 var(--accent),inset 0 -2px 0 var(--accent)}
 #v-intake-review tr.mchild td.title{padding-left:20px}
 #v-intake-review .iracts{white-space:nowrap;text-align:right;width:1%}
 #v-intake-review .irlist{margin:4px 0 12px;padding-left:20px}
@@ -36514,7 +36514,7 @@ system/scripts/run launch.py agent ${what}`;
     const ord = shown2.map((c5) => c5[0]);
     return [...shown2, ...rest].map((c5) => {
       const on2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]), l6 = esc(c5[1]);
-      return `<label><input type="checkbox" data-prop id="${prefix}-${c5[0]}" value="${c5[0]}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 && !(pinFirst && i5 === 0) ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 || pinFirst && i5 === 1 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+      return `<label><input type="checkbox" data-prop id="${esc(prefix)}-${esc(c5[0])}" value="${esc(c5[0])}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 && !(pinFirst && i5 === 0) ? `<span class="colmv"><button type="button" data-mv="${esc(c5[0])}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 || pinFirst && i5 === 1 ? "disabled" : ""}>↑</button><button type="button" data-mv="${esc(c5[0])}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
     }).join("");
   }
   var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
@@ -36589,7 +36589,7 @@ system/scripts/run launch.py agent ${what}`;
     return { group, sub, cols, collapsed };
   }
   function pdSort(s5) {
-    return s5 && PD_SORTS[s5.col] && (s5.dir === "asc" || s5.dir === "desc") ? { col: s5.col, dir: s5.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
+    return s5 && typeof s5.col === "string" && Object.prototype.hasOwnProperty.call(PD_SORTS, s5.col) && (s5.dir === "asc" || s5.dir === "desc") ? { col: s5.col, dir: s5.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
   }
   function pdGroupsOf(x5, g5, projectName) {
     if (g5 === "org") return [[x5.org || "", x5.org || "No organisation"]];
@@ -36615,6 +36615,21 @@ system/scripts/run launch.py agent ${what}`;
     }
     const fixed = FIXED[g5];
     return [...by2.values()].sort((a5, b5) => fixed ? fixed.indexOf(a5.key) - fixed.indexOf(b5.key) : (!a5.key ? 1 : 0) - (!b5.key ? 1 : 0) || a5.label.localeCompare(b5.label));
+  }
+  function pdPrune(st2, everyone, projectName) {
+    if (st2.group === "none") return 0;
+    const live = /* @__PURE__ */ new Set();
+    for (const g5 of pdGroup(everyone, st2.group, projectName)) {
+      live.add(pdKey(st2.group, g5.key));
+      if (st2.sub !== "none") for (const g22 of pdGroup(g5.items, st2.sub, projectName)) live.add(pdKey(st2.group, g5.key, st2.sub, g22.key));
+    }
+    let n4 = 0;
+    const mine = st2.group + "|";
+    for (const k5 of Object.keys(st2.collapsed)) if (k5.startsWith(mine) && !live.has(k5)) {
+      delete st2.collapsed[k5];
+      n4++;
+    }
+    return n4;
   }
   var pdKey = (g5, v5, sub, sv) => `${g5}|${v5}${sub ? `|${sub}|${sv}` : ""}`;
   var pdColumns = (st2) => st2.cols.filter((k5) => PD_KEYS.includes(k5));
@@ -36960,7 +36975,9 @@ system/scripts/run launch.py agent ${what}`;
   function PeoplePage(_props) {
     pdSyncSort();
     const s5 = PLST.s, tab = ptabOf(shared.PTAB), st2 = pdState(), cols = pdColumns(st2);
-    const all = registerRows(), F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
+    const all = registerRows();
+    if (pdPrune(st2, all, pName)) pdSave();
+    const F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
     const so2 = sortOf(), f5 = SORTS[so2.col], dir = so2.dir === "asc" ? 1 : -1;
     const L3 = hit2.filter(IN_TAB[tab]).sort((a5, b5) => (a5.me ? -1 : b5.me ? 1 : 0) || (() => {
       const x5 = f5(a5), y5 = f5(b5);
@@ -51822,7 +51839,7 @@ system/scripts/run launch.py agent ${what}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${ftLabel(f5.type)}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${ftLabel(f5.type)}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && FF.type === "All" && !FF.from && !FF.to ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
@@ -51910,6 +51927,10 @@ system/scripts/run launch.py agent ${what}`;
       renderFiles();
     }
     menu.addEventListener("click", (e4) => {
+      if (e4.target.matches && e4.target.matches("input[name=fsView][value=all]") && (shared.FSEL.p !== "All" || shared.FSEL.f !== "All" || shared.FSEL.sub)) {
+        shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
+        renderFiles();
+      }
       if (e4.target.closest("#fmDone")) fmSet(false, true);
       if (e4.target.closest("#fmClear")) {
         Object.assign(FF, { type: "All", from: "", to: "" });
@@ -53161,7 +53182,7 @@ system/scripts/run launch.py agent ${what}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(who(r4.o)) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(who(r4.o)) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open risk or issue item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -53215,7 +53236,7 @@ system/scripts/run launch.py agent ${what}`;
       const h5 = document.querySelector(`#v-cockpit h2 a[data-nav="actions:dueor:${code}"]`), card = h5 && h5.closest(".card");
       if (card && !card.querySelector("[data-allitems]")) {
         const n4 = [...A4, ...R3, ...DEC].filter((x5) => x5.p === code && allBucket(x5.st) === "Open").length;
-        addHTML(card, "beforeend", html` <a href="#" class="seeall" data-allitems="1" data-nav="all:open:${raw(code)}" title="Actions, RAID items and decisions together">All items${n4 ? html` (${raw(n4)} open)` : ""} ›</a>`);
+        addHTML(card, "beforeend", html` <a href="#" class="seeall" data-allitems="1" data-nav="all:open:${raw(code)}" title="Actions, risks and issues, and decisions together">All items${n4 ? html` (${raw(n4)} open)` : ""} ›</a>`);
       }
     }
     rkClamp($("#v-cockpit"));
@@ -55197,7 +55218,7 @@ ${pre}**Current state title:** ${title}`);
     L3.sort((a5, b5) => isNewUndated(a5[1]) - isNewUndated(b5[1]) || pri(a5[1]) - pri(b5[1]) || a5[1].id.localeCompare(b5[1].id));
     return `<div class="card" id="undatedCard"><h2>No due date <span class="sub">· ${L3.length}</span></h2>
     <div class="mini-list">${L3.map(([k5, x5]) => `<div class="undrow${isNewUndated(x5) ? " dim" : ""}" data-open="${k5}:${x5.id}" style="cursor:pointer"><span class="sub undid">${esc(x5.id)}</span>${ico(k5 === "actions" ? "action" : kindOf("raid", x5))}<span class="undt">${esc(x5.t)}${isNewUndated(x5) ? ' <span class="tag">new</span>' : ""}</span><span class="sub">— ${esc(who(x5.o))}${x5.pr ? " · " + esc(x5.pr) : ""}</span><span class="dwrap undset"><input type="text" id="und-${esc(x5.id)}" data-pick="1" data-date="1" data-und="${k5}:${x5.id}" placeholder="Set date" autocomplete="off" aria-label="Set the due date of ${esc(x5.id)}" title="Set the due date of ${esc(x5.id)} here: type DD-MM-YYYY or choose from the calendar"><button type="button" class="dbtn" data-cal="und-${esc(x5.id)}" aria-label="Choose the due date of ${esc(x5.id)}">${CALI}</button></span></div>`).join("")}</div>
-    ${na2 ? seeAll(na2, `${pName(code)} undated action`, "actions:undated:" + code) + " " : ""}${nr2 ? seeAll(nr2, `${pName(code)} undated RAID item`, "raid:undated:" + code) : ""}</div>`;
+    ${na2 ? seeAll(na2, `${pName(code)} undated action`, "actions:undated:" + code) + " " : ""}${nr2 ? seeAll(nr2, `${pName(code)} undated risk or issue item`, "raid:undated:" + code) : ""}</div>`;
   }
   async function undCommit(inp, picked) {
     if (!picked) {
@@ -55499,7 +55520,8 @@ ${pre}**Current state title:** ${title}`);
     })();
     {
       const m5 = prepOf(shared.PREPEV) || {}, code = m5.p, body2 = $("#prepBody");
-      if (body2 && code && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
+      const guessed = !!(m5.invite && m5.invite.confidential) && m5.how !== "remembered" && m5.how !== "chosen";
+      if (body2 && code && !guessed && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
         const bar = `<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer() ? "" : "; needs creaite to be running"})</span></p>`;
         addHTML(body2, "afterbegin", raw(bar));
       }
@@ -57060,8 +57082,8 @@ ${pre}**Current state title:** ${title}`);
     const parts = [
       [ov, countLink(`${plur(ov, "overdue action")} in ${nm3}`, ov, `actions:overdue:${c5}`, null, `Overdue <b class="${ov ? "bad" : ""}">${ov}</b>`)],
       [nd2, jumpLink(`${plur(nd2, "open item")} with no due date in ${nm3}`, nd2, c5, "undated", `No date <b>${nd2}</b>`)],
-      [urg, countLink(`${plur(urg, "urgent open RAID item")} in ${nm3}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)],
-      [p6.slip, jumpLink(`Milestone slip of ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm3}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)],
+      [urg, countLink(`${urg === 1 ? "1 urgent open risk or issue" : urg + " urgent open risks and issues"} in ${nm3}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)],
+      [p6.slip, jumpLink(`Late milestones: ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm3}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)],
       [nw2, `Warnings <b class="${nw2 ? "bad" : ""}">${nw2}</b>`]
     ];
     const shown2 = onlyFlagged ? parts.filter((x5) => x5[0]) : parts;
@@ -59556,7 +59578,7 @@ ${pre}**Current state title:** ${title}`);
       title: "Project page",
       groups: ["Project page"],
       kw: "flow weeks undated grace no due date list cap overdue ageing",
-      render: () => row("Flow looks back (weeks)", nm2("flowWeeks"), "The project page's Flow card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)") + row("A new undated item counts as new for (days)", nm2("undatedGrace"), "The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made") + row("Project page lists show at most", nm2("listCap"), "Actions due or overdue; the rest are a link away")
+      render: () => row("Progress over time looks back (weeks)", nm2("flowWeeks"), "The project page's Progress over time card: opened and closed, overdue and ageing over this many weeks (8 or 12 are usual; 4 to 26 work)") + row("A new undated item counts as new for (days)", nm2("undatedGrace"), "The project page's No due date card shows items raised this recently dimmer, so a fresh item isn't flagged the minute it's made") + row("Project page lists show at most", nm2("listCap"), "Actions due or overdue; the rest are a link away")
     },
     {
       id: "files",
@@ -60518,7 +60540,7 @@ ${pre}**Current state title:** ${title}`);
      <p class="sub" style="margin:2px 0">${p6 && (p6.org || p6.role) ? [p6.org, p6.role].filter(Boolean).join(" · ") : "Organisation and role not recorded"}${p6 && p6.email ? html` · ${mailLink(p6.email)}` : ""}</p>
      ${p6 && p6.aliases.length ? html`<p class="sub" style="margin:2px 0">Also written as ${p6.aliases.join(", ")}</p>` : ""}</div>
      ${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", 'id="ppEdit" aria-haspopup="dialog"', "bd"))}</div>
-   <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x5.oo.length, "open action")} owned by ${name}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) }, `<b>${x5.oo.length}</b> open action${x5.oo.length === 1 ? "" : "s"}`))}</span><span>${raw(countLink(`${plur(x5.or.length, "open RAID item")} owned by ${name}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) }, `<b>${x5.or.length}</b> open risk${x5.or.length === 1 ? "" : "s"} and issue${x5.or.length === 1 ? "" : "s"}`))}</span><span class="${x5.late ? "late" : ""}">${raw(countLink(`${plur(x5.late, "overdue item")} owned by ${name}`, x5.late, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(latesOf(x5)) }, `<b>${x5.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ") || "—")}</span></div>
+   <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x5.oo.length, "open action")} owned by ${name}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) }, `<b>${x5.oo.length}</b> open action${x5.oo.length === 1 ? "" : "s"}`))}</span><span>${raw(countLink(`${x5.or.length === 1 ? "1 open risk or issue" : x5.or.length + " open risks and issues"} owned by ${name}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) }, `<b>${x5.or.length}</b> open risk${x5.or.length === 1 ? "" : "s"} and issue${x5.or.length === 1 ? "" : "s"}`))}</span><span class="${x5.late ? "late" : ""}">${raw(countLink(`${plur(x5.late, "overdue item")} owned by ${name}`, x5.late, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(latesOf(x5)) }, `<b>${x5.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ") || "—")}</span></div>
    <div class="card ppcard"><h2>Open work${items2.length ? html` <span class="sub">· ${items2.length}</span>` : ""}</h2>${items2.length ? raw(personLinks(x5) + personWork(x5, codes)) : html`<p class="sub">Nothing open.</p>`}</div>
    <div class="card ppcard"><h2>Decisions made${recent.length ? html` <span class="sub">· last ${raw(RECENT_DEC_DAYS)} days</span>` : ""}</h2>${recent.length ? raw(personTbl("decisions", recent)) : html`<p class="sub">None in the last ${raw(RECENT_DEC_DAYS)} days.</p>`}</div>
    ${leads.length ? html`<div class="card ppcard"><h2>Workstreams led</h2><div class="mini-list">${leads.map((w6) => html`<div class="li"><div class="t">${raw(pLink(w6[0]))} ${w6[1]}</div></div>`)}</div></div>` : ""}</div>`);
@@ -74039,6 +74061,22 @@ ${d5.text}`);
     const c5 = mcClassify(label);
     return c5 ? String(label) : "A creaite step";
   }
+  var MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|sweep(?: mail)? the last \\d{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\d{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
+  var MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
+  var MC_SWEEP_NOT = "\\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\\b";
+  var MC_SWEEP_FOR = "\\bfor ([a-z][a-z0-9]{2,6})\\b";
+  var MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
+  var SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "i"), NOT_RE = new RegExp(MC_SWEEP_NOT, "i"), FOR_RE = new RegExp(MC_SWEEP_FOR, "ig");
+  var codeOk = (code) => code.toLowerCase() === "the" || code === code.toUpperCase() || /\d/.test(code) || code.length <= 3 && !MC_SWEEP_COMMON.includes(code.toLowerCase());
+  function mcIsAsk(text) {
+    const t47 = String(text || "").trim().split(/\s+/).join(" ");
+    if (MC_PLAIN_ASKS.includes(t47)) return true;
+    if (!t47 || t47.length > 120) return false;
+    const m5 = SWEEP_RE.exec(t47);
+    if (!m5 || m5.groups && m5.groups.subject && NOT_RE.test(m5.groups.subject)) return false;
+    if (m5.groups && m5.groups.subject != null) return true;
+    return [...t47.matchAll(FOR_RE)].every((x5) => codeOk(x5[1]));
+  }
 
   // core/closeDayRows.js
   var CD_LABELS = [
@@ -75978,7 +76016,8 @@ ${d5.text}`);
       } else {
         {
           let g5 = null;
-          (m5.steps || []).forEach((l6) => g5 = stepGroup(g5, l6));
+          const mcr = i5 > 0 && rec.messages[i5 - 1].who === "you" && mcIsAsk(rec.messages[i5 - 1].text);
+          (m5.steps || []).forEach((l6) => g5 = stepGroup(g5, mcr ? mcStepText(l6) : l6));
         }
         if (m5.plain) {
           const b5 = runClosure({ line: m5.text, href: m5.href, link: m5.link });
@@ -78643,7 +78682,7 @@ ${d5.text}`);
           chip || irStateWords(m5, n4),
           d5 ? ` ${d5}` : ""
         ] }),
-        waiting && (irBadName(m5) || !irFileKind(m5)) ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
+        waiting && (irBadName(m5) || !irFileKind(m5) || !irFixed(m5)) ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
       ] });
     }
     return /* @__PURE__ */ u4(S2, { children: [
@@ -79395,6 +79434,7 @@ ${d5.text}`);
         "tr",
         {
           class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
+          "aria-current": sel && sel.id === m5.id ? "true" : void 0,
           "data-irm": m5.id,
           tabindex: 0,
           onClick: (e4) => {
@@ -81855,6 +81895,11 @@ Next: `;
         "LCOLL",
         "MAC",
         "MC_MARKER",
+        "MC_PLAIN_ASKS",
+        "MC_SWEEP_COMMON",
+        "MC_SWEEP_FOR",
+        "MC_SWEEP_NOT",
+        "MC_SWEEP_SRC",
         "MFIRST",
         "MM",
         "MOD",
@@ -82350,6 +82395,7 @@ Next: `;
         "mcEnd",
         "mcFileStamp",
         "mcFound",
+        "mcIsAsk",
         "mcIsRun",
         "mcLine",
         "mcNew",
@@ -82483,6 +82529,7 @@ Next: `;
         "pdGroup",
         "pdKey",
         "pdNormalise",
+        "pdPrune",
         "pdReset",
         "pdSave",
         "pdSort",

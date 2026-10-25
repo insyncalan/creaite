@@ -123,7 +123,7 @@ export function TwoPanes({ model, list }) {
   const hidden = (/** @type {any} */ m) => m.private || m.confidential;      /* title and times only */
   const right = (/** @type {any} */ m) => { const n = liveN(m); return n ? `${n} suggestion${n === 1 ? "" : "s"}` : m.stage === "arrived" && m.state === "ready" ? "ready" : ""; };
   const paneRows = (/** @type {any[]} */ rs) => rs.length ? <div class="tbl"><table><tbody>{irGroups(rs).map(g => <>{irGroup.value !== "none" ? <GroupHead g={g} /> : null}{g.items.map((/** @type {any} */ m) => (
-    <tr key={m.id} class={`click${sel && sel.id === m.id ? " sel" : ""}`} data-irm={m.id} tabindex={0} onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("input")) irSel.value = m.id; }}
+    <tr key={m.id} class={`click${sel && sel.id === m.id ? " sel" : ""}`} aria-current={sel && sel.id === m.id ? "true" : undefined} data-irm={m.id} tabindex={0} onClick={e => { if (!(/** @type {Element} */ (e.target)).closest("input")) irSel.value = m.id; }}
       onContextMenu={e => irRowMenu(e, m)} onKeyDown={e => irRowKey(e, m)}>
       <td class="title"><IrTick m={m} /> {m.title}<div class="why">{IR_STAGE_NAMES[/** @type {keyof IR_STAGE_NAMES} */ (m.stage)]} · {irWhen(m)}</div></td>
       <td class="icsub irright">{right(m)}</td>

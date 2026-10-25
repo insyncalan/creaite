@@ -351,8 +351,8 @@ export function evidence(p,onlyFlagged=false){ const nw=WARNS().filter(w=>w.p===
   /* #341 item 4: the Projects page shows only the figures above zero, and a quiet "Nothing flagged" when every one is zero */
   const parts=[[ov,countLink(`${plur(ov,"overdue action")} in ${nm}`,ov,`actions:overdue:${c}`,null,`Overdue <b class="${ov?"bad":""}">${ov}</b>`)],
     [nd,jumpLink(`${plur(nd,"open item")} with no due date in ${nm}`,nd,c,"undated",`No date <b>${nd}</b>`)],
-    [urg,countLink(`${plur(urg,"urgent open RAID item")} in ${nm}`,urg,`raid:urgentonly:${c}`,null,`Urgent risks <b class="${urg?"bad":""}">${urg}</b>`)],
-    [p.slip,jumpLink(`Milestone slip of ${p.slip} day${p.slip===1?"":"s"} in ${nm}`,p.slip,c,"ms",`Slip <b class="${p.slip?"bad":""}">${p.slip?p.slip+" days":"none"}</b>`)],
+    [urg,countLink(`${urg===1?"1 urgent open risk or issue":urg+" urgent open risks and issues"} in ${nm}`,urg,`raid:urgentonly:${c}`,null,`Urgent risks <b class="${urg?"bad":""}">${urg}</b>`)],
+    [p.slip,jumpLink(`Late milestones: ${p.slip} day${p.slip===1?"":"s"} in ${nm}`,p.slip,c,"ms",`Slip <b class="${p.slip?"bad":""}">${p.slip?p.slip+" days":"none"}</b>`)],
     [nw,`Warnings <b class="${nw?"bad":""}">${nw}</b>`]];
   const shown=onlyFlagged?parts.filter(x=>x[0]):parts;
   if(onlyFlagged&&!shown.length) return `<span class="ev sub">Nothing flagged</span>`;

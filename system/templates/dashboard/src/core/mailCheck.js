@@ -132,3 +132,27 @@ export function mcStepText(label) {
   const c = mcClassify(label);
   return c ? String(label) : "A creaite step";
 }
+
+/* The server's own words for a plain mail check (live_server.PANEL_SWEEP_WORDS, PANEL_SWEEP_FOR, PANEL_SWEEP_COMMON, PANEL_SWEEP_NOT and
+   panel_sweep): a hand copy, the Python pattern with (?P< written (?< . dev/tests/test_mail_check.py reads live_server.py as text and
+   fails if any of them differs. Used only to draw a saved chat, where the run record is gone. */
+export const MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|sweep(?: mail)? the last \\d{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\d{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
+export const MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
+export const MC_SWEEP_NOT = "\\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\\b";
+export const MC_SWEEP_FOR = "\\bfor ([a-z][a-z0-9]{2,6})\\b";
+/** The asks creaite itself writes for a run it starts (live_server.PLAIN_ASK "sweep" and "calendar"). */
+export const MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
+const SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "i"), NOT_RE = new RegExp(MC_SWEEP_NOT, "i"), FOR_RE = new RegExp(MC_SWEEP_FOR, "ig");
+const codeOk = code => code.toLowerCase() === "the" || code === code.toUpperCase() || /\d/.test(code) || (code.length <= 3 && !MC_SWEEP_COMMON.includes(code.toLowerCase()));
+
+/** Whether a saved chat's message was a mail check: what the server's panel_sweep accepts ("sweep and apply" is not one), or the ask
+    creaite wrote for the catch-up or a calendar refresh. Only used to draw a saved chat's steps list. @param {unknown} text */
+export function mcIsAsk(text) {
+  const t = String(text || "").trim().split(/\s+/).join(" ");
+  if (MC_PLAIN_ASKS.includes(t)) return true;
+  if (!t || t.length > 120) return false;
+  const m = SWEEP_RE.exec(t);
+  if (!m || (m.groups && m.groups.subject && NOT_RE.test(m.groups.subject))) return false;
+  if (m.groups && m.groups.subject != null) return true;
+  return [...t.matchAll(FOR_RE)].every(x => codeOk(x[1]));
+}

@@ -719,12 +719,12 @@ class FilesFilters(LiveBrowserCase):
         self.open_files()
         b.click('#tree button[data-p="inbox"]')                        # #192: Intake is a folder in the tree, once
         self.assertEqual(self.shown(), self.want(p="inbox"))
-        b.click('#fquick [data-q="all"]')
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=all]').click(); })()")
         self.assertEqual(self.shown(), self.want())
-        b.click('#fquick [data-q="week"]')
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=week]').click(); })()")
         monday = (W.TODAY - W.timedelta(days=W.TODAY.weekday())).isoformat()
         self.assertEqual(self.shown(), sorted(x["path"] for x in self.files if x["f"] in ("minutes", "transcripts") and x["date"] >= monday))
-        b.click('#fquick [data-q="latest"]')
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=latest]').click(); })()")
         latest = []
         for code in ("ABC", "DEF"):                                   # BL-87: the newest in each report folder, not by file name
             for folder in ("Weekly", "Adhoc", "Steerco"):
@@ -750,7 +750,7 @@ class FilesFilters(LiveBrowserCase):
         self.assertEqual(self.shown(), self.want(frm=lo, to=hi))
         b.click('#tree button[data-p="ABC"][data-f="All"]')
         self.assertEqual(self.shown(), self.want(p="ABC", frm=lo, to=hi))
-        b.click('#fquick [data-q="all"]')              # a pill replaces the folder; the filter stays
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=all]').click(); })()")              # a pill replaces the folder; the filter stays
         self.assertEqual(self.shown(), self.want(frm=lo, to=hi))
 
     def test_the_from_and_to_calendars_set_the_range(self):

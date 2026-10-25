@@ -135,11 +135,11 @@ export function FileKind({ m }) {
     project, its state, and what kind it is while it waits. @param {{m: any, n: number, compact?: boolean}} props */
 export function FileFacts({ m, n, compact }) {
   const waiting = m.stage === "arrived" && m.state === "ready" && !irBusy.value.includes(m.id);
-  if (compact) {   /* #341 item 8: in the List a file is one line of facts; what the kind means is in the Two panes' detail, and shows here only when the file needs a choice */
+  if (compact) {   /* #341 item 8: in the List a file is one line of facts; what the kind means is in the Two panes' detail, and shows here only when the file needs or allows a choice (not sure, a bad name, or a kind that can be switched) */
     const chip = IrStateChip({ m, n }), d = chip ? stateDetail(m, n) : "";
     return <>
       <div class={`why${chip ? " irstate" : ""}`}>{irAdded(m)} · Likely project: {m.p ? pName(m.p) : "Not sure"} · {chip || irStateWords(m, n)}{d ? ` ${d}` : ""}</div>
-      {waiting && (irBadName(m) || !irFileKind(m)) ? <FileKind m={m} /> : null}
+      {waiting && (irBadName(m) || !irFileKind(m) || !irFixed(m)) ? <FileKind m={m} /> : null}
     </>;
   }
   return <>
