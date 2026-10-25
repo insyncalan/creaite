@@ -30,7 +30,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 ### Intake and the project for a meeting
 - **How sure creaite is.** Each meeting row carries a chip: Matched, Likely or Not sure, with the reason in a few words (for example "Project code in the title" or "Same series as before"). You see it in List, Board and Two panes. (#328)
 - **Not sure rows offer the likely projects.** Up to three project buttons sit on the row. Choosing one saves the choice for that series, so the next meeting in it is Matched. (#328)
-- **Remember a sender's domain.** After you choose a project, creaite asks once: "Remember <domain> for <project>?". Yes saves it, so later meetings from that domain are matched. (#328)
+- **Remember a sender's domain.** After you choose a project for a meeting, creaite may ask once: "Remember <domain> for <project>?". Remember adds the domain to that project once you save, so later meetings from that domain are matched. No changes nothing in your register; creaite just won't ask about that domain and project again in this browser. (#328)
 - **Process all ready is careful.** It processes only meetings that are Matched or remembered. It lists the Likely and Not sure ones it skipped, so you pick a project for each first. Confidential meetings are counted, never named. (#328)
 - **A single Process is unchanged.** Pressing Process on one row, even a Likely one, still processes that meeting. (#328)
 
