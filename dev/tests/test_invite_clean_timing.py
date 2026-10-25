@@ -25,9 +25,26 @@ sys.path.insert(0, str(SCRIPTS))
 import invite_clean as I  # noqa: E402
 from test_invite_clean_sweep import FORMS  # noqa: E402
 
-LIMIT = 0.2                 # seconds per call; the real figure is a few milliseconds, the margin is for a loaded CI machine
-ALARM = 5.0
-RUNS = [".", ". ", ".:", ":.", "…", " . ", "!", "?", ",", ";", "..", ". . "]
+
+
+def calibrate():
+    """How much slower than the reference machine this one is (1.0 or more): the best of 7 runs of a fixed plain-text job, against the
+    5 ms it takes on the reference machine. Every time bound below is multiplied by it, so a slow or busy box (an aarch64 CI runner) does
+    not fail a test that a fast one passes, while a catastrophic regression (seconds, not milliseconds) still does."""
+    text = "Budget review with the team and the plan for next week\n" * 40
+    best = 1e9
+    for _ in range(7):
+        t0 = time.perf_counter()
+        I.invite_text(text)
+        I.scrub(text[:140], 140)
+        best = min(best, time.perf_counter() - t0)
+    return max(1.0, best / 0.005)
+
+
+SCALE = calibrate()
+LIMIT = 0.2 * SCALE         # seconds per call; the real figure is a few milliseconds, the margin is for a slower or loaded machine
+ALARM = 5.0 * SCALE
+RUNS = [".", ". ", ".:", ":.", "…", " . ", "!", "?", ",", ";", "..", ". . ", "_", "*", "~", "`", "_*", "__ ", "_a", "*_~`", "_:"]
 
 
 def timed(fn, *args):
@@ -136,7 +153,8 @@ class Timing(unittest.TestCase):
 
     def test_seeded_fuzz(self):
         rnd = random.Random(232)
-        alphabet = [".", ":", " ", "!", "?", ";", ",", "…", "-", "Password", "PIN", "Passcode", "Key", "Meeting ID", "reset", "\n", "<td>", "x"]
+        alphabet = [".", ":", " ", "!", "?", ";", ",", "…", "-", "Password", "PIN", "Passcode", "Key", "Meeting ID", "reset", "\n", "<td>", "x",
+                    "Code", "of ", "review ", "rollout ", "Token ", "API key ", "_", "*", "~", "`", "__Passcode:__ ", "/" * 1500, "\u0903"]
         slow = []
         for _ in range(1500):
             atoms = [rnd.choice(alphabet) * (rnd.randint(1, 30) if rnd.random() < 0.2 else 1) for _ in range(rnd.randint(20, 120))]   # a repeated atom

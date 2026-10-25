@@ -1239,8 +1239,9 @@ def invite_details(ev, confidential=False):
     addr = address_of(ev.get("organiser_email"))
     if addr:
         out["organiser_email"] = addr
-    if ev.get("recurrence"):
-        out["recurrence"] = str(ev["recurrence"])[:40]
+    rec = invite_clean.scrub(ev.get("recurrence"), 40) if ev.get("recurrence") else ""        # free text: scrubbed like the title
+    if rec:
+        out["recurrence"] = rec
     if confidential:
         return out
     body = invite_text(ev.get("body"))

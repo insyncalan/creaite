@@ -27,9 +27,8 @@ SCRIPTS = HERE.parents[1] / "system" / "scripts"
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(SCRIPTS))
 import invite_clean as I  # noqa: E402
-from test_invite_clean_timing import ALARM, timed  # noqa: E402,F401
+from test_invite_clean_timing import ALARM, LIMIT, timed  # noqa: E402,F401
 
-LIMIT = 0.2
 # (text, value) as a title; every one must come back without the value
 REVIEWER_TITLES = [("Pásscode: 1234", "1234"), ("Piń: 1234", "1234"), ("Passcodé: hunter", "hunter"),
                    ("Passwörd hunter", "hunter"), ("Pàssword hunter", "hunter"), ("Sécret hunter", "hunter"),

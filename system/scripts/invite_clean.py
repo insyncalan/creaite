@@ -281,7 +281,10 @@ def scrub(text, limit):
     t = normal(str(text if text is not None else "")[:LINE_MAX])
     t = URL.sub(lambda m: "" if _bad_url(skeleton(m.group())) else m.group(), t)
     t = re.sub(r"\s+", " ", t).strip()
-    return "" if is_secret(t) else t[:limit]
+    if is_secret(t):
+        return ""
+    cut = t[:limit].rstrip()                   # a field cut at the limit never ends on a space, and the cut must not make a secret
+    return "" if cut != t and is_secret(cut) else cut          # ("Token refresh" cut to "Token r"): a second scrub is the same
 
 
 _HREF = re.compile(r"""\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))""", re.I)
@@ -450,8 +453,8 @@ class _Reader:
             return
         value = self.digit_wait and bool(re.search(r"\d", ln))     # "Meeting ID." then "987 654 321": the number is the value
         reach = self.window > 0 or value                           # a window or a value rule reaches this line
-        if self.anchor is not None and reach and not dropped:
-            self.kept[self.anchor] = None      # an ordinary line was removed after this label line: the label goes too (idempotence)
+        if self.anchor is not None and reach:
+            self.kept[self.anchor] = None      # a line was removed after this label line: the label goes too (idempotence)
             self.anchor = None
         consumed = self.pending > 0 or reach or dropped
         self._advance(ln, dropped, _label_line(ln, dropped), consumed, reach)

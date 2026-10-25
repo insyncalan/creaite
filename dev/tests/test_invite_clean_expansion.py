@@ -27,8 +27,8 @@ sys.path.insert(0, str(SCRIPTS))
 import invite_clean as I  # noqa: E402
 import test_invite_clean_timing as T  # noqa: E402
 
-LIMIT = 0.2          # a 2000-character line
-BIG = 1.5            # 40,000 characters of a body (RAW_MAX is 60,000): the plain-ASCII equivalent already costs about 0.3 s
+LIMIT = T.LIMIT      # a 2000-character line (0.2 s on the reference machine, scaled by T.SCALE)
+BIG = 1.5 * T.SCALE  # 40,000 characters of a body: the plain-ASCII equivalent already costs about 0.3 s
 CHARS = ["ﷺ", "⑴", "㎯", "ﬃ", "㎒", "שּׁ"]
 
 
@@ -99,7 +99,7 @@ class SavedBody(unittest.TestCase):
     def test_hostile_rows_are_bounded(self):
         for ch in ("\u2474", "\ufb03", "a "):
             took, out = T.timed(I.clean_calendar, self.rows(5, ch * 60000))
-            self.assertLess(took, 3.0, repr(ch))
+            self.assertLess(took, 3.0 * T.SCALE, repr(ch))
             self.assertLessEqual(len(out["days"]["2026-10-26"][0].get("body", "")), I.BODY_MAX)
 
     def test_without_the_cut_it_is_slower(self):
