@@ -110,7 +110,55 @@ def label_sep_survivors(mod):
     return n, bad
 
 
+CORES = ["Passcode", "PIN", "Password", "Meeting ID", "Pass code", "Host key", "Access code", "Webinar ID", "Pw", "Pswd", "Token", "Secret",
+         "OTP", "Code", "API key", "Key", "Access", "Pwd", "Join code", "Zoom ID"]
+WRAPPERS = ["_", "*", "~", "`"]
+NEEDS_SEPARATOR = {"Key", "Access"}          # "Key hunter" alone is an ordinary phrase: documented limit; with a separator they are labels
+
+
+def decorated_survivors(mod):
+    """Labels wrapped in runs of 0 to 3 of each wrapper (_ * ~ `) on both sides, with a separator or not, a value on the same line or the next."""
+    n, bad = 0, []
+    for core, w, pre, suf in itertools.product(CORES, WRAPPERS, range(4), range(4)):
+        if pre == 0 and suf == 0 and w != "_":
+            continue
+        label = w * pre + core + w * suf
+        for tail in (":", " -", "") if core not in NEEDS_SEPARATOR else (":", " -"):
+            for v in ("hunter", "4417"):
+                if tail == "" and v == "hunter" and core in ("Meeting ID", "Webinar ID", "Zoom ID", "PIN"):
+                    continue                     # "Meeting ID hunter": an ID word is not a value without a digit or a separator (documented)
+                cases = [("scrub", mod.scrub(label + tail + " " + v, 140)),
+                         ("line", mod.invite_text("Agenda: budget\n" + label + tail + " " + v + "\nEnd")),
+                         ("td", mod.invite_text("<td>" + label + tail + "</td><td>" + v + "</td>"))]
+                if tail:
+                    cases += [("next", mod.invite_text("Agenda: budget\n" + label + tail + "\n" + v + "\nEnd")),
+                              ("li", mod.invite_text("<ul><li>" + label + tail + "</li><li>" + v + "</li></ul>"))]
+                for kind, out in cases:
+                    n += 1
+                    if v in out:
+                        bad.append((kind, label + tail, v))
+    return n, bad
+
+
 class Sweep(unittest.TestCase):
+    def test_decorated_labels(self):
+        n, bad = decorated_survivors(I)
+        self.assertGreater(n, 15000)
+        self.assertEqual(bad[:8], [], f"{len(bad)} of {n} combinations leak")
+
+    def test_the_decoration_sweep_sees_a_missing_normalisation(self):
+        """Mutant: the underscore / wrapper reading removed: the sweep finds leaks."""
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = '[_DECORATION.sub(" ", s)] if _DECORATION.search(s) else []'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_nodeco", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, "[]", 1), "invite_clean_nodeco", "exec"), mod.__dict__)
+        _n, bad = decorated_survivors(mod)
+        self.assertTrue(bad)
+
+
     def test_every_label_with_every_separator(self):
         n, bad = label_sep_survivors(I)
         self.assertGreater(n, 5000)
@@ -137,12 +185,12 @@ class Sweep(unittest.TestCase):
     def test_the_sweep_sees_a_leak(self):
         """Mutant: labels in a row no longer add up (a stand-alone label is one value long again): the sweep finds leaks."""
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
-        old = "            pending += 1                       # \"Meeting ID:\" then \"Passcode:\": a label never uses up another's value"
+        old = "        return pending + _label_count(ln)"
         self.assertIn(old, src)
         spec = importlib.util.spec_from_loader("invite_clean_sweep_mutant", loader=None)
         mod = importlib.util.module_from_spec(spec)
         mod.__file__ = str(SCRIPTS / "invite_clean.py")
-        exec(compile(src.replace(old, "            pending = 1", 1), "invite_clean_sweep_mutant", "exec"), mod.__dict__)
+        exec(compile(src.replace(old, "        return 1", 1), "invite_clean_sweep_mutant", "exec"), mod.__dict__)
         _n, bad = survivors(mod)
         self.assertTrue(bad)
 

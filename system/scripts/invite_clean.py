@@ -60,7 +60,7 @@ _SE_RUN = re.compile(r"[.,;!?](?:\s*[.,;!?])+")                                 
 # a label followed by a value: a separator, "is", a word with a digit, or (v2.6 review) a word that switches from a small
 # letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
 _VAL = rf"(?:\s*(?:{SEPRUN}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
-_EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
+_EVERYWHERE = (r"pass[\s-]*codes?|pass[\s-]*phrases?|pass[\s-]*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
                r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
                r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
                r"codice\s+(?:di\s+(?:accesso|partecipazione)|riunione)|password\s+(?:della\s+)?riunione|"
@@ -70,7 +70,8 @@ _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*co
                r"dial[- ]?in|audio|phone|call[- ]?in|room|webinar|panell?ist|leader)[\s-]*(?:code|pin)s?")
 _WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
                r"clave\s+de\s+acceso|pw|pswd|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
-               r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
+               r"(?:meeting|webinar|event|session|conference|call|phone\s+conference|zoom|room|mtg|teams|webex)[\s-]*(?:id|number|no\.?)|"
+               r"(?:meeting|zoom|room|mtg)\s*#|join(?:ing)?\s+(?:with\s+)?id")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
 # v2.6.8 (k26-b-bare, Full review x2): after these labels the next word IS the value even with no digit and no capital ("Password
 # swordfish", "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta", "Token abcd"). Fail closed, and as a whole phrase: every
@@ -134,7 +135,8 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
-                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"       # "Meeting ID. 123 456"
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"   # "Code! 4417"
+                   rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])id\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 _ALONE_ITEM = rf"(?:\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"                                  # a separator, "is" or "are"
 _ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
@@ -185,13 +187,24 @@ def _ellipsis(m):
     return m.group() if set(m.group().replace(" ", "").replace("\t", "").replace("\n", "")) == {","} else "\u2026"
 
 
+_DECORATION = re.compile(r"[_*~`]+")                                          # markdown emphasis and underscores: read as a space
+
+
 def _views(text):
-    """The skeleton, and the same with look-alike letters (a Cyrillic "а" for an "a") read as the Latin ones."""
+    """What every test matches on: the skeleton and the same with look-alike letters (a Cyrillic "a") read as the Latin ones, and both
+    again with every underscore and markdown wrapper (_ * ~ `) read as a space (2.6.8, #369: `_` is a word character, so "__Passcode:__",
+    "_PIN_" and "Meeting_ID" hid their label). Those views come first, so the last view is still the translated original (sensitivity()
+    reads it)."""
     s = skeleton(str(text if text is not None else "")[:LINE_MAX + 200])       # every test runs on a bounded text (timing)
     s = _SPACED.sub("PIN", s)
     s = _SE_RUN.sub(_ellipsis, s)
-    t = s.translate(confusables.TABLE)
-    return [s, t] if t != s else [s]
+    out = []
+    for base in ([_DECORATION.sub(" ", s)] if _DECORATION.search(s) else []) + [s]:
+        out.append(base)
+        t = base.translate(confusables.TABLE)
+        if t != base:
+            out.append(t)
+    return out
 
 
 def _secret_in(s):
@@ -319,6 +332,27 @@ def _label_line(ln, dropped):
     return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_BARE_END.search(v) for v in views))
 
 
+_LABEL_TOKEN = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?<![\w-])id(?![\w-])|(?:{_OTHER_ALPHABETS})", re.I)
+_KEY_STOP = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])\s*[.,;!?\u2026]+\s*$", re.I)
+
+
+def _label_count(ln):
+    """How many labels a line that stands alone holds ("Meeting ID: Passcode:" is two, "ID/Passcode:" two): at least one."""
+    return max(1, max(len(_LABEL_TOKEN.findall(v)) for v in _views_of(ln)))
+
+
+def _ends_on_key_and_stop(ln):
+    """Whether a line ends on a join-key label and a sentence end ("Meeting ID."): a number on the next line is its value."""
+    return any(_KEY_STOP.search(v) for v in _views_of(ln))
+
+
+def _pending_after(ln, dropped, pending):
+    """The labels standing alone whose value is still to come, after this line."""
+    if dropped and _alone(ln):
+        return pending + _label_count(ln)      # "Meeting ID: Passcode:" holds two labels: two values follow
+    return pending - 1 if pending and not dropped else pending      # a removed line (a link, a line with its own value) is no label's value
+
+
 def invite_text(body):
     """An invite body as plain text: HTML removed (also a bare table cell or list item), every line with a join link or a key to the
     meeting dropped; the next line with text (any number of blank lines on) after a label that stands alone
@@ -326,19 +360,18 @@ def invite_text(body):
     bare label phrase ("Password reset", "Password reset for", "Password reset -", also one that was itself removed) the next WINDOW
     lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, window, pending = [], 0, 0                   # pending: labels that stand alone whose value has not been seen yet
+    kept, window, pending, digit_wait = [], 0, 0, False      # pending: labels standing alone whose value is not seen yet
     for ln, tail in _lines(t):
         if not ln:
             kept.append(ln)                    # a blank line is transparent: any number, for a label alone as for a window
             continue
         dropped = _drop_line(ln) or bool(tail and _drop_line(tail + " " + ln))
         label = _label_line(ln, dropped)
-        consumed = pending > 0 or window > 0 or dropped
+        value = digit_wait and bool(re.search(r"\d", ln))       # "Meeting ID." then "987 654 321": the number is the value
+        consumed = pending > 0 or window > 0 or dropped or value
         window = WINDOW if label else (max(window - 1, 0) if consumed else 0)
-        if dropped and _alone(ln):
-            pending += 1                       # "Meeting ID:" then "Passcode:": a label never uses up another's value
-        elif pending:
-            pending -= 1
+        pending = _pending_after(ln, dropped, pending)
+        digit_wait = _ends_on_key_and_stop(ln)
         if not consumed:
             kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]

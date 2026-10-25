@@ -93,12 +93,13 @@ class Timing(unittest.TestCase):
     def test_long_runs_after_every_label(self):
         slow, n = [], 0
         for form, run in itertools.product(FORMS, RUNS):
-            text = form + " " + (run * (2000 // len(run) + 1))[:2000]
-            for name, fn, args in paths_of(I, text, run):
-                took, _out = timed(fn, *args)
-                n += 1
-                if took > LIMIT:
-                    slow.append((round(took, 3), name, form, run))
+            long_run = (run * (2000 // len(run) + 1))[:2000]
+            for text in (form + " " + long_run, long_run + form + " 4417", long_run + form + long_run):      # after, before, both sides
+                for name, fn, args in paths_of(I, text, run):
+                    took, _out = timed(fn, *args)
+                    n += 1
+                    if took > LIMIT:
+                        slow.append((round(took, 3), name, form, run))
         self.assertGreater(n, 3000)
         self.assertEqual(slow[:6], [], f"{len(slow)} of {n} calls took more than {LIMIT} s")
 
@@ -120,7 +121,7 @@ class Timing(unittest.TestCase):
     def test_repeat_one_token_fuzz(self):
         """Any one token repeated up to 80 times, after a label or alone (seed 232)."""
         rnd = random.Random(232)
-        tokens = [*ALL_WORDS, *LABELS, ".", ":", "-", "\u2013", "|", "/", "(", "!", "?", ",", ";", "\u2026", "\n", "<td>", "</td>", "<li>", " ", "is"]
+        tokens = [*ALL_WORDS, *LABELS, "_", "__", "*", "~", "`", "_*_", ".", ":", "-", "\u2013", "|", "/", "(", "!", "?", ",", ";", "\u2026", "\n", "<td>", "</td>", "<li>", " ", "is"]
         slow = []
         for _ in range(2500):
             tok, n = rnd.choice(tokens), rnd.randint(2, 80)
