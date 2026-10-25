@@ -142,7 +142,7 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"   # "Code! 4417"
                    rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])ids?\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
-                   rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d"      # "ID 4417", "ID - 4417"
+                   rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d\S*\d\S*\d"   # "ID 4417": 3 digits
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 # a footnote mark "(1)", a separator run, "_", "is" or "are"
 _ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
@@ -192,6 +192,7 @@ def normal(text, marks=False):
                    or unicodedata.category(c) not in ("Cf", "Cc", "Co"))
 
 
+_JOINING_DASH = re.compile(r"(?<=\w)(\W)(?=\w)")                          # one non-word character between two word characters
 _KEEP_MARKS = ("\u3099", "\u309a")
 _INVISIBLE = frozenset("\u3164\u115f\u1160\uffa0\u2800\u17b4\u17b5")                  # fillers that draw nothing
 
@@ -201,9 +202,9 @@ def skeleton(text):
     "Piń", "Passwörd"; NFKC would COMPOSE e + U+0301 first, leaving nothing to strip), recomposed (Hangul, kana), Arabic tatweel removed,
     escapes and URL encoding decoded. Only a copy used for matching: the text that is kept is never changed by this."""
     d = unicodedata.normalize("NFKD", _bounded(normal(text)))
-    kept = ("-" if unicodedata.category(c) == "Pd" else c for c in d
-            if (unicodedata.category(c) not in ("Mn", "Me", "Mc") or c in _KEEP_MARKS) and c != "ـ" and c not in _INVISIBLE)
+    kept = (c for c in d if (unicodedata.category(c) not in ("Mn", "Me", "Mc") or c in _KEEP_MARKS) and c != "ـ" and c not in _INVISIBLE)
     t = unicodedata.normalize("NFC", "".join(kept))
+    t = _JOINING_DASH.sub(lambda m: "-" if unicodedata.category(m.group(1)) == "Pd" else m.group(1), t)       # "Meeting\u2011ID": a hyphen
     for _ in range(3):
         u = unquote(htmllib.unescape(t))
         if u == t:
