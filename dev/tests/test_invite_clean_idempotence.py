@@ -264,14 +264,14 @@ class Mutants(unittest.TestCase):
         self.assertNotEqual(m.invite_text(m.invite_text(body)), m.invite_text(body))
 
     def test_without_the_hard_window_tombstone_pass_two_removes_more(self):
-        body = "Agenda\nPassword reset for\nsome text here today\nmore text here today\nthird text here today\nfourth text here today"
+        body = "Agenda\nPassword reset for\nalpha\nbravo\ncharlie\ndelta\necho"      # bare22: a hard window removes only 1-2 token or value lines
         once = I.invite_text(body)
         self.assertEqual(I.invite_text(once), once)
         m = self.mutated("                self.kept[at] = None", "                pass")
         self.assertNotEqual(m.invite_text(m.invite_text(body)), m.invite_text(body))
 
     def test_digit_wait_dropped_by_a_removed_line_leaks_and_is_not_a_fixed_point(self):
-        m = self.mutated("self.digit_wait = _ends_on_key_and_stop(ln) or bool(consumed and self.digit_wait and not value)", "self.digit_wait = _ends_on_key_and_stop(ln)")
+        m = self.mutated("self.digit_wait = self._wait_after(ln, kind, consumed, value)", "self.digit_wait = _ends_on_key_and_stop(ln)")
         body = "Meeting ID.\nPasscode: abc\n1234"
         once = m.invite_text(body)
         self.assertIn("1234", once)                                       # the value stays after pass 1...
