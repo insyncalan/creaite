@@ -6,6 +6,8 @@
 
 **The lines after a label.** In an invite's text, a line that ends on one of those labels or phrases ("Password reset", "Password reset for", "Password reset –", or a label alone) makes the next three lines with text go too, whatever they say; blank lines in between do not count. So "Password reset" followed by "Team standup at 10", "Agenda: budget", "Review and update" or a short list loses its next three lines; the fourth stays. A removed label line does the same, and a label line inside those three starts the count again. Table cells and list items without a surrounding table or page are read as lines in the same way.
 
+**Plainly, what the lines rule costs.** If an invite has the line "Password reset" (or "Code review", "PIN entry" and so on) followed by "Team standup at 10" and the lines after it, those three lines are lost; the fourth line stays, by design. A label on a line of its own ("Passcode:") removes the next line with text however many blank lines come between. Older label gaps that the cleaning never handled stay as they were.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");

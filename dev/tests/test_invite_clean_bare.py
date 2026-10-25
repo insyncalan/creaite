@@ -178,6 +178,13 @@ NEXT_LINE = [
     ("w-open-then-plain", "Password reset for\nplan\nsync\nhunter", "hunter"),
     ("w-sep-then-plain", "Password reset \u2013\nplan\nsync\nhunter", "hunter"),
     ("w-restart", "Password reset\nplan\nPIN entry\nsync\nplan\nhunter", "hunter"),        # a label line inside the window starts it again
+    ("a-blanks-3", "Passcode:\n\n\n\nhunter", "hunter"),                                   # round 5: a label alone, any number of blank lines
+    ("a-blanks-5", "Passcode:\n" + "\n" * 5 + "hunter", "hunter"),
+    ("a-blanks-20", "Passcode:\n" + "\n" * 20 + "hunter", "hunter"),
+    ("a-nbsp-lines", "Passcode:\n\u00a0\n\u00a0\n\u00a0\nhunter", "hunter"),
+    ("a-zero-width-lines", "Passcode:\n\u200b\n\u200b\n\u200b\n\u200b\nhunter", "hunter"),
+    ("a-br-br-br", "Passcode:<br><br><br><br>hunter", "hunter"),
+    ("a-pin-alone", "PIN\n\n\n\nswordfish", "swordfish"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
@@ -402,6 +409,21 @@ class Saved(unittest.TestCase):
         self.assertIn("rescrub_calendar", (SCRIPTS / "session.py").read_text(encoding="utf-8"))
 
 
+def mutant_with_cap():
+    """invite_text as it was before round 5: a label alone keeps its value only up to two blank lines on."""
+    src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+    import re
+    old = re.search(r"            kept\.append\(ln\)  +# a blank line is transparent[^\n]*", src).group(0)
+    src = src.replace("    kept, window, alone = [], 0, False\n", "    kept, window, alone, blanks = [], 0, False, 0\n", 1)
+    src = src.replace(old, "            blanks += 1\n            alone = alone and blanks <= 2\n            kept.append(ln)", 1)
+    src = src.replace("        alone = dropped and _alone(ln) and not alone\n", "        alone, blanks = (dropped and _alone(ln) and not alone), 0\n", 1)
+    spec = importlib.util.spec_from_loader("invite_clean_cap", loader=None)
+    mod = importlib.util.module_from_spec(spec)
+    mod.__file__ = str(SCRIPTS / "invite_clean.py")
+    exec(compile(src, "invite_clean_cap", "exec"), mod.__dict__)
+    return mod
+
+
 class Mutants(unittest.TestCase):
     """Each change to the rule must make the table fail (so the table is known to bite)."""
 
@@ -455,7 +477,7 @@ class Mutants(unittest.TestCase):
         self.assertNotIn("nl-finished", bad)                       # one and two lines are still caught: only the third leaks
 
     def test_blank_lines_consume_the_window(self):
-        m = mutant("            alone = alone and blanks <= 2\n", "            alone = alone and blanks <= 2\n            window = max(window - 1, 0)\n")
+        m = mutant("            kept.append(ln)                    # a blank line is transparent", "            window = max(window - 1, 0)\n            kept.append(ln)                    # a blank line is transparent")
         self.assertTrue({"w-blanks-5", "w-blanks-between"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_fragment_conversion_off(self):
@@ -465,6 +487,10 @@ class Mutants(unittest.TestCase):
     def test_label_line_inside_the_window_does_not_restart_it(self):
         m = mutant("window = WINDOW if label else (max(window - 1, 0) if consumed else 0)", "window = max(window - 1, 0) if consumed else 0")
         self.assertIn("w-restart", self.next_line_bad(m))
+
+    def test_blank_line_cap_restored(self):
+        bad = self.next_line_bad(mutant_with_cap())
+        self.assertTrue({"a-blanks-3", "a-blanks-5", "a-blanks-20", "a-br-br-br"} <= set(bad), bad)
 
     def test_finished_phrase_rule_off(self):
         m = mutant("or (not dropped and any(_BARE_END.search(v) for v in views))", "")

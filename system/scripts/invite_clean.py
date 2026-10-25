@@ -291,22 +291,20 @@ def _label_line(ln, dropped):
 
 def invite_text(body):
     """An invite body as plain text: HTML removed (also a bare table cell or list item), every line with a join link or a key to the
-    meeting dropped; the next line with text (up to two blank lines on) after a label that stands alone; and after a line that ends a
+    meeting dropped; the next line with text (any number of blank lines on) after a label that stands alone; and after a line that ends a
     bare label phrase ("Password reset", "Password reset for", "Password reset -", also one that was itself removed) the next WINDOW
     lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, window, alone, blanks = [], 0, False, 0
+    kept, window, alone = [], 0, False
     for ln, tail in _lines(t):
         if not ln:
-            blanks += 1
-            alone = alone and blanks <= 2
-            kept.append(ln)
+            kept.append(ln)                    # a blank line is transparent: any number, for a label alone as for a window
             continue
         dropped = _drop_line(ln) or bool(tail and _drop_line(tail + " " + ln))
         label = _label_line(ln, dropped)
         consumed = alone or window > 0 or dropped
         window = WINDOW if label else (max(window - 1, 0) if consumed else 0)
-        alone, blanks = (dropped and _alone(ln) and not alone), 0
+        alone = dropped and _alone(ln) and not alone
         if not consumed:
             kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
