@@ -213,7 +213,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue([t for t in ("Tokenise", "Pinot", "Optical", "Secretary") if m.is_secret(t)])
 
     def test_key_item_rule_off(self):
-        m = mutant('rf"|{KEY_ITEM}", re.I)', 'rf"|(?!)", re.I)')
+        m = mutant('rf"|{KEY_ITEM}|{QUALIFIED_ALONE}", re.I)', 'rf"|(?!)|{QUALIFIED_ALONE}", re.I)')
         self.assertTrue(leaks(m, [r for r in KEY_ROWS if r[1] in ("hunter", "ZQ7742")]))
 
     def test_key_item_without_table_cells_and_quotes(self):
