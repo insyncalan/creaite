@@ -70,7 +70,7 @@ def _is_divider(s):
 
 # ---------------------------------------------------------------- dates, digit runs, anchors
 
-_DATE = re.compile(r"(?<!\d)(\d{1,4})([-./])(\d{1,2})\2(\d{1,4})(?![-./]?\d)")
+_DATE = re.compile(r"(?<!\d)(?<!\d[-./])(\d{1,4})([-./])(\d{1,2})\2(\d{1,4})(?![-./]?\d)")
 _DATE_WHOLE = re.compile(r"(\d{1,4})([-./])(\d{1,2})\2(\d{1,4})")
 _TIME = re.compile(r"\d{1,2}:\d{2}(?::\d{2})?(?:-\d{1,2}:\d{2}(?::\d{2})?)?")
 _CHAIN = re.compile(r"\d(?:[ .\-‐-―]{0,3}\d)*")
@@ -106,9 +106,78 @@ def _is_datetime_token(tok):
     return _is_date_token(tok) or _TIME.fullmatch(tok) is not None
 
 
+_L = r"(?<!\d)(?<!\d[.\-])"            # a shape does not start inside a longer digit chain
+_R = r"(?!\d)(?![.\-]\d)"               # ... and does not end inside one
+_NUM = r"(?:\d{1,3}(?:[,.' ]\d{3})+|\d+)(?:[.,]\d{1,2})?"
+_CUR_PRE = "[£$€¥₹]"
+_CUR_POST = (r"(?:[£$€¥₹]|(?:kr|eur|euros?|gbp|usd|sek|nok|dkk|chf|cad|aud|jpy|inr|pounds|dollars|million|billion|mn|bn)"
+             r"(?![a-z0-9]))")
+
+
+def _ok_date(m):
+    return _date_parts_ok(m.group(1), m.group(3), m.group(4))
+
+
+def _ok_clock_range(m):
+    a, b, c, d = (int(x) for x in m.groups())
+    return a <= 24 and c <= 24 and b <= 59 and d <= 59
+
+
+def _ok_compact_range(m):
+    return _ok_clock_range(m) and (int(m.group(1)), int(m.group(2))) < (int(m.group(3)), int(m.group(4)))
+
+
+def _ok_year_range(m):
+    return int(m.group(1)) < int(m.group(2)) <= int(m.group(1)) + 30
+
+
+def _ok_build(m):
+    parts = m.group(0).split(".")
+    if any(len(x) > 1 and x[0] == "0" for x in parts):
+        return False                                # '0958', '010': a phone's groups
+    return any(len(x) <= 2 for x in parts[1:])      # one short part ('3.14.2.1007'; '12.345.678.901' has none)
+
+
+# (name, pattern, validator or None, why it is not a secret). A match that passes its validator is replaced by a placeholder before the
+# 7-digit rule runs, in this order; one that fails is left for the rule. Added a shape: add its positives and negatives to
+# dev/tests/test_invite_filter_numbers.py (SHAPE_CASES).
+SHAPES = (
+    ("date", _DATE, _ok_date,
+     "12-11-2026, 2026-11-12, 12.11.26: a plausible day, month and year (_date_parts_ok)."),
+    ("compact_date", re.compile(_L + r"(?:19|20)\d\d(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])(?:t[0-2]\d[0-5]\d[0-5]\dz?)?(?!\d)"), None,
+     "20261112 and 20261112T140000Z (ICS, file names): the month and day are real and the year is 1900-2099."),
+    ("time_range", re.compile(_L + r"(\d{1,2})[.:](\d{2})\s*[-–—]\s*(\d{1,2})[.:](\d{2})" + _R), _ok_clock_range,
+     "14.00 - 15.30, 14.00-15.30: a slot; hours up to 24, minutes up to 59."),
+    ("time_range_compact", re.compile(_L + r"(\d{2})(\d{2})\s*[-–—]\s*(\d{2})(\d{2})" + _R), _ok_compact_range,
+     "1400-1530: a slot written without a separator; valid hours and minutes, the end after the start (a phone number rarely is)."),
+    ("year_range", re.compile(_L + r"((?:19|20)\d\d)\s*[-–—]\s*((?:19|20)\d\d)" + _R), _ok_year_range,
+     "2026-2027, 2026 - 2027: a budget or plan span; the end year is later, at most 30 years on."),
+    ("money", re.compile(_L + "(?:" + _CUR_PRE + r"\s?" + _NUM + "|" + _NUM + r"\s?" + _CUR_POST + ")" + _R), None,
+     "A currency symbol or code on the number (£1250000, 1.250.000 €, 1 250 000 kr): an amount. A bare 1250000 is not set aside."),
+    ("build_number", re.compile(r"(?<![\d.+(])[1-9]\d?(?:\.\d{1,5}){3,}(?!\d)(?!\.\d)"), _ok_build,
+     "3.14.2.1007: four or more dotted parts, no leading zero, one part of at most two digits (a dotted phone has none)."),
+    ("po_ticket", re.compile(r"(?<![a-z0-9])(?:(po|pr|inv|invoice|order|ticket|case|request|req|change|task|incident|sr|wo|quote|contract|"
+                             r"job|batch|serial|asset|sku|doc|document)(?:[ .:#-]{1,2}(?:no\.?|nr\.?|number)?[ .:#-]{0,2})"
+                             r"|(inc|req|ritm|chg|prb|task|sctask|tkt|rfc|wo|sr|so|po|inv)[-_#]?)\d{6,}" + _R), None,
+     "PO 4500123456, Invoice #20261234, INC0012345, REQ0012345: a business reference named by a word of that vocabulary or an "
+     "ITSM prefix. 'ref', 'id', 'pin', 'code', 'tel' and any other prefix keep the digit-run rule."),
+)
+
+
+def _mask_shapes(s):
+    """The skeleton with every shape in SHAPES replaced by a placeholder (not a digit, not a separator), in table order."""
+    for name, pat, ok, _why in SHAPES:
+        if name == "date":
+            s = _DATE.sub(_date_sub, s)
+        else:
+            s = pat.sub(lambda m, ok=ok: _HOLE if ok is None or ok(m) else m.group(0), s)
+    return s
+
+
 def _digit_run(s):
-    """Seven or more decimal digits (category Nd) in a chain: digits joined by gaps of at most three spaces, dots or dashes."""
-    for m in _CHAIN.finditer(_DATE.sub(_date_sub, s)):
+    """Seven or more decimal digits (category Nd) in a chain: digits joined by gaps of at most three spaces, dots or dashes.
+    Number shapes (SHAPES: dates, ranges, amounts, builds, references) are set aside first."""
+    for m in _CHAIN.finditer(_mask_shapes(s)):
         if m.end() - m.start() >= 7 and sum(1 for c in m.group() if c.isdecimal()) >= 7:
             return True
     return False
@@ -124,6 +193,13 @@ def _has_anchor(s):
 _ALNUM = re.compile(r"[^\W_]+")
 _BLOB = re.compile(r"[a-z0-9+/=_\-%.~]+")
 _CONSONANTS = re.compile(r"[^aeiouy]{8,}")
+# a lone table cell such as Room204, Level4, Q42026, FY2026, INC0012345: a word of the agenda's own vocabulary and its number. Any other
+# letters+digits token (Summer2026, xk9Pq27a, Pin8825) stays an id or a password. A bare run of 5+ digits ('125000', '90210') STAYS dropped
+# (a PIN), as does anything that is only digits; a comma- or dot-grouped number or one with a currency sign is not a token and was
+# never dropped.
+_ORDINARY_ID = re.compile(r"(?:room|rm|floor|level|suite|desk|table|team|sprint|phase|week|wave|build|release|ver|version|rev|"
+                          r"ticket|inc|req|chg|"
+                          r"task|story|epic|case|po|pr|fy|q[1-4]|h[12]|ref|sr|wo)\d{1,10}|q[1-4]\d{4}|fy\d{2,4}|(?:19|20)\d{6}t\d{6}z?")
 
 
 def _shape_drop(s):
@@ -137,6 +213,8 @@ def _shape_drop(s):
     if s.isdecimal():
         return len(s) >= 5
     if not s.isascii():
+        return False
+    if _ORDINARY_ID.fullmatch(s):
         return False
     if s.isalpha():
         return len(s) >= 8 and _CONSONANTS.search(s) is not None
