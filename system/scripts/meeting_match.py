@@ -67,6 +67,15 @@ def match_meeting(title, attendees, rows, remembered_code=None, own_domains=(), 
     first_names = capture._first_names(rows, shared)                          # noqa: SLF001
     all_domains = [d for r in rows for d in set(r["domains"])]
     shared_domains = {d for d in all_domains if all_domains.count(d) > 1}      # a domain two projects list is no evidence
+    strong, medium, weak = _signals(rows, title, low, addrs, own, shared, first_names, shared_domains)
+    codes = {r["code"] for r in rows}
+    mem = remembered_code if remembered_code in codes else None
+    return _verdict(strong, medium, weak, mem, names)
+
+
+def _signals(rows, title, low, addrs, own, shared, first_names, shared_domains):
+    """({code: strong signals}, {code: medium}, {code: weak}): each project in its strongest class; one its Exclude word rules out
+    is in none."""
     strong, medium, weak = {}, {}, {}
     for r in rows:
         sig = _title_signals(r, title, low, shared, first_names)
@@ -80,11 +89,14 @@ def match_meeting(title, attendees, rows, remembered_code=None, own_domains=(), 
             medium[r["code"]] = m
         elif w:
             weak[r["code"]] = w
-    codes = {r["code"] for r in rows}
-    mem = remembered_code if remembered_code in codes else None
+    return strong, medium, weak
+
+
+def _verdict(strong, medium, weak, mem, names):
+    """The answer from the signals: a strong one (or the series Alan chose) matches, medium ones agreeing on one project are
+    likely, several projects or a lone keyword or nothing are unsure."""
     if len(strong) > 1 or (strong and mem and mem not in strong):
-        both = set(strong) | ({mem} if mem else set())
-        return _unsure(both, names, "Two projects fit")
+        return _unsure(set(strong) | ({mem} if mem else set()), names, "Two projects fit")
     if strong:
         (code,) = strong
         return {"p": code, "level": "matched", "reason": "Named in the title", "cands": [code]}
