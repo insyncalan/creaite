@@ -2555,6 +2555,8 @@ def prep_match_ev(title, ev, projects, remembered):
     if how in ("remembered", "portfolio") or not isinstance(ev, dict):
         return code, how
     a = meeting_answer(title, ev, projects, remembered, invite_clean.sensitivity(ev) == "confidential")
+    if a["p"] is None and code:        # the matcher read no register row for it: keep prep_match's own answer (a title code)
+        return code, how
     return a["p"], a["level"]
 
 
