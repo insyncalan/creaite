@@ -649,7 +649,7 @@ class Mutants(unittest.TestCase):
                 self.assertNotEqual(m.scrub(t, 140), "", f"{t!r}: the digit rule is not what removes it")
 
     def test_underscore_and_wrapper_reading_removed(self):
-        m = mutant('[_DECORATION.sub(" ", s)] if _DECORATION.search(s) else []', "[]")
+        m = mutant('[_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases', "bases")
         bad = {b.split(":")[0] for b in fails(m)} | set(self.next_line_bad(m))
         self.assertTrue({"u-bold", "u-italic", "u-joined", "u-glued", "u-mid", "u-word-value", "m-underscore-next"} <= bad, bad)
 

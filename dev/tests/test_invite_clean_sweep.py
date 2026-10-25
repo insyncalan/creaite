@@ -149,12 +149,12 @@ class Sweep(unittest.TestCase):
     def test_the_decoration_sweep_sees_a_missing_normalisation(self):
         """Mutant: the underscore / wrapper reading removed: the sweep finds leaks."""
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
-        old = '[_DECORATION.sub(" ", s)] if _DECORATION.search(s) else []'
+        old = '[_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases'
         self.assertIn(old, src)
         spec = importlib.util.spec_from_loader("invite_clean_nodeco", loader=None)
         mod = importlib.util.module_from_spec(spec)
         mod.__file__ = str(SCRIPTS / "invite_clean.py")
-        exec(compile(src.replace(old, "[]", 1), "invite_clean_nodeco", "exec"), mod.__dict__)
+        exec(compile(src.replace(old, "bases", 1), "invite_clean_nodeco", "exec"), mod.__dict__)
         _n, bad = decorated_survivors(mod)
         self.assertTrue(bad)
 
