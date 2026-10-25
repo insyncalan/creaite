@@ -102,6 +102,10 @@ BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "
 
 
 # a phrase that ends on one of these has its value on the next line
+# A dash glued to a label and a word after it: the word is a value unless it is one the lists already know (the allowed second words of
+# BARE_NEXT and BARE_FOLLOW) or one of these compound endings: "Password-based", "PIN-protected", "Code-review", "Key-account".
+GLUE_OK = "|".join(dict.fromkeys([*(w for _l, ok in BARE_NEXT for w in ok), *BARE_FOLLOW, "based", "protected", "protection", "enabled",
+                                  "less", "free", "account", "accounts", "related", "only", "holder", "holders"]))
 BARE_FUNCTION = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or")
 
 
@@ -141,14 +145,15 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"   # "Code! 4417"
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})-(?:\s+|(?!(?:{GLUE_OK})(?![\w-])))[^\W_]"  # "Passcode-4417"
                    rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])ids?\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
                    rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d\S*\d\S*\d"   # "ID 4417": 3 digits
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 # a footnote mark "(1)", a separator run, "_", "is" or "are"
 _ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
 _ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
-LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?\s*$"
-                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?![\w-]){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
+LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?\s*$"
+                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
@@ -448,7 +453,7 @@ class _Reader:
     def feed(self, ln, tail, glue):
         """Take the next line (and the end of the piece before it, with the glue between them)."""
         dropped = bool(ln) and (_drop_line(ln) or bool(tail and _drop_line(tail + glue + ln)))
-        if not ln or (not dropped and not re.search(r"\w", ln)):
+        if not ln or (not dropped and not re.search(r"[^\W_]", ln)):
             self.kept.append(ln)               # a blank or symbols-only line is transparent: any number, for a label alone as for a window
             return
         value = self.digit_wait and bool(re.search(r"\d", ln))     # "Meeting ID." then "987 654 321": the number is the value
@@ -457,12 +462,13 @@ class _Reader:
             self.kept[self.anchor] = None      # a line was removed after this label line: the label goes too (idempotence)
             self.anchor = None
         consumed = self.pending > 0 or reach or dropped
-        self._advance(ln, dropped, _label_line(ln, dropped), consumed, reach)
+        self._advance(ln, dropped, _label_line(ln, dropped), consumed, reach, value)
 
-    def _advance(self, ln, dropped, label, consumed, reach):
+    def _advance(self, ln, dropped, label, consumed, reach, value):
         self.window = WINDOW if label else (max(self.window - 1, 0) if consumed else 0)
         self.pending = _pending_after(ln, dropped, self.pending)
-        self.digit_wait = _ends_on_key_and_stop(ln)
+        # a "Meeting ID." rule stays alive across a removed line (a link, a passcode line) until its number comes or an ordinary line does
+        self.digit_wait = _ends_on_key_and_stop(ln) or bool(dropped and self.digit_wait and not value)
         if consumed:
             self.anchor = self.anchor if reach else None
         else:

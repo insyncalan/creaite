@@ -140,7 +140,52 @@ def decorated_survivors(mod):
     return n, bad
 
 
+def dashes():
+    """Every dash-like character: all of Unicode category Pd, the minus sign and the non-breaking hyphen."""
+    import unicodedata
+    return [c for c in map(chr, range(0x20, 0x11000)) if unicodedata.category(c) == "Pd" or c in "\u2212\u2011\u2010"]
+
+
+DASHES = dashes()
+DASH_LABELS = ["Passcode", "Meeting ID", "Password", "Token", "PIN", "Pwd", "Access code", "API key", "Host key", "Webinar ID", "Secret", "Code",
+               "Key", "Access", "Pass code", "Conf ID"]
+DASH_VALUES = ["4417", "ZQ7742", "hunter", "987654321"]
+
+
+def dash_survivors(mod):
+    n, bad = 0, []
+    for lab, d, v in itertools.product(DASH_LABELS, DASHES, DASH_VALUES):
+        for form in (f"{lab}{d}{v}", f"{lab}{d} {v}", f"{lab} {d}{v}", f"{lab} {d} {v}"):
+            cases = [("title", mod.scrub(form, 140)), ("body", mod.invite_text("Agenda: budget\n" + form + "\nEnd")),
+                     ("td", mod.invite_text("<td>" + form + "</td>")), ("li", mod.invite_text("<ul><li>" + form + "</li></ul>"))]
+            for kind, out in cases:
+                n += 1
+                if v in out:
+                    bad.append((kind, form))
+    return n, bad
+
+
 class Sweep(unittest.TestCase):
+    def test_every_dash_glued_or_spaced_to_a_label(self):
+        n, bad = dash_survivors(I)
+        self.assertGreater(n, 15000)
+        self.assertEqual(bad[:8], [], f"{len(bad)} of {n} combinations leak")
+
+    def test_compound_words_stay(self):
+        for t in ("Password-based login", "PIN-protected doors", "Code-review", "Key-account plan", "Token-based auth", "Secret-free zone"):
+            self.assertEqual(I.scrub(t, 140), t, t)
+
+    def test_the_dash_sweep_sees_a_missing_rule(self):
+        """Mutant: the glued-dash rule removed."""
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = '-(?:\\s+|(?!(?:{GLUE_OK})(?![\\w-])))[^\\W_]"'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_noglue", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, '-(?!)[^\\W_]"', 1), "invite_clean_noglue", "exec"), mod.__dict__)
+        self.assertTrue(dash_survivors(mod)[1])
+
     def test_decorated_labels(self):
         n, bad = decorated_survivors(I)
         self.assertGreater(n, 15000)
