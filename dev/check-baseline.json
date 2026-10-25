@@ -187,7 +187,7 @@
   "system/scripts/excel_sync.py": 1,
   "system/scripts/filechange.py": 5,
   "system/scripts/launch.py": 10,
-  "system/scripts/live_server.py": 24,
+  "system/scripts/live_server.py": 25,
   "system/scripts/locations.py": 2,
   "system/scripts/minutes.py": 4,
   "system/scripts/paths.py": 9,
