@@ -187,39 +187,77 @@ def write(words_, href):
 # reply asked for by 19-10-2026.", "...: Emailed Tom Reid by message asking for an update.", "...: Asked Chris Dunn for a decision by
 # email.". They sit in an action's Latest update, a risk's Response or a decision's Reasoning (drafts.js sentLine writes one fixed
 # shape), so plain code recognises them by that shape and no client path carries them; no schema change is needed.
-_SENT_DATE = r"(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2})"
-# The fixed shape: a date, a colon, Chased / Emailed / Asked (any case), a name, "by email" or "by message". It starts a line (after an
-# optional bullet) or follows the end of a sentence; ordinary text such as "We chased the supplier" has no date and never matches.
-SENT_LINE = re.compile(r"(?:^[ \t]*(?:[-*\u2022\u2013][ \t]*)?|(?<=[.!?;])[ \t]+)" + _SENT_DATE
-                       + r":[ \t]+(?i:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?i:email|message)\b[^\n]*$", re.M)
+# Fail closed (#368). A sent line wrongly NOT recognised (a false negative) lets Alan's chase log into a client text or an email: a
+# leak, and the worse failure. A line wrongly recognised (a false positive) only has a line struck out or a draft held for a look.
+# So the recognition is read on the plainest form of the text (HTML tags off, then edit_ai.normal: no-break and full-width spaces,
+# a full-width colon, look-alike hyphens and invisible characters made plain), in any case and spacing, anywhere on a line (a bullet or
+# a sentence before it), with a date in either order, and the name allowed to break over one line. The date, its colon, the verb and
+# "by email|message" must all be there, so ordinary prose that only says "chased" or "asked" is never matched.
+_NL = "\n\r\v\f\x85\u2028\u2029"
+_SPAN = 400                      # #368 (review): the longest name, or text before "by", one scan allows; bounds the work per date start
+_SENT_DATE = r"(?:\d{2}\s{0,50}-\s{0,50}\d{2}\s{0,50}-\s{0,50}\d{4}|\d{4}\s{0,50}-\s{0,50}\d{2}\s{0,50}-\s{0,50}\d{2})"
+_NAME_BREAK = rf"(?:[^{_NL}]{{0,{_SPAN}}}?(?:\r\n|[{_NL}])[ \t]{{0,50}})?"
+SENT_LINE = re.compile(rf"(?<!\d){_SENT_DATE}\s{{0,50}}:\s{{0,50}}(?:chased|emailed|asked)\s{{1,50}}"
+                       rf"{_NAME_BREAK}[^{_NL}]{{0,{_SPAN}}}?\bby\s{{1,50}}(?:email|message)\b[^{_NL}]*", re.I)
 _TAGS = re.compile(r"</?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>", re.I)
 _BREAKS = re.compile(r"</(?:p|li|div)>|<br\s*/?>", re.I)
+_PLAIN_RUN = re.compile(r"[\x20-\x7e\t\n]+")
 
 
 def _sent_norm(text):
-    """The text as the recognition reads it: no zero-width marks, no-break spaces as spaces, CRLF as LF, simple HTML as plain lines."""
-    t = re.sub("[\u200b\u200c\u200d\u2060\ufeff]", "", str(text or "")).replace("\u00a0", " ").replace("\r\n", "\n").replace("\r", "\n")
+    """Simple HTML as plain lines, CRLF as LF, no-break spaces as spaces (what the recognition reads first)."""
+    t = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
     if _TAGS.search(t):
         import html
         t = html.unescape(_TAGS.sub("", _BREAKS.sub("\n", t)))
-        t = t.replace("\u00a0", " ")
-    return t
+    return t.replace("\u00a0", " ")
+
+
+def _sent_map(plain):
+    """(form, at): the plain text on edit_ai.normal's form, one character at a time, and for each character of the form the position
+    in `plain` it came from. Plain printable ASCII passes as it is, so a long text is read quickly."""
+    import edit_ai
+    out, at, pos = [], [], 0
+    while pos < len(plain):
+        m = _PLAIN_RUN.match(plain, pos)
+        if m:
+            out.append(m.group())
+            at.extend(range(pos, m.end()))
+            pos = m.end()
+            continue
+        n = edit_ai.normal(plain[pos])
+        out.append(n)
+        at.extend([pos] * len(n))
+        pos += 1
+    return "".join(out), at
 
 
 def sent_has(text):
-    """Whether a text holds an "I sent it" line."""
-    return bool(SENT_LINE.search(_sent_norm(text)))
+    """Whether a text holds an "I sent it" line, however it is spaced, cased or written."""
+    return bool(SENT_LINE.search(_sent_map(_sent_norm(text))[0]))
 
 
 def sent_strip(text):
-    """The text without its "I sent it" lines (and the blank lines they leave); the rest as it was."""
-    if not text or not SENT_LINE.search(_sent_norm(text)):
+    """The text without its "I sent it" lines (and the blank lines they leave). A text without one comes back as it was. A text with
+    one loses only that line, cut from its date to the line's end (fail closed: the rest of that line goes too); the rest keeps its own
+    characters (accents, other scripts), with HTML as lines and CRLF as LF."""
+    if not text:
         return text
+    plain = _sent_norm(text)
+    form, at = _sent_map(plain)
+    spans = [(at[m.start()], at[m.end() - 1] + 1) for m in SENT_LINE.finditer(form)]
+    if not spans:
+        return text
+    t, last = [], 0
+    for a, b in spans:
+        t.append(plain[last:a])
+        t.append("\x00")
+        last = b
+    t = "".join(t) + plain[last:]
     out = []
-    for line in _sent_norm(text).split("\n"):
-        cut = SENT_LINE.sub("", line)
-        if cut != line and not cut.strip():
-            continue
-        out.append(cut)
-    return "\n".join(out).strip("\n").strip()
+    for line in t.split("\n"):
+        if "\x00" in line and not re.sub(r"[\x00 \t\-*\u2022\u2013]", "", line):
+            continue                                                  # the line held only the cut line (and a bullet)
+        out.append(line.replace("\x00", ""))
+    return "\n".join(out).strip()
 # ===== end #153 =====

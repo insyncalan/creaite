@@ -7206,10 +7206,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     send: () => send,
     sendQueued: () => sendQueued,
     sendState: () => sendState,
+    sentHas: () => sentHas,
     sentKindOf: () => sentKindOf,
     sentLine: () => sentLine,
     sentLog: () => sentLog,
     sentStrip: () => sentStrip,
+    sentUnescape: () => sentUnescape,
     sentVia: () => sentVia,
     serverCardFlow: () => serverCardFlow,
     serverSeams: () => serverSeams,
@@ -12132,6 +12134,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
   var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
 
+  // core/sentConfusables.js
+  var SENT_CONFUSABLES = { "-": "‐‑‒–—―−﹘﹣－", "A": "ΑАᎪᴀꓮ", "B": "ʙΒВᏴꓐ", "C": "ϹСᏟᴄꓚ", "D": "Ꭰᴅꓓ", "E": "ΕЕᎬᴇꓰ", "G": "ɢᏀꓖ", "H": "ʜΗНᎻꓧ", "I": "ıǀɩɪΙιІіӀꓲ", "K": "ΚКᏦᴋꓗ", "L": "ʟᏞꓡ", "M": "ΜМᎷᴍꓟ", "S": "ЅᏚꓢꜱ", "Y": "ʏΥҮꓬ", "a": "ɑαа", "c": "ϲс", "d": "ԁ", "e": "е", "g": "ɡց", "h": "һհ", "k": "κк", "s": "ѕ", "y": "у" };
+
+  // core/sentEntities.js
+  var SENT_NAMED = { "Aacute": "Á", "Aacute;": "Á", "Abreve;": "Ă", "Acirc": "Â", "Acirc;": "Â", "Acy;": "А", "Afr;": "𝔄", "Agrave": "À", "Agrave;": "À", "Alpha;": "Α", "Amacr;": "Ā", "Aogon;": "Ą", "Aopf;": "𝔸", "ApplyFunction;": "⁡", "Aring": "Å", "Aring;": "Å", "Ascr;": "𝒜", "Atilde": "Ã", "Atilde;": "Ã", "Auml": "Ä", "Auml;": "Ä", "Bernoullis;": "ℬ", "Beta;": "Β", "Bfr;": "𝔅", "Bopf;": "𝔹", "Breve;": "˘", "Bscr;": "ℬ", "Cacute;": "Ć", "CapitalDifferentialD;": "ⅅ", "Cayleys;": "ℭ", "Ccaron;": "Č", "Ccedil": "Ç", "Ccedil;": "Ç", "Ccirc;": "Ĉ", "Cdot;": "Ċ", "Cedilla;": "¸", "Cfr;": "ℭ", "Copf;": "ℂ", "Cscr;": "𝒞", "DD;": "ⅅ", "DScy;": "Ѕ", "Dcaron;": "Ď", "Dfr;": "𝔇", "DiacriticalAcute;": "´", "DiacriticalDot;": "˙", "DiacriticalDoubleAcute;": "˝", "DiacriticalTilde;": "˜", "DifferentialD;": "ⅆ", "Dopf;": "𝔻", "Dot;": "¨", "DotDot;": "⃜", "DoubleDot;": "¨", "DownBreve;": "̑", "Dscr;": "𝒟", "Eacute": "É", "Eacute;": "É", "Ecaron;": "Ě", "Ecirc": "Ê", "Ecirc;": "Ê", "Edot;": "Ė", "Efr;": "𝔈", "Egrave": "È", "Egrave;": "È", "Emacr;": "Ē", "Eogon;": "Ę", "Eopf;": "𝔼", "Epsilon;": "Ε", "Escr;": "ℰ", "Eta;": "Η", "Euml": "Ë", "Euml;": "Ë", "ExponentialE;": "ⅇ", "Gbreve;": "Ğ", "Gcedil;": "Ģ", "Gcirc;": "Ĝ", "Gdot;": "Ġ", "Gfr;": "𝔊", "Gopf;": "𝔾", "Gscr;": "𝒢", "Hcirc;": "Ĥ", "Hfr;": "ℌ", "HilbertSpace;": "ℋ", "Hopf;": "ℍ", "Hscr;": "ℋ", "IEcy;": "Е", "IOcy;": "Ё", "Iacute": "Í", "Iacute;": "Í", "Icirc": "Î", "Icirc;": "Î", "Idot;": "İ", "Ifr;": "ℑ", "Igrave": "Ì", "Igrave;": "Ì", "Im;": "ℑ", "Imacr;": "Ī", "ImaginaryI;": "ⅈ", "InvisibleComma;": "⁣", "InvisibleTimes;": "⁢", "Iogon;": "Į", "Iopf;": "𝕀", "Iota;": "Ι", "Iscr;": "ℐ", "Itilde;": "Ĩ", "Iukcy;": "І", "Iuml": "Ï", "Iuml;": "Ï", "KJcy;": "Ќ", "Kappa;": "Κ", "Kcedil;": "Ķ", "Kcy;": "К", "Kfr;": "𝔎", "Kopf;": "𝕂", "Kscr;": "𝒦", "Lacute;": "Ĺ", "Laplacetrf;": "ℒ", "Lcaron;": "Ľ", "Lcedil;": "Ļ", "Lfr;": "𝔏", "Lopf;": "𝕃", "Lscr;": "ℒ", "Mcy;": "М", "MediumSpace;": " ", "Mellintrf;": "ℳ", "Mfr;": "𝔐", "Mopf;": "𝕄", "Mscr;": "ℳ", "Mu;": "Μ", "Ncy;": "Н", "NegativeMediumSpace;": "​", "NegativeThickSpace;": "​", "NegativeThinSpace;": "​", "NegativeVeryThinSpace;": "​", "NewLine;": "\n", "NoBreak;": "⁠", "NonBreakingSpace;": " ", "OverBar;": "‾", "Poincareplane;": "ℌ", "Sacute;": "Ś", "Scaron;": "Š", "Scedil;": "Ş", "Scirc;": "Ŝ", "Scy;": "С", "Sfr;": "𝔖", "Sopf;": "𝕊", "Sscr;": "𝒮", "Tab;": "	", "ThickSpace;": "  ", "ThinSpace;": " ", "TripleDot;": "⃛", "Upsi;": "ϒ", "Upsilon;": "Υ", "Vcy;": "В", "VeryThinSpace;": " ", "YIcy;": "Ї", "Yacute": "Ý", "Yacute;": "Ý", "Ycirc;": "Ŷ", "Yfr;": "𝔜", "Yopf;": "𝕐", "Yscr;": "𝒴", "Yuml;": "Ÿ", "ZeroWidthSpace;": "​", "aacute": "á", "aacute;": "á", "abreve;": "ă", "acirc": "â", "acirc;": "â", "acute": "´", "acute;": "´", "acy;": "а", "af;": "⁡", "afr;": "𝔞", "agrave": "à", "agrave;": "à", "alpha;": "α", "amacr;": "ā", "angst;": "Å", "aogon;": "ą", "aopf;": "𝕒", "aring": "å", "aring;": "å", "ascr;": "𝒶", "atilde": "ã", "atilde;": "ã", "auml": "ä", "auml;": "ä", "bernou;": "ℬ", "bfr;": "𝔟", "bopf;": "𝕓", "breve;": "˘", "bscr;": "𝒷", "cacute;": "ć", "ccaron;": "č", "ccedil": "ç", "ccedil;": "ç", "ccirc;": "ĉ", "cdot;": "ċ", "cedil": "¸", "cedil;": "¸", "cfr;": "𝔠", "circledS;": "Ⓢ", "colon;": ":", "complexes;": "ℂ", "copf;": "𝕔", "cscr;": "𝒸", "dash;": "‐", "dblac;": "˝", "dcaron;": "ď", "dd;": "ⅆ", "dfr;": "𝔡", "die;": "¨", "dopf;": "𝕕", "dot;": "˙", "dscr;": "𝒹", "dscy;": "ѕ", "eacute": "é", "eacute;": "é", "ecaron;": "ě", "ecirc": "ê", "ecirc;": "ê", "edot;": "ė", "ee;": "ⅇ", "efr;": "𝔢", "egrave": "è", "egrave;": "è", "ell;": "ℓ", "emacr;": "ē", "emsp13;": " ", "emsp14;": " ", "emsp;": " ", "ensp;": " ", "eogon;": "ę", "eopf;": "𝕖", "escr;": "ℯ", "euml": "ë", "euml;": "ë", "expectation;": "ℰ", "exponentiale;": "ⅇ", "gacute;": "ǵ", "gbreve;": "ğ", "gcirc;": "ĝ", "gdot;": "ġ", "gfr;": "𝔤", "gopf;": "𝕘", "gscr;": "ℊ", "hairsp;": " ", "hamilt;": "ℋ", "hcirc;": "ĥ", "hfr;": "𝔥", "hopf;": "𝕙", "horbar;": "―", "hscr;": "𝒽", "hyphen;": "‐", "iacute": "í", "iacute;": "í", "ic;": "⁣", "icirc": "î", "icirc;": "î", "iecy;": "е", "ifr;": "𝔦", "igrave": "ì", "igrave;": "ì", "ii;": "ⅈ", "imacr;": "ī", "image;": "ℑ", "imagline;": "ℐ", "imagpart;": "ℑ", "imath;": "ı", "inodot;": "ı", "iocy;": "ё", "iogon;": "į", "iopf;": "𝕚", "iota;": "ι", "iscr;": "𝒾", "it;": "⁢", "itilde;": "ĩ", "iukcy;": "і", "iuml": "ï", "iuml;": "ï", "kappa;": "κ", "kappav;": "ϰ", "kcedil;": "ķ", "kcy;": "к", "kfr;": "𝔨", "kjcy;": "ќ", "kopf;": "𝕜", "kscr;": "𝓀", "lacute;": "ĺ", "lagran;": "ℒ", "lcaron;": "ľ", "lcedil;": "ļ", "lfr;": "𝔩", "lopf;": "𝕝", "lrm;": "‎", "lscr;": "𝓁", "macr": "¯", "macr;": "¯", "mdash;": "—", "mfr;": "𝔪", "minus;": "−", "mopf;": "𝕞", "mscr;": "𝓂", "nbsp": " ", "nbsp;": " ", "ndash;": "–", "numsp;": " ", "oS;": "Ⓢ", "ogon;": "˛", "oline;": "‾", "ordf": "ª", "ordf;": "ª", "phmmat;": "ℳ", "planckh;": "ℎ", "puncsp;": " ", "quaternions;": "ℍ", "ring;": "˚", "rlm;": "‏", "sacute;": "ś", "scaron;": "š", "scedil;": "ş", "scirc;": "ŝ", "scy;": "с", "sfr;": "𝔰", "shy": "­", "shy;": "­", "sopf;": "𝕤", "sscr;": "𝓈", "strns;": "¯", "sup1": "¹", "sup1;": "¹", "sup2": "²", "sup2;": "²", "sup3": "³", "sup3;": "³", "tdot;": "⃛", "thinsp;": " ", "tilde;": "˜", "ubrcy;": "ў", "ucy;": "у", "uml": "¨", "uml;": "¨", "upsih;": "ϒ", "varkappa;": "ϰ", "yacute": "ý", "yacute;": "ý", "ycirc;": "ŷ", "yfr;": "𝔶", "yicy;": "ї", "yopf;": "𝕪", "yscr;": "𝓎", "yuml": "ÿ", "yuml;": "ÿ", "zwj;": "‍", "zwnj;": "‌" };
+  var SENT_CHARREFS = { "0": "�", "128": "€", "129": "", "13": "\r", "130": "‚", "131": "ƒ", "132": "„", "133": "…", "134": "†", "135": "‡", "136": "ˆ", "137": "‰", "138": "Š", "139": "‹", "140": "Œ", "141": "", "142": "Ž", "143": "", "144": "", "145": "‘", "146": "’", "147": "“", "148": "”", "149": "•", "150": "–", "151": "—", "152": "˜", "153": "™", "154": "š", "155": "›", "156": "œ", "157": "", "158": "ž", "159": "Ÿ" };
+  var SENT_DROPPED = [[1, 8], [11, 11], [14, 31], [127, 159], [64976, 65007], [65534, 65535], [131070, 131071], [196606, 196607], [262142, 262143], [327678, 327679], [393214, 393215], [458750, 458751], [524286, 524287], [589822, 589823], [655358, 655359], [720894, 720895], [786430, 786431], [851966, 851967], [917502, 917503], [983038, 983039], [1048574, 1048575], [1114110, 1114111]];
+
   // core/linkText.js
   var LINK = /\[((?:[^[\]\\\n]|\\[[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
   var unwords = (s5) => s5.replace(/\\([[\]\\])/g, "$1");
@@ -12164,14 +12174,86 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     const addr = /^(?:[^()\s]|\([^()\s]*\))+$/.test(a5) ? a5 : a5.replace(/\(/g, "%28").replace(/\)/g, "%29");
     return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
   }
-  var SENT_NORM = (t47) => String(t47 == null ? "" : t47).replace(/[​‌‍⁠﻿]/g, "").replace(/ /g, " ").replace(/\r\n?/g, "\n");
+  var SENT_NL = "\\n\\r\\v\\f\\u0085\\u2028\\u2029";
+  var SENT_SPAN = 400;
+  var SENT_DATE = "(?:\\d{2}\\s{0,50}-\\s{0,50}\\d{2}\\s{0,50}-\\s{0,50}\\d{4}|\\d{4}\\s{0,50}-\\s{0,50}\\d{2}\\s{0,50}-\\s{0,50}\\d{2})";
+  var SENT_NAME_BREAK = `(?:[^${SENT_NL}]{0,${SENT_SPAN}}?(?:\\r\\n|[${SENT_NL}])[ \\t]{0,50})?`;
+  var SENT_SRC = `(?<!\\d)${SENT_DATE}\\s{0,50}:\\s{0,50}(?:chased|emailed|asked)\\s{1,50}${SENT_NAME_BREAK}[^${SENT_NL}]{0,${SENT_SPAN}}?\\bby\\s{1,50}(?:email|message)\\b[^${SENT_NL}]*`;
   var SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
-  var SENT_LINE = /(?:^[ \t]*(?:[-*•–][ \t]*)?|(?<=[.!?;])[ \t]+)(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}):[ \t]+(?:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?:email|message)\b[^\n]*$/im;
+  var SENT_LOOK = Object.fromEntries(Object.entries(SENT_CONFUSABLES).flatMap(([to2, from]) => [...from].map((c5) => [c5, to2])));
+  var SENT_UNSEEN = new RegExp("[\\p{Cf}\\u00ad\\u034f\\u115f\\u1160\\u17b4\\u17b5\\u180b-\\u180f\\u3164\\ufe00-\\ufe0f\\uffa0\\ufff0-\\ufff8\\u{e0000}-\\u{e0fff}\\u0000-\\u0008\\u000e-\\u001f\\u007f-\\u0084\\u0086-\\u009f]", "gu");
+  var SENT_LINEISH = new RegExp("[\\u000b\\u000c\\u001c-\\u001e\\u0085]", "g");
+  var SENT_CUT = "";
+  var sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "gu");
+  var sentLook = (t47) => t47.replace(sentLookRe, (c5) => SENT_LOOK[c5]);
+  var sentUnseen = (t47) => t47.replace(SENT_LINEISH, "\n").replace(SENT_UNSEEN, "").replace(/⠀/g, " ");
+  var sentUnmark = (t47) => t47.normalize("NFKD").replace(/\p{M}/gu, "");
+  var sentNormal = (t47) => {
+    t47 = sentLook(sentUnmark(sentLook(sentUnseen(t47))));
+    t47 = sentLook(sentUnseen(t47.normalize("NFKC")));
+    return t47.replace(/\p{Nd}/gu, (c5) => {
+      let x5 = c5.codePointAt(0), d5 = 0;
+      while (/\p{Nd}/u.test(String.fromCodePoint(x5 - 1))) {
+        x5--;
+        d5++;
+      }
+      return String(d5 % 10);
+    });
+  };
+  var sentInvalid = (n4) => SENT_DROPPED.some(([a5, b5]) => n4 >= a5 && n4 <= b5);
+  function sentRef(s5) {
+    if (s5[0] === "#") {
+      const hex = s5[1] === "x" || s5[1] === "X", num2 = parseInt(s5.slice(hex ? 2 : 1).replace(";", ""), hex ? 16 : 10);
+      if (Object.hasOwn(SENT_CHARREFS, num2)) return SENT_CHARREFS[num2];
+      if (num2 >= 55296 && num2 <= 57343 || num2 > 1114111) return "�";
+      return sentInvalid(num2) ? "" : String.fromCodePoint(num2);
+    }
+    if (Object.hasOwn(SENT_NAMED, s5)) return SENT_NAMED[s5];
+    for (let x5 = s5.length - 1; x5 > 1; x5--) if (Object.hasOwn(SENT_NAMED, s5.slice(0, x5))) return SENT_NAMED[s5.slice(0, x5)] + s5.slice(x5);
+    return "&" + s5;
+  }
+  function sentUnescape(t47) {
+    return t47.replace(/&(#[0-9]+;?|#[xX][0-9a-fA-F]+;?|[^\t\n\f <&#;]{1,32};?)/g, (_6, s5) => sentRef(s5));
+  }
+  var sentPlain = (text) => {
+    let t47 = String(text == null ? "" : text).replace(/\r\n?/g, "\n");
+    if (SENT_TAGS.test(t47)) t47 = sentUnescape(t47.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, ""));
+    return t47.replace(/ /g, " ");
+  };
+  var sentMap = (plain) => {
+    const out = [], at2 = [], run = /[\x20-\x7e\t\n]+/y;
+    let pos = 0;
+    while (pos < plain.length) {
+      run.lastIndex = pos;
+      const m5 = run.exec(plain);
+      if (m5) {
+        out.push(m5[0]);
+        for (let k5 = 0; k5 < m5[0].length; k5++) at2.push(pos + k5);
+        pos += m5[0].length;
+        continue;
+      }
+      const ch2 = String.fromCodePoint(plain.codePointAt(pos)), n4 = sentNormal(ch2);
+      out.push(n4);
+      for (let k5 = 0; k5 < n4.length; k5++) at2.push(pos);
+      pos += ch2.length;
+    }
+    return { form: out.join(""), at: at2 };
+  };
+  function sentHas(text) {
+    return new RegExp(SENT_SRC, "i").test(sentMap(sentPlain(text)).form);
+  }
   function sentStrip(text) {
-    let t47 = SENT_NORM(text);
-    if (SENT_TAGS.test(t47)) t47 = t47.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-    if (!SENT_LINE.test(t47)) return String(text == null ? "" : text);
-    return t47.split("\n").map((l6) => [l6, l6.replace(SENT_LINE, "")]).filter(([l6, c5]) => c5 === l6 || c5.trim()).map((x5) => x5[1]).join("\n").replace(/^\n+|\n+$/g, "").trim();
+    if (!text) return String(text == null ? "" : text);
+    const plain = sentPlain(text), { form, at: at2 } = sentMap(plain);
+    const spans = [...form.matchAll(new RegExp(SENT_SRC, "gi"))].map((m5) => [at2[m5.index], at2[m5.index + m5[0].length - 1] + 1]);
+    if (!spans.length) return String(text);
+    let t47 = "", last = 0;
+    for (const [a5, b5] of spans) {
+      t47 += plain.slice(last, a5) + SENT_CUT;
+      last = b5;
+    }
+    t47 += plain.slice(last);
+    return t47.split("\n").filter((l6) => !(l6.includes(SENT_CUT) && !l6.replace(/[ \t\-*•–]/g, ""))).map((l6) => l6.replaceAll(SENT_CUT, "")).join("\n").trim();
   }
 
   // components/Chip.jsx
@@ -82774,7 +82856,10 @@ Next: `;
         "seeAll",
         "send",
         "sensitive",
+        "sentHas",
         "sentLog",
+        "sentStrip",
+        "sentUnescape",
         "setChat",
         "setChatWidth",
         "setClientLogos",
