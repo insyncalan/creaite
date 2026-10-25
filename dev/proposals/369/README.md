@@ -9,3 +9,7 @@ Why: `session.py start` already cleans the calendar, but the live server's own r
 
 Test: `dev/tests/test_live_rescrub_369.py` applies the diff to a throwaway vault's copy, never to the checkout. Four mutants, including the development-repository guard (the marker present: the calendar stays byte for byte).
 Not on any chain list.
+
+## v2 (live_server-rescrub-v2.diff)
+
+`live_server-rescrub.diff` (sha256 6cdba005...) stays as it was. The review found that its job ran outside the server's job lock (`LOCK`), where a restore could overlap it. `live_server-rescrub-v2.diff` makes `calendar_rescrub_job()` take `LOCK` without waiting and skip until the next hourly pass when it is held. It applies cleanly on origin/main, and `test_live_rescrub_369.py` uses it (and also works when either diff is already applied: it takes the applied diff off before it tries the changed copies).

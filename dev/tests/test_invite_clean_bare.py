@@ -309,6 +309,11 @@ NEXT_LINE = [
     ("c-comment", "Pass<!-- -->code: 4417", "4417"),
     ("c-o-p", "P<o:p></o:p>asscode: 4417", "4417"),
     ("c-code-tag", "Pass<code>code</code>: 4417", "4417"),
+    ("c-url-meeting-password", "Sync https://x.example.invalid/j?meetingPassword=abc123", "abc123"),   # camelCase URL keys
+    ("c-url-conf-pin", "Sync https://x.example.invalid/j?confPin=987654", "987654"),
+    ("c-url-user-pin", "Sync https://x.example.invalid/j?userPin=987654", "987654"),
+    ("c-url-session-pwd", "Sync https://x.example.invalid/j?sessionPwd=abc123", "abc123"),
+    ("c-url-mpwd", "Sync https://x.example.invalid/j?mpwd=abc123", "abc123"),
     ("c-hangul-filler", "Pa\u3164sscode: 4417", "4417"),
     ("c-braille-blank", "Meeting\u2800ID: 4417", "4417"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>

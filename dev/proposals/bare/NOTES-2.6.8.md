@@ -26,6 +26,24 @@
 
 **Details for the release note (Romanoff).** The saved-calendar clean-up always runs: if the calendar lock cannot be had within a few seconds (another process holds it, the lock file cannot be written, or the system has no file locking) it cleans without the lock and writes only if the file has not changed since it was read, and says so in the debug log. The read-side cache is keyed on modified time, size and inode; a rewrite that restores all three would be served the earlier CLEANED content, which is stale but never a leak. Day keys that are not YYYY-MM-DD dates and extra fields on attendees are dropped by design. The daily backup zips and their OneDrive copies keep an earlier raw `calendar.json` for their retention period.
 
+**Idempotent cleaning.** Cleaning a saved text twice gives the same text as cleaning it once. A line that ends in a label phrase after other words or punctuation ("IT update: password reset") opens nothing. A phrase that LEADS its line ("Password reset", "Code of conduct") removes itself and the next three lines with text, once; the value on the next line therefore still goes on the first pass. This is the accepted cost: an agenda that has such a leading line loses four lines, once. Team Cap's two tests that ask for those three lines to stay are marked as accepted limits in `test_calendar_clean_idempotence.py`, because they contradict the "Password reset" then "hunter" rows.
+
+**Status of the shapes Team Cap found (#369)** — shape | status | row names (in `test_invite_clean_bare.py` unless stated)
+
+| Shape | Status | Rows |
+|---|---|---|
+| underscores and markdown wrappers around a label | closed | `u-*`, `m-underscore-*`, `test_invite_clean_sweep` decoration sweep |
+| several labels on a line, a used-up value, unknown ID labels, sentence end then digits, Pass-code | closed | `m-*`, `id-*`, `se-*`, `split-pass-code` |
+| a line cut at 2,000 characters through a label | closed | `c-cut-*` |
+| a spacing mark (Mc) or an invisible filler inside a label | closed | `c-mc-*`, `c-hangul-filler`, `c-braille-blank` |
+| markdown reference, titled, angle and double-bracket links; a footnote mark | closed | `c-md-*`, `c-footnote` |
+| plurals, hyphen-joined labels, other dashes | closed | `c-plural-*`, `c-hyphen-*`, `c-nb-hyphen-*`, `c-en-dash-id` |
+| Conf, Meet, Video, GoTo ID; Webinar, Conference, Event, Session #; Zoom ID number; bare ID with three digits | closed | `c-conf-id` ... `c-bare-id*` |
+| a bare label in a header row; a separator or table rule on its own line; escaped HTML; tags inside a label | closed | `c-header-row`, `c-colon-own-line`, `c-table`, `c-escaped-html`, `c-wbr`, `c-comment`, `c-o-p`, `c-code-tag` |
+| camelCase keys in a link (meetingPassword, confPin, userPin, sessionPwd, mpwd) | closed | `c-url-*` |
+| the recurrence field was saved unscrubbed | closed | `test_calendar_shapes.Recurrence` |
+| "ID 12" (fewer than three digits), HTML around a label in a TITLE, a secret in Greek, Hebrew, Hindi, Thai or Russian | limit, by design | `NOT_COVERED`, `test_project_id_with_a_short_number_stays` |
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
