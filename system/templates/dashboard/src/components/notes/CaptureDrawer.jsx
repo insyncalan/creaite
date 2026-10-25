@@ -186,10 +186,11 @@ export async function captureDone(find) {
   } finally { capBusy.value = false; }
 }
 
-/** Carry on with a draft the server kept. @param {Draft} d */
+/** Carry on with a draft the server kept. A meeting's draft (Working session) with no project stays unselected: no guess from
+ *  the title (#343, a confidential meeting must not file under a guess). @param {Draft} d */
 function resume(d) {
   load({ ...blank(), id: d.id, code: d.code === "_portfolio" ? "" : d.code || "", chosen: !!d.code && d.code !== "_portfolio",
-    how: d.code && d.code !== "_portfolio" ? "chosen" : "", reason: "", title: d.title || "", body: d.body || "",
+    how: d.code && d.code !== "_portfolio" ? "chosen" : d.template === "working-session" ? "meeting" : "", reason: "", title: d.title || "", body: d.body || "",
     template: d.template || "blank", date: d.date || "", with: d.with || [], confidential: !!d.confidential, saved: d.at || "", loaded: "" });
   requestAnimationFrame(() => { if (ed) ed.focus("end"); });
 }
