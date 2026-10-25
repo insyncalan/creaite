@@ -59,7 +59,8 @@ DEFAULTS = {"daily_days": 30, "weekly_days": 365, "copy_days": 14, "snapshot_day
             "releases_kept": 3, "update_backups_kept": 3}
 VERIFY_EVERY_DAYS = 7
 LEFT_OUT = ("system/staging/ask/", "system/staging/uploads/ask/",   # ask creaite chats and images: can hold mail and Teams text
-            "system/staging/vip.json")                                  # VIP is private to Alan (BL-288; Alan, 14-10-2026)
+            "system/staging/vip.json",                                  # VIP is private to Alan (BL-288; Alan, 14-10-2026)
+            "system/staging/drafts/calendar")                           # #369: the raw calendar reply (invite text, passcodes)
 RESTORABLE = ("system/tracker.db", "system/config/", ".claude/settings.local.json", "CLAUDE.md", "system/staging/",
               "system/history/flow-", "system/processed.txt", BUNDLE, MANIFEST)
 
