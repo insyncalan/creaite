@@ -47,7 +47,7 @@ class FieldNames(LiveBrowserCase):
         names = self.b.eval("""['vsInput','fmBtn','fsFrom','fsTo'].map(id=>{ const el=document.getElementById(id);
           return el.getAttribute('aria-label')||[...(el.labels||[])].map(l=>l.textContent.trim()).join(' '); })""")
         self.assertEqual(names, ["Search everything", "Filter", "From", "To"])
-        self.assertEqual(self.b.eval("document.querySelector('#fmenu fieldset legend').textContent"), "Type")
+        self.assertEqual(self.b.eval("[...document.querySelectorAll('#fmenu fieldset legend')].map(l=>l.textContent)"), ["View", "Type"])   # #341 item 13: the view is chosen here too
         self.assertEqual(self.unnamed("files"), [])
 
     def test_every_settings_category(self):

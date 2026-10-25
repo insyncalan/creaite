@@ -130,7 +130,7 @@ class Links(LiveBrowserCase):
         b.wait("document.querySelector('#projTbl tr')")
         def_ev = b.eval("document.querySelector('#projTbl tr[data-cock=\"DEF\"] .ev').innerHTML")
         self.assertNotIn("raid:urgentonly:DEF", def_ev)              # DEF has no urgent risk: plain text
-        self.assertIn("Urgent risks <b", def_ev)
+        self.assertNotIn("Urgent risks", def_ev)                     # #341 item 4: the Projects page shows only the figures above zero
         b.click("#projTbl [data-cockjump='ABC|undated']")
         b.wait("VIEW==='cockpit' && COCK==='ABC' && !!document.getElementById('undatedCard')")
         b.eval("go('projects')")
