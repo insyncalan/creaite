@@ -187,39 +187,53 @@ def write(words_, href):
 # reply asked for by 19-10-2026.", "...: Emailed Tom Reid by message asking for an update.", "...: Asked Chris Dunn for a decision by
 # email.". They sit in an action's Latest update, a risk's Response or a decision's Reasoning (drafts.js sentLine writes one fixed
 # shape), so plain code recognises them by that shape and no client path carries them; no schema change is needed.
-_SENT_DATE = r"(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2})"
-# The fixed shape: a date, a colon, Chased / Emailed / Asked (any case), a name, "by email" or "by message". It starts a line (after an
-# optional bullet) or follows the end of a sentence; ordinary text such as "We chased the supplier" has no date and never matches.
-SENT_LINE = re.compile(r"(?:^[ \t]*(?:[-*\u2022\u2013][ \t]*)?|(?<=[.!?;])[ \t]+)" + _SENT_DATE
-                       + r":[ \t]+(?i:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?i:email|message)\b[^\n]*$", re.M)
+# Fail closed (#368). A sent line wrongly NOT recognised (a false negative) lets Alan's chase log into a client text or an email: a
+# leak, and the worse failure. A line wrongly recognised (a false positive) only has a line struck out or a draft held for a look.
+# So the recognition is read on the plainest form of the text (HTML tags off, then edit_ai.normal: no-break and full-width spaces,
+# a full-width colon, look-alike hyphens and invisible characters made plain), in any case and spacing, anywhere on a line (a bullet or
+# a sentence before it), with a date in either order, and the name allowed to break over one line. The date, its colon, the verb and
+# "by email|message" must all be there, so ordinary prose that only says "chased" or "asked" is never matched.
+_NL = "\n\r\v\f\x85\u2028\u2029"
+_SENT_DATE = r"(?:\d{2}\s*-\s*\d{2}\s*-\s*\d{4}|\d{4}\s*-\s*\d{2}\s*-\s*\d{2})"
+SENT_LINE = re.compile(rf"(?<!\d){_SENT_DATE}\s*:\s*(?:chased|emailed|asked)\s+"
+                       rf"(?:[^{_NL}]*?(?:\r\n|[{_NL}])[ \t]*)?[^{_NL}]*?\bby\s+(?:email|message)\b[^{_NL}]*", re.I)
 _TAGS = re.compile(r"</?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>", re.I)
 _BREAKS = re.compile(r"</(?:p|li|div)>|<br\s*/?>", re.I)
 
 
 def _sent_norm(text):
-    """The text as the recognition reads it: no zero-width marks, no-break spaces as spaces, CRLF as LF, simple HTML as plain lines."""
-    t = re.sub("[\u200b\u200c\u200d\u2060\ufeff]", "", str(text or "")).replace("\u00a0", " ").replace("\r\n", "\n").replace("\r", "\n")
+    """Simple HTML as plain lines, CRLF as LF, no-break spaces as spaces (what the recognition reads first)."""
+    t = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
     if _TAGS.search(t):
         import html
         t = html.unescape(_TAGS.sub("", _BREAKS.sub("\n", t)))
-        t = t.replace("\u00a0", " ")
-    return t
+    return t.replace("\u00a0", " ")
+
+
+def _sent_form(text):
+    import edit_ai
+    return edit_ai.normal(_sent_norm(text))
 
 
 def sent_has(text):
-    """Whether a text holds an "I sent it" line."""
-    return bool(SENT_LINE.search(_sent_norm(text)))
+    """Whether a text holds an "I sent it" line, however it is spaced, cased or written."""
+    return bool(SENT_LINE.search(_sent_form(text)))
 
 
 def sent_strip(text):
-    """The text without its "I sent it" lines (and the blank lines they leave); the rest as it was."""
-    if not text or not SENT_LINE.search(_sent_norm(text)):
+    """The text without its "I sent it" lines (and the blank lines they leave). A text without one comes back as it was; a text with
+    one comes back in the plain form the line was found in, the line cut from its date to the line's end."""
+    if not text:
         return text
+    t = _sent_form(text)
+    if not SENT_LINE.search(t):
+        return text
+    t = SENT_LINE.sub("\x00", t)
     out = []
-    for line in _sent_norm(text).split("\n"):
-        cut = SENT_LINE.sub("", line)
-        if cut != line and not cut.strip():
-            continue
-        out.append(cut)
-    return "\n".join(out).strip("\n").strip()
+    for line in t.split("\n"):
+        if "\x00" in line and not re.sub(r"[\x00 \t\-*\u2022\u2013]", "", line):
+            continue                                                  # the line held only the cut line (and a bullet)
+        out.append(line.replace("\x00", ""))
+    t = "\n".join(out)
+    return t.strip()
 # ===== end #153 =====

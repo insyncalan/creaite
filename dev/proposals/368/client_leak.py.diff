@@ -1,0 +1,28 @@
+diff --git a/system/scripts/client_leak.py b/system/scripts/client_leak.py
+index 48ac63aa..fb594e0c 100644
+--- a/system/scripts/client_leak.py
++++ b/system/scripts/client_leak.py
+@@ -223,7 +223,7 @@ def text_findings(con, code, text, skip=()):
+         why = f"{ref} belongs to another project" if ref.split("-")[0] != code else item_problem(con, ref, blocking)
+         if why:
+             found.append(f"{why}, but its ID appears")
+-    found += _context_findings(con, code, text, low, ids)
++    found += _context_findings(con, code, text, low, ids, raw)
+     for word in INTERNAL_WORDS:
+         if word in low:
+             found.append(f"contains “{word}”")
+@@ -234,12 +234,12 @@ def text_findings(con, code, text, skip=()):
+     return found + unreadable_findings(raw)
+ 
+ 
+-def _context_findings(con, code, text, low, ids):
++def _context_findings(con, code, text, low, ids, raw=None):
+     """text_findings' checks beyond the items themselves: a memory line marked Client-safe: no, a chase log line, and an item a
+     label excludes (BL-94's floor). Split out of text_findings (v2.5.3, #259), its messages unchanged."""
+     found = _memory_findings(code, low)
+     import linktext                                            # #153: an "I sent it" line is internal
+-    if linktext.sent_has(as_shown(text)):
++    if linktext.sent_has(as_shown(text)) or linktext.sent_has(text) or (raw is not None and linktext.sent_has(raw)):   # #368: fail closed, any form
+         found.append("a chase log line (a dated 'Chased/Emailed/Asked … by email') is internal")
+     try:                                                       # BL-94's floor
+         found += _label_findings(con, code, text, low, ids)
