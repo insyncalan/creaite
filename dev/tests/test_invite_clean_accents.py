@@ -33,7 +33,9 @@ from test_invite_clean_timing import ALARM, LIMIT, timed  # noqa: E402,F401
 REVIEWER_TITLES = [("Pásscode: 1234", "1234"), ("Piń: 1234", "1234"), ("Passcodé: hunter", "hunter"),
                    ("Passwörd hunter", "hunter"), ("Pàssword hunter", "hunter"), ("Sécret hunter", "hunter"),
                    ("Passcodě: hunter", "hunter"), ("Passcodė: hunter", "hunter"), ("Passcodȩ: hunter", "hunter"),
-                   ("Påsscode: hunter", "hunter"), ("Passcodé: 4417", "4417"), ("ṔIN: 4417", "4417")]
+                   ("Påsscode: hunter", "hunter"), ("Passcodé: 4417", "4417"), ("ṔIN: 4417", "4417"),
+                   ("PI\u0903N: 4417", "4417"), ("Meeting I\u0903D: 987 654 321", "987 654 321"), ("Passw\u0903ord: hunter2x", "hunter2x"),
+                   ("Pa\u3164sscode: 4417", "4417"), ("Meeting\u2800ID: 4417", "4417")]
 REVIEWER_BODIES = [("PIŃ\nkqzxyw\nok", "kqzxyw"), ("Tokeń\nabcdef\nok", "abcdef"), ("[Passcode](http://x.example.invalid)\nhunter\nok", "hunter"),
                    ("[Meeting ID](http://x.example.invalid): 987 654 321", "987 654 321"), ("Pásscode:\nhunter\nok", "hunter")]
 OTHER_ALPHABETS = [("パスコード: 4417", "4417"), ("비밀번호: 4417", "4417"), ("Пароль: 4417", "4417"),
