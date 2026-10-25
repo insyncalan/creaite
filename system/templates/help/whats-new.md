@@ -48,7 +48,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - **Files** says Word, Transcript or Excel for a file's type. (#343)
 
 ### What's fixed
-- **A confidential meeting's Prep page and agenda no longer land in a project folder you didn't choose.** Until you pick the project, they go to the portfolio folder, and nothing sent to Claude names the project.
+- **A confidential meeting's Prep page and agenda no longer land in a project folder you didn't choose.** Until you pick the project, they go to the portfolio folder, and Claude isn't told which project it is.
 
 ### Behind the scenes
 - A failed Track change clears the Filed note, and renaming minutes follows an update item's source. (#355)
