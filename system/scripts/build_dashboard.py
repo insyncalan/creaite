@@ -3928,7 +3928,8 @@ def meeting_hub(settings, projects, today, cal, actions, raid, decisions, folder
     for day, events in ((cal or {}).get("days") or {}).items():
         for ev in events if isinstance(events, list) else []:
             title = str(ev.get("title") or "")
-            if ev.get("all_day") or invite_clean.sensitivity(ev) == "private" or not title or ("private" not in ev and title == "Busy" and not ev.get("where")):
+            busy = "private" not in ev and title == "Busy" and not ev.get("where")
+            if ev.get("all_day") or invite_clean.sensitivity(ev) == "private" or not title or busy:
                 continue
             eid = str(ev.get("id") or "") or None
             key = f"calendar:{eid}" if eid else f"cal:{day}|{ev.get('start', '')}|{title}"

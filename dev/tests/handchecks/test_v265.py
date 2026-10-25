@@ -16,6 +16,7 @@ test_design_fixes_343_browser) and in the gate; this file checks the release is 
   10  #343        Files names a file's type Word, Transcript or Excel
   11  #355        minutes_destination follows an update item's top-level source (test_355_followups, no browser)
   12  not in      #341 and #362 are not claimed in What's new as done
+  13  leak fix    a confidential meeting's project counts only when chosen (test_confidential_persisted, test_confidential_paths, test_confidential_end_to_end), hand check 10 is on the sheet, and What's new says it in plain words
 
 Run (from the repository root):  python3 dev/tests/handchecks/test_v265.py
 """
@@ -114,6 +115,14 @@ class V265(unittest.TestCase):
     def test_c12_not_in_scope(self):
         sec = read("system/templates/help/whats-new.md").split("## creaite 2.6.4\n")[0]
         self.assertNotRegex(sec, r"\(#(341|362)\)")
+
+    def test_c13_confidential_leak_fix(self):
+        for t in ("test_confidential_persisted", "test_confidential_paths", "test_confidential_end_to_end"):
+            r = subprocess.run([sys.executable, str(REPO / f"dev/tests/{t}.py")], cwd=REPO, capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, t + "\n" + r.stderr[-1500:])
+        self.assertRegex(read("dev/handchecks/v2.6.5.md"), r"(?m)^10\. \*\*A confidential meeting")
+        for p in ("system/templates/help/whats-new.md", "dev/release-notes/2.6.5-plain.md"):
+            self.assertIn("no longer land in a project folder you didn't choose", read(p))
 
 
 if __name__ == "__main__":
