@@ -21,3 +21,7 @@ v1 (6cdba005...) and v2 (ecb0f097...) stay as they were. v3 fixes the two notes 
 ## v4 (live_server-rescrub-v4.diff): show Alan this one instead of v3
 
 v3 retried only once: `calendar_rescrub_retry` returns when the timer is alive, and when it is called from the timer's own callback that timer is alive. v4 adds `and timer is not threading.current_thread()`. Applies cleanly on origin/main (`git apply --check`); `test_live_rescrub_369.py` uses it, with a held-lock test of several retries (0.3 s delay, lock held 2 s) and a mutant that fails if only one retry happens.
+
+## Superseded
+
+`live_server-rescrub.diff` (v1), `live_server-rescrub-v2.diff` and `live_server-rescrub-v3.diff` are superseded by `live_server-rescrub-v4.diff` and are kept only for the record. Only v4 is on the 2.6.8 guarded chain.

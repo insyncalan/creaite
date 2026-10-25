@@ -39,3 +39,7 @@ pair, applied after them:
 Applies on the branch base a10a7299 after the four frozen diffs (`git apply --check` clean there). On the current origin/main
 (a505164f) the approved tools delta itself no longer applies (its run_dirs hunk, changed by #339 A), so a rebase of the tools delta
 and this one is needed at the cut; it needs Alan's word again.
+
+## Follow-up pair not in 2.6.8
+
+`live_server-365-followup.diff` and `tests-followup.diff` are not part of the 2.6.8 tree or chain (removed from the release merge); only the four frozen diffs above travel (`live_server-365.diff`, `tests-pins.diff`, `live_server-365-tools.diff`, `tests-tools.diff`). The follow-up lines above describe files that are not in this tree.

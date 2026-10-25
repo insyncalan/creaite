@@ -1,14 +1,16 @@
-# The guarded chain for 2.6.8 (the list the check in dev/tests/guarded_chain.py pins). One diff per line, in order of use.
+# The guarded chain for 2.6.8 (nothing is pinned yet: dev/tests/guarded_chain.py does not know it; a pin is added only on Alan's say). One diff per line, in landing order.
 # Base: origin/main at the 2.6.8 cut (apply on the release commit).
+# Guarded files only: system/scripts/live_server.py, system/scripts/client_leak.py, system/scripts/backup.py.
+#
 # #365: a transcript load that never got the calendar event: per-result debug log, the day-window search with one retry, and the check/load kind prompt (no CLAUDE.md, no session start)
 dev/proposals/365/live_server-365.diff
-# #365 tools delta (pending Alan's word)
+# #365 tools delta
 dev/proposals/365/live_server-365-tools.diff
-# #365 tests for the above (a new test file)
-dev/proposals/365/tests-pins.diff
-# #365 tools delta tests (pending Alan's word)
-dev/proposals/365/tests-tools.diff
-# #365 follow-up delta: CLAUDE.md, bounded search, id pinned (pending Alan's re-approval)
-dev/proposals/365/live_server-365-followup.diff
-dev/proposals/365/tests-followup.diff
-# #368: dev/proposals/368/<file>.diff to be added when it lands
+# #368: the client report check reads the sent line in every form
+dev/proposals/368/client_leak.py.diff
+# #369: the live server cleans the saved calendar again at start-up (v4; v1 to v3 are superseded)
+dev/proposals/369/live_server-rescrub-v4.diff
+# #369b: backup draft
+dev/proposals/369b/backup-draft.diff
+#
+# Not guarded (ordinary commits): dev/proposals/365/tests-pins.diff, dev/proposals/365/tests-tools.diff
