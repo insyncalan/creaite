@@ -363,10 +363,10 @@ class V269(unittest.TestCase):
         src = read("system/scripts/sweep.py")
         if "calendar_gateway" not in src:
             self.skipTest("sweep.py does not use calendar_gateway yet (readers and writers migrate in a later slice); it unblocks this check")
-        for fn in ("calendar_row", "keep_held_past_days"):
+        for fn in ("_calendar", "keep_held_past_days", "_rescrubbed"):   # the three writers; calendar_row only builds a row
             m = re.search(rf"^def {fn}\(.*?(?=^def |\Z)", src, re.M | re.S)
             self.assertIsNotNone(m, f"sweep.{fn} not found")
-            self.assertRegex(m.group(0), r"stamp|calendar_gateway|clean_row", f"sweep.{fn} does not stamp its rows")
+            self.assertRegex(m.group(0), r"stamp|clean_row", f"sweep.{fn} does not stamp its rows")
 
     def test_c29_e1_unit_tests(self):
         """The quick E1 unit tests (invite_filter_order takes about two minutes and runs at the gate, not here)."""
