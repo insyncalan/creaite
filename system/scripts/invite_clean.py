@@ -166,9 +166,16 @@ def normal(text, marks=False):
                    or unicodedata.category(c) not in ("Cf", "Cc", "Co"))
 
 
+_KEEP_MARKS = ("\u3099", "\u309a")                    # kana voicing marks belong to the letter (パスコード): they are kept
+
+
 def skeleton(text):
-    """What a test matches on: normal(), combining marks and Arabic tatweel removed, escapes and URL encoding decoded."""
-    t = "".join(c for c in normal(text) if unicodedata.category(c) != "Mn" and c != "ـ")
+    """What a test matches on: NFKD with every combining mark removed (an accent on a label letter must not hide the label: "Pásscode",
+    "Piń", "Passwörd"; NFKC would COMPOSE e + U+0301 first, leaving nothing to strip), recomposed (Hangul, kana), Arabic tatweel removed,
+    escapes and URL encoding decoded. Only a copy used for matching: the text that is kept is never changed by this."""
+    d = unicodedata.normalize("NFKD", normal(text))
+    kept = (c for c in d if (unicodedata.category(c) not in ("Mn", "Me") or c in _KEEP_MARKS) and c != "ـ")
+    t = unicodedata.normalize("NFC", "".join(kept))
     for _ in range(3):
         u = unquote(htmllib.unescape(t))
         if u == t:
@@ -187,6 +194,7 @@ def _ellipsis(m):
     return m.group() if set(m.group().replace(" ", "").replace("\t", "").replace("\n", "")) == {","} else "\u2026"
 
 
+_MDLINK = re.compile(r"\[([^\[\]]{0,200})\]\([^()\s]{0,500}\)")                  # [Passcode](http://x): the text is the label
 _DECORATION = re.compile(r"[_*~`]+")                                          # markdown emphasis and underscores: read as a space
 
 
@@ -199,7 +207,9 @@ def _views(text):
     s = _SPACED.sub("PIN", s)
     s = _SE_RUN.sub(_ellipsis, s)
     out = []
-    for base in ([_DECORATION.sub(" ", s)] if _DECORATION.search(s) else []) + [s]:
+    linked = _MDLINK.sub(r" \1 ", s)                       # a markdown link read as its text: [Passcode](http://x) is the label Passcode
+    bases = ([linked] if linked != s else []) + [s]
+    for base in [_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases:
         out.append(base)
         t = base.translate(confusables.TABLE)
         if t != base:

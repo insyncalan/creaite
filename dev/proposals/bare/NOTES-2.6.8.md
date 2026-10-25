@@ -18,6 +18,8 @@
 
 **Underscores and markdown.** Underscores, asterisks, tildes and backticks round a label are read as spaces, so `snake_case` words are read as words: "pass_code", "meeting_id 4417" and "api_key abc" are removed, "code_review" and "my_password_manager plan" stay. A label line followed by a removed line (a link, a line with its own value) loses the next ordinary line as well, because the removed line is not taken for the value.
 
+**Accents.** An accent or other combining mark on a label letter no longer hides the label ("Pásscode: 1234", "Piń: 1234", "Passwörd hunter", "Sécret"). Words that differ from a label only by accents are read as the label, so "Códe sprint", "Piñ board" and "Tokén of appreciation" lose their text to "Meeting" like their plain forms; "Códe review" and "Piñ pad" stay, and "Passwörter" is a different word and stays. The text that is kept keeps its accents. A markdown link whose text is a label ("[Passcode](http://...)") is read as that label.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
