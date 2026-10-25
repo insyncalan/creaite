@@ -24,7 +24,7 @@ LIVE = REPO / "system/scripts/live_server.py"
 DIFFS = sorted(p for p in (REPO / "dev/proposals/339").glob("*.diff") if p.name not in ("tests-pins.diff", "creaite-rules.diff"))
 RULES = REPO / "dev/proposals/339/creaite-rules.diff"
 PINS = REPO / "dev/proposals/339/tests-pins.diff"
-PIN_FILES = ("test_panel_sweep", "test_calendar_refresh", "test_ai_budget_gate_334", "test_mail_check")
+PIN_FILES = ("test_panel_sweep", "test_calendar_refresh", "test_ai_budget_gate_334", "test_mail_check", "test_fresh_ask_327")
 sys.path.insert(0, str(REPO / "system/scripts"))
 
 

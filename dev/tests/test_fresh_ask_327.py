@@ -267,9 +267,13 @@ class UsageAndQueue(unittest.TestCase):
                     live_server.Run("r-nul327", "hi\x00there", None, None, None)
                 self.assertIsNone(reach.guard_run())                   # no half-started run is left behind
         src = (ROOT / "system/scripts/live_server.py").read_text(encoding="utf-8")
-        for mark in ("except (OSError, ValueError) as e:                  # #327 B", "except (OSError, ValueError):                           # #327 B",
-                     "sweep=panel_sweep(item[\"text\"], images), fresh=True)                             # BL-309: a queued sweep too\n        except (OSError, ValueError):"):
-            self.assertIn(mark, src)                                   # the ask handler, the run, the queue
+        for mark in ("except (OSError, ValueError) as e:                  # #327 B",
+                     "except (OSError, ValueError):                           # #327 B"):
+            self.assertIn(mark, src)                                   # the ask handler, the run
+        # the queue: #339 moved the queued Run(...) into queued_run(); queue_start holds the queue when it raises
+        self.assertIn('sweep=panel_sweep(item["text"], images), fresh=True)', src)
+        self.assertIn("# BL-309: a queued sweep too", src)
+        self.assertRegex(src, r"queued_run\(item, images, session, chat\)[^\n]*\n\s+except \(OSError, ValueError\) as e:")
 
 
     def test_the_usage_line_says_resumed_for_an_ask_only(self):
