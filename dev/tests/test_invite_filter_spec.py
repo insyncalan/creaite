@@ -468,10 +468,15 @@ class Cap(unittest.TestCase):
 
     def test_a_line_that_would_cross_drops_the_rest_too(self):
         short = ["Short line number %d here" % i for i in range(5)]
-        crossing = "x " * 800                                                   # 1,600 characters of words
+        crossing = "x " * 700                                                   # 1,400 characters of words: fits alone, not after the others
         tail = ["Tail one", "Tail two"]
         out = F.filter_text("\n".join(short + [crossing] + tail))
         self.assertEqual(out.split("\n"), short)                                # not the tail: still a subset in order, cut at the crossing line
+
+    def test_a_line_over_the_cap_is_dropped_whole_and_the_rest_stays(self):
+        short = ["Short line number %d here" % i for i in range(5)]
+        out = F.filter_text("\n".join(short + ["x " * 800, "Tail one", "Tail two"]))     # 1,600 characters can never fit (2.6.9 item 3)
+        self.assertEqual(out.split("\n"), short + ["Tail one", "Tail two"])
 
     def test_below_the_cap_nothing_is_lost(self):
         src = self.lines(20)

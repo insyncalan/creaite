@@ -310,8 +310,16 @@ def _cut(text):
     return head[:k] if k >= 0 else ""
 
 
+def _fit(lines):
+    """THE LONG-LINE RULE: a line longer than CAP can never fit in the cap, so it is dropped whole (fail-closed; never cut, never
+    truncated at a space, which would break the subset property). Done before the label layers, so the scrub never judges a fragment."""
+    return [ln for ln in lines if len(ln) <= CAP]
+
+
 def _capped(lines):
-    """Whole lines in order while the joined text (with newlines) stays within CAP; the first line that would cross ends it."""
+    """Whole lines in order while the joined text (with newlines) stays within CAP; the first line that would cross ends it.
+    A line over CAP is dropped first (_fit); the output never ends in a blank line, so filtering it again changes nothing."""
+    lines = _fit(lines)
     out, total = [], 0
     for ln in lines:
         add = len(ln) + (1 if out else 0)
@@ -319,6 +327,8 @@ def _capped(lines):
             break
         out.append(ln)
         total += add
+    while out and not out[-1].strip():
+        out.pop()
     return out
 
 
@@ -350,11 +360,11 @@ def filter_text(text, *, second_layer=True, html=None):
                 return ""
         elif html or mod.looks_like_html(text):
             lines = mod.to_lines(text)
-            kept = keep_lines(_cut("\n".join(lines)).split("\n"), second_layer=second_layer)
+            kept = keep_lines(_fit(_cut("\n".join(lines)).split("\n")), second_layer=second_layer)
             return "\n".join(_capped(kept))
     if html is not False:
         text = text.replace("\r\n", "\n").replace("\r", "\n")  # a CR must not hide a line from the rules
-    return "\n".join(_capped(keep_lines(_cut(text).split("\n"), second_layer=second_layer)))
+    return "\n".join(_capped(keep_lines(_fit(_cut(text).split("\n")), second_layer=second_layer)))
 
 
 # ---------------------------------------------------------------- option (c): the 2.6.8 scrub as the body label layer (2.6.9)
@@ -433,8 +443,9 @@ def _label_layer(lines, order=None):
     still there when the scrub's window runs, so the window cannot eat an innocent neighbour, and a qualified label ("PIN to follow")
     is judged with its value present. See PLAN.md sections 1b and 1c."""
     order = order or DEFAULT_ORDER
+    lines = _fit(lines)
     if order == "anchors_first":
-        return _scrub_lines(keep_lines(list(lines), second_layer=False))
+        return _tidy_blanks(_scrub_lines(keep_lines(list(lines), second_layer=False)))
     if order == "scrub_first":
         return _tidy_blanks(keep_lines(_scrub_lines(list(lines)), second_layer=False))
     raise ValueError("order must be one of %r" % (ORDERS,))
@@ -460,7 +471,7 @@ def filter_text_with_scrub(text, html=None, order=None):
         if scrub is None:
             return ""
         raw = text[:BODY_MAX * 5]
-        kept = _tidy_blanks(keep_lines(_cut(scrub.invite_text(raw)).split("\n"), second_layer=False))
+        kept = _tidy_blanks(keep_lines(_fit([x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]), second_layer=False))
         return "\n".join(_capped(kept))
     mod = _blocks_module()
     if html is None or html:
