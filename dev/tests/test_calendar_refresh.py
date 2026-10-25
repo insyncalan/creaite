@@ -672,7 +672,7 @@ class SweepCalendarSave(unittest.TestCase):
         self.assertEqual(self.save({self.tomorrow: [ev]}).returncode, 0)
         row = self.held()[self.tomorrow][0]
         self.assertEqual(row, {"id": "ev-1", "start": "09:00", "end": "09:30", "all_day": False, "title": "Pilot readiness review",
-                               "where": "", "teams": False, "private": False, "organiser": False, "sensitivity": "confidential"})
+                               "where": "", "teams": False, "private": False, "organiser": False, "sensitivity": "confidential", "clean": 1})
         text = self.cal.read_text()
         for gone in ("Room 2", "Jane Doe", "jane.doe", "weekly", "Board pack", "Sam Lee", "pack.pdf", "pwd"):
             self.assertNotIn(gone, text)

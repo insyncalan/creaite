@@ -320,6 +320,13 @@ def read(purpose, path=None):
     return out
 
 
+def read_raw(path=None):
+    """The saved calendar exactly as stored (json.loads of the file), for the WRITERS only (the sweep's held-day merge and the rescrub),
+    which must see the stamps and the unfiltered rows they are about to stamp. Never serve this to a reader: use read(purpose).
+    Raises OSError or ValueError as the plain read did."""
+    return json.loads((path if path is not None else paths.CALENDAR).read_text(encoding="utf-8"))
+
+
 def clear_cache():
     """Forget every cached calendar (tests)."""
     _CACHE.clear()
