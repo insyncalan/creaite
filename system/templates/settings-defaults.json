@@ -348,5 +348,17 @@
   "reports": {
     "_about": "v2.1.0 (BL-335, BL-338): reports and minutes in creaite's own format; their HTML, Word and PDF exports.",
     "file_minutes_exports_beside": true
+  },
+  "ai": {
+    "_about": "#132: which model each kind of job uses (provider:model, never a key), weaker choices Alan accepted, what happens at a limit, and the models each connected provider offers. Keys live only in the Mac's keychain.",
+    "jobs": {
+      "guard": "claude:opus",
+      "tools": "claude:sonnet",
+      "write": "claude:sonnet",
+      "quick": "claude:haiku"
+    },
+    "accepted_weaker": [],
+    "on_limit": "ask",
+    "providers": {}
   }
 }

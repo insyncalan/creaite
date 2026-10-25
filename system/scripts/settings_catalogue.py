@@ -23,9 +23,10 @@ import paths  # noqa: E402
 
 DEFAULTS_FILE = paths.TEMPLATES / "settings-defaults.json"
 SKIP = ("_about", "note")                 # descriptions, not settings
-MAP_KEYS = ("prep.series",)               # a dict that is one setting (a map Alan fills), not a group of settings
+MAP_KEYS = ("prep.series", "ai.providers")               # a dict that is one setting (a map Alan fills), not a group of settings
 UNORDERED = ("work.weekend_days", "dashboard.week_ahead_priorities", "identity.short_forms", "identity.own_domains",
-             "locations.never_index", "reminders.dismissed_forever", "dashboard.rail.hidden")   # order means nothing
+             "locations.never_index", "reminders.dismissed_forever", "dashboard.rail.hidden",
+             "ai.accepted_weaker")   # order means nothing
 RETIRE_AFTER_DAYS = 30                    # a setting never changed in a log this old is a candidate to retire (counts only)
 LOCK = threading.Lock()                   # one settings save at a time from the server
 
@@ -96,7 +97,7 @@ FIXED = ("excel.export", "live_mode.required", "live_mode.port", "assistant.enab
          "locations.folders.transcripts", "locations.folders.minutes", "locations.folders.weekly_reports",
          "locations.folders.client_reports", "locations.folders.adhoc_documents", "locations.folders.images",
          "locations.folders.steerco", "locations.folders.agendas", "locations.folders.notes", "locations.never_index",
-         "locations.offsite_backup")
+         "locations.offsite_backup", "ai.providers")
 FIXED_WHY = {
     "excel.export": "a description of how the export runs, not a choice",
     "live_mode.required": "the dashboard needs creaite running (IT-approved); not a choice",
@@ -106,6 +107,7 @@ FIXED_WHY = {
     "people.hidden": "an old list; set-up moves it into the people register",
     "workstreams.added": "an old list; set-up moves it into the workstreams table",
     "workstreams.hidden": "an old list; set-up moves it into the workstreams table",
+    "ai.providers": "changed by Connect, Manage and Disconnect in AI models, with the key in the keychain",
 }
 CATALOGUE = {
     # ── Sweep
@@ -493,11 +495,33 @@ CATALOGUE = {
                                             "never overwriting.",
                                             "On: the copy you send sits with the minutes it came from (BL-338; Alan, "
                                             "15-10-2026)."),
+    # ── AI models (#132): Settings › Essentials › AI models
+    "ai.jobs.guard": ("AI models", "Model for guard, permissions and data work",
+                      "The model for jobs that change what protects your data.",
+                      "Claude Opus: these jobs use tools and a mistake could weaken a safeguard, so the strongest model."),
+    "ai.jobs.tools": ("AI models", "Model for work that uses tools",
+                      "The model for ask creaite, the sweep, minutes extraction and Prep research.",
+                      "Claude Sonnet: it uses tools well and reads exactly, at less cost than Opus."),
+    "ai.jobs.write": ("AI models", "Model for writing and drafting",
+                      "The model for one prompt in, text out: Generate, status forms, redrafts.",
+                      "Claude Sonnet: good writing that keeps the facts; you review every draft."),
+    "ai.jobs.quick": ("AI models", "Model for quick edits and short drafts",
+                      "The model for short rewrites that must keep dates, numbers, names and IDs exact.",
+                      "Claude Haiku: quick and light; creaite checks every fact and retries on the next kind up."),
+    "ai.accepted_weaker": ("AI models", "Weaker models you accepted",
+                           "Pairs of a kind of job and a weaker model you chose with Use it anyway.",
+                           "Empty: a weaker choice asks first until you accept it."),
+    "ai.on_limit": ("AI models", "When a limit is reached",
+                    "Ask me, use another connected model, or step down one kind.",
+                    "Ask me: nothing changes model without you saying so."),
+    "ai.providers": ("AI models", "Connected providers' models",
+                     "The models each connected provider offers and which you ticked. Never a key.",
+                     "Empty: only Claude is connected at first."),
 }
 GROUP_ORDER = ("You", "Draft email", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Opening views", "Work board", "Project page", "Files",
                "Checking mail and Teams", "Meeting prep and Intake", "Close the day", "Reports and minutes", "Reminders", "AI drafts",
-               "Look and layout", "Help", "Review", "Health thresholds", "Early warnings", "Current state",
+               "AI models", "Look and layout", "Help", "Review", "Health thresholds", "Early warnings", "Current state",
                "Archiving and backups", "Folders and OneDrive", "creaite and ask creaite", "Search", "Logging",
                "Health check", "creaite and backups", "Diagnostics", "Legacy", "Developer")
 # v2.6 (#246, Alan 19-10-2026): Settings is tabs. Each group's tab ("advanced/<sub>" for Advanced's five sub-tabs). An Essential
@@ -511,7 +535,7 @@ ADVANCED_SUBS = (("review", "Review and warnings"), ("state", "Current state"), 
                  ("folders", "Folders and OneDrive"), ("server", "Server, search and logs"))
 GROUP_TAB = {
     "You": "essentials", "Draft email": "essentials", "Your day": "essentials", "Saving and review": "essentials",
-    "People I follow": "essentials", "Safety": "essentials",
+    "People I follow": "essentials", "Safety": "essentials", "AI models": "essentials",
     "Opening views": "work", "Work board": "work", "Project page": "work", "Files": "work",
     "Checking mail and Teams": "sweep", "Meeting prep and Intake": "sweep", "Close the day": "sweep",
     "Reports and minutes": "reports", "Reminders": "reports",
