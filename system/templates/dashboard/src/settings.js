@@ -130,7 +130,7 @@ export const SETSECTIONS=[
  {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day you short forms email domains follow browser notification",
   mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(essText(r),w)); }},
  {id:"aimodels",cat:"essentials",title:"AI models",kw:"ai models providers claude openai api key connect model opus sonnet haiku limit",   /* #132 */
-  mount:el=>render(h(AiModels,null),el),match:w=>sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard",w)},
+  mount:el=>render(h(AiModels,null),el),match:w=>sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard",w)||!!(catalogue.value&&catalogue.value.settings.some(r=>r.group==="AI models"&&sqHas(`${r.label} ${r.line} ${r.reason}`,w)))},
  {id:"views",cat:"work",title:"Opening views",groups:["Opening views"],kw:"default priority new action actions raid open status filter view opening page sort archived projects show",
   render:()=>row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))+row("Actions open with",sl("defActionView",viewsList("actions")))+row("RAID opens with",sl("defRaidView",viewsList("raid")))+row("Decisions open with",sl("defDecisionView",viewsList("decisions")))+SHOWARCH_ROW()},   /* BL-131; BL-09's switch (also on the Projects page, #247) */
  {id:"board",cat:"work",title:"Work board",groups:["Work board"],kw:"board group by actions raid decisions closed days column",

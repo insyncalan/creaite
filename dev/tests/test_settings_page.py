@@ -546,6 +546,11 @@ class SettingsPage(LiveBrowserCase):
             if tab == "essentials" and key.startswith("drafting.") or key.startswith("dashboard.rail."):
                 continue                                  # the rail's settings are its Customise dialog (Look and help › Appearance)
             self.type_query(label)
+            if key.startswith("ai."):                     # #132: AI models draws its own rows (not .srow); the card must stay shown
+                sel = json.dumps(f'[data-keys~="{key}"]')
+                self.b.wait(f"(()=>{{ const e=document.querySelector('#aiModels'); return !!e&&e.offsetParent!==null&&!!e.querySelector({sel}); }})()")
+                checked += 1
+                continue
             got, end = None, time.time() + 15
             while time.time() < end and got is None:
                 got = self.b.eval(f"{find}({key!r},{json.dumps(tab == 'essentials')})")

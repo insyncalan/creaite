@@ -1,0 +1,82 @@
+diff --git a/dev/tests/pinned/guard/decisions.json b/dev/tests/pinned/guard/decisions.json
+index d2ba1113..99c59af9 100644
+--- a/dev/tests/pinned/guard/decisions.json
++++ b/dev/tests/pinned/guard/decisions.json
+@@ -2893,8 +2893,8 @@
+    ""
+   ],
+   "held | notes | Glob | {\"path\": \"<HOME>\", \"pattern\": \"**/*.md\"}": [
+-   true,
+-   ""
++   false,
++   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+   ],
+   "held | notes | Glob | {\"path\": \"projects/ABC Example Programme\", \"pattern\": \"*.md\"}": [
+    false,
+@@ -2921,8 +2921,8 @@
+    "<VAULT>: this folder holds a confidential note, and a run creaite starts itself never reads a confidential note: search a folder without one"
+   ],
+   "held | notes | LS | {\"path\": \"<HOME>\"}": [
+-   true,
+-   ""
++   false,
++   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+   ],
+   "held | notes | LS | {\"path\": \"system/backups\"}": [
+    false,
+@@ -2937,12 +2937,12 @@
+    ""
+   ],
+   "held | notes | Read | {\"file_path\": \"/etc/hosts\"}": [
+-   true,
+-   ""
++   false,
++   "/etc/hosts: it is part of the operating system"
+   ],
+   "held | notes | Read | {\"file_path\": \"<HOME>/.ssh/id_rsa\"}": [
+-   true,
+-   ""
++   false,
++   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+   ],
+   "held | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+    true,
+@@ -3017,8 +3017,8 @@
+    ""
+   ],
+   "prep | notes | Glob | {\"path\": \"<HOME>\", \"pattern\": \"**/*.md\"}": [
+-   true,
+-   ""
++   false,
++   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+   ],
+   "prep | notes | Glob | {\"path\": \"projects/ABC Example Programme\", \"pattern\": \"*.md\"}": [
+    false,
+@@ -3045,8 +3045,8 @@
+    "<VAULT>: this folder holds a confidential note, and a run creaite starts itself never reads a confidential note: search a folder without one"
+   ],
+   "prep | notes | LS | {\"path\": \"<HOME>\"}": [
+-   true,
+-   ""
++   false,
++   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+   ],
+   "prep | notes | LS | {\"path\": \"system/backups\"}": [
+    false,
+@@ -3061,12 +3061,12 @@
+    ""
+   ],
+   "prep | notes | Read | {\"file_path\": \"/etc/hosts\"}": [
+-   true,
+-   ""
++   false,
++   "/etc/hosts: it is part of the operating system"
+   ],
+   "prep | notes | Read | {\"file_path\": \"<HOME>/.ssh/id_rsa\"}": [
+-   true,
+-   ""
++   false,
++   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+   ],
+   "prep | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+    true,

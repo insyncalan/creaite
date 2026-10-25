@@ -1,0 +1,69 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index 28f260f8..b92673f0 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -809,6 +809,7 @@ SHELL_OUT = set(";&|<>(){}\n\r")
+ WRAPPER = "run"
+ WRAPPED = r"system/scripts/run ([a-z0-9_]+\.py)(?=\s|$)"
+ WRAP_NAME = r"[a-z0-9_]+\.py"
++KEY_SCRIPTS = ("providers.py",)   # #132 G1: holds the AI key store (the keychain); never run, by the panel or the wrapper
+ 
+ 
+ def wrap_problem(argv):
+@@ -822,6 +823,8 @@ def wrap_problem(argv):
+         return "runs only a creaite script in system/scripts/, by its bare name: no -c, -m, path or other program"
+     if not (Path(__file__).resolve().parent / name).is_file():
+         return f"found no system/scripts/{name}"
++    if name in KEY_SCRIPTS:                                    # #132 G1: no command line reaches the key store
++        return f"{name} holds the AI key store, which only the live server uses"
+     for a in argv[1:]:
+         if ("/" in a or a.startswith(("~", "."))) and not a.startswith("-"):
+             kind, why = classify(a, "read")
+@@ -873,6 +876,8 @@ def bash_problem(command):
+ def _script_refused(script):
+     if script == "permissions.py":
+         return "permissions.py is never run by the panel"
++    if script in KEY_SCRIPTS:                                  # #132 G1: the AI key store is the live server's alone
++        return f"{script} holds the AI key store, which only the live server uses"
+     if script in ("live_server.py", "launch.py"):
+         return f"{script} starts the live server or the app, which ask creaite never does"
+     if not (paths.ROOT / "system" / "scripts" / script).is_file():
+@@ -1228,8 +1233,12 @@ def confidential_reason(tool, inp):
+ 
+ 
+ def prep_decision(tool, inp):
+-    """(allow, reason) for one tool call in a Prep page run: refused if it would read a confidential note, or if it is a Bash call
+-    that isn't one creaite script on its own; else let through to Prep's allow list, as before."""
++    """(allow, reason) for one tool call in a Prep page run: refused if it names a never place (secrets, the operating system:
++    #132 G1c, as for ask creaite), if it would read a confidential note, or if it is a Bash call that isn't one creaite script
++    on its own; else let through to Prep's allow list, as before."""
++    why = never_reason_for(tool, inp)                       # #132 G1c: the never list, in every mode
++    if why:
++        return False, why
+     why = confidential_reason(tool, inp)
+     if why:
+         return False, why
+@@ -1243,6 +1252,23 @@ def prep_decision(tool, inp):
+     return True, ""
+ 
+ 
++def never_reason_for(tool, inp):
++    """#132 G1c: why this call names a never place (a path it reads, or a search folder with one below it), or None: the check
++    ask creaite's hook makes first, now made for the runs creaite starts itself too (modes prep and held). Fails closed."""
++    try:
++        for p in prep_paths(tool, inp):
++            kind, why = classify(p, "read")
++            if kind == "never":
++                return f"{p}: {why}"
++        if tool in ("Grep", "Glob", "LS"):
++            inside = never_inside((inp or {}).get("path") or str(paths.ROOT))
++            if inside:
++                return f"the search folder holds {inside}, which is never read: search a folder below it instead"
++    except Exception as e:  # noqa: BLE001  fail closed
++        return f"the guard couldn't check this call ({type(e).__name__})"
++    return None
++
++
+ # ===== #116 F1 (17-10-2026): the guard's own wildcard expansion, bounded =====
+ # The guard expands a wildcard to check what the shell (ask) or a script (held) would find. Opening some folders blocks in the
+ # kernel (macOS asks for consent before a program reads other apps' data under ~/Library/Group Containers), and a blocked open

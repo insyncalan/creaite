@@ -60027,7 +60027,7 @@ ${pre}**Current state title:** ${title}`);
       kw: "ai models providers claude openai api key connect model opus sonnet haiku limit",
       /* #132 */
       mount: (el2) => R(k(AiModels, null), el2),
-      match: (w6) => sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard", w6)
+      match: (w6) => sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard", w6) || !!(catalogue.value && catalogue.value.settings.some((r4) => r4.group === "AI models" && sqHas(`${r4.label} ${r4.line} ${r4.reason}`, w6)))
     },
     {
       id: "views",

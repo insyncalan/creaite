@@ -1,0 +1,812 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 8554f7ff..8bd28480 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -183,6 +183,9 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
+                          settings.json, a settings-log.jsonl line each); refuses an unknown or set-up-only key (BL-320)
+ - POST /api/health       Settings › Health: doctor's checks run read only (--read-only --json), only the problems in plain
+                          words with the Fix it each would offer (none built: guard decisions), the rest counted (BL-320)
++- POST /api/ai/state, /test, /connect, /forget, /offer, /disconnect, /choose, /limit: Settings › Essentials › AI models (#132,
++                         providers.py): providers, the four kinds of job, the limit; a key only on /test, never logged or
++                         answered; the key store and provider call are not built yet (guarded), so a real vault refuses
+ Standard library only. Never uses a skip-permissions mode.
+ """
+ import contextlib
+@@ -2389,6 +2392,21 @@ SEARCH_TOOLS = ["Read", "Grep", "Glob"]
+ KIND_TOOLS["search"] = list(SEARCH_TOOLS)
+ KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
+                          *vault_permissions.m365_read_tools()]
++
++
++def never_read_denies():
++    """#132 S1: reach.py's never list, the places barred even to reading (secrets, the operating system), as Read deny rules
++    for a run that has no guard hook (Search's answer): `Read(~/.ssh)` and `Read(~/.ssh/**)`, `Read(//etc/**)`. Claude Code
++    applies Read rules to its other reading tools (Grep, Glob) as well. A deny beats every allow, so this only takes away."""
++    out = []
++    for base, pattern, ops, _why in reach.NEVER:
++        if ops == "all" and base in ("home", "abs"):
++            at = f"~/{pattern}" if base == "home" else f"/{pattern}"
++            out += [f"Read({at})", f"Read({at}/**)"]
++    return out
++
++
++KIND_DENIES["search"] += never_read_denies()                          # #132 S1
+ KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS), "--strict-mcp-config"]    # F4 (#116 review): it uses no MCP at all
+ # ===== F2 (#116 review, 15-10-2026): every run kind names its built-in tools =====
+ # A run started with no --tools gets EVERY built-in tool in the installed Claude Code, including ones that run headless without
+@@ -2488,6 +2506,97 @@ def launch_context(policy):
+ # ===== end #126 =====
+ 
+ 
++# ===== #132 G3 (proposal): the model Alan chose for a kind of job, in every claude -p launch =====
++# Which kind of job (providers.JOBS) each run is. "guard" is the build work's (changing creaite's own guard files), never an in-app
++# run's, so no run maps to it. A kind not listed keeps today's launch.
++KIND_JOB = {"ask": "tools", "sweep": "tools", "search": "tools", "prep": "tools", "check": "tools", "load": "tools",
++            "vip": "tools", "generate": "write", "shape-closed": "write", "edit-ai": "quick", "notes-find": "quick"}
++CLAUDE_ALIASES = ("opus", "sonnet", "haiku")       # the only values --model is ever given
++UNAVAILABLE = "The model chosen for this isn't available now, so this ran on the recommended model."
++CONFIDENTIAL_KINDS = ("shape-closed",)             # #132 G5: a run the server already knows is confidential (a closed meeting)
++
++
++def model_choice(job, settings=None, declared=None, text=""):
++    """What run_model decides from: the model the job routes to now (providers.route_for: G5, never route), the job's default,
++    that model's entry (None when it isn't on offer), what the setting asks for, and `held`: why a job whose chosen model is
++    another provider's stays on Claude (confidential, or not checked yet), else ""."""
++    import providers
++    settings = paths.load_settings() if settings is None else settings
++    routed = providers.route_for(job, settings, text=text, declared=declared)                  # #132 G5
++    pick, wanted = routed["model"], str(providers.chosen(job, settings))
++    held = ""
++    if routed["why"] == "confidential" and not wanted.startswith("claude:"):                     # #132 G5
++        held = providers.CONFIDENTIAL_WORDS if routed["confidential_why"] in ("declared", "marked") else \
++            f"{providers.PROVIDERS.get(wanted.partition(':')[0], ('That provider',))[0]} isn't used for this yet."
++    return {"pick": pick, "default": providers.setting({}, f"ai.jobs.{job}"), "asked": providers.setting(settings, f"ai.jobs.{job}"),
++            "found": providers.model(pick, settings) if pick else None, "tools": providers.JOBS[job]["tools"],
++            "name": providers.PROVIDERS.get(str(pick).partition(":")[0], (str(pick),))[0], "held": held,
++            "limit": routed["why"] if routed["why"].startswith("limit") else "", "stepped": stepped_note(routed, settings)}
++
++
++def stepped_note(routed, settings):
++    """#132 G6: what a run that Claude's limit stepped down to the quick-edit model says, or ""."""
++    import providers
++    found = providers.model(routed["model"], settings) if routed["why"] == "limit: stepped down" else None
++    return f"Claude's limit is reached, so this ran as a quick edit on {found['label']} (Step down one kind)." if found else ""
++
++
++def run_model(kind, settings=None, text="", declared=None):
++    """(alias, note): the Claude model to start a run of this kind with, or None to start it exactly as before #132. None while
++    the kind's job is at its default, so every launch is byte for byte today's until Alan chooses another model. Fails closed to
++    today's launch (with a note in plain words) when the choice isn't a Claude model (`claude` runs only Claude; other
++    providers' direct calls are G4), isn't one of the three aliases, can't use tools for a job that needs them, or the setting
++    can't be read. Nothing else in the launch depends on it: the tools, denies, guard hook, folders and cwd are as before."""
++    job = KIND_JOB.get(kind)
++    if job is None:
++        return None, ""
++    try:
++        c = model_choice(job, settings, True if kind in CONFIDENTIAL_KINDS else declared, text)   # #132 G5
++    except Exception as e:  # noqa: BLE001  fail closed: today's launch
++        return None, f"The AI model setting couldn't be read ({type(e).__name__}), so this ran on Claude's usual model."
++    if c["held"]:                                                                                  # #132 G5
++        return None, f"{c['held']} So Claude ran it."
++    pick, found = c["pick"], c["found"]
++    if not pick or pick == c["default"]:              # #132 G6: at Claude's limit with no model, the run's own card says so
++        return None, "" if c["asked"] == pick or c["limit"] else UNAVAILABLE
++    provider, _, alias = str(pick).partition(":")
++    if provider != "claude":
++        return None, f"{c['name']} isn't used for this yet, so Claude ran it."
++    if alias not in CLAUDE_ALIASES or not found or (c["tools"] and not found.get("tools")):
++        return None, "That model can't run this job, so this ran on Claude's usual model."
++    return alias, c["stepped"]                        # #132 G6: a step down is never silent
++
++
++def model_step(events, run_id, kind, note):
++    """A run's step saying why the model Alan chose wasn't used (nothing when there is no note), and a debug log line."""
++    if note:
++        events.append({"type": "step", "label": note})
++        if globals().get("debuglog") is not None:
++            debuglog.info("ai-models", f"{run_id} {kind}: {note}")
++
++
++def with_model(args, alias):
++    """args with `--model <alias>`: a tool-less kind's pinned model (#126) replaced, else added. Unchanged when alias is None."""
++    if alias is None:
++        return list(args)
++    out = list(args)
++    if "--model" in out[:-1]:
++        out[out.index("--model") + 1] = alias
++        return out
++    return out + ["--model", alias]
++
++
++def launch_plan(policy, route=None):
++    """#132 G4: (alias, note, opener) for a run: run_model's model and note, or, when the server made a plan for this run
++    (direct_plan), its note and, for a direct call, its opener (DirectProcess) in place of subprocess.Popen."""
++    alias, note = run_model(policy)
++    if not route:
++        return alias, note, subprocess.Popen
++    return (None if route.get("direct") else route.get("alias", alias)), route.get("note", ""), \
++        route.get("direct") or subprocess.Popen                 # #132 G7: a retry names its Claude model ("alias")
++# ===== end #132 G3 =====
++
++
+ def run_args(policy, confirmed=None, only=None):
+     """A run's built-in tools (`--tools`, and `--strict-mcp-config` where it has no MCP): its kind's own entry in KIND_ARGS; only
+     ToolSearch for a narrowed run (`only`: Microsoft 365 reading only); none for a kind with no entry (fail closed)."""
+@@ -2699,7 +2808,7 @@ class Run:
+             raise
+ 
+     def _start(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
+-               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
++               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False, route=None):
+         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
+         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
+         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+@@ -2712,6 +2821,9 @@ class Run:
+                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
+                "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
+         more, more_env, cwd = launch_context(policy)            # #126: a tool-less run: no CLAUDE.md, settings or auto-memory
++        alias, model_note, opener = launch_plan(policy, route)  # #132 G3, G4: the model Alan chose, or the server's own plan
++        more = with_model(more, alias)
++        self.alias = alias                                      # #132 G7: the model this run was started with (None: today's)
+         cmd += more
+         for d in run_dirs(policy, guarded):                     # #264: a Process run reads the vault and the projects folder
+             cmd += ["--add-dir", d]
+@@ -2733,23 +2845,32 @@ class Run:
+         self.pending, self.said, self.steps = {}, [], []
+         if self.sweep:                                          # BL-309: the chat says what kind of run this is
+             self.events.append({"type": "step", "label": PANEL_SWEEP_STEP})
++        model_step(self.events, run_id, policy, model_note)    # #132 G3: a choice that couldn't be used says so
+         self.stop = self.deferred = self.done = self.seen = False
+         self.started, self.recorded = time.time(), 0       # BL-262: how many events the chat's history reaches
+         try:
+             env = run_env(kind if held else None)                                      # BL-248; #60: a held run's kind
+             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
+             env.update(more_env)                                                       # #126
+-            self.proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+-                                         bufsize=1, env=env)
++            self.proc = opener(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,   # #132 G4
++                               bufsize=1, env=env)
+         except (OSError, ValueError):                           # #327 B: carried text can hold what Popen refuses (a NUL)
+             if guarded:
+                 reach.end_run(run_id)
+             raise
++        self._listed(run_id, route)                             # #132 G7: a retry inside its run is not listed
++        threading.Thread(target=self.read, daemon=True).start()
++        threading.Thread(target=self.watchdog, daemon=True).start()
++
++    def _listed(self, run_id, route):
++        """Keep only the run in progress and the latest one in RUNS, and list this one; #132 G7: a quick edit's retry (`nested`)
++        runs inside its run and is never listed, so it is never "the run in progress" and never starts a queued message."""
++        self.nested = bool((route or {}).get("nested"))
++        if self.nested:
++            return
+         for old in [k for k, r in RUNS.items() if r.done]:   # keep only the run in progress and the latest one
+             RUNS.pop(old, None)
+         RUNS[run_id] = self
+-        threading.Thread(target=self.read, daemon=True).start()
+-        threading.Thread(target=self.watchdog, daemon=True).start()
+ 
+     def _plain_setup(self, label, lines, closer):
+         """The run's label (a chat's is Alan's message; BL-326: a run creaite started has a plain ask, never its prompt), its
+@@ -2809,6 +2930,7 @@ class Run:
+             except ValueError:
+                 continue
+             self.session = ev.get("session_id") or self.session
++            self._limit(ev)                             # #132 G6: Claude's limit, from the stream
+             kind = ev.get("type")
+             self._usage_seen(ev, kind)                  # #197: the model, the start load and skill names, counts only
+             if kind == "assistant":
+@@ -2821,13 +2943,9 @@ class Run:
+         proc.wait()
+         if self.guarded:
+             self._end_guarded(proc, final)
+-        if self.stop:
+-            self._end_stopped()
+-        elif proc.returncode and not final:
+-            self._end_failed(proc)
+-        else:
+-            self._end_answered(final)
+-        if self.job and not self.stop:                     # the status and the files are written here, from the tool results
++        self._end(proc, final)                             # #132 G6: stopped, Claude's limit, failed or answered
++        if self.job and not self.stop and not getattr(self, "limited", None):   # #132 G6: a limit's words are never a draft
++            # the status and the files are written here, from the tool results
+             self._finish_job()
+         self._done()
+ 
+@@ -2934,6 +3052,52 @@ class Run:
+         self.emit("stopped", after_step=self.deferred, timed_out=getattr(self, "timed_out", False))
+         self.record(stopped=True)
+ 
++    # ===== #132 G6 (proposal): Claude's limit =====
++    def _end(self, proc, final):
++        """How the run ended, as read() always said it: stopped, failed or answered; and now Claude's limit, whose card is shown
++        instead of an answer and which is never retried."""
++        if self.stop:
++            self._end_stopped()
++        elif getattr(self, "limited", None):
++            self._end_limited()
++        elif proc.returncode and not final:
++            self._end_failed(proc)
++        else:
++            self._end_answered(final)
++
++    def _limit(self, ev):
++        """Keep what a stream event says about Claude's limit (providers.limit_seen); a direct call's stream is never Claude's."""
++        if isinstance(self.proc, DirectProcess):
++            return
++        try:
++            import providers
++            sig = providers.limit_seen(ev)
++        except Exception as e:  # noqa: BLE001  never stops the reader
++            swallowed("limit", e)
++            return
++        if isinstance(sig, dict):
++            self.limited = sig
++
++    def _end_limited(self):
++        """The run hit Claude's limit: one card in plain words (the reset time; what ai.on_limit does next; Ask me's other model
++        when there is one for this job), through the chat's existing "cant" card. Nothing is retried by itself."""
++        import providers
++        try:
++            card = providers.limit_card(KIND_JOB.get(self.kind, "tools"), paths.load_settings(),
++                                        "edit-ai" if self.kind == "edit-ai" else "")
++        except Exception as e:  # noqa: BLE001  the plain words without the choices
++            swallowed("limit", e)
++            card = {"line": "Claude's limit is reached. Nothing was changed: try again later.", "offer": None}
++        self.failed = True
++        self.emit("cant", what="limit", line=card["line"], go=providers.LIMIT_GO, offer=card.get("offer"))
++        self.emit("error", message=card["line"])
++        if globals().get("debuglog") is not None:
++            at = card.get("resets")
++            debuglog.info("ai-models", f"{self.id} {self.kind}: Claude's limit ({providers.LIMIT.get('kind') or 'unknown'}), "
++                                       f"resets {datetime.fromtimestamp(at).isoformat(timespec='minutes') if at else 'unknown'}")
++        self.record()
++    # ===== end #132 G6 =====
++
+     def _end_failed(self, proc):
+         err = proc.stderr.read().strip().splitlines()
+         self.failed = True                                   # BL-326: a run creaite started closes with a plain failure
+@@ -3120,7 +3284,7 @@ class Run:
+         if self.plain:                                    # BL-326: one plain closure line, for success, failure and Stop
+             self._close(getattr(self, "failed", False))
+         job_run = self.kind in ("check", "load") or self.plain     # BL-326: a run creaite started never becomes the panel's chat
+-        nxt = queue_after(self)                           # BL-257: the next queued message starts before this run is done
++        nxt = None if getattr(self, "nested", False) else queue_after(self)    # BL-257 (#132 G7: never from a retry)
+         with self.cond:
+             self.done = True
+             self.events.append({"type": "done", "session": None if job_run else self.session,
+@@ -4212,6 +4376,8 @@ def vip_check(how="check"):
+         return quiet
+     if sweep_running():                                   # BL-328: a lock left by an ended sweep doesn't hold the check
+         return "skipped: a sweep is running"
++    if vip_limited():                                     # #132 G6: no call while Claude's limit holds
++        return "skipped: Claude's limit is reached"
+     if not VIP_LOCK.acquire(blocking=False):
+         return "skipped: a check is running"
+     VIP_STATUS["running"] = True
+@@ -4222,10 +4388,12 @@ def vip_check(how="check"):
+         parts = sweep.vip_prompt_parts(st, zone)
+         prompt = vip_prompt(since, vips, zone, parts)
+         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
+-                           "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
++                           "--disallowedTools", ",".join(vip_deny())] + with_model([], run_model("vip")[0]),   # #132 G3
++                          prompt)                                                         # #91: after `--`; no --tools (#116)
+         found, why, cost, began, r = None, "", None, time.monotonic(), None
+         try:
+             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
++            vip_limited(r.stdout)                                                                # #132 G6
+             found, why, cost = vip_reply(r)
+         except subprocess.TimeoutExpired:
+             why = VIP_TIMED_OUT
+@@ -4256,6 +4424,19 @@ def vip_check(how="check"):
+         VIP_LOCK.release()
+ 
+ 
++def vip_limited(out=None):
++    """#132 G6: with `out` (a VIP check's JSON reply), keep what it says about Claude's limit; then whether the limit holds."""
++    import providers
++    if out is not None:
++        try:
++            reply = json.loads(out or "{}")
++        except (ValueError, RecursionError):           # a reply that can't be read says nothing about the limit
++            reply = None
++        if isinstance(reply, dict):
++            providers.limit_seen(dict(reply, type="result"))
++    return providers.limited_now()
++
++
+ VIP_TIMED_OUT, VIP_NOT_STARTED = "it timed out", "claude couldn't be started"
+ 
+ 
+@@ -6165,6 +6346,161 @@ SETTINGS_ROUTES = {"/api/settings/catalogue": settings_catalogue_route, "/api/se
+                    "/api/health": health_route}
+ SETUP_ROUTES.update(SETTINGS_ROUTES)          # dispatched with the set-up routes (do_POST stays as it is)
+ # ===== end BL-320 =====
++# ===== #132 (ai-models-132): Settings › Essentials › AI models =====
++# The page's routes for the providers, the four kinds of job and the limit. providers.py holds the rules and the words; every
++# change is saved through settings_catalogue.save (a backup and a log line a key). A key comes in only on /api/ai/test, is
++# never logged, never answered and never put in an error: the answers carry provider ids, model ids and HTTP statuses only.
++# The key store and the provider call are providers.py's seams: not built yet (guarded, #132 part B), so a real vault answers
++# "not switched on yet" and no key is held; a test starts the server with CREAITE_FAKE_PROVIDERS=1. No run uses these
++# choices yet: wiring them into runs is the guarded part.
++def _ai_answer(handler, extra=None, code=200):
++    import providers
++    return handler.send(code, dict(providers.state(), ok=code == 200, **(extra or {})))
++
++
++def _ai_save(changes, what):
++    import settings_catalogue
++    if changes:
++        settings_catalogue.save(changes)
++    if debuglog is not None:
++        debuglog.info("ai-models", f"{what}: {', '.join(sorted(changes)) or 'nothing changed'}")
++
++
++def ai_state_route(handler, req):
++    """POST /api/ai/state: the providers, the four kinds of job with their lists, the limit."""
++    return _ai_answer(handler)
++
++
++def ai_test_route(handler, req):
++    """POST /api/ai/test {provider, key}: ask the provider which models the key can use. On success the key is held (in this
++    server's memory only) until Done (/api/ai/connect) or Cancel (/api/ai/forget); the answer is a one-time id and the
++    models. A refused key, an unreachable provider or the not-built store answer ok: false with plain words and a reason."""
++    import providers
++    provider, key = req.get("provider"), req.get("key")
++    bad = providers.check_key(provider, key)
++    if bad:
++        return handler.send(400, {"ok": False, "reason": "bad", "message": bad})
++    _store, lister = providers.backend()
++    name = providers.PROVIDERS[provider][0]
++    try:
++        ids = lister.models(provider, key.strip())
++    except providers.NotBuilt:
++        return handler.send(200, {"ok": False, "reason": "not_built", "message": providers.NOT_BUILT_WORDS})
++    except providers.KeyRefused as e:
++        if debuglog is not None:
++            debuglog.info("ai-models", f"{provider} key refused ({e.status})")
++        return handler.send(200, {"ok": False, "reason": "refused", "status": e.status,
++                                  "message": providers.refused_words(provider, e.status)})
++    except (ConnectionError, OSError, TimeoutError):
++        if debuglog is not None:
++            debuglog.info("ai-models", f"{provider} unreachable")
++        return handler.send(200, {"ok": False, "reason": "network",
++                                  "message": f"Couldn't reach {name}. Check the connection and try again."})
++    found = providers.found_models(provider, ids) if provider != "claude" else []
++    if provider != "claude" and not found:
++        return handler.send(200, {"ok": False, "reason": "no_models",
++                                  "message": f"{name} accepted the key, but it can't use any model that writes text."})
++    pid = providers.hold(provider, key.strip(), ids)
++    if debuglog is not None:
++        debuglog.info("ai-models", f"{provider} key tested: {len(found)} models")
++    return handler.send(200, {"ok": True, "pending": pid, "provider": provider,
++                              "models": [{"id": m["id"], "label": m["label"], "grade": m["grade"]} for m in found]})
++
++
++def ai_connect_route(handler, req):
++    """POST /api/ai/connect {pending, offered}: Done. The held key goes to the key store; the models and the ticked ones are
++    saved. Nothing else changes: the models now appear in the lists."""
++    import paths
++    import providers
++    held = providers.take(req.get("pending"))
++    if not held:
++        return handler.send(409, {"ok": False, "message": "That test has run out: test the key again."})
++    offered = req.get("offered") if isinstance(req.get("offered"), list) else []
++    store = providers.backend()[0]
++    try:
++        store.put(held["provider"], held["key"])
++    except providers.NotBuilt:
++        return handler.send(200, {"ok": False, "reason": "not_built", "message": providers.NOT_BUILT_WORDS})
++    except (providers.KeychainError, providers.Refused, ValueError) as e:      # #132 G1: plain words and a status, no key
++        if debuglog is not None:
++            debuglog.info("ai-models", f"{held['provider']} key not kept ({getattr(e, 'status', 'refused')})")
++        return handler.send(200, {"ok": False, "reason": "keychain", "message": str(e)})
++    _ai_save(providers.connect_changes(held["provider"], held["ids"], [str(x) for x in offered], paths.load_settings()),
++             f"{held['provider']} connected")
++    return _ai_answer(handler)
++
++
++def ai_forget_route(handler, req):
++    """POST /api/ai/forget {pending}: Cancel after a test; the held key is dropped."""
++    import providers
++    providers.forget(req.get("pending"))
++    return handler.send(200, {"ok": True})
++
++
++def ai_offer_route(handler, req):
++    """POST /api/ai/offer {provider, offered}: Manage. Which of a connected provider's models the lists offer."""
++    import paths
++    import providers
++    offered = req.get("offered") if isinstance(req.get("offered"), list) else []
++    try:
++        changes = providers.offer_changes(req.get("provider"), [str(x) for x in offered], paths.load_settings())
++    except providers.Refused as e:
++        return handler.send(400, {"ok": False, "message": str(e)})
++    _ai_save(changes, f"{req.get('provider')} models offered")
++    return _ai_answer(handler, {"reset": sorted(k[8:] for k in changes if k.startswith("ai.jobs."))})
++
++
++def ai_disconnect_route(handler, req):
++    """POST /api/ai/disconnect {provider}: the key leaves the key store, the provider's models leave the lists, and anything
++    set to one of them goes back to its recommended model (`reset` names those kinds of job)."""
++    import paths
++    import providers
++    provider = req.get("provider")
++    if provider not in providers.PROVIDERS or not providers.PROVIDERS[provider][4]:
++        return handler.send(400, {"ok": False, "message": "That provider can't be disconnected."})
++    settings = paths.load_settings()
++    changes = providers.disconnect_changes(provider, settings)
++    providers.forget_all(provider)                            # #132 G10: a key tested but not yet kept goes too
++    try:
++        providers.backend()[0].remove(provider)
++    except providers.KeychainError as e:                      # #132 G1: the key is still there, so nothing else changes
++        return handler.send(200, {"ok": False, "reason": "keychain", "message": str(e)})
++    if provider not in providers.saved_providers(settings):
++        changes.pop("ai.providers", None)
++    _ai_save(changes, f"{provider} disconnected")
++    return _ai_answer(handler, {"reset": sorted(k[8:] for k in changes if k.startswith("ai.jobs."))})
++
++
++def ai_choose_route(handler, req):
++    """POST /api/ai/choose {job, model, accept}: a kind of job's model. A weaker model than recommended needs accept (Use it
++    anyway) the first time: without it the answer is 409 {needs_accept}. A job that needs tools takes only a model that can."""
++    import providers
++    try:
++        changes = providers.choose(req.get("job"), req.get("model"), bool(req.get("accept")))
++    except providers.Refused as e:
++        if str(e) == "weaker":
++            return handler.send(409, {"ok": False, "needs_accept": True, "message": "A weaker model asks first."})
++        return handler.send(400, {"ok": False, "message": str(e)})
++    _ai_save(changes, f"{req.get('job')} model chosen")
++    return _ai_answer(handler)
++
++
++def ai_limit_route(handler, req):
++    """POST /api/ai/limit {mode}: what happens when a limit is reached."""
++    import providers
++    try:
++        changes = providers.set_limit(req.get("mode"))
++    except providers.Refused as e:
++        return handler.send(400, {"ok": False, "message": str(e)})
++    _ai_save(changes, "limit choice")
++    return _ai_answer(handler)
++
++
++AI_ROUTES = {"/api/ai/state": ai_state_route, "/api/ai/test": ai_test_route, "/api/ai/connect": ai_connect_route,
++             "/api/ai/forget": ai_forget_route, "/api/ai/offer": ai_offer_route, "/api/ai/disconnect": ai_disconnect_route,
++             "/api/ai/choose": ai_choose_route, "/api/ai/limit": ai_limit_route}
++SETUP_ROUTES.update(AI_ROUTES)                # dispatched with the set-up routes (do_POST stays as it is)
++# ===== end #132 =====
+ # ===== BL-164 (sprint-rail): Activity's "undo several" =====
+ # The page sends the change_log rowids it chose; tracker.py (the only writer) decides what can go back and does it as one
+ # new apply. Token-protected like every route; one at a time with apply and undo (LOCK).
+@@ -6664,17 +7000,25 @@ class DraftJob:
+         reply = "\n\n".join(self.run.said) if self.run else ""
+         got = None
+         if self.run and reply.strip():
+-            rc, out = run_stdin(self.SCRIPT, {"request": self.req, "context": self.ctx, "reply": reply}, "result")
+-            try:
+-                got = json.loads(out) if rc == 0 else None
+-            except ValueError:
+-                got = None
++            got = self.again(self.checked(reply, self.ctx))          # #132 G7: a quick edit's one retry (EditJob)
+             self.run.emit("draft", ok=bool(got), **(got or {"message": "The draft couldn't be read."}))
+         if self.run:                                         # BL-326: the closure ask creaite shows (drafts.run_closure)
+             import drafts
+             self.run.closing = drafts.run_closure(self.ctx, got if isinstance(got, dict) else None)
+         return {"status": None, "files": [], "message": ""}
+ 
++    def checked(self, reply, ctx):
++        """The reply parsed and checked by SCRIPT result, or None."""
++        rc, out = run_stdin(self.SCRIPT, {"request": self.req, "context": ctx, "reply": reply}, "result")
++        try:
++            return json.loads(out) if rc == 0 else None
++        except ValueError:
++            return None
++
++    def again(self, got):
++        """#132 G7: a draft is never retried (EditJob's quick edit is)."""
++        return got
++
+ 
+ def section_request(req):
+     """#90: the keys the ✦ on a report or minutes section sends (kinds "report-section" and "minutes-section"): known keys, short
+@@ -6779,8 +7123,44 @@ class EditJob(DraftJob):
+     SCRIPT = "edit_ai.py"
+     quiet = True                                            # the page shows the suggestion, not the reply as it streams
+ 
++    # ===== #132 G7 (proposal): a quick edit whose check found a changed fact is tried once more, on a stronger model =====
++    def again(self, got):
++        """The suggestion to show: the first one, or, when its check has notes and retry_plan finds a stronger model this text
++        may go to, one more try on it, inside this run (a step says so; the draft says which model made it). Never more than
++        one, and the second goes through the same checks: edit_ai.py result (the client check in the client place) and, for
++        another provider, outside_problems and G5's gate. A second that is dropped or doesn't come back leaves the first."""
++        plan = retry_plan(self.ctx, got, getattr(self.run, "alias", None)) if got and got.get("notes") and self.run and \
++            not self.run.stop else None
++        if not plan:
++            return got
++        self.run.emit("step", label=f"The check found a changed fact, so this was tried once more on {plan['made_by']}.")
++        second = self.second(plan)
++        if not second or not second.get("text"):          # dropped by its checks, or nothing came back: never shown
++            self.run.emit("step", label=("The second try was dropped by the checks" if (second or {}).get("message") else
++                                         "The second try didn't give a suggestion") + ", so the first is shown with its notes.")
++            return got
++        return dict(second, retried=True)
++
++    def second(self, plan):
++        """The retry, run inside this run (Stop stops it too), its reply checked as the first was; None when nothing came back,
++        it was stopped or it hit Claude's limit."""
++        try:
++            retry = Run(f"{self.run.id}-retry", plan["prompt"], None, None, None, kind="edit-ai", route=plan["route"])
++        except OSError:
++            return None
++        while not retry.done:
++            if self.run.stop:
++                retry.request_stop()
++            with retry.cond:
++                retry.cond.wait(timeout=1)
++        reply = "\n\n".join(retry.said)
++        if not reply.strip() or retry.stop or getattr(retry, "limited", None):
++            return None
++        return self.checked(reply, dict(self.ctx, made_by=plan["made_by"]))
++    # ===== end #132 G7 =====
++
+ 
+-EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document", "recipients"}
++EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document", "recipients", "limit_choice"}   # #132 G6: Ask me
+ EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
+ 
+ 
+@@ -6792,6 +7172,8 @@ def edit_ai_request(req):
+     body = {k: str(req.get(k) or "")[:40] for k in ("option", "code", "place")}
+     body["text"] = str(req.get("text") or "")[:12001]
+     body["instruction"] = str(req.get("instruction") or "")[:401]
++    if req.get("limit_choice") == "other":                     # #132 G6: the Ask me card's "Run this one on …"
++        body["limit_choice"] = "other"
+     d = req.get("document")
+     if d is not None:
+         if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
+@@ -6851,6 +7233,7 @@ def edit_ai_route(handler, req):
+     busy = current_run()
+     if busy and not busy.done:
+         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
++    choice = body.pop("limit_choice", "")                      # #132 G6
+     rc, out = run_stdin("edit_ai.py", body, "context")
+     try:
+         ctx = json.loads(out) if rc == 0 else {"refused": "The suggestion couldn't be prepared."}
+@@ -6860,9 +7243,13 @@ def edit_ai_route(handler, req):
+         return handler.send(200, {"ok": False, "message": ctx["refused"]})
+     run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
+         else f"e-{secrets.token_hex(6)}"
++    plan = direct_plan(ctx, choice=choice)                      # #132 G4: None at the defaults (today's run)
++    if plan and plan.get("made_by"):
++        ctx = dict(ctx, made_by=plan["made_by"], made_by_id=plan["made_by_id"])      # #132 G7: the first try's model
+     job = EditJob(body, ctx)
+     try:
+-        r = Run(run_id, ctx["prompt"], None, None, None, kind="edit-ai", job=job, label=f"{ctx['label']}, with Claude")
++        r = Run(run_id, ctx["prompt"], None, None, None, kind="edit-ai", job=job, route=plan,
++                label=f"{ctx['label']}, with {(plan or {}).get('made_by') or 'Claude'}")
+     except OSError as e:
+         return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
+     job.run = r
+@@ -6876,6 +7263,180 @@ DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
+ DRAFT_ROUTES["/api/edit/ai/caps"] = edit_ai_caps_route        # #186
+ # ===== end BL-301 D =====
+ 
++
++# ===== #132 G4 (proposal): a suggestion on another provider, after the checks =====
++# When Alan chose another provider's model for quick edits, the server decides per request: the option must be one providers.
++# CLEAN_FEATURES declares, and the selected text must pass edit_ai.outside_problems (no item IDs, people, organisations, project
++# names, health reasons, internal or confidential markers, nothing the client check finds); route_for (G5) then picks the model
++# and send_allowed is checked again just before the call. What is sent is edit_ai.outside_prompt: the option's instruction, the
++# format rule and the selection, nothing else. The reply comes back through the run engine as the same stream a `claude -p`
++# run gives (DirectProcess), so EditJob checks it exactly as before (client_problems in the client place, BL-106's fact check).
++def direct_plan(ctx, settings=None, choice=""):
++    """The run's plan for a suggestion: None when Alan hasn't chosen another provider for quick edits (today's run); {"note"} when
++    this one stays on Claude, with why; {"direct", "note", "made_by"} when it goes to the chosen model. Fails closed to Claude."""
++    import providers
++    try:
++        settings = paths.load_settings() if settings is None else settings
++        if choice == "other" and providers.limited_now():      # #132 G6: Ask me's "another model", for this request only
++            settings = providers.with_choice(settings, "other")
++        at_limit = providers.limited_now() and providers.setting(settings, "ai.on_limit") == "other"     # #132 G6
++        if providers.chosen("quick", settings).startswith("claude:") and not at_limit:
++            return None
++        problems, routed = outside_route(ctx, "quick", settings)
++        pick = str(routed["model"] or "")
++        if routed["confidential"] or not pick or pick.startswith("claude:"):
++            return {"note": outside_note(problems, routed, settings)}
++        opener, made_by, _prompt = direct_call(pick, routed, ctx, settings)
++    except Exception as e:  # noqa: BLE001  fails closed: Claude runs it
++        return {"note": f"The AI model setting couldn't be read ({type(e).__name__}), so Claude ran it."}
++    return {"direct": opener, "made_by": made_by, "made_by_id": pick,                  # #132 G7: made_by_id
++            "note": f"Sent to {made_by}: the selected text and the instruction only."}
++
++
++def outside_route(ctx, job, settings):
++    """(problems, routed) for a suggestion's text: what edit_ai.outside_problems finds in it (or "not declared" for an option
++    providers.CLEAN_FEATURES doesn't list), and route_for's answer for the kind of job given, declared clean only with none."""
++    import edit_ai
++    import providers
++    option, text = ctx.get("option"), ctx.get("original") or ""
++    problems = edit_ai.outside_problems(ctx.get("code") or "", text) if option in providers.CLEAN_FEATURES["edit-ai"] \
++        else ["not declared"]
++    return problems, providers.route_for(job, settings, text=text, declared=providers.declared("edit-ai", option, problems))
++
++
++def direct_call(pick, routed, ctx, settings):
++    """(opener, made_by, prompt) for a direct call of this suggestion to `pick`: G5's gate checked first, the prompt
++    edit_ai.outside_prompt (the instruction, the format rule and the selection), the model's label."""
++    import edit_ai
++    import providers
++    providers.send_allowed(pick, routed["confidential"])
++    provider, _, model_id = pick.partition(":")
++    conf = routed["confidential"]
++    prompt = edit_ai.outside_prompt(ctx.get("option"), ctx.get("place") or "plain", ctx.get("original") or "")
++    return (lambda *_a, **_k: DirectProcess(provider, model_id, prompt, conf)), \
++        (providers.model(pick, settings) or {}).get("label") or pick, prompt
++
++
++def retry_plan(ctx, got, first_alias=None, settings=None):
++    """#132 G7: {"route", "prompt", "made_by"} for a quick edit's one retry, or None. Only when the check found a changed fact
++    (providers.retry_kind), the writing kind routes this text to a model stronger than the one that made the first suggestion,
++    and that model may be sent it: route_for with the same declaration as the first try (outside_route), G5's gate on the
++    answer (direct_call). Claude gets the prompt it always gets; another provider only edit_ai.outside_prompt. At the defaults
++    (quick edits and writing both on Claude Sonnet) there is no stronger model, so nothing is retried, as today."""
++    import providers
++    try:
++        settings = paths.load_settings() if settings is None else settings
++        if providers.retry_kind("quick", (got or {}).get("notes")) != "write" or ctx.get("retried"):
++            return None
++        _problems, routed = outside_route(ctx, "write", settings)
++        pick = str(routed["model"] or "")
++        first = ctx.get("made_by_id") or f"claude:{first_alias or 'sonnet'}"       # None: #126's Sonnet pin (NO_CONTEXT_ARGS)
++        new, old = providers.model(pick, settings), providers.model(first, settings)
++        if not new or not old or new["grade"] <= old["grade"]:
++            return None
++        if pick.startswith("claude:"):
++            alias = pick.partition(":")[2]
++            return {"route": {"alias": alias, "nested": True}, "prompt": ctx["prompt"], "made_by": new["label"]} \
++                if alias in CLAUDE_ALIASES else None
++        opener, made_by, prompt = direct_call(pick, routed, ctx, settings)
++    except Exception:  # noqa: BLE001  fails closed: no retry
++        return None
++    return {"route": {"direct": opener, "nested": True}, "prompt": prompt, "made_by": made_by}
++
++
++def outside_note(problems, routed, settings):
++    """Why a suggestion stayed on Claude when Alan chose another provider, in plain words."""
++    import providers
++    name = providers.PROVIDERS.get(str(providers.chosen("quick", settings)).partition(":")[0], ("That provider",))[0]
++    if problems == ["not declared"]:
++        return f"{name} isn't used for this option, so Claude ran it."
++    if routed.get("confidential_why") == "marked" or problems == ["something private"] or \
++            "a confidential or internal-only marker" in problems:
++        return f"{providers.CONFIDENTIAL_WORDS} So Claude ran it."
++    if problems:
++        return f"This text holds {problems[0]}, so it went to Claude, not {name}."
++    return f"{name} couldn't be used for this, so Claude ran it."
++
++
++class _Lines:
++    """A pipe's readline for DirectProcess: the lines put, then "" once closed."""
++
++    def __init__(self):
++        import queue
++        self.q = queue.Queue()
++
++    def put(self, line):
++        """One line of the stream."""
++        self.q.put(line + "\n")
++
++    def close(self):
++        """The end of the stream."""
++        self.q.put("")
++
++    def readline(self):
++        """The next line, or "" at the end."""
++        return self.q.get()
++
++
++class DirectProcess:
++    """What the run engine reads in place of `claude -p` for a direct call: the same stream-json lines (the reply as one text
++    block, then the result) from one HTTPS POST made in a thread. The key is read from the key store just before the call and
++    dropped after it. A failure ends the run with plain words (the host and a status, never the key, the prompt or the reply).
++    Stop ends it at once; a reply that comes later is dropped."""
++
++    def __init__(self, provider, model_id, prompt, confidential=True):
++        import io
++        self.stdout, self.stderr, self.returncode, self.pid, self.stopped = _Lines(), io.StringIO(""), None, 0, False
++        self.thread = threading.Thread(target=self.call, args=(provider, model_id, prompt, confidential), daemon=True)
++        self.thread.start()
++
++    def call(self, provider, model_id, prompt, confidential):
++        """The call, then the stream's lines (or the failure's words)."""
++        import io
++        import providers
++        name = providers.PROVIDERS[provider][0]
++        try:
++            providers.send_allowed(f"{provider}:{model_id}", confidential)       # G5's gate, again, just before the call
++            key = providers.backend()[0].peek(provider)
++            if not key:
++                raise providers.Refused(f"{name} isn't connected any more: connect it again in Settings › AI models.")
++            text, _used = providers.caller().complete(provider, model_id, prompt, key)
++            del key
++            lines, code, err = [{"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}},
++                                {"type": "result", "result": text}], 0, ""
++        except providers.KeyRefused as e:
++            lines, code, err = [], 1, providers.refused_words(provider, e.status)
++        except (providers.Refused, providers.NotBuilt) as e:
++            lines, code, err = [], 1, str(e)
++        except Exception as e:  # noqa: BLE001  never the key or the text: the provider's name and the kind of failure
++            lines, code, err = [], 1, f"Couldn't get a suggestion from {name} ({type(e).__name__}). Nothing was changed."
++        if not self.stopped:
++            for line in lines:
++                self.stdout.put(json.dumps(line))
++            self.stderr, self.returncode = io.StringIO(err), code
++        self.stdout.close()
++
++    def poll(self):
++        """None while the call runs, then its exit code."""
++        return self.returncode
++
++    def wait(self, timeout=None):
++        """Wait for the call (subprocess.TimeoutExpired after `timeout`); at once after Stop."""
++        if self.stopped:
++            return self.returncode
++        self.thread.join(timeout)
++        if self.thread.is_alive() and timeout is not None:
++            raise subprocess.TimeoutExpired("direct call", timeout)
++        return self.returncode
++
++    def terminate(self):
++        """Stop: the run ends now; the call's answer, if it comes, is dropped."""
++        self.stopped, self.returncode = True, -15 if self.returncode is None else self.returncode
++        self.stdout.close()
++
++    kill = terminate
++# ===== end #132 G4 =====
++
+ # ===== BL-223 (sprint-drafts-writing) ===== Draft agenda: the kind "agenda" on /api/draft (the meeting's key and the style), and
+ # POST /api/agenda/save {key, parts, agenda, attendees}: the agenda Alan chose to keep, written by the server into the Agendas folder
+ # (prep_page.save_agenda: never overwrites; Internal unless marked for attendees). Nothing is sent and no invite is touched.
+@@ -8128,6 +8689,7 @@ def restart_when_free():
+     if debuglog is not None:
+         debuglog.info("server", "restarting after an update")
+     print("Restarting the live server on the new version…", flush=True)
++    forget_tested_keys()                                  # #132 G10
+     try:
+         EVENTS.close()
+     except Exception as e:  # noqa: BLE001  the restart goes ahead
+@@ -8135,6 +8697,15 @@ def restart_when_free():
+     os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
+ 
+ 
++def forget_tested_keys():
++    """#132 G10: drop any key tested but not yet kept (providers.forget_all), as the server stops or restarts."""
++    try:
++        import providers
++        providers.forget_all()
++    except Exception as e:  # noqa: BLE001  never stops a stop
++        swallowed("stop", e)
++
++
+ def restart_asked(signum, frame):
+     """SIGUSR1: restart once free (only the first ask counts)."""
+     if not RESTART_ASKED.is_set():
+@@ -8149,6 +8720,7 @@ def stopped_by_signal(signum, frame):
+     """SIGTERM: release the sweep lock this server's runs hold (BL-328), end the runs, then stop exactly as SIGTERM always
+     did (the default action, so launchd sees the same exit)."""
+     import signal
++    forget_tested_keys()                                  # #132 G10
+     try:
+         for run in list(RUNS.values()):
+             end_process(run.proc)
+@@ -8172,6 +8744,7 @@ def main_with_restart():
+     try:
+         return _main_before_restart()
+     finally:
++        forget_tested_keys()                              # #132 G10
+         try:
+             if json.loads(launcher.SERVER_FILE.read_text(encoding="utf-8")).get("pid") == os.getpid():
+                 launcher.SERVER_FILE.unlink()
