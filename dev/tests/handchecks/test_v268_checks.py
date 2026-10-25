@@ -3,7 +3,7 @@ The checks call invite_clean.invite_text, scrub, clean_row and safe_address on t
 
    1  version     VERSION is a version the tooling accepts (2.6.6 or later; the notes checks below wait until it is 2.6.8)
    2  notes       once VERSION is 2.6.8: What's new has the 2.6.8 section above 2.6.7, mentioning #369 and #365; the plain notes and the sheet exist
-   3  guarded     no guarded file differs from the merge base with origin/main (the guarded changes travel as diffs under dev/proposals)
+   3  guarded     no guarded file differs from the merge base with origin/main, except the three the chain changes (the guarded changes travel as diffs under dev/proposals)
    4  chain       once dev/proposals/GUARDED-2.6.8.chain exists: five diffs, each pinned by sha256, that apply in order on origin/main
    5  chain       the follow-up #365 pair is not in the chain or under dev/proposals
    6  item 1      lines that must always survive (times, dates, room numbers, "Item 12", "Q3 forecast") survive, and word-only lines under a soft heading stay
@@ -16,13 +16,10 @@ The checks call invite_clean.invite_text, scrub, clean_row and safe_address on t
   13  item 5      bare21 qualified labels ("Passcode for dial-in:", "Meeting ID (Teams)", "PIN to join:", "Host key (organiser only)") take their value; "Passcode policy review" keeps "AOB"
   14  item 5      under a soft heading ("Code freeze", "Password reset") dates and times stay, "4417" goes; after "Passcode:" a date goes
   15  item 1      judgement: how many real agenda lines are lost on a realistic invite (the sheet's list is measured and printed)
-  16  skip-until  bare22: a qualified label with any short phrase ("PIN, see below:") takes its value
-  17  skip-until  bare22: a date after a stop-label ("Meeting ID.") goes
+  16  item 9      bare22: a qualified label with a short phrase ("PIN below:", "Passcode (see invite):", "Access code - Teams") takes its value; a comma phrase is measured
+  17  item 8      bare22: a date after a stop-label ("Meeting ID.") goes; "Lunch at 12:30" after "Bring your staff ID." and the date under "Code freeze" stay
   18  titles      glued titles and the qualified labels in a title go to "Meeting" (scrub / clean_row), plain titles stay
   19  tests       the invite_clean test files that need no browser pass (bare, bare20, bare21, 369 cap, idempotence, accents, sweep, rescrub)
-
-A SKIP-UNTIL check runs the probe the sheet's wording asks for; if the probe fails on this commit it is skipped with the marker
-"SKIP-UNTIL bare22" and starts counting as soon as it passes, so a later rule change turns the skip into a real check.
 
 Run (from the repository root):  python3 dev/tests/handchecks/test_v268.py
 """
@@ -44,6 +41,7 @@ GUARDED = ["system/creaite-rules.md", "system/scripts/tracker.py", "system/scrip
            "system/scripts/permissions.py", "system/scripts/backup.py", "system/scripts/update.py", "system/scripts/live_server.py",
            "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "system/scripts/draft_delivery.py", ".claude/settings.json"]
 CHAIN = "dev/proposals/GUARDED-2.6.8.chain"
+CHAIN_FILES = ["system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/backup.py"]
 CHAIN_PINS = ["b63bce71ea0ff04ac0b824f55cd6cd8aeb5d4879bc562359a3b4221d5703d0e7",
               "ba75c4689af9ec93cd6c4f676e0bae47443583c5bff1d958ee293e7224f38248",
               "26c89bd25b4bc279d467cb0810f92d95b007cab306251fdd97413bd36f477d45",
@@ -89,11 +87,6 @@ def chain_diffs():
 
 
 class V268(unittest.TestCase):
-    def until(self, ok, why):
-        """A probe that depends on a rule change still to come: skipped (marked) while it fails, a real check once it passes."""
-        if not ok:
-            self.skipTest(f"SKIP-UNTIL bare22: {why}")
-
     def test_c01_version(self):
         v = version()
         self.assertRegex(v, r"^\d+\.\d+\.\d+$")
@@ -116,6 +109,8 @@ class V268(unittest.TestCase):
             self.skipTest("no origin/main here")
         mb = git("merge-base", "origin/main", "HEAD").stdout.strip()
         d = git("diff", "--name-only", mb, "HEAD", "--", *GUARDED).stdout.split()
+        # the three files the chain changes may differ from origin/main only by the chain (test_c04_chain checks their bytes)
+        d = [f for f in d if f not in CHAIN_FILES or not (REPO / CHAIN).exists()]
         self.assertEqual(d, [], f"guarded files changed since origin/main: {d} (they must travel as diffs under dev/proposals)")
 
     def test_c04_chain(self):
@@ -134,6 +129,8 @@ class V268(unittest.TestCase):
             for d in diffs:
                 p = subprocess.run(["git", "apply", str(REPO / d)], cwd=wt, capture_output=True, text=True)
                 self.assertEqual(p.returncode, 0, f"{d} does not apply in order on origin/main: {p.stderr[-600:]}")
+            for f in CHAIN_FILES:
+                self.assertEqual((wt / f).read_bytes(), (REPO / f).read_bytes(), f"{f} is not origin/main plus the chain")
         finally:
             git("worktree", "remove", "--force", str(wt))
             git("worktree", "prune")
@@ -198,8 +195,9 @@ class V268(unittest.TestCase):
                 self.assertEqual(text(f"Agenda\n{ok}\nAOB"), f"Agenda\n{ok}\nAOB")
 
     def test_c12_key(self):
-        out = text("Welcome\n- Key\n- 4417\nAOB")
-        self.assertEqual(out.split("\n"), ["Welcome", "AOB"])
+        self.assertEqual(lines("Welcome\nKey\n- 4417\nAOB"), ["Welcome", "AOB"])
+        self.assertEqual(lines("- Key\n- Red: blocked\n- Amber: at risk"), ["- Key", "- Red: blocked", "- Amber: at risk"])   # a legend (bare22)
+        self.assertIn("- ZQ7742", text("Welcome\n- Key\n- ZQ7742\nAOB"))                  # known limit (bare22)
         self.assertIn("Key milestones", text("Key milestones\nAOB"))
         self.assertIn("X9", text("Password reset\nX9\nAOB"))                  # known limit
         self.assertIn("hunter", text("Key\n- hunter\nAOB"))                  # known limit
@@ -228,18 +226,26 @@ class V268(unittest.TestCase):
         kept = text("\n".join(sheet)).split("\n")
         lost = [l for l in sheet if l not in kept]
         print(f"\n[v2.6.8 check 15] agenda lines lost: {len(lost)} of {len(sheet)}: {lost}")
+        alone = [l for l in sheet if l not in text(f"Agenda\n{l}\nAOB").split("\n")]
+        print(f"[v2.6.8 check 15] lost when each line stands alone under 'Agenda': {alone}")
         for must in ("Lunch at 12:30", "Room 4", "Item 12", "Q3 forecast"):
-            self.assertIn(must, kept)
+            self.assertIn(must, text(f"Agenda\n{must}\nAOB").split("\n"))
+        # measurement: directly after a label phrase the must-survive lines can go with it (bare22; the sheet says so)
+        print("[v2.6.8 check 15] 'Pin the roadmap' then 'Lunch at 12:30' ->", lines("Agenda\nPin the roadmap\nLunch at 12:30"))
 
-    def test_c16_any_short_phrase(self):
-        ok = lines("Agenda\nPIN, see below:\n4417\nAOB") == ["Agenda", "AOB"] and "4417" not in text("Passcode (see invite):\n4417\nAOB")
-        self.until(ok, "a qualified label with any short phrase ('PIN, see below:') does not yet take its value")
-        self.assertNotIn("4417", text("Passcode (see invite):\n4417\nAOB"))
+    def test_c16_short_phrase(self):
+        for label in ("Passcode (see invite):", "PIN below:", "Passcode required:", "Access code - Teams", "Passcode is - Zoom"):
+            for value in ("4417", "hunter"):
+                with self.subTest(label=label, value=value):
+                    self.assertNotIn(value, text(f"Agenda\n{label}\n{value}\nAOB"))
+        print("\n[v2.6.8 check 16] 'PIN, see below:' / 4417 ->", lines("Agenda\nPIN, see below:\n4417\nAOB"))   # measurement: a comma phrase leaks
 
     def test_c17_date_after_stop_label(self):
-        out = text("Meeting ID.\n12-11-2026\nAOB")
-        self.until("12-11-2026" not in out, "a date after 'Meeting ID.' is still kept")
-        self.assertNotIn("12-11-2026", out)
+        for d in ("12-11-2026", "12-11-26", "31-02-2026"):
+            with self.subTest(d):
+                self.assertNotIn(d, text(f"Meeting ID.\n{d}\nAOB"))
+        self.assertIn("Lunch at 12:30", text("Bring your staff ID.\nLunch at 12:30\nAOB"))
+        self.assertIn("12-11-2026", text("Code freeze\n12-11-2026\nAOB"))
 
     def test_c18_titles(self):
         for title in ("PIN4417", "Passcode4417 sync", "Meeting ID123456", "Token4417", "Secret4417 review", "Zoom IDH2K7",
