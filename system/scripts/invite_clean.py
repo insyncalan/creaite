@@ -236,6 +236,16 @@ _DOUBLE = re.compile(r"\[\[([^\[\]]{0,200})\]\]")                               
 _DECORATION = re.compile(r"[_*~`]+")                                          # markdown emphasis and underscores: read as a space
 
 
+_CAMEL = re.compile(r"(?<=[a-z])(?=[A-Z])")
+
+
+def _compounds(text):
+    """The text with a provider glued to a label read as two words: a hyphen before a label becomes a space ("Zoom-Passcode"), and a
+    lower-case letter followed by a capital is split ("ZoomPasscode", "TeamsPIN"). "" when nothing changed. Only a matching view."""
+    out = _CAMEL.sub(" ", _HYPHEN_LABEL.sub(" ", text))
+    return out if out != text else ""
+
+
 def _views(text):
     """What every test matches on: the skeleton and the same with look-alike letters (a Cyrillic "a") read as the Latin ones, and both
     again with every underscore and markdown wrapper (_ * ~ `) read as a space (2.6.8, #369: `_` is a word character, so "__Passcode:__",
@@ -247,7 +257,8 @@ def _views(text):
     out = []
     linked = _MDLINK.sub(r" \1 ", _DOUBLE.sub(r"[\1]", s))        # a markdown link read as its text
     bases = ([linked] if linked != s else []) + [s]
-    for base in [_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases:
+    split = [c for c in (_compounds(x) for x in bases + [_DECORATION.sub(" ", x) for x in bases]) if c]      # "Zoom-Passcode", "ZoomPIN"
+    for base in [_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + split + bases:
         out.append(base)
         t = base.translate(confusables.TABLE)
         if t != base:
@@ -444,6 +455,7 @@ def _looks_like_value(line):
     return len(tokens) <= 2
 
 
+_HYPHEN_LABEL = re.compile(rf"(?<=\w)[-](?=(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS}|ids?)(?!\w))", re.I)
 _LABEL_TOKEN = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])|(?<![\w-])ids?(?![\w-])"
                           rf"|(?:{_OTHER_ALPHABETS})", re.I)
 _KEY_STOP = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS}|ids?)(?![\w-])\s*[.,;!?\u2026]+\s*$", re.I)
@@ -483,7 +495,7 @@ class _Reader:
         if not ln or (not dropped and not re.search(r"[^\W_]", ln)):
             self.kept.append(ln)               # a blank or symbols-only line is transparent: any number, for a label alone as for a window
             return
-        value = self.digit_wait and not dropped and bool(re.search(r"\d", ln))     # "Meeting ID." then "987 654 321": the value
+        value = self.digit_wait and not dropped and not self.pending and bool(re.search(r"\d", ln))     # "Meeting ID." then a number
         reach = self.window > 0 or value                           # a hard window or a value rule reaches this line
         self._tombstone(reach)
         soft = self._soft_step(ln, dropped, reach)
@@ -517,13 +529,13 @@ class _Reader:
         self.window = WINDOW if kind == "open" else (max(self.window - 1, 0) if consumed else 0)
         self.pending = _pending_after(ln, removed, self.pending)
         # a "Meeting ID." rule stays alive across a removed line (a link, a passcode line) until its number comes or an ordinary line does
-        self.digit_wait = _ends_on_key_and_stop(ln) or bool(removed and self.digit_wait and not value)
+        self.digit_wait = _ends_on_key_and_stop(ln) or bool(consumed and self.digit_wait and not value)
         if not consumed:
             self.kept.append(_MARK.sub("", ln))
             self.anchors = [*self.anchors, len(self.kept) - 1] if (kind == "open" or self.digit_wait) else []      # a chain of label lines
             if kind == "leads":
                 self.soft.append([WINDOW, len(self.kept) - 1])      # a kept, finished phrase: the next three lines are looked at
-        elif not reach and not (removed and self.digit_wait):
+        elif not reach and not (consumed and self.digit_wait):
             self.anchors = []                  # (a removed line between "Meeting ID." and its number keeps the chain)
 
 
