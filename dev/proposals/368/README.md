@@ -17,3 +17,8 @@ Cap's `deSent` change in `system/templates/dashboard/src/drafts.js` (a new mode 
 | M3 strip cuts to the end of the line | Accepted (fail closed). `drafts.js` writes one sent line per line, so nothing real is lost. |
 | LOW 5 look-alike letters not in the page map | Recorded: the page map holds every look-alike Python maps to the letters of chased/emailed/asked/by/email/message, hyphen and colon (generated); other homoglyphs need hostile input and matter only for those letters. |
 | LOW 6/7 variants such as `e-mail`, `by Teams` | Recorded as known limits: `sentLine` in `drafts.js` writes only `by email` or `by message`, so they are not added. |
+
+## Re-review of 3443b9e4
+- Fixed: the page's entity table now holds every HTML5 name whose text `edit_ai.normal` reads as nothing (invisible and control characters: `&shy;`, `&zwj;`, `&NoBreak;`, `&ZeroWidthSpace;`, `&lrm;`, `&InvisibleTimes;` and the rest) as well as the letters, digits, spaces, line breaks, hyphens and colons of before. The definition is `edit_ai.normal`'s own, in `gen_linktext_confusables.py`, so the two cannot drift (`--check` covers the file). Tests: the six reviewer rows, one tagged line for every invisible name (seed 368), and a mutant that drops `&shy;`.
+- Accepted (deliberate trade-off): the bounds of 50 characters of spacing and 400 characters for a name or the text before "by". A line padded beyond them is not matched; real sent lines are one short line from `drafts.js`.
+- Known limits, recorded: upper-case `&NBSP;` (browsers do not decode it either), and entities with no tag or written twice (`&amp;shy;`): neither is decoded by a browser, and the fields are escaped before they are shown.

@@ -41,8 +41,9 @@ def text():
 def entities():
     """(the named-entity allow-list, the numeric exceptions) the page decodes as html.unescape does.
 
-    Allow-list: the HTML5 names whose text, read the way the sent-line check reads it, is made only of the letters the pattern needs,
-    digits, spaces, hyphens or colons (so &colon;, &hyphen;, &NewLine;, &eacute; and the like). Every other name is left as written
+    Allow-list: the HTML5 names whose text, read the way the sent-line check reads it (edit_ai.normal), is nothing (an invisible
+    character, a control character: &shy;, &zwj;, &NoBreak;, &lrm;), or only the letters the pattern needs, digits, spaces, line
+    breaks, hyphens or colons (so &colon;, &hyphen;, &NewLine;, &eacute; and the like). Every other name is left as written
     by the page and decoded by Python; neither can make or hide a sent line, because what it gives is outside those characters."""
     import html
     import html.entities
@@ -50,7 +51,7 @@ def entities():
     named = {}
     for n, v in html.entities.html5.items():
         t = edit_ai.normal(v.replace("\u00a0", " "))
-        if t and all(c.lower() in NEEDED or c in " \t\n-:0123456789" for c in t):
+        if all(c.lower() in NEEDED or c in " \t\n-:0123456789\r\x0b\x0c\x85\u2028\u2029" for c in t):    # "" too: edit_ai.normal strips it
             named[n] = v
     ranges, prev = [], None
     for cp in sorted(html._invalid_codepoints):

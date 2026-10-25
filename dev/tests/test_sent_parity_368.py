@@ -22,6 +22,9 @@ EXTRA = ["<p>17-10-2026: Chased Sara by email.</p>", "Waiting\r\n17-10-2026: Cha
          # review M1: character references in HTML
          "<p>17-10-2026: Chased Sara by&#32;email.</p>", "<p>17-10-2026: Chased Sara by&#x20;email.</p>", "<p>17-10-2026&#58; Chased Sara by email.</p>",
          "<p>17-10-2026&colon; Chased Sara by&nbsp;email.</p>", "<p>17-10-2026: Chased Sara b&#121; &#101;mail.</p>", "<p>Fish &amp; chips &lt;b&gt;</p>",
+         # re-review: invisible named references inside the date or a word, with a tag present
+         "<p>17-10-2026&shy;: Chased Sara by email.</p>", "<p>17-10-2026&zwj;: Chased Sara by email.</p>", "<p>17-10-2026&NoBreak;: Chased Sara by email.</p>",
+         "<p>17-10-2026: Chased Sara by em&ZeroWidthSpace;ail.</p>", "<p>17-10-2026: Cha&lrm;sed Sara by email.</p>", "<p>17-10-2026: Chased Sara &InvisibleTimes;by email.</p>",
          # review M2: the rest keeps its own characters
          "Caf\u00e9 r\u00e9sum\u00e9 \u0928\u092e\u0938\u094d\u0924\u0947 \u0391\u0392\u0393 \u041f\u0440\u0438\u0432\u0435\u0442\n17-10-2026: Chased Sara by email.\nCaf\u00e9 again",
          "Caf\u00e9 \u041f\u0440\u0438\u0432\u0435\u0442. 17-10-2026: Chased Sara by email.",
@@ -108,6 +111,57 @@ console.log(c.createHash('sha256').update(Buffer.from(p.join('\\x01'),'utf8')).d
         self.assertEqual(r.returncode, 0, r.stderr[-400:])
         for t, got in zip(texts, json.loads(r.stdout)):
             self.assertEqual(got, html.unescape(t), t)
+
+
+INVISIBLE_ROWS = ["<p>17-10-2026&shy;: Chased Sara by email.</p>", "<p>17-10-2026&zwj;: Chased Sara by email.</p>",
+                  "<p>17-10-2026&NoBreak;: Chased Sara by email.</p>", "<p>17-10-2026: Chased Sara by em&ZeroWidthSpace;ail.</p>",
+                  "<p>17-10-2026: Cha&lrm;sed Sara by email.</p>", "<p>17-10-2026: Chased Sara by&InvisibleTimes; email.</p>"]
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class InvisibleReferences(unittest.TestCase):
+    def names(self):
+        import html.entities
+        import edit_ai
+        return sorted(n for n, v in html.entities.html5.items() if n.endswith(";") and edit_ai.normal(v) == "")
+
+    def test_every_invisible_name_is_in_the_page_table(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "dev" / "tools"))
+        import gen_linktext_confusables as g
+        names = self.names()
+        self.assertGreater(len(names), 5)
+        for n in ("shy;", "zwj;", "NoBreak;", "ZeroWidthSpace;", "lrm;", "InvisibleTimes;"):
+            self.assertIn(n, names)
+        self.assertEqual([n for n in names if n not in g.entities()[0]], [])
+
+    def lines(self):
+        import random
+        rnd, out = random.Random(368), []
+        base = "<p>17-10-2026: Chased Sara by email.</p>"
+        for n in self.names():
+            cut = rnd.randrange(len("<p>"), len(base) - len("</p>"))
+            out.append(base[:cut] + "&" + n + base[cut:])
+        return INVISIBLE_ROWS + out
+
+    def test_both_sides_agree_and_recognise(self):
+        lines = self.lines()
+        for t, (has, out) in zip(lines, run_js(fix=lines)):
+            self.assertTrue(linktext.sent_has(t), repr(t))
+            self.assertEqual((has, out), (True, linktext.sent_strip(t)), repr(t))
+
+    def test_dropping_an_invisible_name_is_caught(self):
+        ent = JS.parent / "sentEntities.js"
+        src = ent.read_text()
+        self.assertIn('"shy;"', src)
+        tmpe, tmpj = JS.parent / "_mutant_368_ent.js", JS.parent / "_mutant_368.js"
+        tmpe.write_text(src.replace('"shy;"', '"shyX;"'))
+        tmpj.write_text(JS.read_text().replace("./sentEntities.js", "./_mutant_368_ent.js"))
+        try:
+            got = dict(zip(INVISIBLE_ROWS, run_js(tmpj, INVISIBLE_ROWS)))
+        finally:
+            tmpe.unlink()
+            tmpj.unlink()
+        self.assertFalse(got[INVISIBLE_ROWS[0]][0])
 
 
 class Timing(unittest.TestCase):
