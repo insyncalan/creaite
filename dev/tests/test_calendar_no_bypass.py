@@ -7,7 +7,6 @@ allowed to: calendar_gateway.py (the one read path), invite_clean.py (legacy rea
 rescrub) and live_server.py (stat only). Mutant: the test must see a bypass planted in a reader.
 """
 import re
-import sys
 import unittest
 from pathlib import Path
 
