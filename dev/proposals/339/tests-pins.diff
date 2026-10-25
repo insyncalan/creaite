@@ -1,8 +1,16 @@
 diff --git a/dev/tests/test_ai_budget_gate_334.py b/dev/tests/test_ai_budget_gate_334.py
-index e2d42743..d4799ce9 100644
+index e2d42743..6458e71d 100644
 --- a/dev/tests/test_ai_budget_gate_334.py
 +++ b/dev/tests/test_ai_budget_gate_334.py
-@@ -152,7 +152,8 @@ class SweepsAreNeverHeld(unittest.TestCase):
+@@ -41,6 +41,7 @@ class FakeHandler:
+         self.sent = (code, body)
+ 
+     numbered = staticmethod(lambda: False)
++    calendar_start = getattr(live_server.Handler, "calendar_start", None)       # #339 A
+ 
+     def follow(self, run, **kw):
+         raise Reached()
+@@ -152,7 +153,8 @@ class SweepsAreNeverHeld(unittest.TestCase):
      def test_the_ask_path(self):
          for at_limit in ("confirm", "stop"):
              for words in SWEEPS:
@@ -12,6 +20,16 @@ index e2d42743..d4799ce9 100644
          sent, reached = ask({"message": "tell me about the pilot"}, status(500))
          self.assertFalse(reached)                                    # anything else is still held
          self.assertEqual(sent[0], 429)
+@@ -178,7 +180,8 @@ class SweepsAreNeverHeld(unittest.TestCase):
+     def test_the_queue_path(self):
+         for at_limit in ("confirm", "stop"):
+             for words in SWEEPS:
+-                self.assertTrue(self.queued(words, status(500, at_limit=at_limit))[1], (at_limit, words))
++                q, reached = self.queued(words, status(500, at_limit=at_limit))
++                self.assertTrue(reached or (words == "refresh calendar" and "why" not in q), (at_limit, words))   # #339 A
+         q, reached = self.queued("tell me about the pilot", status(500))
+         self.assertFalse(reached)
+         self.assertTrue(q["held"])
 diff --git a/dev/tests/test_calendar_refresh.py b/dev/tests/test_calendar_refresh.py
 index b4ce3da5..2c84505e 100644
 --- a/dev/tests/test_calendar_refresh.py

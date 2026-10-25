@@ -1,24 +1,46 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index 1d0867e..ab6ae50 100644
+index 1d0867e..2143537 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -1658,6 +1658,15 @@ class Handler(BaseHTTPRequestHandler):
+@@ -1646,8 +1646,7 @@ class Handler(BaseHTTPRequestHandler):
+         images = req.get("images") or []
+         if not (isinstance(images, list) and len(images) <= ASK_IMAGE_MAX and all(ask_image_files(i) for i in images)):
+             return self.send(400, {"ok": False, "message": f"Up to {ASK_IMAGE_MAX} attached images that have been uploaded"})
+-        run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
+-            else f"r-{secrets.token_hex(6)}"
++        run_id = request_run_id(req)
+         if req.get("permfile"):                           # BL-141: a permission file is changed on the one card, never by a run
+             return self.send(400, {"ok": False, "message": "Permission files are changed on the approval card now: ask creaite again."})
+         held = budget_gate(req)                           # #334: this week's AI budget (confirm or stop, by setting)
+@@ -1658,6 +1657,8 @@ class Handler(BaseHTTPRequestHandler):
              if busy and not busy.done:
                  return self.send(409, {"ok": False, "busy": True, "run": busy.summary(),
                                         "message": "ask creaite is still working on the last request."})
 +            if panel_kind(message, images, req.get("confirmed")) == "calendar":     # #339 A: the busy check above is the 409 for a run
-+                try:
-+                    run, said = calendar_run(run_id)
-+                except OSError as e:
-+                    return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
-+                if said:                                                    # a sweep running (409), or the precheck's own reason (400)
-+                    return self.send(409 if said == SWEEP_RUNNING_SAYS else 400, {"ok": False, "message": said,
-+                                                                                  "busy": said == SWEEP_RUNNING_SAYS})
-+                return self.follow(run, numbered=self.numbered())
++                return self.calendar_start(run_id)
              try:
                  sweep = panel_sweep(message, images, req.get("confirmed"))      # BL-309: the server decides, from the words
                  run = Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images, sweep=sweep,
-@@ -2346,6 +2355,35 @@ def panel_sweep(message, images=(), confirmed=None):
+@@ -1667,6 +1668,18 @@ class Handler(BaseHTTPRequestHandler):
+                                                                f"signed in?"})
+         return self.follow(run, numbered=self.numbered())
+ 
++    def calendar_start(self, run_id):
++        """#339 A: start the typed "refresh calendar" (START_LOCK held, no other run going): the calendar run, or 409 for a sweep
++        running (the plain sentence), 400 for the precheck's own reason."""
++        try:
++            run, said = calendar_run(run_id)
++        except OSError as e:
++            return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
++        if said:
++            busy = said == SWEEP_RUNNING_SAYS
++            return self.send(409 if busy else 400, {"ok": False, "message": said, "busy": busy})
++        return self.follow(run, numbered=self.numbered())
++
+     def here(self, req):
+         """POST /api/here: the open page's "still here" every 10 seconds; keeps a launcher-started server running (BL-86)."""
+         LAST_HERE[0] = time.time()
+@@ -2346,6 +2359,54 @@ def panel_sweep(message, images=(), confirmed=None):
      return m.group("subject") is not None or all(panel_sweep_code_ok(c) for c in PANEL_SWEEP_FOR.findall(text))
  
  
@@ -37,6 +59,12 @@ index 1d0867e..ab6ae50 100644
 +    return "calendar" if PANEL_CALENDAR_WORDS.fullmatch(text) else "sweep"
 +
 +
++def request_run_id(req):
++    """#339 A: the run id a request names (letters, digits and hyphens, 6 to 64), else a fresh one."""
++    named = req.get("run")
++    return named if isinstance(named, str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", named) else f"r-{secrets.token_hex(6)}"
++
++
 +def calendar_run(run_id):
 +    """#339 A: a typed "refresh calendar" as the button's own run: its fixed prompt, no session and no chat (so nothing is carried
 +    from a chat and no outside-content mark is inherited), kind "calendar", its closure kept in the day's runs chat (BL-326).
@@ -51,18 +79,29 @@ index 1d0867e..ab6ae50 100644
 +               closer=calendar_refresh.closer(), lines=calendar_refresh.lines()), None
 +
 +
++def queued_run(item, images, session, chat):
++    """#339 A: the run a queued message starts. A queued "refresh calendar" is the calendar run; if that is refused (a sweep
++    running, a calendar that cannot be read) this raises OSError, so the queue is held like a start that failed, and never
++    becomes a full mail sweep. Anything else is the chat or sweep run it always was (BL-309)."""
++    if panel_kind(item["text"], images) == "calendar":
++        run, said = calendar_run(f"c-{secrets.token_hex(6)}")
++        if run is None:
++            raise OSError(said)
++        return run
++    return Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
++               sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
++
++
  PANEL_SWEEP_PROMPT = (
      "You are running creaite's cx-sweep from the dashboard panel (ask creaite), headless in the vault: Alan typed a sweep "
      "request, and typing it is his confirmation to stage its proposals (BL-309). Run the cx-sweep skill now for exactly what he "
-@@ -3345,8 +3383,9 @@ def queue_start(q, prev=None):
+@@ -3345,8 +3406,7 @@ def queue_start(q, prev=None):
          chat = q["chat"] or (prev.chat or prev.session if mine else None)
          session = prev.session if mine and chat in (prev.chat, prev.session) else chat_session(chat)
          try:
 -            nxt = Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
 -                      sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
-+            nxt = calendar_run(f"c-{secrets.token_hex(6)}")[0] if panel_kind(item["text"], images) == "calendar" else None   # #339 A
-+            nxt = nxt or Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
-+                             sweep=panel_sweep(item["text"], images), fresh=True)                      # BL-309: a queued sweep too
++            nxt = queued_run(item, images, session, chat)                                       # BL-309; #339 A: a queued refresh
          except (OSError, ValueError):
              q["items"].insert(0, item)
              q["held"] = True
