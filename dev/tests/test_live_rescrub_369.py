@@ -60,6 +60,15 @@ class Rescrub(unittest.TestCase):
         self.assertNotIn("rtyu", flat)
         self.assertIn("agenda: budget", flat)
 
+    def test_the_development_repository_is_left_alone(self):
+        v, cal = patched_vault(self)
+        (v.root / ".creaite-dev").write_text("", encoding="utf-8")
+        before = cal.read_bytes()
+        r = run(v, "print(live_server.calendar_rescrub_job())")
+        self.assertEqual(r.returncode, 0, r.stderr[-300:])
+        self.assertEqual(r.stdout.strip().splitlines()[-1], "None")
+        self.assertEqual(cal.read_bytes(), before)                        # byte for byte
+
     def test_an_exception_never_stops_the_server(self):
         v, cal = patched_vault(self)
         r = run(v, "def boom():\n    raise RuntimeError('x')\nsweep.rescrub_calendar = boom\nprint(live_server.calendar_rescrub_job())")
@@ -74,12 +83,8 @@ class Rescrub(unittest.TestCase):
 
     def test_a_save_made_meanwhile_is_not_overwritten(self):
         v, cal = patched_vault(self)
-        code = ("import json, os\nfrom pathlib import Path\nreal = sweep.invite_clean.clean_row\n"
-                "def late(row):\n    p = sweep.paths.CALENDAR\n    p.write_text(json.dumps({'days': {'NEWER': []}}))\n"
-                "    os.utime(p, (1, 1))\n    return real(row)\n"
-                "sweep.invite_clean.clean_row = late\nprint(sweep.rescrub_calendar())")
-        run(v, code)
-        self.assertIn("NEWER", cal.read_text(encoding="utf-8"))
+        run(v, "import sweep\n" + 'import threading, time, json\ngot_lock = threading.Event()\ndef saver():\n    with sweep.calendar_lock() as ok:\n        got_lock.set()\n        time.sleep(0.4)\n        sweep.paths.CALENDAR.write_text(json.dumps({"days": {"2026-10-27": [{"id": "n1", "start": "08:00", "end": "09:00",\n            "title": "NEWER Password swordfish", "sensitivity": "normal"}]}}))\nt = threading.Thread(target=saver); t.start(); got_lock.wait(5)\nprint(sweep.rescrub_calendar(wait=10)); t.join()')
+        self.assertIn("2026-10-27", cal.read_text(encoding="utf-8"))
 
 
 class Mutants(unittest.TestCase):
@@ -87,6 +92,13 @@ class Mutants(unittest.TestCase):
         text = DIFF.read_text(encoding="utf-8")
         self.assertIn(old, text, "mutant anchor not found")
         return text.replace(old, new, 1)
+
+    def test_dev_guard_removed_rewrites_the_sample(self):
+        old = "+        return None                                      # the development repository keeps its sample calendar as it is"
+        v, cal = patched_vault(self, self.mutated(old, "+        pass"))
+        (v.root / ".creaite-dev").write_text("", encoding="utf-8")
+        run(v, "live_server.calendar_rescrub_job()")
+        self.assertNotIn("swordfish", cal.read_text(encoding="utf-8").lower())      # the sample was rewritten: what the guard prevents
 
     def test_hook_without_its_call_fails(self):
         v, cal = patched_vault(self, self.mutated("+        n = sweep.rescrub_calendar()", "+        n = 0"))

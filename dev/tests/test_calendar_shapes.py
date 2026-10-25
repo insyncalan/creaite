@@ -1,0 +1,177 @@
+"""2.6.8 review: a saved calendar of any shape is cleaned, and readers never fail on it.
+
+Run: python3 dev/tests/test_calendar_shapes.py      (quick tier: throwaway vaults, no Chrome, no Claude)
+
+A legacy or foreign calendar.json may hold keys the sweep never writes (description, joinUrl, location, extra), a note at the top, a string
+for a row or a day. clean_row now keeps ONLY invite_clean.ROW_KEYS (what sweep.calendar_row writes); clean_calendar keeps only
+"fetched", "to" and a dict of YYYY-MM-DD days to lists of dict rows; rescrub_calendar rewrites the file to that; and every reader reads
+through invite_clean.read_calendar (cleaned, cached while the file is unchanged), so none can raise on an odd shape.
+- SHAPES: the reviewer's examples. READERS: build_dashboard, transcripts, drafts, prep_page on the odd file. CACHE: the second read of an
+  unchanged file is fast, a changed file always misses, the caller gets its own copy.
+- MUTANTS: the allow-list off, non-dict rows kept, the readers' guard off, the cache key without the size or time.
+All values are made up.
+"""
+import copy
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+SCRIPTS = HERE.parents[1] / "system" / "scripts"
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(SCRIPTS))
+import invite_clean as I  # noqa: E402
+from test_tracker import Vault  # noqa: E402
+
+SECRET = "Passcode: 4321"
+ODD = {"fetched": "2026-10-25 08:00", "to": "2026-10-30", "note": SECRET, "extra": [SECRET],
+       "days": {"2026-10-26": [{"id": "a1", "start": "09:00", "end": "10:00", "title": "Sync", "description": SECRET,
+                                "joinUrl": "https://zoom.example.invalid/j/5550001111?pwd=abc", "location": SECRET, "extra": SECRET,
+                                "sensitivity": "normal"}, SECRET, 7, None, ["x"]],
+                "2026-10-27": SECRET, "2026-10-28": None, "not-a-day": [{"id": "z", "title": SECRET}]}}
+
+
+def vault(test, data=None):
+    v = Vault()
+    test.addCleanup(v.cleanup)
+    cal = v.root / "system/staging/calendar.json"
+    cal.parent.mkdir(parents=True, exist_ok=True)
+    cal.write_text(json.dumps(ODD if data is None else data), encoding="utf-8")
+    return v, cal
+
+
+def run(v, code):
+    return subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts')\n" + code], cwd=v.root,
+                          capture_output=True, text=True, env={**os.environ, "CREAITE_NO_LAUNCH": "1", "CREAITE_NOW": "2026-10-25T09:00:00"})
+
+
+READERS = {
+    "dashboard saved days": "import build_dashboard as b\nprint(json.dumps(b.saved_calendar_days()))",
+    "dashboard day view": "import build_dashboard as b\nprint(json.dumps(b.calendar([])))",
+    "transcript rows": "import transcripts as t\nprint(json.dumps(t.calendar_rows()))",
+    "draft attendees": "import drafts as d\nprint(json.dumps(d._meeting_attendees('2026-10-26', 'Sync')))",
+    "draft event": "import drafts as d\nprint(json.dumps(d.calendar_event({'eid': 'a1'})))",
+    "prep event": "import prep_page as p\nprint(json.dumps(p._event('2026-10-26|09:00|Sync', '2026-10-26')))",
+}
+
+
+class Shapes(unittest.TestCase):
+    def test_clean_calendar_keeps_only_a_calendar(self):
+        out = I.clean_calendar(copy.deepcopy(ODD))
+        self.assertEqual(set(out), {"fetched", "to", "days"})
+        self.assertEqual(list(out["days"]), ["2026-10-26"])
+        self.assertEqual(len(out["days"]["2026-10-26"]), 1)
+        self.assertEqual(set(out["days"]["2026-10-26"][0]) - set(I.ROW_KEYS), set())
+        self.assertNotIn("4321", json.dumps(out))
+        self.assertNotIn("zoom", json.dumps(out))
+        self.assertEqual(I.clean_calendar(out), out)                          # a cleaned calendar cleans to itself
+
+    def test_not_a_calendar_at_all(self):
+        for odd in ([], "x", None, 5, [ODD], {"days": [1, 2]}, {"days": "x"}):
+            self.assertEqual(I.clean_calendar(odd)["days"], {})
+
+    def test_each_example_on_its_own(self):
+        base = {"id": "a", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal"}
+        for key in ("description", "joinUrl", "location", "extra", "notes", "body2", "teams_url"):
+            row = I.clean_row({**base, key: SECRET})
+            self.assertNotIn(key, row)
+            self.assertNotIn("4321", json.dumps(row))
+
+    def test_rescrub_rewrites_the_file(self):
+        v, cal = vault(self)
+        r = run(v, "import sweep\nprint(sweep.rescrub_calendar())")
+        self.assertEqual(r.returncode, 0, r.stderr[-300:])
+        self.assertNotIn("4321", cal.read_text(encoding="utf-8"))
+        self.assertNotIn("note", json.loads(cal.read_text(encoding="utf-8")))
+        self.assertEqual(run(v, "import sweep\nprint(sweep.rescrub_calendar())").stdout.strip(), "0")        # then nothing to do
+
+
+class Readers(unittest.TestCase):
+    def test_no_reader_fails_on_an_odd_file(self):
+        v, _cal = vault(self)
+        for name, code in READERS.items():
+            r = run(v, code)
+            self.assertEqual(r.returncode, 0, f"{name}: {r.stderr[-300:]}")
+            self.assertNotIn("4321", r.stdout, name)
+
+    def test_no_reader_fails_on_other_shapes(self):
+        for data in ([], "text", {"days": "x"}, {"days": {"2026-10-26": "x"}}, {"days": {"2026-10-26": ["x", 1]}}):
+            v, _cal = vault(self, data)
+            for name, code in READERS.items():
+                r = run(v, code)
+                self.assertEqual(r.returncode, 0, f"{name} on {data!r}: {r.stderr[-300:]}")
+
+
+class Cache(unittest.TestCase):
+    def big(self, n=60):
+        row = {"id": "a", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal",
+               "body": "Agenda: budget\n" + "Review the plan with the team\n" * 600}
+        return {"fetched": "x", "to": "y", "days": {"2026-10-26": [dict(row, id=str(i)) for i in range(n)]}}
+
+    def test_second_read_is_fast_and_a_changed_file_misses(self):
+        v, cal = vault(self, self.big())
+        code = ("import time, json, invite_clean as I, paths\nt0 = time.time(); a = I.read_calendar(paths.CALENDAR); t1 = time.time()\n"
+                "b = I.read_calendar(paths.CALENDAR); t2 = time.time()\na['days'].clear()\nc = I.read_calendar(paths.CALENDAR)\n"
+                "print(json.dumps([round(t1 - t0, 3), round(t2 - t1, 3), len(c['days']['2026-10-26'])]))")
+        first, second, n = json.loads(run(v, code).stdout.strip().splitlines()[-1])
+        self.assertGreater(first, second * 3)                                # the first read cleans 60 rows of 18 KB
+        self.assertLess(second, 0.1)                                         # the second read of the unchanged file does not
+        self.assertEqual(n, 60)                                              # and the caller's copy was its own
+        code2 = ("import json, invite_clean as I, paths\nI.read_calendar(paths.CALENDAR)\n"
+                 "d = json.loads(paths.CALENDAR.read_text()); d['days']['2026-10-26'][0]['title'] = 'Passcode: 4321'\n"
+                 "paths.CALENDAR.write_text(json.dumps(d))\nprint(json.dumps(I.read_calendar(paths.CALENDAR)['days']['2026-10-26'][0]['title']))")
+        self.assertEqual(json.loads(run(v, code2).stdout.strip().splitlines()[-1]), "Meeting")        # changed file: cleaned afresh
+
+    def test_cached_value_is_cleaned(self):
+        v, _cal = vault(self)
+        code = ("import json, invite_clean as I, paths\nI.read_calendar(paths.CALENDAR)\nprint(json.dumps(I.read_calendar(paths.CALENDAR)))")
+        self.assertNotIn("4321", run(v, code).stdout)
+
+
+class Mutants(unittest.TestCase):
+    def mutated(self, old, new):
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_shape_mutant", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, new, 1), "invite_clean_shape_mutant", "exec"), mod.__dict__)
+        return mod
+
+    def test_allow_list_off(self):
+        m = self.mutated("    out = _row_head(row, sens, private)\n",
+                         "    out = {**{k: v for k, v in row.items() if k not in ('title', 'where', 'body')}, **_row_head(row, sens, private)}\n")
+        self.assertIn("4321", json.dumps(m.clean_row({"id": "a", "title": "Sync", "description": SECRET, "sensitivity": "normal"})))
+
+    def test_non_dict_rows_kept(self):
+        m = self.mutated("[clean_row(r) for r in rows if isinstance(r, dict)]", "[clean_row(r) if isinstance(r, dict) else r for r in rows]")
+        self.assertIn(SECRET, json.dumps(m.clean_calendar(copy.deepcopy(ODD))))
+
+    def test_reader_without_the_guard_raises(self):
+        v, _cal = vault(self, [])                                            # a top-level list
+        f = v.root / "system/scripts/invite_clean.py"
+        src = f.read_text(encoding="utf-8")
+        old = '    if not isinstance(cal, dict):\n        return {"days": {}}\n'
+        self.assertIn(old, src)
+        f.write_text(src.replace(old, "", 1), encoding="utf-8")
+        self.assertNotEqual(run(v, READERS["dashboard day view"]).returncode, 0)
+
+    def test_cache_key_without_size_or_time(self):
+        v, cal = vault(self)
+        f = v.root / "system/scripts/invite_clean.py"
+        src = f.read_text(encoding="utf-8")
+        old = "sig = (st.st_mtime_ns, st.st_size, st.st_ino)"
+        self.assertIn(old, src)
+        f.write_text(src.replace(old, "sig = (0,)", 1).replace("(st2.st_mtime_ns, st2.st_size, st2.st_ino) == sig", "True", 1), encoding="utf-8")
+        code = ("import json, invite_clean as I, paths\nI.read_calendar(paths.CALENDAR)\npaths.CALENDAR.write_text(json.dumps({'days': "
+                "{'2026-10-26': [{'id': 'n', 'title': 'NEWER'}]}}))\nprint(json.dumps(I.read_calendar(paths.CALENDAR)))")
+        self.assertNotIn("NEWER", run(v, code).stdout)                       # stale: the cache would serve the old file
+
+
+if __name__ == "__main__":
+    unittest.main()

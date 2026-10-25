@@ -22,6 +22,8 @@
 
 **Odd characters.** A character that would turn into more than four characters when normalised (a ligature such as U+FDFA, which stands for eighteen letters, or a unit sign) is read as a space before it is expanded, so a hostile invite cannot make reading slow. No label letter expands that far.
 
+**Saved calendars.** A saved meeting keeps only the fields the sweep writes (title, place, times, organiser, invite text, attendees, attachment names and a few flags); anything else in an old or foreign file (a description, a join link, a note at the top, a row that is not a meeting) is dropped when the file is cleaned and when it is read. The clean-up and a sweep's save take the same lock, so neither loses the other's write. A cleaned calendar is kept in memory while the file is unchanged, so repeated reads are fast.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
@@ -36,3 +38,5 @@
 - labels in scripts without rules: Greek (Κωδικός), Hebrew (סיסמה), Hindi (पासवर्ड), Thai (รหัสผ่าน) and Russian "Контрольный код" followed by a plain word;
 - "şifre hunterxyz" and "Şifre" (Turkish) with a plain word on the same or the next line;
 - "Meeting ID" followed by a plain word with no digit and no separator ("Meeting ID hunterxyz").
+- a character that expands to more than four characters, or a symbol, INSIDE a label word ("P㈝IN: hunter", "P#IN: hunter") breaks the label (not a regression);
+- reading a saved calendar of hundreds of hostile rows with 20,000-character bodies still takes seconds (a saved body is cut to 20,000 characters before it is cleaned again; real invites are far smaller and are not affected).

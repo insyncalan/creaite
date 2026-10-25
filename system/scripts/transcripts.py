@@ -219,7 +219,7 @@ def classify(*, online, uri, count, error, past):
 def calendar_rows():
     """The timed meetings in system/staging/calendar.json, each with its day."""
     try:
-        cal = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8")))
+        cal = invite_clean.read_calendar(paths.CALENDAR)
     except (OSError, ValueError):
         return []
     out = []

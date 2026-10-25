@@ -67,7 +67,7 @@ def latest():
 
 def _event(key, day):
     try:
-        days = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8"))).get("days") or {}
+        days = invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
     except (OSError, ValueError):
         return None
     start, title = key.split("|")[-2:]

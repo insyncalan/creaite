@@ -302,6 +302,8 @@ NOT_COVERED = [
     ("sifre with a plain word", "Sync sifre hunterxyz", "hunterxyz"),
     ("Turkish Sifre on its own line", "Sync \u015eifre hunterxyz", "hunterxyz"),
     ("Meeting ID and a word value", "Sync Meeting ID hunterxyz", "hunterxyz"),
+    ("a long-expansion character inside a label word", "Sync P\u321dIN: hunterxyz", "hunterxyz"),       # read as a space: "P IN"
+    ("a symbol inside a label word", "Sync P#IN: hunterxyz", "hunterxyz"),
 ]
 
 

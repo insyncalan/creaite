@@ -90,28 +90,26 @@ class Mutants(unittest.TestCase):
 
 
 class Rescrub(unittest.TestCase):
-    CONCURRENT = ("import json, os\nreal = sweep.invite_clean.clean_row\nstate = {'n': 0}\n"
-                  "def late(row):\n    if state['n'] == 0:\n        state['n'] = 1\n"
-                  "        sweep.paths.CALENDAR.write_text(json.dumps({'days': {'2026-10-27': [{'id': 'n1', 'start': '08:00', 'end': '09:00',"
-                  " 'title': 'NEWER Password swordfish', 'sensitivity': 'normal'}]}}))\n    return real(row)\n"
-                  "sweep.invite_clean.clean_row = late\nprint(sweep.rescrub_calendar())")
+    # a sweep's save and the clean-up share the calendar lock: the saver holds it, writes a newer file, lets go; the clean-up waits
+    CONCURRENT = 'import threading, time, json\ngot_lock = threading.Event()\ndef saver():\n    with sweep.calendar_lock() as ok:\n        got_lock.set()\n        time.sleep(0.4)\n        sweep.paths.CALENDAR.write_text(json.dumps({"days": {"2026-10-27": [{"id": "n1", "start": "08:00", "end": "09:00",\n            "title": "NEWER Password swordfish", "sensitivity": "normal"}]}}))\nt = threading.Thread(target=saver); t.start(); got_lock.wait(5)\nprint(sweep.rescrub_calendar(wait=10)); t.join()'
 
     def test_a_save_made_meanwhile_is_kept_and_cleaned(self):
         v, cal = vault(self)
         run(v, "import sweep\n" + self.CONCURRENT)
         flat = cal.read_text(encoding="utf-8")
         self.assertIn("2026-10-27", flat)                               # the sweep's save was not lost
-        self.assertNotIn("swordfish", flat.lower())                     # and it was cleaned on the retry
+        self.assertNotIn("swordfish", flat.lower())                     # and it was cleaned once the lock was free
 
-    def test_mutant_without_the_re_read_loses_the_save(self):
+    def test_mutant_without_the_lock_loses_the_save(self):
         v, cal = vault(self)
         f = v.root / "system/scripts/sweep.py"
         src = f.read_text(encoding="utf-8")
-        old = "unchanged = paths.CALENDAR.read_text(encoding=\"utf-8\") == raw"
+        old = "                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
         self.assertIn(old, src)
-        f.write_text(src.replace(old, "unchanged = True", 1), encoding="utf-8")
+        f.write_text(src.replace(old, "                pass\n", 1), encoding="utf-8")
         run(v, "import sweep\n" + self.CONCURRENT)
-        self.assertNotIn("2026-10-27", cal.read_text(encoding="utf-8"))   # the lost update the re-read prevents
+        # without the lock the clean-up runs before the sweep's save finishes: the newer file lands afterwards, uncleaned
+        self.assertIn("swordfish", cal.read_text(encoding="utf-8").lower())
 
     def test_session_start_survives_a_failing_rescrub(self):
         v, _cal = vault(self)

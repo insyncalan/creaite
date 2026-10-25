@@ -1298,7 +1298,7 @@ def minutes_file(files):
 def calendar_event(req):
     """The saved calendar's entry for the meeting (by its ID, else its day, start and title), or {}."""
     try:
-        days = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8"))).get("days") or {}
+        days = invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
     except (OSError, ValueError):
         return {}
     for day, evs in days.items():
@@ -1690,7 +1690,7 @@ def _source_meeting(src):
 def _meeting_attendees(day, title):
     """The saved calendar's attendees for that meeting (its day, the title matched loosely), [] when it isn't there."""
     try:
-        days = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8"))).get("days") or {}
+        days = invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
     except (OSError, ValueError, AttributeError):
         return []
     want = words(title)
