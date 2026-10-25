@@ -13,6 +13,7 @@ import { profileCardHtml, profileWire } from "./profile.js";   /* #312 */
 import { h, render } from "preact";
 import { essText, Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
+import { AiModels } from "./components/settings/AiModels.jsx";
 import { MoreSettings, moreRows, tabOfSetting } from "./components/settings/MoreSettings.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
@@ -71,7 +72,7 @@ export const catOf=s=>CATOF[s.cat]||s.cat;
 /* Addresses: #settings/<tab> opens that tab; #settings/<sub> an Advanced sub-tab; #settings/<section> (sweep, diagnostics…)
    opens the tab the section is in and scrolls to it. The old ones (prefs, admin, general, capture, system, the old "more")
    still work. */
-export const SETOLD={prefs:"essentials",general:"look",capture:"sweep",system:"health",more:"advanced"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"essentials",vip:"essentials",you:"essentials",about:"profile","about-you":"profile","your-profile":"profile"};
+export const SETOLD={prefs:"essentials",general:"look",capture:"sweep",system:"health",more:"advanced"}, SETALIAS={"ai-models":"aimodels",models:"aimodels",diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"essentials",vip:"essentials",you:"essentials",about:"profile","about-you":"profile","your-profile":"profile"};
 export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t};
   if(ADVSUBS.some(c=>c[0]===t)) return {cat:"advanced",sub:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
   const a=SETALIAS[t]||t; if(SETCATS.some(c=>c[0]===a)) return {cat:a};
@@ -128,6 +129,8 @@ export const SETSECTIONS=[
  {id:"profile",cat:"essentials",title:"Your profile",raw:true,kw:"your profile about you name email aliases organisation role this is me",render:()=>profileCardHtml(),after:()=>profileWire()},   /* #312: your own people-register entry */
  {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day you short forms email domains follow browser notification",
   mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(essText(r),w)); }},
+ {id:"aimodels",cat:"essentials",title:"AI models",kw:"ai models providers claude openai api key connect model opus sonnet haiku limit",   /* #132 */
+  mount:el=>render(h(AiModels,null),el),match:w=>sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard",w)},
  {id:"views",cat:"work",title:"Opening views",groups:["Opening views"],kw:"default priority new action actions raid open status filter view opening page sort archived projects show",
   render:()=>row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))+row("Actions open with",sl("defActionView",viewsList("actions")))+row("RAID opens with",sl("defRaidView",viewsList("raid")))+row("Decisions open with",sl("defDecisionView",viewsList("decisions")))+SHOWARCH_ROW()},   /* BL-131; BL-09's switch (also on the Projects page, #247) */
  {id:"board",cat:"work",title:"Work board",groups:["Work board"],kw:"board group by actions raid decisions closed days column",
@@ -191,7 +194,7 @@ export const EMBEDDED=()=>SETSECTIONS.flatMap(s=>s.groups||[]);
 export const ROWKEY={k:v=>SKEY[v],vipk:v=>"vip."+v,drsw:v=>"drafting."+v,wk:v=>"warnings."+v};
 /* v2.6 (#246): drafting.* are the AI drafts card's own switches (data-drsw), all but the agenda style; help.start_seen is Look and
    help › Help's button */
-export const COVERED_PREFIX=["warnings.","dashboard.rail.","drafting."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities","help.start_seen"], UNCOVERED=["drafting.agenda_style"];
+export const COVERED_PREFIX=["warnings.","dashboard.rail.","drafting.","ai."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities","help.start_seen"], UNCOVERED=["drafting.agenda_style"];
 export const covered=k=>!UNCOVERED.includes(k)&&(Object.values(SKEY).includes(k)||COVERED_KEYS.includes(k)||COVERED_PREFIX.some(p=>k.startsWith(p)));
 /** The settings a row of an older card holds, from its controls' data attributes. @param {Element} r */
 export function rowKeys(r){ const out=[]; r.querySelectorAll("input,select,textarea").forEach(el=>{ const d=/** @type {HTMLElement} */(el).dataset;

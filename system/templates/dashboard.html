@@ -4406,6 +4406,48 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 /* #341 (People fit): under 1100 px the column headings are set a little tighter (.04em, not .08em) so the table keeps spare width on a wide
    fallback font (the "Risks and issues" heading is a word wider than the old "RAID"). */
 @media (max-width:1100px){ #v-people #peopleTbl th{letter-spacing:.04em} }
+/* ===== #132: Settings › Essentials › AI models (components/settings/AiModels.jsx) ===== */
+.aimodels .hsub{margin-top:20px} .aimodels>.hsub:first-of-type{margin-top:12px}
+.aiprov{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 0}
+.aiprovi{display:flex}
+.aicard{flex:1;display:flex;flex-direction:column;gap:6px;min-height:140px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.aicard h4{margin:0;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:var(--fs-md)}
+.aicard p{margin:0} .aicard.soon{background:var(--sunk);color:var(--muted)}
+.aicard .tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-pill);white-space:nowrap}
+.aicard .tag.aiok{color:var(--ok);border-color:var(--ok)} .aicard .tag.aisoon{border-style:dashed}
+.aimodels-list{font-size:var(--fs-xs);color:var(--muted)} .aisp{flex:1}
+.aiact{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.aihowbox{margin:8px 0 10px;padding:10px 16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--sunk);font-size:var(--fs-sm)}
+.aihowbox ol{margin:4px 0 0;padding-left:20px} .aihowbox li{margin:2px 0}
+.aijobs{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.aijob{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,280px);gap:12px;padding:10px 12px;border-top:1px solid var(--line);align-items:start}
+.aijob:first-child{border-top:0}
+.ainm{font-weight:600;font-size:var(--fs-md)} .aijobwhat small,.aihint{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.aijob details summary{cursor:pointer;color:var(--accent);font-size:var(--fs-xs);margin-top:4px}
+.aijob details ul{margin:4px 0 0;padding-left:18px;font-size:var(--fs-xs);color:var(--muted)}
+.aineeds{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.aineeds .tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-pill)}
+.aineeds .aihint{flex-basis:100%}
+.aipick select{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
+.airules{margin:8px 0 0;padding-left:18px;font-size:var(--fs-xs);color:var(--muted)} .airules li{margin:2px 0}
+.ailimit{margin:4px 0 0;padding:0;border:0;min-width:0}
+.ailim{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.ailim:first-of-type{border-top:0} .ailim input{margin-top:4px} .ailim small{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.ailim.off{color:var(--muted)}
+.aidlg h2{margin:0 0 6px} .aidlg .sub{margin:0 0 10px}
+.aidlg input[type=password]{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--sunk);color:var(--ink);font-size:var(--ctl-fs);margin-bottom:8px}
+.aidlg input[aria-invalid=true]{border-color:var(--bad)}
+.aierr{color:var(--bad);font-size:var(--fs-sm);margin:-4px 0 8px}
+.aiwarn{background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px;font-size:var(--fs-sm);margin:0 0 10px}
+.aihow2{font-size:var(--fs-sm);margin:0 0 8px}
+.aiticks{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r-md);margin:0 0 10px}
+.aiticks label{display:flex;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.aiticks label:first-child{border-top:0}
+.airow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.aidlg .spin{display:inline-block;vertical-align:-2px;margin-right:6px}
+@media (max-width:900px){ .aiprov{grid-template-columns:repeat(2,minmax(0,1fr))} .aijob{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:560px){ .aiprov{grid-template-columns:minmax(0,1fr)} }
+/* ===== end #132 ===== */
 </style>
 </head>
 <body>
@@ -43945,6 +43987,26 @@ system/scripts/run launch.py agent ${what}`;
     }
     j3(() => showHealthCount(healthCount.value));
   }
+  var aiState = y3(null);
+  var aiError = y3("");
+  async function loadAi() {
+    const r4 = await api("/api/ai/state", {});
+    if (r4.ok && r4.providers) {
+      aiState.value = /** @type {AiState} */
+      r4;
+      aiError.value = "";
+    } else aiError.value = r4.message || "Couldn't read the AI models";
+    return !!r4.ok;
+  }
+  async function aiCall(path, body2) {
+    const r4 = await api(path, body2);
+    if (r4.providers) {
+      aiState.value = /** @type {AiState} */
+      r4;
+      if (catalogue.value) loadCatalogue();
+    }
+    return r4;
+  }
 
   // components/sidebar/RailButton.jsx
   var attr = (el2, k5, v5) => {
@@ -59197,6 +59259,418 @@ ${pre}**Current state title:** ${title}`);
     ] });
   }
 
+  // components/settings/AiModels.jsx
+  var AI_N = 0;
+  var uid = (p6) => `${p6}${++AI_N}`;
+  var soonVerb = (p6) => p6.id === "local" ? "Set up" : "Connect";
+  function ProviderCard({ p: p6, onConnect, onManage, onDisconnect, onSignIn }) {
+    const [hid] = d2(() => uid("aip"));
+    const soon2 = p6.status === "soon", on2 = p6.status === "connected";
+    const how = p6.id === "claude" ? p6.auth === "key" ? "Signed in with an Anthropic API key." : "Signed in with your subscription." : p6.blurb;
+    return /* @__PURE__ */ u4("div", { class: `aicard${soon2 ? " soon" : ""}`, "data-prov": p6.id, "aria-labelledby": hid, role: "group", "aria-disabled": soon2 ? "true" : void 0, children: [
+      /* @__PURE__ */ u4("h4", { id: hid, children: [
+        p6.name,
+        soon2 ? /* @__PURE__ */ u4("span", { class: "tag aisoon", children: "Available soon" }) : on2 ? /* @__PURE__ */ u4("span", { class: "tag aiok", children: "Connected" }) : /* @__PURE__ */ u4("span", { class: "tag", children: "Not connected" })
+      ] }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: soon2 ? p6.blurb : how }),
+      !soon2 && p6.billing && p6.id !== "claude" ? /* @__PURE__ */ u4("p", { class: "sub", children: p6.billing }) : null,
+      on2 && p6.models.length ? /* @__PURE__ */ u4("p", { class: "aimodels-list", children: p6.models.join(" · ") }) : null,
+      /* @__PURE__ */ u4("span", { class: "aisp" }),
+      /* @__PURE__ */ u4("div", { class: "aiact", children: soon2 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn", disabled: true, "aria-label": `${soonVerb(p6)} ${p6.name}: available soon`, children: soonVerb(p6) }) : p6.id === "claude" ? /* @__PURE__ */ u4(S2, { children: [
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: onSignIn, "aria-haspopup": "dialog", children: "Sign in again…" }),
+        p6.auth === "key" ? /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", onClick: () => onDisconnect(p6), "aria-haspopup": "dialog", children: "Use my subscription" }) : /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", onClick: () => onConnect(p6), "aria-haspopup": "dialog", children: "Use an API key" })
+      ] }) : on2 ? /* @__PURE__ */ u4(S2, { children: [
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: () => onManage(p6), "aria-haspopup": "dialog", "aria-label": `Manage ${p6.name}'s models`, children: "Manage…" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", onClick: () => onDisconnect(p6), "aria-haspopup": "dialog", "aria-label": `Disconnect ${p6.name}`, children: "Disconnect" })
+      ] }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", onClick: () => onConnect(p6), "aria-haspopup": "dialog", "aria-label": `Connect ${p6.name}`, children: "Connect…" }) })
+    ] });
+  }
+  function ConnectDialog({ flow, setFlow, warning }) {
+    const key2 = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const live = A2(
+      /** @type {Flow|null} */
+      null
+    );
+    live.current = flow;
+    const [hid] = d2(() => uid("aic"));
+    if (!flow) return /* @__PURE__ */ u4(Dialog, { open: false, onClose: () => {
+    }, id: "aiConnect", class: "rvdlg aidlg", labelledBy: hid, children: /* @__PURE__ */ u4("h2", { id: hid, children: "Connect" }) });
+    const p6 = flow.provider, isClaude = p6.id === "claude";
+    const set = (ch2) => {
+      if (live.current) setFlow({ ...live.current, ...ch2 });
+    };
+    const test = async () => {
+      const el2 = key2.current, k5 = el2 ? el2.value.trim() : "";
+      if (!k5) {
+        set({ error: "Paste the key first." });
+        if (el2) el2.focus();
+        return;
+      }
+      if (el2) el2.value = "";
+      set({ step: "testing", error: "" });
+      const r4 = await aiCall("/api/ai/test", { provider: p6.id, key: k5 });
+      const now = live.current;
+      if (!now || now.step !== "testing" || now.provider.id !== p6.id) {
+        if (r4.ok && r4.pending) aiCall("/api/ai/forget", { pending: r4.pending });
+        return;
+      }
+      if (!r4.ok) {
+        setFlow({ ...now, step: "key", error: r4.message || "The key wasn't accepted." });
+        return;
+      }
+      const models = r4.models || [];
+      setFlow({ ...now, step: "found", pending: r4.pending, models, ticked: models.map((m5) => m5.id) });
+    };
+    const done = async () => {
+      const r4 = await aiCall("/api/ai/connect", { pending: flow.pending, offered: flow.ticked });
+      setFlow(null);
+      snack(r4.ok ? isClaude ? "Claude now uses your API key" : `${p6.name} is connected: its models are in the lists` : r4.message || "It wasn't connected");
+    };
+    const saveOffer = async () => {
+      const r4 = await aiCall("/api/ai/offer", { provider: p6.id, offered: flow.ticked });
+      setFlow(null);
+      const reset = r4.reset || [];
+      snack(r4.ok ? reset.length ? `Saved. ${reset.length === 1 ? "One kind of job" : `${reset.length} kinds of job`} went back to the recommended model` : "Saved" : r4.message || "It wasn't saved");
+    };
+    const cancel = () => {
+      if (flow.step === "found") {
+        done();
+        return;
+      }
+      if (flow.pending) aiCall("/api/ai/forget", { pending: flow.pending });
+      setFlow(null);
+    };
+    const tick2 = (id2, on2) => set({ ticked: on2 ? [...flow.ticked.filter((x5) => x5 !== id2), id2] : flow.ticked.filter((x5) => x5 !== id2) });
+    const ticks = (ms2) => /* @__PURE__ */ u4("div", { class: "aiticks", role: "group", "aria-label": `${p6.name} models to offer`, children: ms2.map((m5) => /* @__PURE__ */ u4("label", { children: [
+      /* @__PURE__ */ u4(
+        "input",
+        {
+          type: "checkbox",
+          checked: flow.ticked.includes(m5.id),
+          onChange: (e4) => tick2(
+            m5.id,
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked
+          )
+        }
+      ),
+      " ",
+      m5.label
+    ] })) });
+    const errId = hid + "e";
+    return /* @__PURE__ */ u4(
+      Dialog,
+      {
+        open: true,
+        onClose: cancel,
+        id: "aiConnect",
+        class: "rvdlg aidlg",
+        labelledBy: hid,
+        focus: flow.step === "key" ? "#aiKey" : void 0,
+        cmdEnter: flow.step !== "testing",
+        dirty: flow.step === "testing",
+        children: [
+          flow.step === "key" && /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("h2", { id: hid, children: isClaude ? "Use an API key for Claude" : `Connect ${p6.name}` }),
+            /* @__PURE__ */ u4("p", { class: "sub", children: isClaude ? "An Anthropic API key is billed to that account, not to your Claude subscription." : `${p6.name} is billed to your ${p6.name} account, not to your Claude subscription.` }),
+            /* @__PURE__ */ u4("p", { class: "aihow2", children: [
+              /* @__PURE__ */ u4("b", { children: "How you sign in:" }),
+              " an API key",
+              isClaude ? " (your subscription stays as it is: Sign in again)" : `, from your ${p6.name} account`,
+              "."
+            ] }),
+            /* @__PURE__ */ u4(
+              "input",
+              {
+                type: "password",
+                id: "aiKey",
+                ref: key2,
+                placeholder: "API key",
+                "aria-label": "API key",
+                autocomplete: "off",
+                spellcheck: false,
+                "aria-invalid": flow.error ? "true" : void 0,
+                "aria-describedby": flow.error ? errId : void 0,
+                onInput: () => {
+                  if (live.current && live.current.error) set({ error: "" });
+                }
+              }
+            ),
+            flow.error && /* @__PURE__ */ u4("p", { class: "aierr", id: errId, role: "alert", children: flow.error }),
+            /* @__PURE__ */ u4("p", { class: "aiwarn", children: warning }),
+            /* @__PURE__ */ u4("div", { class: "airow", children: [
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: cancel, children: "Cancel" }),
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "aiTest", onClick: test, children: flow.error ? "Try again" : "Test and connect" })
+            ] })
+          ] }),
+          flow.step === "testing" && /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("h2", { id: hid, children: "Testing the key…" }),
+            /* @__PURE__ */ u4("p", { class: "sub", role: "status", children: [
+              /* @__PURE__ */ u4("span", { class: "spin", "aria-hidden": "true" }),
+              " Asking ",
+              p6.name,
+              " which models this key can use. This takes a few seconds."
+            ] }),
+            /* @__PURE__ */ u4("div", { class: "airow", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "aiTestCancel", onClick: cancel, children: "Cancel" }) })
+          ] }),
+          flow.step === "found" && /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("h2", { id: hid, children: isClaude ? "Claude's key works" : `${p6.name} is connected` }),
+            isClaude ? /* @__PURE__ */ u4("p", { class: "sub", children: "Claude's runs will use this key, billed to your Anthropic account. Your model choices stay as they are." }) : /* @__PURE__ */ u4(S2, { children: [
+              /* @__PURE__ */ u4("p", { class: "sub", children: "These models are available to this key. Tick the ones to offer in the lists." }),
+              ticks(flow.models),
+              /* @__PURE__ */ u4("p", { class: "sub", children: [
+                "Nothing changes yet: ",
+                p6.name,
+                " now appears in the model lists below. You choose where to use it."
+              ] })
+            ] }),
+            /* @__PURE__ */ u4("div", { class: "airow", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "aiDone", onClick: done, children: "Done" }) })
+          ] }),
+          flow.step === "manage" && /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("h2", { id: hid, children: [
+              p6.name,
+              " models"
+            ] }),
+            /* @__PURE__ */ u4("p", { class: "sub", children: "Tick the models to offer in the lists. A kind of job set to one you untick goes back to its recommended model." }),
+            ticks(flow.models),
+            /* @__PURE__ */ u4("div", { class: "airow", children: [
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: () => setFlow(null), children: "Cancel" }),
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", onClick: saveOffer, children: "Save" })
+            ] })
+          ] })
+        ]
+      }
+    );
+  }
+  function WeakerDialog({ pend, onKeep, onAccept }) {
+    const [hid] = d2(() => uid("aiw"));
+    const opt = pend ? pend.job.options.find((o5) => o5.id === pend.model) : null;
+    return /* @__PURE__ */ u4(
+      Dialog,
+      {
+        open: !!pend,
+        onClose: onKeep,
+        id: "aiWeaker",
+        class: "rvdlg aidlg",
+        labelledBy: hid,
+        describedBy: hid + "d",
+        cmdEnter: false,
+        focus: "#aiKeep",
+        children: [
+          /* @__PURE__ */ u4("h2", { id: hid, children: pend && opt ? `Use ${opt.label} for ${pend.job.name.toLowerCase()}?` : "Use a weaker model?" }),
+          /* @__PURE__ */ u4("p", { class: "sub", id: hid + "d", children: pend ? `${pend.job.warn} The recommended model here is ${pend.job.recommended_label}.` : "" }),
+          /* @__PURE__ */ u4("div", { class: "airow", children: [
+            /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "aiKeep", onClick: onKeep, children: "Keep the recommended model" }),
+            /* @__PURE__ */ u4("button", { type: "button", class: "btn danger", id: "aiAnyway", onClick: onAccept, children: "Use it anyway" })
+          ] })
+        ]
+      }
+    );
+  }
+  function JobRow({ job, shown: shown2, onPick, moreHint }) {
+    const [hid] = d2(() => uid("aij"));
+    return /* @__PURE__ */ u4("div", { class: "aijob", "data-job": job.id, role: "listitem", children: [
+      /* @__PURE__ */ u4("div", { class: "aijobwhat", children: [
+        /* @__PURE__ */ u4("span", { class: "ainm", id: hid, children: job.name }),
+        /* @__PURE__ */ u4("small", { children: job.line }),
+        /* @__PURE__ */ u4("details", { children: [
+          /* @__PURE__ */ u4("summary", { children: "Features in this group" }),
+          /* @__PURE__ */ u4("ul", { children: job.features.map((f5) => /* @__PURE__ */ u4("li", { children: f5 })) })
+        ] })
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "aineeds", "aria-label": "What it needs", children: [
+        job.needs.map((n4) => /* @__PURE__ */ u4("span", { class: "tag aineed", children: n4 })),
+        job.tools_only ? /* @__PURE__ */ u4("small", { class: "aihint", children: "Only tool-capable models are listed." }) : null
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "aipick", children: [
+        /* @__PURE__ */ u4(
+          "select",
+          {
+            "aria-labelledby": hid,
+            value: shown2,
+            disabled: !viaServer(),
+            onChange: (e4) => onPick(
+              job,
+              /** @type {HTMLSelectElement} */
+              e4.currentTarget.value
+            ),
+            children: job.options.map((o5) => /* @__PURE__ */ u4("option", { value: o5.id, children: [
+              o5.label,
+              o5.recommended ? " (recommended)" : ""
+            ] }))
+          }
+        ),
+        moreHint ? /* @__PURE__ */ u4("small", { class: "aihint", children: "Connect another provider to see more models." }) : null
+      ] })
+    ] });
+  }
+  function SignInDialog({ open: open2, onClose }) {
+    const [hid] = d2(() => uid("ais"));
+    return /* @__PURE__ */ u4(Dialog, { open: open2, onClose, id: "aiSignIn", class: "rvdlg aidlg", labelledBy: hid, cmdEnter: false, children: [
+      /* @__PURE__ */ u4("h2", { id: hid, children: "Sign in to Claude again" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: [
+        "Open Terminal, run the command below, then type ",
+        /* @__PURE__ */ u4("code", { children: "/login" }),
+        " and follow the steps in your browser. creaite uses the new sign-in from its next run."
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "cmdbox", children: [
+        /* @__PURE__ */ u4("code", { children: "claude" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: (e4) => {
+          const b5 = (
+            /** @type {HTMLButtonElement} */
+            e4.currentTarget
+          );
+          (navigator.clipboard ? navigator.clipboard.writeText("claude") : Promise.reject()).then(() => copied(b5), () => snack("Couldn't copy"));
+        }, children: "Copy" })
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "airow", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", onClick: onClose, children: "Close" }) })
+    ] });
+  }
+  function DisconnectDialog({ p: p6, onClose }) {
+    const [hid] = d2(() => uid("aid"));
+    const go3 = async () => {
+      if (!p6) return;
+      const r4 = await aiCall("/api/ai/disconnect", { provider: p6.id });
+      onClose();
+      if (!r4.ok) {
+        snack(r4.message || "It wasn't disconnected");
+        return;
+      }
+      const n4 = (r4.reset || []).length;
+      snack(p6.id === "claude" ? "Claude uses your subscription again" : `${p6.name} disconnected${n4 ? `: ${n4 === 1 ? "one kind of job" : `${n4} kinds of job`} went back to the recommended model` : ""}`);
+    };
+    const isClaude = p6 && p6.id === "claude";
+    return /* @__PURE__ */ u4(Dialog, { open: !!p6, onClose, id: "aiDisconnect", class: "rvdlg aidlg", labelledBy: hid, cmdEnter: false, children: [
+      /* @__PURE__ */ u4("h2", { id: hid, children: p6 ? isClaude ? "Stop using the API key for Claude?" : `Disconnect ${p6.name}?` : "Disconnect" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: isClaude ? "The key is removed from this Mac's keychain and Claude goes back to your subscription." : p6 ? `The key is removed from this Mac's keychain and ${p6.name}'s models leave the lists. Anything set to one of them goes back to its recommended model.` : "" }),
+      /* @__PURE__ */ u4("div", { class: "airow", children: [
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: onClose, children: "Cancel" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn danger", id: "aiDisconnectGo", onClick: go3, children: isClaude ? "Use my subscription" : "Disconnect" })
+      ] })
+    ] });
+  }
+  function AiModels() {
+    const [flow, setFlow] = d2(
+      /** @type {Flow|null} */
+      null
+    );
+    const [pend, setPend] = d2(
+      /** @type {Pend|null} */
+      null
+    );
+    const [signIn, setSignIn] = d2(false);
+    const [leaving, setLeaving] = d2(
+      /** @type {AiProvider|null} */
+      null
+    );
+    h2(() => {
+      if (SERVED && !aiState.value) loadAi();
+    }, []);
+    const st2 = aiState.value;
+    if (!st2) return /* @__PURE__ */ u4("div", { class: "card wide", id: "aiModels", children: [
+      /* @__PURE__ */ u4("h2", { children: "AI models" }),
+      /* @__PURE__ */ u4("p", { class: "sub", role: "status", children: aiError.value || (SERVED ? "Reading your AI models…" : "AI models need creaite to be running: open creaite from its icon.") })
+    ] });
+    const save2 = async (job, model, accept2 = false) => {
+      const r4 = await aiCall("/api/ai/choose", { job: job.id, model, accept: accept2 });
+      if (r4.needs_accept) {
+        setPend({ job, model });
+        return;
+      }
+      const o5 = job.options.find((x5) => x5.id === model);
+      snack(r4.ok ? `${job.name}: ${o5 ? o5.label : model}` : r4.message || "It wasn't saved");
+    };
+    const pick = (job, model) => {
+      const o5 = job.options.find((x5) => x5.id === model);
+      if (o5 && o5.weaker && !o5.accepted) setPend({ job, model });
+      else save2(job, model);
+    };
+    const keep2 = () => {
+      const p6 = pend;
+      setPend(null);
+      if (p6 && p6.job.value !== p6.job.recommended) save2(p6.job, p6.job.recommended);
+    };
+    const accept = () => {
+      const p6 = pend;
+      setPend(null);
+      if (p6) save2(p6.job, p6.model, true);
+    };
+    const connect = (p6) => setFlow({ provider: p6, step: "key", error: "", pending: "", models: [], ticked: [] });
+    const manage = (p6) => setFlow({
+      provider: p6,
+      step: "manage",
+      error: "",
+      pending: "",
+      models: p6.found.map((m5) => ({ id: m5.id, label: m5.label })),
+      ticked: p6.found.filter((m5) => m5.offered).map((m5) => m5.id)
+    });
+    const limit = async (mode) => {
+      const r4 = await aiCall("/api/ai/limit", { mode });
+      if (!r4.ok) snack(r4.message || "It wasn't saved");
+    };
+    return /* @__PURE__ */ u4("div", { class: "card wide aimodels", id: "aiModels", children: [
+      /* @__PURE__ */ u4("h2", { children: "AI models" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "Which models creaite uses for each kind of job, and how you sign in." }),
+      /* @__PURE__ */ u4("h3", { class: "hsub", id: "aiProvH", children: "Providers" }),
+      /* @__PURE__ */ u4("p", { class: "sub", id: "aiProvLine", children: st2.line }),
+      /* @__PURE__ */ u4("div", { class: "aiprov", role: "list", "aria-labelledby": "aiProvH", children: st2.providers.map((p6) => /* @__PURE__ */ u4("div", { role: "listitem", class: "aiprovi", children: /* @__PURE__ */ u4(
+        ProviderCard,
+        {
+          p: p6,
+          onConnect: connect,
+          onManage: manage,
+          onDisconnect: setLeaving,
+          onSignIn: () => setSignIn(true)
+        }
+      ) })) }),
+      /* @__PURE__ */ u4("h3", { class: "hsub", id: "aiJobsH", children: "Which model does what" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "creaite sorts every feature into one of four kinds of job. Pick a model for each kind. Each row says what the job needs, so you can choose sensibly; the recommended model is marked." }),
+      /* @__PURE__ */ u4("div", { class: "aihowbox", children: [
+        /* @__PURE__ */ u4("b", { children: "How creaite decides which kind of job something is" }),
+        /* @__PURE__ */ u4("ol", { children: st2.how.map((x5) => /* @__PURE__ */ u4("li", { children: x5 })) })
+      ] }),
+      /* @__PURE__ */ u4("div", { class: "aijobs", role: "list", "aria-labelledby": "aiJobsH", children: st2.jobs.map((j5) => /* @__PURE__ */ u4(
+        JobRow,
+        {
+          job: j5,
+          moreHint: st2.more_hint,
+          shown: pend && pend.job.id === j5.id ? pend.model : j5.value,
+          onPick: pick
+        },
+        j5.id
+      )) }),
+      /* @__PURE__ */ u4("ul", { class: "airules", "aria-label": "Always", children: st2.rules.map((x5) => /* @__PURE__ */ u4("li", { children: x5 })) }),
+      /* @__PURE__ */ u4("fieldset", { class: "ailimit", children: [
+        /* @__PURE__ */ u4("legend", { class: "hsub", children: "When a limit is reached" }),
+        /* @__PURE__ */ u4("p", { class: "sub", children: "Your Claude limit can run out mid-day. Choose what happens next." }),
+        st2.limits.map((l6) => /* @__PURE__ */ u4("label", { class: `ailim${l6.enabled ? "" : " off"}`, "data-limit": l6.id, children: [
+          /* @__PURE__ */ u4(
+            "input",
+            {
+              type: "radio",
+              name: "aiLimit",
+              value: l6.id,
+              checked: st2.on_limit === l6.id,
+              disabled: !l6.enabled || !viaServer(),
+              onChange: () => limit(l6.id)
+            }
+          ),
+          /* @__PURE__ */ u4("span", { children: [
+            /* @__PURE__ */ u4("b", { children: l6.label }),
+            /* @__PURE__ */ u4("small", { children: l6.line })
+          ] })
+        ] }))
+      ] }),
+      /* @__PURE__ */ u4(ConnectDialog, { flow, setFlow, warning: st2.key_warning }),
+      /* @__PURE__ */ u4(WeakerDialog, { pend, onKeep: keep2, onAccept: accept }),
+      /* @__PURE__ */ u4(SignInDialog, { open: signIn, onClose: () => setSignIn(false) }),
+      /* @__PURE__ */ u4(DisconnectDialog, { p: leaving, onClose: () => setLeaving(null) })
+    ] });
+  }
+
   // components/settings/MoreSettings.jsx
   var LIMITS = {
     "assistant.run_timeout_minutes": [1, 240],
@@ -59432,7 +59906,7 @@ ${pre}**Current state title:** ${title}`);
   var CATOF = { general: "look", capture: "sweep", review: "advanced", system: "health" };
   var OLDCATS = { general: "You and the look", work: "Work and views", review: "Review and warnings", capture: "Capture and alerts", advanced: "Everything else" };
   var catOf = (s5) => CATOF[s5.cat] || s5.cat;
-  var SETOLD = { prefs: "essentials", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials", about: "profile", "about-you": "profile", "your-profile": "profile" };
+  var SETOLD = { prefs: "essentials", general: "look", capture: "sweep", system: "health", more: "advanced" }, SETALIAS = { "ai-models": "aimodels", models: "aimodels", diagnostics: "diag", updates: "version", backups: "live", "live-server": "live", "early-warnings": "warnings", "ignore-rules": "sweep", follow: "essentials", vip: "essentials", you: "essentials", about: "profile", "about-you": "profile", "your-profile": "profile" };
   function setResolve(t47) {
     t47 = String(t47 || "").toLowerCase();
     if (SETCATS.some((c5) => c5[0] === t47)) return { cat: t47 };
@@ -59545,6 +60019,15 @@ ${pre}**Current state title:** ${title}`);
         const c5 = catalogue.value;
         return !!c5 && c5.essentials.some((r4) => sqHas(essText(r4), w6));
       }
+    },
+    {
+      id: "aimodels",
+      cat: "essentials",
+      title: "AI models",
+      kw: "ai models providers claude openai api key connect model opus sonnet haiku limit",
+      /* #132 */
+      mount: (el2) => R(k(AiModels, null), el2),
+      match: (w6) => sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard", w6)
     },
     {
       id: "views",
@@ -59694,7 +60177,7 @@ ${pre}**Current state title:** ${title}`);
   ];
   var EMBEDDED = () => SETSECTIONS.flatMap((s5) => s5.groups || []);
   var ROWKEY = { k: (v5) => SKEY[v5], vipk: (v5) => "vip." + v5, drsw: (v5) => "drafting." + v5, wk: (v5) => "warnings." + v5 };
-  var COVERED_PREFIX = ["warnings.", "dashboard.rail.", "drafting."], COVERED_KEYS = ["logging.level", "sweep.ignore", "vip.notify", "reminders.dismissed_forever", "dashboard.week_ahead_priorities", "help.start_seen"], UNCOVERED = ["drafting.agenda_style"];
+  var COVERED_PREFIX = ["warnings.", "dashboard.rail.", "drafting.", "ai."], COVERED_KEYS = ["logging.level", "sweep.ignore", "vip.notify", "reminders.dismissed_forever", "dashboard.week_ahead_priorities", "help.start_seen"], UNCOVERED = ["drafting.agenda_style"];
   var covered = (k5) => !UNCOVERED.includes(k5) && (Object.values(SKEY).includes(k5) || COVERED_KEYS.includes(k5) || COVERED_PREFIX.some((p6) => k5.startsWith(p6)));
   function rowKeys(r4) {
     const out = [];

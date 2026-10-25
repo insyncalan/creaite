@@ -133,12 +133,15 @@ class KeyStore:
     to anything but the provider call itself (`peek`, for the lister and the direct call only)."""
 
     def has(self, provider):
+        """True when there is a key for the provider."""
         raise NotImplementedError
 
     def put(self, provider, key):
+        """Keep the provider's key."""
         raise NotImplementedError
 
     def remove(self, provider):
+        """Delete the provider's key; True when there was one."""
         raise NotImplementedError
 
 
@@ -146,12 +149,15 @@ class NotBuiltStore(KeyStore):
     """Until the keychain is built: nothing is connected and no key is taken."""
 
     def has(self, provider):
+        """True when there is a key for the provider."""
         return False
 
     def put(self, provider, key):
+        """Keep the provider's key."""
         raise NotBuilt(NOT_BUILT_WORDS)
 
     def remove(self, provider):
+        """Delete the provider's key; True when there was one."""
         return False
 
 
@@ -162,12 +168,15 @@ class MemoryStore(KeyStore):
         self._keys = {}
 
     def has(self, provider):
+        """True when there is a key for the provider."""
         return provider in self._keys
 
     def put(self, provider, key):
+        """Keep the provider's key."""
         self._keys[provider] = key
 
     def remove(self, provider):
+        """Delete the provider's key; True when there was one."""
         return self._keys.pop(provider, None) is not None
 
 
@@ -176,6 +185,7 @@ class Lister:
     status) or ConnectionError (it couldn't be reached)."""
 
     def models(self, provider, key):
+        """The model ids the key can use."""
         raise NotImplementedError
 
 
@@ -189,6 +199,7 @@ class KeyRefused(Exception):
 
 class NotBuiltLister(Lister):
     def models(self, provider, key):
+        """The model ids the key can use."""
         raise NotBuilt(NOT_BUILT_WORDS)
 
 
@@ -199,6 +210,7 @@ class FakeLister(Lister):
              "claude": ["claude-opus", "claude-sonnet", "claude-haiku"]}
 
     def models(self, provider, key):
+        """The model ids the key can use."""
         if key.startswith("fake-net"):
             raise ConnectionError("unreachable")
         if not key.startswith("fake-good"):
@@ -313,6 +325,7 @@ def chosen(job, settings, store=None):
 
 
 def accepted(settings):
+    """The "<job>=<model>" pairs Alan accepted with Use it anyway."""
     v = setting(settings, "ai.accepted_weaker")
     return [x for x in v if isinstance(x, str)] if isinstance(v, list) else []
 
@@ -323,45 +336,54 @@ def other_connected(settings, store=None):
 
 
 # ── What the page shows ──────────────────────────────────────────────────────────────────────────────────────────────────
+def card(pid, settings, store, conn):
+    """One provider card: its words, status (connected, not, soon), how it signs in, its models and those found."""
+    name, blurb, billing, how, live = PROVIDERS[pid]
+    p = saved_providers(settings).get(pid) or {}
+    on = pid in conn
+    auth = ("key" if store.has("claude") else "subscription") if pid == "claude" else ("key" if on else None)
+    found = [m for m in p.get("models", []) if isinstance(m, dict) and m.get("id")] if on and pid != "claude" else []
+    return {"id": pid, "name": name, "blurb": blurb, "billing": billing, "how": list(how),
+            "status": "soon" if not live else "connected" if on else "not", "auth": auth,
+            "models": [m["label"] for m in models_of(pid, settings)] if on else [],
+            "found": [{"id": m["id"], "label": m.get("label") or label_of(pid, m["id"]),
+                       "offered": m["id"] in p.get("offered", [])} for m in found]}
+
+
+def job_view(jid, settings, store, others):
+    """One kind of job as the page shows it: its words, its list with the recommended and weaker marks, its model."""
+    j, took = JOBS[jid], accepted(settings)
+    opts = options(jid, settings, store)
+    rec = next((m for m in opts if m["recommended"]), None)
+    return {"id": jid, "name": j["name"], "line": j["line"], "needs": list(j["needs"]), "tools": j["tools"],
+            "features": list(j["features"]), "warn": j["warn"], "recommended": j["recommended"],
+            "recommended_label": rec["label"] if rec else j["recommended"], "value": chosen(jid, settings, store),
+            "options": [{"id": m["id"], "label": m["label"], "recommended": m["recommended"], "weaker": m["weaker"],
+                         "accepted": f"{jid}={m['id']}" in took} for m in opts],
+            "tools_only": j["tools"] and bool(others)}
+
+
+def limit_view(settings, two):
+    """The limit's choice (Ask me when "another connected model" has no second provider) and its three options."""
+    lim = setting(settings, "ai.on_limit")
+    return (lim if lim in LIMITS and (lim != "other" or two) else "ask",
+            [{"id": k, "label": LIMITS[k][0], "line": LIMITS[k][1] if (k != "other" or two) else NEEDS_SECOND,
+              "enabled": k != "other" or two} for k in LIMIT_ORDER])
+
+
 def state(settings=None, store=None):
     """The whole AI models section, for /api/ai/state: providers as cards, the four jobs with their lists, the limit."""
     settings = paths.load_settings() if settings is None else settings
     store = store or backend()[0]
-    saved, conn = saved_providers(settings), connected(settings, store)
-    cards = []
-    for pid in PROVIDER_ORDER:
-        name, blurb, billing, how, live = PROVIDERS[pid]
-        p = saved.get(pid) or {}
-        on = pid in conn
-        auth = ("key" if store.has("claude") else "subscription") if pid == "claude" else ("key" if on else None)
-        cards.append({"id": pid, "name": name, "blurb": blurb, "billing": billing, "how": list(how),
-                      "status": "soon" if not live else "connected" if on else "not",
-                      "auth": auth, "models": [m["label"] for m in models_of(pid, settings)] if on else [],
-                      "found": [{"id": m["id"], "label": m.get("label") or label_of(pid, m["id"]),
-                                 "offered": m["id"] in p.get("offered", [])} for m in p.get("models", [])
-                                if isinstance(m, dict) and m.get("id")] if on and pid != "claude" else []})
+    conn = connected(settings, store)
     others = [PROVIDERS[p][0] for p in conn if p != "claude"]
     line = (f"Claude and {' and '.join(others)} are connected. Anything else is on its way." if others else
             "Claude is connected. Add OpenAI to use it for drafting and quick edits. Anything else is on its way.")
-    jobs = []
-    took = accepted(settings)
-    for jid in JOB_ORDER:
-        j = JOBS[jid]
-        opts = options(jid, settings, store)
-        rec = next((m for m in opts if m["recommended"]), None)
-        jobs.append({"id": jid, "name": j["name"], "line": j["line"], "needs": list(j["needs"]), "tools": j["tools"],
-                     "features": list(j["features"]), "warn": j["warn"], "recommended": j["recommended"],
-                     "recommended_label": rec["label"] if rec else j["recommended"], "value": chosen(jid, settings, store),
-                     "options": [{"id": m["id"], "label": m["label"], "recommended": m["recommended"], "weaker": m["weaker"],
-                                  "accepted": f"{jid}={m['id']}" in took} for m in opts],
-                     "tools_only": j["tools"] and bool(others)})
-    lim = setting(settings, "ai.on_limit")
-    two = bool(others)
-    return {"providers": cards, "line": line, "jobs": jobs, "more_hint": not two,
+    on_limit, limits = limit_view(settings, bool(others))
+    return {"providers": [card(p, settings, store, conn) for p in PROVIDER_ORDER], "line": line,
+            "jobs": [job_view(j, settings, store, others) for j in JOB_ORDER], "more_hint": not others,
             "how": list(HOW_IT_DECIDES), "rules": list(FIXED_RULES), "key_warning": KEY_WARNING, "built": built(),
-            "on_limit": lim if lim in LIMITS and (lim != "other" or two) else "ask",
-            "limits": [{"id": k, "label": LIMITS[k][0], "line": LIMITS[k][1] if (k != "other" or two) else NEEDS_SECOND,
-                        "enabled": k != "other" or two} for k in LIMIT_ORDER]}
+            "on_limit": on_limit, "limits": limits}
 
 
 # ── Changes (each returns {dotted key: value} for settings_catalogue.save) ──────────────────────────────────────────────
