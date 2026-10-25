@@ -22,7 +22,7 @@ import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, now
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
-import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsAsk, mcIsRun, mcLine, mcNew, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
+import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsAsk, mcIsRun, mcLine, mcNew, mcNormalise, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { previewInbox } from "./core/intakeApi.js";
@@ -604,7 +604,7 @@ export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; sh
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
 /* #339 A: a typed "refresh calendar" is the small calendar run (the server decides from the same words): drawn as a run creaite started, its steps and closure only */
-export const typedCalendar=(q,confirmed)=>!confirmed&&!SENDIMG.length&&/^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(String(q||"").trim().replace(/\s+/g," "));
+export const typedCalendar=(q,confirmed)=>!confirmed&&!SENDIMG.length&&/^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(mcNormalise(q));   /* #339 LOW: the server's whitespace rule, not JavaScript's (U+FEFF is not whitespace) */
 export let askLive = async function(q,confirmed){ const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
   try{ await askStream("/api/ask",{message:q,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed,run:id,images:SENDIMG.length?SENDIMG:undefined,continue:$("#chCont").checked||undefined},confirmed,ctl,undefined,typedCalendar(q,confirmed)?"guess":undefined); } finally{ shared.RUN=null; setRunning(false); } };
 /* BL-37: runs belong to the live server. Closing the panel or the page doesn't stop one; on load the page reattaches

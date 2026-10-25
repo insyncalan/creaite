@@ -593,6 +593,7 @@
    "mcIsRun",
    "mcLine",
    "mcNew",
+   "mcNormalise",
    "mcPlaces",
    "mcStep",
    "mcStepText",

@@ -21,18 +21,33 @@ def frontmatter_description(rel):
     return m.group(1) if m else ""
 
 
+def save_words_landed():
+    """The chain's skills diff (dev/proposals/347/skills.diff) is applied: only then may Help promise "save" and "undo last save"."""
+    return '"undo last save"' in frontmatter_description(".claude/skills/cx-review/SKILL.md")
+
+
 class Help(unittest.TestCase):
     def test_help_shows_plain_words_and_keeps_the_old_ones(self):
         h = read("system/templates/help.md")
-        for w in ("`check my mail`", "`save`", "`undo last save`"):
+        self.assertIn("`check my mail`", h)
+        self.assertIn("`sweep` also works", h)
+        if not save_words_landed():
+            # M3 (Wanda, #353): until the skills accept them, Help must not promise the save words; dev/proposals/347/help-save-words.diff restores them
+            for w in ("`save`", "`undo last save`", "**undo last save**"):
+                self.assertNotIn(w, h)
+            return
+        for w in ("`save`", "`undo last save`"):
             self.assertIn(w, h)
-        for w in ("`sweep` also works", "`apply` also works", "`undo last apply` also works"):
+        for w in ("`apply` also works", "`undo last apply` also works"):
             self.assertIn(w, h)
 
     def test_the_table_leads_with_the_plain_words(self):
         h = read("system/templates/help.md")
         self.assertLess(h.index("| `check my mail` |"), h.index("`sweep` also works"))
-        self.assertIn("| `review` · `save` |", h)
+        if save_words_landed():
+            self.assertIn("| `review` · `save` |", h)
+        else:
+            self.assertIn("| `review` |", h)
 
 
 class Guarded(unittest.TestCase):
