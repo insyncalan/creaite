@@ -348,3 +348,81 @@ def filter_text(text, *, second_layer=True, html=None):
     if html is not False:
         text = text.replace("\r\n", "\n").replace("\r", "\n")  # a CR must not hide a line from the rules
     return "\n".join(_capped(keep_lines(_cut(text).split("\n"), second_layer=second_layer)))
+
+
+# ---------------------------------------------------------------- option (c): the 2.6.8 scrub as the body label layer (2.6.9)
+
+def _scrub_module():
+    """invite_clean, imported on first use; None when it cannot be had (then the label layer is skipped)."""
+    try:
+        import invite_clean
+        return invite_clean
+    except ImportError:
+        return None
+
+
+def _scrub_pairs(lines):
+    """THE ONE NARROW WRAPPER around the 2.6.8 body scrub (re-point this function when invite_clean's body entry point changes).
+
+    lines -> [(index, text)]: the scrub's output lines, each mapped back to the input line it came from. invite_clean.invite_text
+    rewrites (tags, spaces, "pass code" -> "passcode") and drops lines, so every output line is matched, in order, to the next input
+    line that equals it after the same normalisation; index is that input line (the caller emits the ORIGINAL, byte for byte). An output
+    line no input line matches gets index None and is emitted as the scrub wrote it (the subset property then holds only up to that
+    line's normalisation; the tests count these, expected zero on converted lines). Blank lines are kept as ""."""
+    mod = _scrub_module()
+    lines = list(lines)
+    if mod is None:
+        return [(i, x) for i, x in enumerate(lines)]
+    keys = [_scrub_key(mod, x) for x in lines]
+    res, j = [], 0
+    for o in mod.invite_text("\n".join(lines)).split("\n"):
+        if not o.strip():
+            if res and res[-1][1] != "":
+                res.append((None, ""))
+            continue
+        ko = _scrub_key(mod, o)
+        k = j
+        while k < len(lines) and keys[k] != ko:
+            k += 1
+        if k < len(lines):
+            res.append((k, lines[k]))
+            j = k + 1
+        else:
+            res.append((None, o))
+    while res and res[-1][1] == "":
+        res.pop()
+    return res
+
+
+def _scrub_lines(lines):
+    """The scrub's kept lines (see _scrub_pairs)."""
+    return [t for _, t in _scrub_pairs(lines)]
+
+
+def _label_layer(lines):
+    """Anchor layer and shape gate first, then the scrub on the surviving lines (the order measured best: 2,041 leak bodies in
+    40,000 against 2,194 when both judge the full lines and a line must pass both, see dev/proposals/375/PLAN.md section 1b)."""
+    return _scrub_lines(keep_lines(list(lines), second_layer=False))
+
+
+def _scrub_key(mod, line):
+    """A line as the scrub would have left it if it kept it: markup stripped, spaces collapsed, 'pass code' joined."""
+    t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", mod.plain_text(line))
+    return " ".join(t.split())
+
+
+def filter_text_with_scrub(text, html=None):
+    """Option (c), the 2.6.9 body filter: html/blocks conversion, the anchor layer and shape gate (second_layer=False), then the
+    2.6.8 scrub (via _scrub_pairs) as the label layer on the surviving lines, then the CAP. Same conversion rules as filter_text."""
+    mod = _blocks_module()
+    if html is None or html:
+        if mod is None:
+            if html:
+                return ""
+        elif html or mod.looks_like_html(text):
+            lines = mod.to_lines(text)
+            kept = _label_layer(_cut("\n".join(lines)).split("\n"))
+            return "\n".join(_capped(kept))
+    if html is not False:
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return "\n".join(_capped(_label_layer(_cut(text).split("\n"))))

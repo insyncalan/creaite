@@ -1,6 +1,6 @@
 # #375 Option E1: build plan (2.6.9)
 
-Base: `v268-bare21` (bfb65603). Decision (Alan, 25-10-2026): "E1 in 2.6.9: anchor-based block drop + one read gateway + shape gate + 1,500-char cap; next release only, no one-off re-clean." Option F stays the recorded alternative. History: `dev/proposals/bare/NOTES-2.6.8.md`; proposal: creaite-confidential `releases/calendar-free-text-proposal-DECIDED.md` (Stark's E1 estimate: 9-10 days, range 7-13). Fictional examples only. Plan only: no code touched.
+Base: `v268-bare21` (bfb65603). Decision (Alan, 25-10-2026): "E1 in 2.6.9: anchor-based block drop + one read gateway + shape gate + 1,500-char cap; next release only, no one-off re-clean." Option F stays the recorded alternative. History: `dev/proposals/bare/NOTES-2.6.8.md`; proposal: creaite-confidential `releases/calendar-free-text-proposal-DECIDED.md` (Stark's E1 estimate: 9-10 days, range 7-13). Fictional examples only. Updated 26-10-2026 (Jarvis decision: option (c), section 1b).
 
 ## 1. Design
 
@@ -40,6 +40,48 @@ Base: `v268-bare21` (bfb65603). Decision (Alan, 25-10-2026): "E1 in 2.6.9: ancho
 
 A view with a body never exceeds its length, always whole lines. Purposes are a closed set; an unknown one raises (tests pin it).
 
+## 1b. Architecture for 2.6.9: option (c), E1 on top of the 2.6.8 scrub (decided 26-10-2026)
+
+Body filter = HTML/blocks conversion -> anchor layer + shape gate (`second_layer=False`) -> the 2.6.8 scrub (`invite_clean.invite_text`) on the surviving lines as the **body label layer** -> CAP. Code: `invite_filter.filter_text_with_scrub(text, html=None)`; `calendar_gateway`'s default FILTER calls it. `invite_clean.py`, `sweep.py` and every 2.6.8 file are untouched. The one point that touches the scrub is `invite_filter._scrub_pairs(lines)` (a single narrow wrapper; re-point it when bare22 changes `invite_text`).
+
+**Subset and idempotence.** `invite_text` rewrites lines (tags, spaces, "pass code" -> "passcode"), so `_scrub_pairs` maps each output line back to the input line it came from (same normalisation, in order) and emits the ORIGINAL line, byte for byte. Measured on 8,000 fuzz bodies: every non-blank output line is a converted line (unmatched lines: 0); blank lines are the scrub's own. Idempotent: 0 failures in 40,000 bodies. Unmatched lines, should any ever appear, are emitted as the scrub wrote them (subset holds only up to normalisation for that line); a test pins both properties.
+
+**Order matters.** Scrub after anchors leaks 2,041 bodies in 40,000; both layers judging the full converted lines (a line must pass both) leaks 2,194. Removing the digit values first makes the scrub's label windows count and eat the next lines, which also swallows more word-only values. The cost is that a label whose value an anchor already dropped eats one or two innocent agenda lines (the scrub's own window behaviour; fixture `label_same_cell_br` loses "Room 204" and "Notes are kept on the team page."; the integration test lists it in `SCRUB_WINDOW_LOSS`). 26 bodies in 40,000 leak a value the scrub alone would have caught (a qualified label such as "PIN to follow" whose window was spent on a neighbouring line after the anchor layer removed its value).
+
+**Comparison: 40,000 bodies (8 generators x 5,000, seed 369), planted secrets, leak bodies / idempotence failures / leak items split digit-bearing vs word-only.** Counts include the classes the 2.6.8 scrub itself lists as known (qualified label alone, header-cell label, soft heading + short token, word-only after an ID label); 0 of the scrub's leaks are outside those classes.
+
+| Generator | E1 minimal (no S1b) | E1 + S1b (old default) | 2.6.8 scrub alone | **E1 + scrub (c)** |
+|---|---|---|---|---|
+| html_table | 1,545 | 1,256 | 2,090 | **516** |
+| nested_lists | 1,742 | 954 | 0 | **0** |
+| blockquote | 3,633 | 2,569 | 839 | **187** |
+| md_table | 3,610 | 3,610 | 443 | **270** |
+| mixed_invite | 1,187 | 558 | 0 | **0** |
+| qualified | 2,193 | 2,103 | 3,301 | **917** |
+| soft_dates | 535 | 535 | 3 | **3** |
+| accents | 2,984 | 2,156 | 658 | **148** |
+| **Leak bodies (of 40,000)** | 17,429 | 13,741 | 7,334 | **2,041** |
+| Idempotence failures | 0 | 0 | 0 | **0** |
+| Leak items, digit-bearing | 16,926 | 10,183 | 7,302 | **853** |
+| Leak items, word-only | 9,724 | 9,634 | 1,877 | **1,344** |
+
+Adding S1b under the scrub (E1 + S1b + scrub): 2,042 leak bodies, 0 idempotence failures: **no measurable gain (+1)**.
+
+**Utility** (lines kept; the 74-line agenda sets are not in the repository, so a 200-line synthetic agenda set was used: 40 agendas of 3 plain lines and 2 label-word lines, 80 of the 200 lines being traps such as "Pin the roadmap", "Password reset rollout", "Code of conduct refresh", "Token refresh", "Dress code", "Key milestones"):
+
+| Measure | E1 minimal | E1 + S1b | scrub alone | E1 + scrub |
+|---|---|---|---|---|
+| 27 fixtures, must_keep lines kept (of 59) | 59 | 59 | 49 | 57 |
+| Fixture planted secrets surviving | 2 | 0 | 12 | 0 |
+| Synthetic agenda lines kept (of 200) | 200 (100%) | 200 (100%) | 162 (81%) | 162 (81%) |
+| Trap lines kept (of 80) | 80 | 80 | 49 | 49 |
+
+Reading: (c) cuts leaks by 72% against the scrub alone (2,041 against 7,334; digit-bearing 853 against 7,302) and by 88% against E1 minimal, at the scrub's own utility (it inherits the 19% agenda-line loss on label-word agendas; E1 adds none). Options E1 minimal / E1 + S1b keep 100% of agenda lines but leak 7x to 8x more. The word-only leaks that remain (1,344) are the documented limit (word-only values after a qualified label or an ID label).
+
+**S1b status: dropped.** Over the scrub it adds nothing measurable (+1 leak body of 40,000, no utility change). It stays in `invite_filter.py` as the pure function `drop_labelled_values` (default of `filter_text`, used by the E1-only fallback path and by its tests) but is **not** in the shipped path; it can be deleted with its tests if the fallback is not wanted. Cost saved: about 1 builder-day.
+
+**Zoom last-paragraph block cutter.** A Zoom body of `<div>..</div><br><div>..</div>` gave no blank line between the paragraphs (a `<div>` is a line break, not a block; the lone `<br>` after it was ignored), so the last paragraph sat in the join block and was dropped with it (fixture `zoom_html` had lost "Please add retro items to the shared board beforehand."). Fix, made in `invite_blocks._Emit.br`: a lone `<br>` after a line that a `<div>`/block ended is a paragraph break (div, br, div -> blank line). Fixture `zoom_html` `must_keep` is back to the original two lines (with the fix, "Retro for the platform team..." and "Please add retro items..." are separate blocks; the closing line is kept); its `expected_lines` now show the blank lines. `test_invite_filter_scrub_layer.py` pins the cutter cases.
+
 ## 2. Readers of calendar.json (on `v268-bare21`)
 
 | # | Reader (file:line) | Today | Needs from the gateway |
@@ -71,14 +113,14 @@ Contracts first (frozen the day Cap's oracle lands): `invite_filter.keep_indices
 
 | Slice | Files (ordinary unless noted) | Interface | Tests it owns | Depends on |
 |---|---|---|---|---|
-| S1 Filter core (+ second layer as S1b, same file, can be a second agent once S1's `keep_indices` signature is fixed) | new `invite_filter.py` (text path: skeleton, anchors, regions/blocks, shape gate, cap; S1b: `drop_labelled_values`, called last in `keep_indices`) | as above | `test_invite_filter_props.py` (P1-P4 on a seeded corpus), label-blind test for the anchor layer (second layer disabled), `test_invite_filter_labels.py` (S1b: positives, negative list, P1/P2, mutants), character-class oracle, timing | none |
+| S1 Filter core (+ second layer as S1b, **S1b DROPPED from the shipped path, section 1b**;  same file, can be a second agent once S1's `keep_indices` signature is fixed) | new `invite_filter.py` (text path: skeleton, anchors, regions/blocks, shape gate, cap; S1b: `drop_labelled_values`, called last in `keep_indices`) | as above | `test_invite_filter_props.py` (P1-P4 on a seeded corpus), label-blind test for the anchor layer (second layer disabled), `test_invite_filter_labels.py` (S1b: positives, negative list, P1/P2, mutants), character-class oracle, timing | none |
 | S2 HTML blocks + provider fixtures | `invite_filter.py` (`blocks_from_html`, wired in `filter_text(html=True)`), `dev/tests/fixtures/invites/` (Teams, Zoom, WebEx, Meet, GoTo, dial-in in en/de/fr/es, Outlook footer, recurring) | `blocks_from_html(html) -> list[list[str]]` | `test_invite_filter_providers.py` (every fixture: canaries gone, agenda lines kept) | S1 interface only (stub `keep_lines`) |
 | S3 Gateway + stamp | new `calendar_gateway.py`; `sweep.py` (`calendar_row` 1240-1250 calls the filter, stamps; `keep_held_past_days`, `_clean_calendar_file` stamp rows); `session.py` rescrub unchanged call | `read`, `view`, `CLEAN` | `test_calendar_gateway.py` (unstamped served filtered, stamped served as is, cache key, no rewrite on read, unknown purpose raises, grep test of readers) | S1 interface only |
 | S4 Readers and prompts | `build_dashboard.py` (1-4), `close_day.py`, `transcripts.py`, `drafts.py` (7-8), `prep_page.py`, `prep_shape.py`, `calendar_refresh.py` (11), `sweep.py` metadata reads (12, 15) | switch each to `calendar_gateway.read(purpose)` | update the ~10 tests that write `calendar.json` by hand (add `clean` or accept in-memory filter), `test_calendar_readers_purpose.py` (per reader: body length bound, none for `day`/`meta`) | S3 |
-| S5 Slim `invite_clean.py` | `invite_clean.py`: delete the body path (`_Reader`, windows, soft/word-only/qualified rules; `sweep.rescrub_calendar` re-pointed to filter and stamp); keep `scrub`, `flagged`, `sensitivity`, `clean_row` head, `safe_address`, short-field rules | `invite_text` becomes a thin call to `invite_filter.filter_text` (kept name for the `sweep.invite_text` alias at 1231) | repoint or retire `test_invite_clean_bare*.py`, `_sweep`, `_idempotence`, `_expansion`; keep short-field cases | S1, S3 |
+| S5 Slim `invite_clean.py` | **REMOVED from 2.6.9 (26-10-2026).** `invite_clean.py` stays whole: its body scrub is the label layer of option (c) (section 1b). Slimming is a later release, if ever. | | | |
 | S6 Corpus, at-rest, release gates | `dev/tests/test_calendar_e1_atrest.py` (grep `dashboard.html`, history snapshot, Prep page, draft, backup zip of a test vault for the corpus canaries), kept-rate prose corpus, mutation checks, fuzz (seeded), hand-check sheet `dev/proposals/375/HANDCHECKS.md`, NOTES-2.6.9 | none | the above | S1-S5 |
 
-Order: S1 || S2 || S3 (S2 and S3 stub S1) -> S4 -> S5 -> S6. S6's corpus builder can start with S1. Cap's oracle gates S1-S3; S4 starts when the gateway signature is merged on the integration branch.
+Order: S1 || S2 || S3 (S2 and S3 stub S1) -> S4 -> S6 (S5 removed). S6's corpus builder can start with S1. Cap's oracle gates S1-S3; S4 starts when the gateway signature is merged on the integration branch.
 
 ## 4. Guarded vs ordinary
 
@@ -90,21 +132,22 @@ Guarded list (`dev/tests/guarded_chain.py`): tracker, filechange, reach, permiss
 
 **What E1 deletes from `invite_clean.py`** (about 430 of 817 lines, estimated): the body label machinery: `BARE_NEXT`/`BARE_FOLLOW`/qualified-label/alone-label regexes (~110-200), `_Reader`, `_pieces`, `_lines`, `_alone`, `_only_labels`, `_label_leads`, `_label_kind`, `id_number`, the date/time exemption, `_looks_like_value`, `_mixed`, `_pending_after`, `_is_dropped`, `WINDOW` and the tombstones (~414-665). What stays: `scrub`, `flagged`, `_views`/`skeleton`/`normal` (reused for deciding), `sensitivity`, `clean_row`, `clean_calendar`, address and name rules, `plain_text` (reused by S2). Roughly 3,000 test lines (bare/bare20/bare21/sweep/idempotence/expansion) are repointed or retired; short-field cases stay.
 
-**Effort (builder-days, range).**
+**Effort (builder-days, range), revised 26-10-2026 for option (c).**
 
-| Slice | WITH second layer | WITHOUT |
+| Slice | (c) without S1b (recommended) | (c) with S1b (before the measurement) |
 |---|---|---|
 | S1 filter core | 2.5 (1.5-3.5) | 2.5 (1.5-3.5) |
-| S1b `drop_labelled_values` + tests | 1 (0.5-1.5) | 0 |
+| S1b `drop_labelled_values` + tests | 0 (built, not shipped) | 1 (0.5-1.5) |
 | S2 HTML blocks, fixtures | 2 (1.5-3) | 2 (1.5-3) |
 | S3 gateway, stamp, rescrub re-point | 1.5 (1-2) | 1.5 (1-2) |
 | S4 readers and prompts | 1.5 (1-2.5) | 1.5 (1-2.5) |
-| S5 slim `invite_clean.py` | 1.5 (1-2.5) | 1.5 (1-2.5) |
-| S6 corpus, at-rest, hand checks | 2 (1.5-3) | 1.5 (1-2.5) |
-| Review (full + two re-checks) | 1.5 (1-3) | 1.5 (1-2.5) |
-| **Total agent-days** | **13.5 (9.5-19)** | **12 (8.5-17.5)** |
+| S5 slim `invite_clean.py` | 0 (removed) | 0 (removed; was 1.5) |
+| (c) composition, wrapper, comparison, cutter fix | 1 (0.5-1.5) | 1 |
+| S6 corpus, at-rest, hand checks | 1.5 (1-2.5) | 2 (1.5-3) |
+| Review (full + two re-checks) | 1.2 (1-2) | 1.5 (1-2.5) |
+| **Total agent-days** | **11.2 (7.5-17)** | **13.0 (9-19)** |
 
-About 6 calendar days with S1-S3 in parallel (5 without the second layer). The second layer costs about 1.5 days (0.5-2) and buys protection for a free-typed "PIN: 4417" in prose, which the anchor filter alone does not see. Stark's 9-10 (7-13) assumed the old label rule unchanged underneath, so most of its test churn, and was a builder-day figure without parallelism.
+About 5 calendar days without S1b (S1-S3 in parallel, largely built on `v269-int`), about 5.5 with it. Against the earlier plan (13.5 with, 12 without S1b/S5) removing S5 saves about 1.5 days and dropping S1b about 1 day more, at the cost of keeping the 2.6.8 scrub's utility loss on label-word agendas.
 
 **Hand checks (judgement and live only, rest automated).** Open Prep for three real meetings (Teams, Zoom, plain): the invite panel reads sensibly, no join block. Build a Prep page and an agenda draft for a recurring meeting: "about" line and "The invite says" are useful. Today and Intake unchanged. First start after update: dashboard rebuilds, no error, `calendar.json` rows gain `clean: 1` after the next sweep.
 

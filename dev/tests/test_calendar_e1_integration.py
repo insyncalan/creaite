@@ -37,6 +37,10 @@ def row(i, body):
             "recurrence": "", "body": body, "attendees": [], "attachments": []}
 
 
+# lines the 2.6.8 scrub (the body label layer of option c) removes after a label inside its window
+SCRUB_WINDOW_LOSS = {"label_same_cell_br": ("Room 204", "Notes are kept on the team page.")}
+
+
 class E1Integration(unittest.TestCase):
     def setUp(self):
         G.clear_cache()
@@ -71,6 +75,8 @@ class E1Integration(unittest.TestCase):
             for (name, _b, meta), v in zip(self.cases, self.views(purpose)):
                 lines = v.get("body", "").split("\n")
                 for line in meta["must_keep"]:
+                    if line in SCRUB_WINDOW_LOSS.get(name, ()):
+                        continue            # option (c): the 2.6.8 scrub's label window removes it (documented cost, PLAN.md 1b)
                     with self.subTest(purpose=purpose, fixture=name, line=line):
                         self.assertIn(line, lines)
 

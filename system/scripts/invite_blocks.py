@@ -304,6 +304,9 @@ class _Emit(object):
         elif self.after_br:
             self.want_blank = True
         else:
+            # a lone <br> after a div that ended its own line (div, br, div) is an empty line in a mail client: a paragraph break
+            if self.out:
+                self.want_blank = True
             self.after_br = True
 
 

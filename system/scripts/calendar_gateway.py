@@ -12,9 +12,10 @@ on every read and served filtered; a stamped row is served as stored. read() nev
 rescrub write, and they stamp (clean_row / stamp_rows). Nothing unfiltered is ever served: when the filter cannot be loaded, the body
 of an unstamped row is dropped (fails closed).
 
-THE FILTER. FILTER is a module-level hook, callable(text) -> text. None means invite_filter.filter_text, imported lazily on first use
-(called with html=None: HTML detected). Tests inject a stand-in. SHORT is the same kind of hook for an unstamped row's short fields
-(title, place, organiser, names): callable(row) -> row without a body; None means invite_clean.clean_row, imported lazily (the short
+THE FILTER. FILTER is a module-level hook, callable(text) -> text. None means invite_filter.filter_text_with_scrub (option c),
+imported lazily on first use (called with html=None: HTML detected). Tests inject a stand-in.
+SHORT is the same kind of hook for an unstamped row's short fields (title, place, organiser, names):
+callable(row) -> row without a body; None means invite_clean.clean_row, imported lazily (the short
 fields keep the label rule, plan section 1 rule 7); without it the row is cut to a bare "Meeting".
 
 THE CACHE. Per path, keyed (mtime_ns, size, inode, CLEAN, id(FILTER), id(SHORT)) and checked again after the file is read: a file that
@@ -97,7 +98,7 @@ def _filter_fn():
         return FILTER
     try:
         import invite_filter
-        fn = invite_filter.filter_text
+        fn = invite_filter.filter_text_with_scrub
     except (ImportError, AttributeError):
         return None
     return lambda text: fn(text, html=None)
