@@ -2534,9 +2534,9 @@ def prep_match(title, projects, remembered):
     (None, "unsure")."""
     s = series_of(title)
     coded = title_codes(title, projects)
-    if len(coded) > 1:
-        return None, "unsure"
     mem = remembered.get(s)
+    if len(coded) > 1:                                  # two codes win nothing; Alan's no-project choice still stands
+        return ("_portfolio", "remembered") if mem == "_portfolio" else (None, "unsure")
     if coded and mem != "_portfolio":
         return next(iter(coded)), ("remembered" if mem in coded else "matched")
     if mem:
@@ -2565,7 +2565,10 @@ def ev_project(ev, title, projects, remembered):
     brief's match."""
     if invite_clean.sensitivity(ev) == "confidential":
         return None
-    return ev.get("p") or prep_match_ev(title, ev, projects, remembered)[0]
+    if ev.get("p"):
+        return ev["p"]
+    code, how = prep_match_ev(title, ev, projects, remembered)
+    return None if how == "likely" else code               # a Likely guess is not a chosen project
 
 
 def ev_shown_p(ev):
@@ -2622,6 +2625,8 @@ def prep_entry(ev, day, ctx):
     code, how = prep_match_ev(ev["title"], ev, ctx["projects"], ctx["remembered"])
     if invite_clean.sensitivity(ev) == "confidential" and how != "remembered":
         code, how = None, "confidential"
+    elif how == "likely":                                # a Likely guess is shown in Intake only; Prep asks (never counted as chosen)
+        code = None
     last = max((d for d, ser in ctx["history"] if ser == s and d < day.isoformat()), default=None)
     key = f"{ev.get('start', '')}|{ev['title']}" if day == ctx["today"] else f"{day.isoformat()}|{ev.get('start', '')}|{ev['title']}"
     m = {"series": s, "p": code, "how": how, "last": last, "day": day.isoformat(),
@@ -2863,7 +2868,7 @@ def _inbox_match(title, ev, private, conf, projects, remembered):
     """(code, how, match) of a calendar entry for Intake: private is never matched, the portfolio and a remembered series are
     prep_match's own answer, anything else is meeting_match's (#328: matched, likely or unsure)."""
     code, how = (None, "private") if private else prep_match(title, projects, remembered)
-    match = {} if private or how == "portfolio" else meeting_answer(title, ev, projects, remembered, conf)
+    match = {} if private or code == "_portfolio" else meeting_answer(title, ev, projects, remembered, conf)   # portfolio: prep_match's own
     if match and (how != "remembered" or match["level"] == "unsure"):     # a series never overrides attendees who point elsewhere
         code, how = match["p"], match["level"]
     return code, how, match

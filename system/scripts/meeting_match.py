@@ -40,7 +40,10 @@ def _title_signals(p, title, low, shared, first_names):
         return None
     strong, medium, weak = sig
     named = [m for m in medium if p["name"] and m == p["name"]]            # the project's full name is strong
-    return strong + named, [m for m in medium if m not in named], weak
+    strong = strong + named
+    if p["code"] not in strong and re.search(rf"\[\s*{re.escape(p['code'])}\s*\]", title[:300], re.I):
+        strong = strong + [p["code"]]                                      # a [tag] holding the code in any case ("[def]")
+    return strong, [m for m in medium if m not in named], weak
 
 
 def _people_signals(p, addrs, own, shared_domains):
