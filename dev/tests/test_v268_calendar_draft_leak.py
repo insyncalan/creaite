@@ -6,7 +6,6 @@ Run: python3 dev/tests/test_v268_calendar_draft_leak.py      (quick tier: throwa
 All names, codes and numbers are made up.
 """
 import json
-import subprocess
 import sys
 import unittest
 import zipfile
