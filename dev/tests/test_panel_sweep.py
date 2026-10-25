@@ -205,11 +205,18 @@ class ThroughTheServer(unittest.TestCase):
         self.assertTrue(run.get("sweep"))
         self.assertEqual(run.get("kind"), "ask")                                              # still a chat, with its history
 
-    def test_2_refresh_calendar_and_a_project_sweep_are_sweeps_too(self):
-        for m in ("refresh calendar", "sweep mail for ABC"):
-            self.ask(m)
-            a = self.call(m)["args"]
-            self.assertIn("--mode sweep", a[a.index("--settings") + 1], m)
+    def test_2_a_project_sweep_is_a_sweep_and_refresh_calendar_is_the_calendar_run(self):
+        """#339 A (rewritten on purpose): "refresh calendar" is still a sweep's words (panel_sweep) but starts the small calendar
+        run, as the button does: its fixed prompt, guard mode calendar, no add-dir, and no chat or session carried."""
+        import calendar_refresh
+        self.ask("sweep mail for ABC")
+        a = self.call("sweep mail for ABC")["args"]
+        self.assertIn("--mode sweep", a[a.index("--settings") + 1])
+        self.ask("refresh calendar")
+        a = self.call(calendar_refresh.build_prompt())["args"]
+        self.assertIn("--mode calendar", a[a.index("--settings") + 1])
+        self.assertNotIn("--add-dir", a)
+        self.assertNotIn("--resume", a)
 
     def test_3_a_mixed_request_is_a_plain_chat(self):
         before = self.staged()

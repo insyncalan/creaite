@@ -500,11 +500,13 @@ class MailCheckBrowser(_Live):
         self.finish()
         self.assertEqual(b.eval("document.querySelectorAll('#chLog .msg.runend').length"), 0)
 
-    def test_refresh_calendar_ends_with_nothing_new(self):
+    def test_refresh_calendar_is_the_calendar_run(self):
         self.begin("refresh calendar")
         self.finish()
-        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-        self.assertEqual(end, "Finished. Nothing new to review.")
+        # #339 A: the calendar run's plain closure, not a mail check's (the stand-in saves nothing)
+        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].map(e=>e.textContent)")
+        self.assertEqual(len(end), 1, end)
+        self.assertTrue(end[0].startswith("The calendar was not saved"), end)
 
     def test_the_badge_with_the_chat_closed_shows_places_only_and_fits(self):
         b = self.b

@@ -574,7 +574,7 @@ class ThroughTheServer(unittest.TestCase):
             dev.unlink()
 
     def test_5_a_model_worded_message_stays_a_plain_chat(self):
-        """An ordinary ask message stays unconfirmed, whatever it carries; "refresh calendar" typed is still BL-309's sweep."""
+        """An ordinary ask message stays unconfirmed, whatever it carries; "refresh calendar" typed is the calendar run (#339 A)."""
         import calendar_refresh as cr
         for body in ({"message": cr.build_prompt()}, {"message": "refresh the calendar for Intake", "kind": "calendar",
                                                         "mode": "calendar"}):
@@ -588,8 +588,11 @@ class ThroughTheServer(unittest.TestCase):
                 self.assertEqual(c["verdicts"], {})
         status, evs = self.post("/api/ask", {"message": "refresh calendar"})
         self.assertEqual(status, 200, evs)
-        a = self.call(lambda c: c["prompt"] == "refresh calendar")["args"]
-        self.assertIn("--mode sweep", a[a.index("--settings") + 1])              # BL-309, unchanged
+        c = self.call(lambda c: c["prompt"] == cr.build_prompt())                # #339 A (rewritten on purpose): the calendar run
+        a = c["args"]
+        self.assertIn("--mode calendar", a[a.index("--settings") + 1])
+        self.assertNotIn("--resume", a)                                           # no session, no chat, nothing carried
+        self.assertNotIn("Background only", c["prompt"])
 
 
 class SweepCalendarSave(unittest.TestCase):
