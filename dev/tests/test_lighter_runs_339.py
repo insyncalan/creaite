@@ -155,6 +155,7 @@ class Behaviour(unittest.TestCase):
         pass
 
     def handler(self):
+        self_ls = self.ls
         class H:
             sent = None
             numbered = staticmethod(lambda: False)
@@ -164,6 +165,8 @@ class Behaviour(unittest.TestCase):
 
             def follow(self, run, **kw):
                 self.followed = run
+
+            calendar_start = self_ls.Handler.calendar_start
 
         return H()
 
@@ -237,6 +240,31 @@ class Behaviour(unittest.TestCase):
         self.assertEqual(runs[0][1]["kind"], "calendar")
         self.assertEqual(runs[0][0][1], calendar_refresh.build_prompt())
 
+    def queue(self, sweep=False, why=None, text="refresh calendar"):
+        import calendar_refresh
+        ls, runs = self.ls, []
+        q = {"chat": "c-1", "items": [{"id": "1", "text": text, "images": []}], "held": False}
+        with mock.patch.object(ls, "Run", side_effect=lambda *a, **kw: runs.append((a, kw)) or mock.Mock(summary=lambda: {})), \
+                mock.patch.object(ls, "queue_save"), mock.patch.object(ls, "budget_gate", return_value=None), \
+                mock.patch.object(ls, "sweep_running", return_value=sweep), mock.patch.object(ls, "ask_image_files", return_value=None), \
+                mock.patch.object(calendar_refresh, "precheck", return_value=why):
+            out = ls.queue_start(q, mock.Mock(done=True, kind="ask", chat="c-1", session="s"))
+        return q, runs, out
+
+    def test_a_refused_queued_refresh_holds_the_queue_and_never_becomes_a_sweep(self):
+        for sweep, why in ((True, None), (False, "the calendar source is off")):
+            q, runs, out = self.queue(sweep=sweep, why=why)
+            self.assertEqual(runs, [], (sweep, why))                              # no calendar run and no mail sweep
+            self.assertIsNone(out)
+            self.assertTrue(q["held"])
+            self.assertEqual([i["text"] for i in q["items"]], ["refresh calendar"])   # the item is put back
+
+    def test_a_queued_sweep_is_still_a_sweep(self):
+        q, runs, out = self.queue(text="sweep")
+        self.assertEqual(len(runs), 1)
+        self.assertTrue(runs[0][1]["sweep"])
+        self.assertFalse(q["held"])
+
     def test_a_sweep_run_never_adds_the_home_folder_and_keeps_the_projects_root(self):
         ls = self.ls
         with mock.patch.object(ls, "extra_dirs", return_value=["/x/projects"]), \
@@ -263,8 +291,10 @@ class Behaviour(unittest.TestCase):
     def test_ask_and_queue_text_routes(self):
         ask = SRC[SRC.index("    def ask(self, req):"):SRC.index("sweep = panel_sweep(message")]
         self.assertIn('panel_kind(message, images, req.get("confirmed")) == "calendar"', ask)
-        q = SRC[SRC.index("def queue_start("):SRC.index("def queue_after(")]
+        q = SRC[SRC.index("def queued_run("):SRC.index("PANEL_SWEEP_PROMPT = (")]
         self.assertIn('panel_kind(item["text"], images) == "calendar"', q)
+        self.assertIn("raise OSError(said)", q)                                 # refused: the queue holds
+        self.assertIn("queued_run(item, images, session, chat)", SRC[SRC.index("def queue_start("):SRC.index("def queue_after(")])
 
     def test_usage_report_lists_a_label_and_kind_per_run(self):
         import usage_report

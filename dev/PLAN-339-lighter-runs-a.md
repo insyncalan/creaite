@@ -45,3 +45,7 @@ Chain: add the chosen diffs to the 2.6.5 or 2.6.6 GUARDED chain file and recompu
 
 ## Review findings (Cap 02:25 and 03:01)
 Fixed here: H1 (landing decided per diff, pins skip when landed), N1 (globals.json), M3 (behaviour tests through the patched server: sweep --add-dir, prompt text, the 409 guard, chat=None, queue route, fixed prompt; mutants killed), M4 (rules diff), L1 (one plan), L4 (the budget pin no longer passes a 500). Left: L2 (calendar route catches only OSError; the prompt is fixed), L3 (a different sentence in the queue fallback, by decision), L5 (typed and button calendar runs both record as calendar/calendar), the full Chrome look at the page.
+
+## Round 4 (Wanda's set review)
+- `calendar-route.diff` re-cut so the patched tree passes check.py: `Handler.ask` hands the calendar branch to `Handler.calendar_start` and takes its run id from `request_run_id`; `queue_start` takes its run from `queued_run`.
+- A queued "refresh calendar" whose calendar run is refused (a sweep running, a calendar that cannot be read) now HOLDS the queue (`queued_run` raises OSError, caught as for a failed start); it never falls through to a full mail sweep. Pinned in `test_lighter_runs_339` (both refusals; a queued sweep is still a sweep). `tests-pins.diff` follows: `test_ai_budget_gate_334` accepts a held queued refresh (never held for the budget) and its fake handler gains `calendar_start`.
