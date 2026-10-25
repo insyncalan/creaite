@@ -101,5 +101,21 @@ class OnePager(unittest.TestCase):
         self.assertEqual(prep_page._project_of(D, entry("remembered")), ("DEF", True))
 
 
+class Header(unittest.TestCase):
+    """The Prep header, the toolbar and the facts all read the entry's `p`: with none, the header offers the picker."""
+
+    def test_entry_has_no_project_for_an_unchosen_confidential_meeting(self):
+        import build_dashboard as bd
+        ev = {"title": "[DEF] x", "start": "10:00", "end": "11:00", "sensitivity": "confidential"}
+        ctx = {"projects": [{"code": "DEF", "name": "Orchard Rollout"}], "remembered": {}, "history": [], "items": None,
+               "ms_names": {}, "vips": {}, "today": bd.date(2026, 10, 26)}
+        self.assertIsNone(bd.prep_entry(ev, bd.date(2026, 10, 26), ctx)[1]["p"])
+
+    def test_header_draws_the_picker_when_there_is_no_project(self):
+        head = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/prep/PrepHead.jsx").read_text()
+        self.assertIn('const name = code === "_portfolio" ? "No project (general meeting)" : code ? pName(code) : "";', head)
+        self.assertIn('need', head)
+
+
 if __name__ == "__main__":
     unittest.main()
