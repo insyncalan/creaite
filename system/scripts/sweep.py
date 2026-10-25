@@ -66,10 +66,12 @@ the laptop's time zone and files each meeting under its local date, BL-107; "HH:
 Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
 """
 import argparse
+import contextlib
 import json
 import os
 import re
 import sys
+import time
 from contextlib import closing
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -764,38 +766,68 @@ def keep_held_past_days(days, start_day, today_day):
     return dict(sorted(days.items()))
 
 
-def rescrub_calendar():
+CAL_LOCK = paths.STAGING / "calendar.lock"
+
+
+@contextlib.contextmanager
+def calendar_lock(wait=20.0):
+    """Hold the calendar's write lock (flock on system/staging/calendar.lock) while the saved calendar is read, changed and written, so a
+    sweep's save and the clean-up cannot lose each other's write. Yields True when held; False when it could not be taken within `wait`
+    seconds (the caller decides: the clean-up skips, a save goes on as it always did)."""
+    fd, got = None, False
+    try:
+        import fcntl
+        CAL_LOCK.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(CAL_LOCK), os.O_RDWR | os.O_CREAT, 0o644)
+        end = time.monotonic() + wait
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                got = True
+                break
+            except OSError:
+                if time.monotonic() >= end:
+                    break
+                time.sleep(0.02)
+    except (ImportError, OSError):
+        got = False
+    try:
+        yield got
+    finally:
+        if fd is not None:
+            os.close(fd)                    # closing releases the lock
+
+
+def _changed_rows(old, new):
+    """How many saved meetings differ between two calendars (rows that changed, were dropped or added), at least 1 when they differ."""
+    n = 0
+    for day in set(old.get("days") or {}) | set(new.get("days") or {}):
+        a, b = (old.get("days") or {}).get(day), (new.get("days") or {}).get(day)
+        a, b = (a if isinstance(a, list) else []), (b if isinstance(b, list) else [])
+        n += abs(len(a) - len(b)) + sum(1 for x, y in zip(a, b) if x != y)
+    return n or 1
+
+
+def rescrub_calendar(wait=20.0):
     """2.6.8: the saved calendar put through today's cleaning (session start, and the live server's start and daily job): a meeting
-    saved by an earlier version that kept a value the rules now remove (a password or PIN word with no digit, k26-b-bare) is cleaned
-    in every day, not only the past ones a later save holds. Rewritten atomically and only when something changed; clean_row cleans
-    a cleaned row to itself. Just before the write the file is read again: if a sweep saved meanwhile, nothing is overwritten and the
-    new file is cleaned instead (up to three tries). Returns the number of meetings changed."""
-    for _ in range(3):
-        try:
-            raw = paths.CALENDAR.read_text(encoding="utf-8")
-            cal = json.loads(raw)
-            days = cal.get("days")
-        except (OSError, ValueError, AttributeError):
-            return 0
-        if not isinstance(days, dict):
-            return 0
-        changed = 0
-        for day, rows in days.items():
-            if isinstance(rows, list):
-                new = [invite_clean.clean_row(r) if isinstance(r, dict) else r for r in rows]
-                changed += sum(1 for a, b in zip(rows, new) if a != b)
-                days[day] = new
-        if not changed:
+    saved by an earlier version that kept a value the rules now remove, or any key, row, day or note that is not a meeting's, is cleaned in
+    every day, not only the past ones a later save holds. Done under the calendar lock, which a sweep's save also takes, so neither
+    loses the other's write; rewritten atomically and only when something changed. Returns the number of meetings changed (0 when
+    nothing changed, the file is not readable, or the lock could not be taken)."""
+    with calendar_lock(wait) as got:
+        if not got:
             return 0
         try:
-            unchanged = paths.CALENDAR.read_text(encoding="utf-8") == raw
-        except OSError:
+            cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
             return 0
-        if unchanged:
-            paths.write_text_atomic(paths.CALENDAR, json.dumps(cal, indent=1, ensure_ascii=False))
-            debuglog.info("sweep", f"calendar: {changed} saved meeting(s) cleaned again with today's rules")
-            return changed
-    return 0
+        new = invite_clean.clean_calendar(cal)
+        if new == cal:
+            return 0
+        changed = _changed_rows(cal if isinstance(cal, dict) else {}, new)
+        paths.write_text_atomic(paths.CALENDAR, json.dumps(new, indent=1, ensure_ascii=False))
+    debuglog.info("sweep", f"calendar: {changed} saved meeting(s) cleaned again with today's rules")
+    return changed
 
 
 def organiser_of(ev):
@@ -952,14 +984,15 @@ def calendar(spec_file):
         debuglog.warn("sweep", "calendar: a reply with no meeting to keep from today was refused; the saved calendar still holds "
                       f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")
         return 1
-    days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
-    saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days},
-                       indent=1, ensure_ascii=False)
-    if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
-        print(CAL_REFUSED)
-        debuglog.warn("sweep", f"calendar: a reply that would save {len(saved.encode('utf-8'))} bytes was refused")
-        return 1
-    paths.write_text_atomic(paths.CALENDAR, saved)                                      # #265 review L3
+    with calendar_lock():                  # the clean-up (rescrub_calendar) takes the same lock: neither loses the other's write
+        days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
+        saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days},
+                           indent=1, ensure_ascii=False)
+        if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
+            print(CAL_REFUSED)
+            debuglog.warn("sweep", f"calendar: a reply that would save {len(saved.encode('utf-8'))} bytes was refused")
+            return 1
+        paths.write_text_atomic(paths.CALENDAR, saved)                                  # #265 review L3
     n = sum(len(v) for v in days.values())
     debuglog.info("sweep", f"calendar saved: {n} meeting(s) over {len(days)} day(s) in {datetime.now().astimezone():%Z (%z)}, "
                   f"{len(bad)} with times that could not be read, {sum(ignored.values())} ignored, {skipped} outside the window "

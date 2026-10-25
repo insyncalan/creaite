@@ -434,37 +434,97 @@ def _clean_names(row):
             continue
         name = a.get("name") if isinstance(a.get("name"), str) and not flagged(a["name"]) else str(a.get("email") or "")
         if name and not flagged(name):
-            people.append({**a, "name": name[:80]})
+            person = {k: a[k] for k in ("email", "registered", "type", "response") if isinstance(a.get(k), (str, bool))}
+            people.append({**{k: (v[:120] if isinstance(v, str) else v) for k, v in person.items()}, "name": name[:80]})
     return files, people
+
+
+# exactly what sweep.calendar_row writes; anything else in a saved row is dropped
+ROW_KEYS = ("id", "start", "end", "all_day", "title", "where", "teams", "private", "organiser", "sensitivity", "organiser_email",
+            "recurrence", "body", "attendees", "attachments")
+_EMAIL = re.compile(r"^[^@\s<>]{1,64}@[^@\s<>]{1,190}$")
+
+
+def _row_head(row, sens, private):
+    out = {}
+    if "id" in row:
+        out["id"] = str(row["id"])[:512]
+    for k in ("start", "end"):
+        if k in row:
+            out[k] = str(row[k])[:12]
+    if "all_day" in row:
+        out["all_day"] = bool(row["all_day"])
+    out.update(title="Busy" if private else scrub(row.get("title"), 140) or "Meeting", where="", private=private, organiser=False,
+               teams=bool(row.get("teams")) and sens != "confidential")
+    return out
+
+
+def _row_details(row):
+    """The details of a meeting that is neither private nor confidential, each cleaned."""
+    org = row.get("organiser")
+    out = {"where": scrub(row.get("where"), 80), "sensitivity": "normal",
+           "organiser": (scrub(org, 80) or False) if isinstance(org, str) else bool(org)}
+    addr = row.get("organiser_email")
+    if isinstance(addr, str) and _EMAIL.match(addr.strip()) and not flagged(addr):
+        out["organiser_email"] = addr.strip()[:254]
+    rec = scrub(row.get("recurrence"), 40) if isinstance(row.get("recurrence"), str) else ""
+    if rec:
+        out["recurrence"] = rec
+    body = invite_text(str(row.get("body") or "")[:BODY_MAX])        # a saved body is already cut to BODY_MAX
+    files, people = _clean_names(row)
+    out.update({k: v for k, v in (("body", body), ("attachments", files), ("attendees", people)) if v})
+    return out
 
 
 def clean_row(row):
     """A meeting already in the saved calendar (written by an earlier version) put through today's cleaning: the sensitivity
     read again (fails closed), the title, place and organiser scrubbed, the body cleaned of join links and keys, and names
-    that carry them dropped. A cleaned row cleans to itself."""
+    that carry them dropped. Only the keys in ROW_KEYS survive (a description, joinUrl, location or anything else a foreign or
+    older file holds is dropped, not copied). A cleaned row cleans to itself."""
     sens = sensitivity({"sensitivity": row.get("sensitivity"), "private": row.get("private")})
     private = sens == "private"
-    out = {k: row[k] for k in ("id", "start", "end", "all_day") if k in row}
-    out.update(title="Busy" if private else scrub(row.get("title"), 140) or "Meeting", where="", private=private, organiser=False,
-               teams=bool(row.get("teams")) and sens != "confidential")
+    out = _row_head(row, sens, private)
     if sens == "confidential":
         out["sensitivity"] = "confidential"
     elif not private:
-        org = row.get("organiser")
-        out.update({k: v for k, v in row.items() if k not in out and k not in ("body", "attachments", "attendees")},
-                   where=scrub(row.get("where"), 80), sensitivity="normal",
-                   organiser=(scrub(org, 80) or False) if isinstance(org, str) else bool(org))
-        body = invite_text(str(row.get("body") or "")[:BODY_MAX])        # a saved body is already cut to BODY_MAX: a longer one is not ours
-        files, people = _clean_names(row)
-        out.update({k: v for k, v in (("body", body), ("attachments", files), ("attendees", people)) if v})
+        out.update(_row_details(row))
     return out
 
 
+_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
 def clean_calendar(cal):
-    """A saved calendar (calendar.json as loaded) with every meeting put through clean_row, so a reader never sees what an earlier
-    version kept (2.6.8). A cleaned row cleans to itself; anything that is not a day of meetings is returned as it is."""
-    days = cal.get("days") if isinstance(cal, dict) else None
-    if isinstance(days, dict):
-        cal = {**cal, "days": {d: ([clean_row(r) if isinstance(r, dict) else r for r in rows] if isinstance(rows, list) else rows)
-                              for d, rows in days.items()}}
-    return cal
+    """A saved calendar (calendar.json as loaded) as a reader may use it: only "fetched", "to" and "days" (a dict of YYYY-MM-DD to a list)
+    survive; every day that is not a list and every row that is not a dict is dropped; every meeting goes through clean_row. Whatever the
+    file holds (a list, a string day, a string row, a top-level note), the result has the same shape and no reader can fail on it.
+    A cleaned calendar cleans to itself."""
+    if not isinstance(cal, dict):
+        return {"days": {}}
+    days = cal.get("days")
+    out = {k: cal[k] for k in ("fetched", "to") if isinstance(cal.get(k), str)}
+    out["days"] = {d: [clean_row(r) for r in rows if isinstance(r, dict)] for d, rows in (days if isinstance(days, dict) else {}).items()
+                   if isinstance(d, str) and _DAY.match(d) and isinstance(rows, list)}
+    return out
+
+
+_CAL_CACHE = {}
+
+
+def read_calendar(path):
+    """clean_calendar(the file's JSON), cached per path while the file is unchanged (modified time, size and inode, read again after the
+    file is read: a file that changed meanwhile is not cached). What is cached is the CLEANED output of that exact content, so a changed
+    file always misses and nothing unscrubbed is ever served. Returns a copy; raises OSError or ValueError as the plain read did."""
+    import copy
+    import json
+    key = str(path)
+    st = path.stat()
+    sig = (st.st_mtime_ns, st.st_size, st.st_ino)
+    hit = _CAL_CACHE.get(key)
+    if hit and hit[0] == sig:
+        return copy.deepcopy(hit[1])
+    cal = clean_calendar(json.loads(path.read_text(encoding="utf-8")))
+    st2 = path.stat()
+    if (st2.st_mtime_ns, st2.st_size, st2.st_ino) == sig:
+        _CAL_CACHE[key] = (sig, cal)
+    return copy.deepcopy(cal)

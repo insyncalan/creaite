@@ -344,7 +344,7 @@ class Lookup:
         import minutes
         if self._cal is None:
             try:
-                cal = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8")))
+                cal = invite_clean.read_calendar(paths.CALENDAR)
             except (OSError, ValueError):          # no saved calendar: the meeting has no title to show
                 cal = {}
             self._cal = {str(e.get("id")): (day, e) for day, evs in (cal.get("days") or {}).items() if isinstance(evs, list)
