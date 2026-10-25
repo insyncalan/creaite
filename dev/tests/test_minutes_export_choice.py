@@ -12,7 +12,6 @@ Run: python3 dev/tests/test_minutes_export_choice.py      (Chrome tier; skipped 
 import json
 import subprocess
 import sys
-import time
 import unittest
 from pathlib import Path
 
@@ -75,15 +74,16 @@ class MinutesExportChoice(LiveBrowserCase):
     def files(self):
         return set(self.v.root.rglob("*.html")) | set(self.v.root.rglob("*.docx")) | set(self.v.root.rglob("*.pdf"))
 
-    def wait_new(self, before, fmt, seconds=30):
-        """The new files of one format. The export is written some time after the click, longer on a busy machine, so poll for
-        it instead of trusting one fixed pause (the test failed under load with an empty list, and passed alone)."""
-        end = time.time() + seconds
-        while True:
-            new = [f for f in self.files() - before if f.suffix == "." + fmt]
-            if new or time.time() > end:
-                return new
-            self.b.pump(0.5)
+    def export_done(self, label):
+        """Pick one export entry and wait until the server has answered its request (so the file is written: the route is
+        synchronous under the server's lock). A fixed pause raced a slow export (a PDF through Chrome on a busy machine): the
+        check ran before the file existed, or took the previous export's late file for this one."""
+        self.b.eval("""(()=>{ if(!window.__expWrapped){ window.__expWrapped=true; window.__exp={sent:0,done:0}; const f=window.fetch;
+            window.fetch=function(u,o){ const x=/api\\/minutes\\/export/.test(String(u)); if(x) window.__exp.sent++;
+              const p=f.apply(this,arguments); if(x) p.then(r=>r.clone().text()).catch(()=>{}).then(()=>{ window.__exp.done++; }); return p; }; }
+            window.__exp.base=window.__exp.done; })()""")
+        self.pick(label)
+        self.b.wait("window.__exp.sent>window.__exp.base && window.__exp.done>window.__exp.base && window.__exp.done===window.__exp.sent", 90)
 
     def test_1_the_menu_says_shareable_and_internal_in_plain_words(self):
         self.open_menu()
@@ -128,8 +128,8 @@ class MinutesExportChoice(LiveBrowserCase):
             for ver, suffix in (("distributed", ""), ("internal", " (Internal)")):
                 with self.subTest(format=fmt, version=ver):
                     before = self.files()
-                    self.pick(label + suffix)
-                    new = self.wait_new(before, fmt)
+                    self.export_done(label + suffix)
+                    new = [f for f in self.files() - before if f.suffix == "." + fmt]
                     self.assertEqual(len(new), 1, f"{label}{suffix} made one {fmt} file: {new}")
                     text = export_text(self.v.root, new[0], fmt)
                     self.assertIn(KEPT, text, "the unmarked action is there (the file is not empty)")
