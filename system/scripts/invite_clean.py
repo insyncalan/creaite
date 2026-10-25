@@ -108,12 +108,6 @@ _BARE_OPEN = re.compile(                                  # a label phrase that 
 _BARE_END = re.compile(rf"{_BARE_RUN}\s*[.,;!?]*\s*$", re.I)           # a finished label phrase ("Password reset"): the next line is judged
 
 
-def _plain_phrase(line):
-    """Whether a line is clearly label-free ordinary text: only listed words (BARE_LISTED), no separator."""
-    words = re.findall(r"[^\W_]+", line.lower())
-    return bool(words) and all(w in BARE_LISTED for w in words) and not re.search(BARE_SEPARATORS, line)
-
-
 _SPACED = re.compile(r"(?<![\w])p[ .\-]{1,2}i[ .\-]{1,2}n\.?(?![\w])", re.I)       # "P I N", "P.I.N.", "P-I-N" read as PIN
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
@@ -241,7 +235,7 @@ def plain_text(body):
     """An invite body as text: HTML removed (inline tags without a gap, so "Pass<b>code</b>" is one word), entities decoded.
     Every pattern here is bounded (no tag is searched past 2000 characters), so a crafted body cannot stall it."""
     t = normal(str(body or "")[:RAW_MAX])
-    if re.search(r"<(html|body|div|p|br|span|table|a)\b", t, re.I):
+    if re.search(r"<(html|body|div|p|br|span|table|a|td|th|tr|li|ul|ol|h[1-6]|b|i|u|em|strong|font)\b", t, re.I):
         t = _strip_blocks(t)
         t = re.sub(r"(?i)<a\b([^<>]{0,2000})>", _anchor, t)
         t = re.sub(r"(?i)<br\s{0,20}/?>|</(p|div|li|tr|h\d)>", "\n", t)
@@ -285,34 +279,35 @@ def _views_of(ln):
     return _views(_MARK.sub(" ", ln))
 
 
-def _waiting_after(ln, dropped):
-    """What the line after this one is: "hard" (a value: after a label alone, or a label phrase that stops on a function word or a
-    separator, a removed line too), "soft" (after a finished label phrase: kept only if plain) or None."""
+WINDOW = 3                                  # lines (blank ones do not count) that go after a line that ends a label phrase
+
+
+def _label_line(ln, dropped):
+    """Whether this line ends a bare label phrase whose value may follow: a phrase that stops on a function word or a separator
+    (a removed line too), or (a line that is kept) a finished phrase such as "Password reset"."""
     views = _views_of(ln)
-    if any(_BARE_OPEN.search(v) for v in views) or (dropped and _alone(ln)):
-        return "hard"
-    return "soft" if not dropped and any(_BARE_END.search(v) for v in views) else None
+    return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_BARE_END.search(v) for v in views))
 
 
 def invite_text(body):
-    """An invite body as plain text: HTML removed, every line with a join link or a key to the meeting dropped, and the next
-    line with text (up to two blank lines on) after a label that stands alone, after a label phrase that stops on a function word or a
-    separator ("Password reset for", "Password reset –"), also on a dropped line; and after a finished label phrase ("Password reset")
-    the next line unless it is itself only listed words; blank runs collapsed."""
+    """An invite body as plain text: HTML removed (also a bare table cell or list item), every line with a join link or a key to the
+    meeting dropped; the next line with text (up to two blank lines on) after a label that stands alone; and after a line that ends a
+    bare label phrase ("Password reset", "Password reset for", "Password reset -", also one that was itself removed) the next WINDOW
+    lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, waiting, blanks = [], None, 0                # waiting: None, "hard" (the next line is a value) or "soft" (kept if plain)
+    kept, window, alone, blanks = [], 0, False, 0
     for ln, tail in _lines(t):
-        if waiting and not ln:
+        if not ln:
             blanks += 1
-            waiting = waiting if blanks <= 2 else None
+            alone = alone and blanks <= 2
             kept.append(ln)
             continue
-        if waiting and ln and (waiting == "hard" or not _plain_phrase(ln)):
-            waiting = None                     # the value of a label: gone with it
-            continue
-        dropped = bool(ln) and (_drop_line(ln) or bool(tail and _drop_line(tail + " " + ln)))
-        waiting, blanks = (_waiting_after(ln, dropped) if ln else None), 0
-        if not dropped:
+        dropped = _drop_line(ln) or bool(tail and _drop_line(tail + " " + ln))
+        label = _label_line(ln, dropped)
+        consumed = alone or window > 0 or dropped
+        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)
+        alone, blanks = (dropped and _alone(ln) and not alone), 0
+        if not consumed:
             kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
 
