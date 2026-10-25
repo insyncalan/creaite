@@ -48,9 +48,18 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
                       r"click\s+(?:here\s+)?to)\b", re.I)
 
 # ---- keys: passcodes, PINs, meeting IDs, dial-in numbers ----
+# ONE separator class for every label path (a label alone, a bare label, a phrase that stops): any punctuation or symbol (Unicode
+# P* and S*, and the rest of what is neither a letter, a digit nor a space) except a sentence end (. , ; ! ?).
+BARE_SEPARATORS = r"[^\w\s.,;!?]"
+# A separator, with at most ONE sentence-end mark in front of it ("Password.:", "Passcode?:"). Longer runs of marks are first read as one
+# ellipsis (a separator itself): _views() does that before any pattern is tried (_SE_RUN), so no pattern needs a repeated group
+# round a repeated mark, and none can backtrack catastrophically (2.6.8 review: ". " x 60 froze the old nested form).
+# Sentence-end marks alone are NOT a separator ("Password! hunter" is two sentences; a documented trade-off).
+SEPRUN = rf"[.,;!?]?{BARE_SEPARATORS}"
+_SE_RUN = re.compile(r"[.,;!?](?:\s*[.,;!?])+")                                    # two or more marks, spaces between: one ellipsis
 # a label followed by a value: a separator, "is", a word with a digit, or (v2.6 review) a word that switches from a small
 # letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
-_VAL = r"(?:\s*(?:[:=#\-\u2013]\s*\S|\bis\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
+_VAL = rf"(?:\s*(?:{SEPRUN}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
 _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
                r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
                r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
@@ -60,16 +69,77 @@ _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*co
                r"(?:access|participant|conference|attendee|host|meeting|moderator|presenter|guest|security|entry|"
                r"dial[- ]?in|audio|phone|call[- ]?in|room|webinar|panell?ist|leader)[\s-]*(?:code|pin)s?")
 _WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
-               r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
+               r"clave\s+de\s+acceso|pw|pswd|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
                r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
+# v2.6.8 (k26-b-bare, Full review x2): after these labels the next word IS the value even with no digit and no capital ("Password
+# swordfish", "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta", "Token abcd"). Fail closed, and as a whole phrase: every
+# word after the label, to the end of the field, must be an allow-listed word for that label (BARE_NEXT, each the second word of a
+# common phrase) or a word of BARE_FOLLOW (small function and topic words). The first word that is neither is a value and the field
+# goes; so do a colon, equals, dash or bracket after the label or after any such word, and punctuation before the value
+# ("Password , hunter"). "Password reset", "Password reset request", "Code of conduct" stay; "Password reset for hunter",
+# "Password reset for new hires", "PIN entry: swordfish", "Code of the swordfish" go. Tests: dev/tests/test_invite_clean_bare.py.
+BARE_NEXT = (
+    (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|pw|pswd",
+     ("reset", "policy", "manager", "management", "expiry", "rotation", "audit", "change")),
+    (r"pin(?:\s*(?:code|number|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
+    (r"codes?",                                                               # "Code review", "Code of conduct", "Source code repository"
+     ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover", "walkthrough", "standards")),
+    (r"tokens?", ("expiry", "rotation", "refresh", "economy", "economics", "ring")),   # "Token refresh", "Token Ring"
+    (r"secrets?", ("management", "manager", "rotation", "santa")),            # "Secret santa", "Secrets management"
+    (r"otp", ("setup", "rollout", "enrolment")),
+    (r"api\s+keys?", ("rotation", "management", "review")),
+)
+BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or", "request", "requests", "process", "plan",
+               "planning", "workshop", "session", "review", "rollout", "update", "changes", "findings", "redesign", "supplier", "call",
+               "move", "conduct", "sync", "retrospective", "sow", "training", "staff")
+
+
+# a phrase that ends on one of these has its value on the next line
+BARE_FUNCTION = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or")
+
+
+
+
+
+def bare_words(ok):
+    """The words that may stand after the first allowed word of a label: its own and BARE_FOLLOW, each ONCE and in order. A word in
+    both lists would match two ways in the repeated group below, and the match time would double with every repeat ("Code of of of
+    ..." took seconds); dev/tests/test_invite_clean_bare.py checks that the built list has no duplicate."""
+    return tuple(dict.fromkeys((*ok, *BARE_FOLLOW)))
+
+
+def _bare_next(lab, ok):
+    okx = "|".join(dict.fromkeys(ok))
+    words = "|".join(bare_words(ok))                                            # what may stand after the first allowed word
+    run = rf"(?:\s+(?:{words})(?![\w-]))*"
+    bad = (rf"(?:\s*{SEPRUN}|\s*[,;.!?]+\s*[\w\"'(\[]|\s+(?!(?:{words})(?![\w-]))[\w\"'(\[])")
+    sep = SEPRUN                                                                 # straight after the label too
+    return (rf"(?:{lab})(?![\w-])(?:\s*(?:[,;.]+|(?:{sep})+)\s*\w"
+            rf"|\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w|(?:{okx})(?![\w-]){run}{bad}))")
+
+
+_BARE_NEXT = "|".join(_bare_next(lab, ok) for lab, ok in BARE_NEXT)
+_BARE_LABELS = "|".join(lab for lab, _ok in BARE_NEXT)
+BARE_LISTED = frozenset(w for _l, ok in BARE_NEXT for w in ok) | frozenset(BARE_FOLLOW)       # every word a label-free phrase may use
+_BARE_RUN = rf"(?<![\w-])(?:{_BARE_LABELS})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*"
+_BARE_OPEN = re.compile(                                  # a label phrase that stops on a function word or a separator: its value is next
+    rf"{_BARE_RUN}(?:\s+(?:{'|'.join(BARE_FUNCTION)})|\s*(?:{SEPRUN})+)\s*[.,;]*\s*$", re.I)
+_BARE_END = re.compile(rf"{_BARE_RUN}\s*[.,;!?]*\s*$", re.I)           # a finished label phrase ("Password reset"): the next line is judged
+
+
+_SPACED = re.compile(r"(?<![\w])p[ .\-]{1,2}i[ .\-]{1,2}n\.?(?![\w])", re.I)       # "P I N", "P.I.N.", "P-I-N" read as PIN
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
-LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
+LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"       # "Meeting ID. 123 456"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
+_ALONE_ITEM = rf"(?:\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"                                  # a separator, "is" or "are"
+_ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
+LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?\s*$"
+                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS})(?![\w-]){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
@@ -110,9 +180,16 @@ def _bad_url(url):
     return bool(HOSTS.search(url) or KEYED.search(url) or JOINPATH.search(url))
 
 
+def _ellipsis(m):
+    """A run of sentence-end marks read as one ellipsis, except a run of commas alone (a dial-in pause: ",,")."""
+    return m.group() if set(m.group().replace(" ", "").replace("\t", "").replace("\n", "")) == {","} else "\u2026"
+
+
 def _views(text):
     """The skeleton, and the same with look-alike letters (a Cyrillic "а" for an "a") read as the Latin ones."""
     s = skeleton(str(text if text is not None else "")[:LINE_MAX + 200])       # every test runs on a bounded text (timing)
+    s = _SPACED.sub("PIN", s)
+    s = _SE_RUN.sub(_ellipsis, s)
     t = s.translate(confusables.TABLE)
     return [s, t] if t != s else [s]
 
@@ -188,7 +265,7 @@ def plain_text(body):
     """An invite body as text: HTML removed (inline tags without a gap, so "Pass<b>code</b>" is one word), entities decoded.
     Every pattern here is bounded (no tag is searched past 2000 characters), so a crafted body cannot stall it."""
     t = normal(str(body or "")[:RAW_MAX])
-    if re.search(r"<(html|body|div|p|br|span|table|a)\b", t, re.I):
+    if re.search(r"<(html|body|div|p|br|span|table|a|td|th|tr|li|ul|ol|h[1-6]|b|i|u|em|strong|font)\b", t, re.I):
         t = _strip_blocks(t)
         t = re.sub(r"(?i)<a\b([^<>]{0,2000})>", _anchor, t)
         t = re.sub(r"(?i)<br\s{0,20}/?>|</(p|div|li|tr|h\d)>", "\n", t)
@@ -228,22 +305,42 @@ def _alone(line):
     return any(LABEL_ALONE.search(s) for s in _views(_MARK.sub(" ", line)))
 
 
+def _views_of(ln):
+    return _views(_MARK.sub(" ", ln))
+
+
+WINDOW = 3                                  # lines (blank ones do not count) that go after a line that ends a label phrase
+
+
+def _label_line(ln, dropped):
+    """Whether this line ends a bare label phrase whose value may follow: a phrase that stops on a function word or a separator
+    (a removed line too), or (a line that is kept) a finished phrase such as "Password reset"."""
+    views = _views_of(ln)
+    return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_BARE_END.search(v) for v in views))
+
+
 def invite_text(body):
-    """An invite body as plain text: HTML removed, every line with a join link or a key to the meeting dropped, and the next
-    line with text (up to two blank lines on) after a label that stands alone; blank runs collapsed."""
+    """An invite body as plain text: HTML removed (also a bare table cell or list item), every line with a join link or a key to the
+    meeting dropped; the next line with text (any number of blank lines on) after a label that stands alone
+    (after k such labels in a row, the next k lines); and after a line that ends a
+    bare label phrase ("Password reset", "Password reset for", "Password reset -", also one that was itself removed) the next WINDOW
+    lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, waiting, blanks = [], False, 0
+    kept, window, pending = [], 0, 0                   # pending: labels that stand alone whose value has not been seen yet
     for ln, tail in _lines(t):
-        if waiting and not ln:
-            blanks += 1
-            waiting = blanks <= 2
-        elif waiting:
-            waiting = False                    # the value of a label that stood alone
+        if not ln:
+            kept.append(ln)                    # a blank line is transparent: any number, for a label alone as for a window
             continue
-        if ln and (_drop_line(ln) or (tail and _drop_line(tail + " " + ln))):
-            waiting, blanks = _alone(ln), 0
-            continue
-        kept.append(_MARK.sub("", ln))
+        dropped = _drop_line(ln) or bool(tail and _drop_line(tail + " " + ln))
+        label = _label_line(ln, dropped)
+        consumed = pending > 0 or window > 0 or dropped
+        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)
+        if dropped and _alone(ln):
+            pending += 1                       # "Meeting ID:" then "Passcode:": a label never uses up another's value
+        elif pending:
+            pending -= 1
+        if not consumed:
+            kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
 
 
@@ -298,3 +395,13 @@ def clean_row(row):
         files, people = _clean_names(row)
         out.update({k: v for k, v in (("body", body), ("attachments", files), ("attendees", people)) if v})
     return out
+
+
+def clean_calendar(cal):
+    """A saved calendar (calendar.json as loaded) with every meeting put through clean_row, so a reader never sees what an earlier
+    version kept (2.6.8). A cleaned row cleans to itself; anything that is not a day of meetings is returned as it is."""
+    days = cal.get("days") if isinstance(cal, dict) else None
+    if isinstance(days, dict):
+        cal = {**cal, "days": {d: ([clean_row(r) if isinstance(r, dict) else r for r in rows] if isinstance(rows, list) else rows)
+                              for d, rows in days.items()}}
+    return cal

@@ -195,6 +195,15 @@ def reminders(t):
     return build_dashboard.reminders(paths.load_settings(), projects, files, t.date(), t)
 
 
+def rescrub_calendar_safely():
+    """2.6.8: a calendar saved by an earlier version, cleaned again. Session start never stops for it: a failure is one debug line
+    (the kind of error, no text) and the start goes on."""
+    try:
+        sweep.rescrub_calendar()
+    except Exception as e:  # noqa: BLE001
+        sweep.debuglog.warn("session", f"calendar clean-up failed: {type(e).__name__}")       # the log's helper never raises
+
+
 def start(as_json=False, force=False):
     """The session-start rule in one call: daily backup, whether the sweep is due, reminders and the status line,
     printed or as JSON. Skipped in the development repository unless `force`.
@@ -203,6 +212,7 @@ def start(as_json=False, force=False):
         print("Development repo (.creaite-dev): session-start rules skipped.")
         return 0
     t = sweep.now()
+    rescrub_calendar_safely()
     notes = []                                           # BL-323: the zip, OneDrive copy, Tidy up and restore check lines
     out = {"backup": backup_today(t, notes.append), "backup_notes": notes, "archive": archive_today(), "sweep": sweep.due_info(),
            "reminders": reminders(t), "status": status(),
