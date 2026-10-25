@@ -1,0 +1,14 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e6..5e474103 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2323,7 +2323,8 @@ PANEL_SWEEP_WORDS = re.compile(
+ # capitals or holds a digit; a short lower-case one (abc) is accepted unless it is a common word; anything else is a plain chat.
+ PANEL_SWEEP_FOR = re.compile(r"\bfor ([a-z][a-z0-9]{2,6})\b", re.I)
+ PANEL_SWEEP_COMMON = frozenset({"the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"})
+-PANEL_SWEEP_NOT = re.compile(r"\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\b", re.I)
++# #347: "save" is a second instruction too (Alan's plain word for apply); a thread subject may not carry it
++PANEL_SWEEP_NOT = re.compile(r"\b(?:and|then|also|plus|apply|save|approve|reject|undo|stage|confirm|delete|send|close)\b", re.I)
+ 
+ 
+ def panel_sweep_code_ok(code):

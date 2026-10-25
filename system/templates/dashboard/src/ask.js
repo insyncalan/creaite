@@ -22,7 +22,7 @@ import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, now
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
-import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsAsk, mcIsRun, mcLine, mcNew, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
+import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsAsk, mcIsRun, mcLine, mcNew, mcNormalise, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { previewInbox } from "./core/intakeApi.js";
@@ -603,8 +603,10 @@ export function setRunning(on){ irAsk.value=!!on||!!shared.BUSY; const b=$("#chS
 export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; const res=await api("/api/ask/stop",{run:shared.RUN.id});
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
+/* #339 A: a typed "refresh calendar" is the small calendar run (the server decides from the same words): drawn as a run creaite started, its steps and closure only */
+export const typedCalendar=(q,confirmed)=>!confirmed&&!SENDIMG.length&&/^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(mcNormalise(q));   /* #339 LOW: the server's whitespace rule, not JavaScript's (U+FEFF is not whitespace) */
 export let askLive = async function(q,confirmed){ const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
-  try{ await askStream("/api/ask",{message:q,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed,run:id,images:SENDIMG.length?SENDIMG:undefined,continue:$("#chCont").checked||undefined},confirmed,ctl); } finally{ shared.RUN=null; setRunning(false); } };
+  try{ await askStream("/api/ask",{message:q,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed,run:id,images:SENDIMG.length?SENDIMG:undefined,continue:$("#chCont").checked||undefined},confirmed,ctl,undefined,typedCalendar(q,confirmed)?"guess":undefined); } finally{ shared.RUN=null; setRunning(false); } };
 /* BL-37: runs belong to the live server. Closing the panel or the page doesn't stop one; on load the page reattaches
    (steps so far replayed, then live), the ask creaite button shows it's working, and a note says when it's done. */
 export async function attachRun(run){ if(run&&run.kind==="search") return reattachSearch(run);   /* BL-07: a search answer */ if(shared.RUN||!run) return;   /* BL-326: a run creaite started (a draft, a Prep page, a check or load) is drawn plainly: its ask, steps and closure */ const ctl=new AbortController(); shared.RUN={id:run.id,ctl,attached:true}; setRunning(!run.done);
@@ -790,16 +792,17 @@ export function runClosure(c){ const href=/^#[\w=%.|:&-]*$/.test(String(c.href||
 /* #334: from 80% of the week's AI budget a plain line after a run (the figures come from GET /api/usage: counts and dates only). */
 async function budgetNote(){ try{ const res=await fetch("/api/usage",{headers:{"X-Creaite-Token":D.token||""}}); const r=res.ok?await res.json():null, b=r&&r.budget; if(!b||!b.enabled||(b.state!=="warn"&&b.state!=="over")) return;
   addEl("msg a info",html`${b.state==="over"?"Over this week's AI budget: ":"Heads-up: "}${b.line}`); }catch(e){ /* the note is a courtesy */ } }
-export async function askStream(url,body,confirmed,ctl,ended,plain,opts){ let res, outcome="done"; const live=!ended; shared.MCEND="";   /* #358: opts {skip, started} is a mail check reattached */ const startIso=nowIso(); let mc=opts?{s:mcNew(),started:opts.started||startIso,pl:""}:null, timedOut=false, doneAt="";
+export async function askStream(url,body,confirmed,ctl,ended,plain,opts){ let res, outcome="done"; const asked=plain; let guessing=plain==="guess"; if(guessing) plain=true;   /* #339 A: a typed "refresh calendar" is drawn as a plain run only if the server starts the calendar run: the first step says (the mail check's marker means the server ran it as a sweep) */ const live=!ended; shared.MCEND="";   /* #358: opts {skip, started} is a mail check reattached */ const startIso=nowIso(); let mc=opts?{s:mcNew(),started:opts.started||startIso,pl:""}:null, timedOut=false, doneAt="";
   const mcFinish=async o=>{ if(!mc) return; const m=mc; mc=null; $("#mcLive").textContent=""; let found=null;   /* #358: Found N is read from the check's own files after a forced reload, never kept in memory */
     try{ if(SERVED){ await reloadData(); found=mcFound(REV,m.started,doneAt||nowIso()); } }catch(e){}
     const line=mcEnd(o,m.s,found); addEl("msg a runend",line); shared.MCEND=line; }; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
   try{ res=await fetch(url,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token,"X-Creaite-Seq":"1"},body:JSON.stringify(body)}); }   /* BL-262: numbered events */
   catch(e){ askWorking(false); if(e.name==="AbortError"){ if(mc) await mcFinish("stopped"); rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("creaite stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
-  if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
+  if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say(j.message&&!j.run?j.message:"ask creaite is still working on the last request. Stop it, or wait until it finishes.");   /* #339 A: a sweep running reads as its own sentence */ if(j.run&&!shared.RUN) attachRun(j.run); return; }
   if(res.status===429){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({}));   /* #334: this week's AI budget is used up */
-    const b=j.budget||{}; if(b.can_continue&&await confirmCard("Weekly AI budget",html`${oneLine(j.message||"")}`,"Run anyway")) return askStream(url,{...body,over_budget:true},confirmed,ctl,ended,plain);
+    const b=j.budget||{}; if(b.can_continue&&await confirmCard("Weekly AI budget",html`${oneLine(j.message||"")}`,"Run anyway")) return askStream(url,{...body,over_budget:true},confirmed,ctl,ended,asked);
     await say(oneLine(j.message||"This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/,"")); return; }   /* declined: the question was just asked on the card, don't ask it again */
+  if(plain&&res.status===400){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say(oneLine(j.message||"The calendar can't be refreshed now.")); return; }   /* #339 A: the precheck's own reason */
   if(!res.ok||!res.body){ askWorking(false); rbEnd("failed"); await say("ask creaite couldn't start: check creaite window."); retryOffer("failed",body); return; }
   const work=()=>{ const d=live?working():document.createElement("div"); if(mc&&live){ const q=d.querySelector(".quip"); if(q){ q.className="mcline"; q.textContent=mcLine(mc.s); } } return d; };   /* BL-262; #358: a mail check shows the true line in place of the quip */ let next=null;
   const rd=res.body.getReader(), dec=new TextDecoder(), t0=performance.now(); let buf="", conf=null, perm=null, chg=null, ecard=null, fcard=null, prep=null, runId=body.run, replies=[], grp=null, spin=work();
@@ -807,6 +810,7 @@ export async function askStream(url,body,confirmed,ctl,ended,plain,opts){ let re
     while((i=buf.indexOf("\n\n"))>=0){ const chunk=buf.slice(0,i); buf=buf.slice(i+2); if(!chunk.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(chunk.slice(6)); }catch(e){ continue; }
       if(ev.seq&&runId&&!(opts&&ev.seq<=opts.skip)) shared.SHOWN={run:runId,seq:ev.seq};   /* BL-262: the last event drawn */
       if(opts&&opts.skip&&ev.seq&&ev.seq<=opts.skip&&ev.type!=="step") continue;   /* #358: already drawn from the saved chat */
+      if(guessing&&ev.type==="step"){ guessing=false; if(ev.label===MC_MARKER) plain=false; }   /* #339 A: the first step settles the guess */
       if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
       if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
       else if(ev.type==="step"){

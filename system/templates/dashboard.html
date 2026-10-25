@@ -4402,6 +4402,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 :is(.pk-ask,.mv-explain.warn,.evidence.warn,.msg.a.cant)::before{background:var(--warn);-webkit-mask-image:var(--ic-alert);mask-image:var(--ic-alert)}
 :is(.curtext blockquote,.rted blockquote,:is(.msg.md,.mdv) blockquote,.evsent,.rfsrc,#v-intake-review .icq)::before{top:5px;background:var(--muted);-webkit-mask-image:var(--ic-quote);mask-image:var(--ic-quote)}
 /* ===== end NEW (#341 item 1) ===== */
+/* #328 Intake: how sure the project match is. Icon + word + colour, never colour alone; tokens only. */
+#v-intake-review .mchip{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:2px 0}
+#v-intake-review .mlv{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);font-weight:500;padding:1px 8px;border-radius:var(--r-sm);border:1px solid var(--line)}
+#v-intake-review .mlv .i{width:14px;height:14px}
+#v-intake-review .mlv[data-irmatch="matched"]{color:var(--ok);background:var(--ok-soft)}
+#v-intake-review .mlv[data-irmatch="likely"]{color:var(--accent);background:var(--accent-soft)}
+#v-intake-review .mlv[data-irmatch="unsure"]{color:var(--warn);background:var(--warn-soft)}
+#v-intake-review .mcands{display:inline-flex;flex-wrap:wrap;gap:4px 10px}
+#v-intake-review .moffer{flex-basis:100%;font-size:var(--fs-xs);color:var(--muted)}
 
 /* #341 (People fit): under 1100 px the column headings are set a little tighter (.04em, not .08em) so the table keeps spare width on a wide
    fallback font (the "Risks and issues" heading is a word wider than the old "RAID"). */
@@ -6141,12 +6150,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irCheck: () => irCheck,
     irChecking: () => irChecking,
     irChooseKind: () => irChooseKind,
+    irChooseProject: () => irChooseProject,
     irClearTicks: () => irClearTicks,
     irClickFold: () => irClickFold,
     irClickMeeting: () => irClickMeeting,
     irClickStage: () => irClickStage,
     irCounts: () => irCounts,
     irCur: () => irCur,
+    irDismissOffer: () => irDismissOffer,
     irDone: () => irDone,
     irDropOn: () => irDropOn,
     irEsc: () => irEsc,
@@ -6172,6 +6183,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irKindOf: () => irKindOf,
     irLater: () => irLater,
     irLeadWithWork: () => irLeadWithWork,
+    irLearnOffer: () => irLearnOffer,
     irLeaveOut: () => irLeaveOut,
     irLeftOut: () => irLeftOut,
     irLive: () => irLive,
@@ -6185,10 +6197,12 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
     irNameOk: () => irNameOk,
+    irNeedsProject: () => irNeedsProject,
     irNextJob: () => irNextJob,
     irNotNeeded: () => irNotNeeded,
     irNote: () => irNote,
     irNotes: () => irNotes,
+    irOffer: () => irOffer,
     irOpen: () => irOpen,
     irOpenFolder: () => irOpenFolder,
     irOpenPeek: () => irOpenPeek,
@@ -6226,6 +6240,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetStateFilter: () => irSetStateFilter,
     irSetTick: () => irSetTick,
     irSetView: () => irSetView,
+    irSkipped: () => irSkipped,
+    irSkippedWords: () => irSkippedWords,
     irSplitTail: () => irSplitTail,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
@@ -7358,6 +7374,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     txReady: () => txReady,
     typeFiling: () => typeFiling,
     typeWord: () => typeWord,
+    typedCalendar: () => typedCalendar,
     typedLinkUrl: () => typedLinkUrl,
     typing: () => typing,
     undCommit: () => undCommit,
@@ -64176,7 +64193,7 @@ ${d5.text}`);
     const el2 = $("#pkSave");
     if (!el2) return;
     el2.classList.toggle("fail", state === "fail");
-    putHTML(el2, state === "busy" ? msg || "Saving…" : state === "fail" ? msg || "Not saved" : state === "ok" ? html`${raw(ic("check"))}${msg || "Saved for Review"}` : "");
+    putHTML(el2, state === "busy" ? msg || "Saving…" : state === "fail" ? msg || "Not saved" : state === "ok" ? html`${raw(ic("check"))}${msg || "Waiting to be saved"}` : "");
   }
   function pkStageDraw() {
     const st2 = $("#pkStage"), n4 = shared.PKS.length, m5 = new Set(shared.PKS.map((s5) => s5.id)).size;
@@ -64198,7 +64215,7 @@ ${d5.text}`);
     }
     const s5 = pkStagedOf(pkCid()), d5 = shared.PKDONE.filter((e4) => e4.id === pkCid());
     putHTML(el2, html`${raw(ic("history"))}<span>${s5.length ? html`You edited this ${s5[s5.length - 1].at.slice(11) === nowStamp().slice(11) ? "just now" : raw("at " + s5[s5.length - 1].at.slice(11))} · ${s5.length} change${s5.length === 1 ? "" : "s"} waiting to be saved` : d5.length ? html`Last saved ${fd(d5[d5.length - 1].at)}` : x5.upd_at ? html`Last updated ${fd(x5.upd_at)}` : ""}</span>`);
-    pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Saved for Review" : d5.length ? "Saved" : "");
+    pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Waiting to be saved" : d5.length ? "Saved" : "");
   }
   function markStagedRows() {
     const ids = /* @__PURE__ */ new Set([...shared.PKS.map((s5) => s5.id), ...(shared.PENDING || []).flatMap((p6) => p6.ids || [])]), sv = savingIds();
@@ -64902,7 +64919,7 @@ ${d5.text}`);
     const st2 = !!shared.CUR.staged, w6 = pkNewWord(k5);
     let el2 = $("#pkLast");
     if (el2) putHTML(el2, html`${raw(ic("history"))}<span>${st2 ? html`Waiting to be saved · created when you save` : shared.CUR.alert ? html`Not saved yet · Save (${MOD}↵) saves it for Review and dismisses the message` : html`Not saved yet · it is saved once it has a title and a project`}</span>`);
-    pkSaving(st2 ? "ok" : "", st2 ? "Saved for Review" : "");
+    pkSaving(st2 ? "ok" : "", st2 ? "Waiting to be saved" : "");
     putHTML($("#pkFeed"), st2 ? html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w6}<span class="pk-pill st">waiting</span></div></div>` : html`<div class="sub">Nothing here yet.</div>`);
     pkNewMarkDraw();
   }
@@ -71940,11 +71957,17 @@ ${d5.text}`);
   var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
   var DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
   var FIG_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  function saidInWords(low, d5, word, year) {
+    if (!word) return false;
+    const day = `0?${d5}(?:st|nd|rd|th)?`, yr2 = `(?:,?\\s*(\\d{4})\\b)?`;
+    const re2 = [new RegExp(`\\b${day}\\s+(?:of\\s+)?${word}\\b${yr2}`, "g"), new RegExp(`\\b${word}\\s+${day}\\b${yr2}`, "g")];
+    for (const r4 of re2) for (const m5 of low.matchAll(r4)) if (!m5[1] || m5[1] === year) return true;
+    return false;
+  }
   function figuresMissing(text, said2) {
     const low = String(said2 || "").toLowerCase(), out = /* @__PURE__ */ new Set();
-    const rest = String(text || "").replace(DATE_FIG, (all, d5, m5) => {
-      const word = FIG_MONTHS[+m5 - 1] || "", day = new RegExp(`\\b0?${+d5}(?:st|nd|rd|th)?\\b`);
-      if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
+    const rest = String(text || "").replace(DATE_FIG, (all, d5, m5, y5) => {
+      if (!low.includes(all) && !saidInWords(low, +d5, FIG_MONTHS[+m5 - 1] || "", y5)) out.add(all);
       return " ";
     });
     for (const f5 of new Set(rest.match(FIGURE) || [])) if (!said2.includes(f5)) out.add(f5);
@@ -74054,7 +74077,7 @@ ${d5.text}`);
   }
   var MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|sweep(?: mail)? the last \\p{Nd}{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\p{Nd}{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
   var MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
-  var MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
+  var MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|save|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
   var MC_SWEEP_FOR = "(?<![\\p{L}\\p{N}_])for ([a-z][a-z0-9]{2,6})(?![\\p{L}\\p{N}_])";
   var MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
   var SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "iu"), NOT_RE = new RegExp(MC_SWEEP_NOT, "iu"), FOR_RE = new RegExp(MC_SWEEP_FOR, "igu");
@@ -74063,6 +74086,7 @@ ${d5.text}`);
     const c5 = ch2.codePointAt(0) ?? 0;
     return MC_SPACE_CODES.has(c5) || c5 >= 8192 && c5 <= 8202;
   };
+  var mcNormalise = (text) => mcSplitSpaces(text || "").join(" ");
   var mcSplitSpaces = (text) => {
     const out = [];
     let cur = "";
@@ -76137,12 +76161,13 @@ ${d5.text}`);
     }
     if (!res.ok && shared.RUN && shared.RUN.ctl) shared.RUN.ctl.abort();
   }
+  var typedCalendar = (q5, confirmed) => !confirmed && !SENDIMG.length && /^(please )?refresh (the |my )?calendar( now)?( please)?[.!]?$/i.test(mcNormalise(q5));
   var askLive = async function(q5, confirmed) {
     const id2 = `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, ctl = new AbortController();
     shared.RUN = { id: id2, ctl };
     setRunning(true);
     try {
-      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl);
+      await askStream("/api/ask", { message: q5, session: shared.ASKSESSION, chat: shared.ASKCHAT, confirmed, run: id2, images: SENDIMG.length ? SENDIMG : void 0, continue: $("#chCont").checked || void 0 }, confirmed, ctl, void 0, typedCalendar(q5, confirmed) ? "guess" : void 0);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -76685,6 +76710,9 @@ ${d5.text}`);
   }
   async function askStream(url, body2, confirmed, ctl, ended, plain, opts) {
     let res, outcome = "done";
+    const asked2 = plain;
+    let guessing = plain === "guess";
+    if (guessing) plain = true;
     const live = !ended;
     shared.MCEND = "";
     const startIso = nowIso();
@@ -76729,7 +76757,7 @@ ${d5.text}`);
       askWorking(false);
       rbCancel();
       const j5 = await res.json().catch(() => ({}));
-      await say("ask creaite is still working on the last request. Stop it, or wait until it finishes.");
+      await say(j5.message && !j5.run ? j5.message : "ask creaite is still working on the last request. Stop it, or wait until it finishes.");
       if (j5.run && !shared.RUN) attachRun(j5.run);
       return;
     }
@@ -76738,8 +76766,15 @@ ${d5.text}`);
       rbCancel();
       const j5 = await res.json().catch(() => ({}));
       const b5 = j5.budget || {};
-      if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, plain);
+      if (b5.can_continue && await confirmCard("Weekly AI budget", html`${oneLine(j5.message || "")}`, "Run anyway")) return askStream(url, { ...body2, over_budget: true }, confirmed, ctl, ended, asked2);
       await say(oneLine(j5.message || "This week's AI budget is used up.").replace(/\s*Run this request anyway\?\s*$/, ""));
+      return;
+    }
+    if (plain && res.status === 400) {
+      askWorking(false);
+      rbCancel();
+      const j5 = await res.json().catch(() => ({}));
+      await say(oneLine(j5.message || "The calendar can't be refreshed now."));
       return;
     }
     if (!res.ok || !res.body) {
@@ -76793,6 +76828,10 @@ ${d5.text}`);
         }
         if (ev.seq && runId2 && !(opts && ev.seq <= opts.skip)) shared.SHOWN = { run: runId2, seq: ev.seq };
         if (opts && opts.skip && ev.seq && ev.seq <= opts.skip && ev.type !== "step") continue;
+        if (guessing && ev.type === "step") {
+          guessing = false;
+          if (ev.label === MC_MARKER) plain = false;
+        }
         if (plain && !PLAINEV.includes(ev.type)) {
           if (ev.type === "stopped") outcome = "stopped";
           else if (ev.type === "error") outcome = "failed";
@@ -78027,7 +78066,10 @@ ${d5.text}`);
   var irLeaveOut = (m5) => m5.private || m5.confidential ? "private" : irBadName(m5) ? "name" : irUnsure(m5, irFileKinds.value) ? "type" : "";
   var IR_LEFT_WHY = "private, confidential, not sure what it is or name not allowed";
   var irBadName = (m5) => !!m5 && m5.src === "upload" && !irNameOk(m5.path || m5.title);
-  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && !irBusy.value.includes(m5.id));
+  var irNeedsProject = (m5) => !!m5 && m5.src === "calendar" && !m5.private && !m5.confidential && m5.p !== "_portfolio" && m5.level !== "matched";
+  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && !irNeedsProject(m5) && !irBusy.value.includes(m5.id));
+  var irSkipped = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && irNeedsProject(m5) && !irBusy.value.includes(m5.id));
+  var irSkippedWords = (held) => !held.length ? "" : `Skipped ${held.length === 1 ? "1 meeting" : `${held.length} meetings`} until you pick a project: ${held.slice(0, 3).map((m5) => m5.title).join(", ")}${held.length > 3 ? ` and ${held.length - 3} more` : ""}`;
   var irLeftOut = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !!irLeaveOut(m5) && !irBusy.value.includes(m5.id));
   var irProcessWord = (m5) => m5.src !== "upload" ? "Process" : irFileKind(m5) === "transcript" ? "Make minutes" : irFileKind(m5) === "minutes" ? "Find work items" : "Process";
   function irChooseKind(m5, kind) {
@@ -78156,7 +78198,7 @@ ${d5.text}`);
       snack(BUSY);
       return;
     }
-    const ids = irReady().map((m5) => m5.id), left = irLeftOut().length;
+    const ids = irReady().map((m5) => m5.id), left = irLeftOut().length, held = irSkippedWords(irSkipped());
     irStopped = false;
     let ran = 0;
     for (const id2 of ids) {
@@ -78172,7 +78214,7 @@ ${d5.text}`);
       irStopped = false;
       return;
     }
-    if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
+    if (left || held) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${held ? `${held}. ` : ""}${left ? `${left} left out: ${IR_LEFT_WHY}` : ""}`.trim());
   }
   var asideItem = (m5, extra) => ({ key: m5.key || m5.path, day: m5.src === "upload" ? TODAY : m5.day, start: m5.start || "", title: m5.title, ...extra });
   async function setAside(ms2, extra, what, after = "") {
@@ -78397,6 +78439,52 @@ ${d5.text}`);
     document.body.appendChild(el2);
     el2.click();
   }
+  var irOffer = y3(
+    /** @type {{id: string, code: string, kind: string, value: string} | null} */
+    null
+  );
+  var OFFER_ASKED = "creaite-ir-offers";
+  var offerAsked = () => {
+    try {
+      return JSON.parse(localStorage.getItem(OFFER_ASKED) || "[]");
+    } catch (x5) {
+      return [];
+    }
+  };
+  var offerMark = (k5) => {
+    try {
+      localStorage.setItem(OFFER_ASKED, JSON.stringify([...offerAsked(), k5].slice(-200)));
+    } catch (x5) {
+    }
+  };
+  async function irChooseProject(m5, code) {
+    if (!m5 || !code || !m5.series) return false;
+    if (!viaServer()) {
+      snack(needsConnection("Choosing a project"));
+      return false;
+    }
+    const map = { ...(D.prep || {}).series || {}, [m5.series]: code };
+    const kept = await writeSettings({ "prep.series": map });
+    if (!kept) return false;
+    D.prep.series = map;
+    const o5 = m5.offer;
+    irOffer.value = o5 && !offerAsked().includes(`${code}|${o5.kind}|${o5.value}`) ? { id: m5.id, code, kind: o5.kind, value: o5.value } : null;
+    await reloadData();
+    return true;
+  }
+  async function irLearnOffer() {
+    const o5 = irOffer.value;
+    if (!o5) return;
+    offerMark(`${o5.code}|${o5.kind}|${o5.value}`);
+    irOffer.value = null;
+    const res = await api("/api/learn", { code: o5.code, kind: o5.kind, value: o5.value });
+    snack(res.ok ? `Remembered for ${pName(o5.code)} once saved` : oneLine(res.message) || "Not remembered");
+  }
+  function irDismissOffer() {
+    const o5 = irOffer.value;
+    if (o5) offerMark(`${o5.code}|${o5.kind}|${o5.value}`);
+    irOffer.value = null;
+  }
 
   // components/intakeReview/icons.js
   var IR_ICONS = {
@@ -78413,6 +78501,12 @@ ${d5.text}`);
     /* the refresh's Stop while it runs (core/dom.js's stop) */
     refresh: [["path", { d: "M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" }]],
     /* a row's kind: a calendar meeting or a file */
+    mTick: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M8 12.5l3 3 5-6" }]],
+    /* #328 chip: Matched */
+    mTilde: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M7.5 13c1.5-3 3-3 4.5-1s3 2 4.5-1" }]],
+    /* Likely */
+    mAsk: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 16.8v.4" }]],
+    /* Not sure */
     meeting: [["rect", { x: "4", y: "5", width: "16", height: "15", rx: "2" }], ["path", { d: "M4 10h16M9 3v4M15 3v4" }]],
     file: [["path", { d: "M6 3h8l4 4v14H6z" }], ["path", { d: "M14 3v4h4" }]],
     /* the kinds of proposal (the mockup's KI), for the proposal rows */
@@ -78651,6 +78745,49 @@ ${d5.text}`);
       waiting ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
     ] });
   }
+  function MatchChip({ m: m5 }) {
+    if (m5.src === "upload" || m5.private || m5.confidential || !m5.level || m5.p === "_portfolio") return null;
+    const lv = m5.level, word = lv === "matched" ? "Matched" : lv === "likely" ? "Likely" : "Not sure";
+    const ic3 = lv === "matched" ? "mTick" : lv === "likely" ? "mTilde" : "mAsk";
+    const o5 = irOffer.value && irOffer.value.id === m5.id ? irOffer.value : null;
+    return /* @__PURE__ */ u4("div", { class: "mchip", "data-mlevel": lv, children: [
+      /* @__PURE__ */ u4("span", { class: "mlv", "data-irmatch": lv, children: [
+        /* @__PURE__ */ u4(IrIcon, { name: ic3 }),
+        " ",
+        word
+      ] }),
+      /* @__PURE__ */ u4("span", { class: "why", children: [
+        " ",
+        m5.reason
+      ] }),
+      lv === "unsure" && m5.cands && m5.cands.length ? /* @__PURE__ */ u4("span", { class: "mcands", children: [
+        m5.cands.map((c5) => /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "linkbtn",
+            "data-ircand": c5,
+            "data-tip": `Use ${pName(c5)} for every meeting with this title`,
+            onClick: () => irChooseProject(m5, c5),
+            children: pName(c5)
+          },
+          c5
+        )),
+        /* @__PURE__ */ u4("span", { class: "why", "data-ircandnote": "1", children: "Your pick is kept for every meeting with this title." })
+      ] }) : null,
+      o5 ? /* @__PURE__ */ u4("div", { class: "moffer", "data-iroffer": "1", children: [
+        "Remember ",
+        /* @__PURE__ */ u4("b", { children: o5.value }),
+        " for ",
+        pName(o5.code),
+        "?",
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-irofferyes": "1", onClick: () => irLearnOffer(), children: "Remember" }),
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-irofferno": "1", onClick: () => irDismissOffer(), children: "No" })
+      ] }) : null
+    ] });
+  }
   var laterWords = (m5) => m5.state === "waiting" ? "Hide it until its transcript arrives" : "Hide it; it stays in Later until you restore it";
   function RowActions({ m: m5, mini }) {
     const running = irBusy.value.includes(m5.id), blocked2 = irBlocked(), checking = irChecking.value.includes(m5.id);
@@ -78760,6 +78897,7 @@ ${d5.text}`);
                 m5.start ? ` ${m5.start}${m5.end ? `–${m5.end}` : ""}` : "",
                 m5.p && !m5.private && !m5.confidential ? ` · ${pName(m5.p)}` : ""
               ] }),
+              /* @__PURE__ */ u4(MatchChip, { m: m5 }),
               /* @__PURE__ */ u4(IrStateLine, { m: m5, n: n4 })
             ] }),
             state === "running" ? /* @__PURE__ */ u4(S2, { children: [
@@ -79315,6 +79453,7 @@ ${d5.text}`);
           ] }),
           m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
             /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
+            /* @__PURE__ */ u4(MatchChip, { m: m5 }),
             /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
           ] }),
           irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
@@ -79415,7 +79554,10 @@ ${d5.text}`);
             sel.src !== "upload" && sel.p && !hidden(sel) ? ` · ${pName(sel.p)}` : ""
           ] }),
           /* @__PURE__ */ u4("div", { class: "icrack", children: /* @__PURE__ */ u4(StageTrack, { m: sel }) }),
-          sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: liveN(sel) }) : /* @__PURE__ */ u4(IrStateLine, { m: sel, n: liveN(sel) }),
+          sel.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: sel, n: liveN(sel) }) : /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4(MatchChip, { m: sel }),
+            /* @__PURE__ */ u4(IrStateLine, { m: sel, n: liveN(sel) })
+          ] }),
           sel.stage === "arrived" && sel.state === "waiting" ? /* @__PURE__ */ u4("div", { class: "empty", children: "Waiting for the transcript. It appears here when the meeting’s transcript arrives." }) : null,
           irBusy.value.includes(sel.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(sel) }) : null,
           /* @__PURE__ */ u4(IrNote, { m: sel }),
@@ -79737,6 +79879,10 @@ ${d5.text}`);
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "dismissaddfail", onClick: () => {
           irAddProblems.value = [];
         }, children: "Dismiss" })
+      ] }) : null,
+      irSkipped().length ? /* @__PURE__ */ u4("p", { class: "icsub irheld", "data-irheld": "1", children: [
+        irSkippedWords(irSkipped()),
+        "."
       ] }) : null,
       irLeftOut().length ? /* @__PURE__ */ u4("p", { class: "icsub irleft", "data-irleft": "1", children: [
         irLeftOut().length,
@@ -81831,6 +81977,7 @@ Next: `;
         "MRUN",
         "MTG",
         "MVCWORD",
+        "MatchChip",
         "Menu",
         "MenuPanel",
         "MinutesView",
@@ -82204,10 +82351,12 @@ Next: `;
         "irAskAbout",
         "irBulk",
         "irBusy",
+        "irCanProcess",
         "irCapGroups",
         "irChanged",
         "irChecking",
         "irChooseKind",
+        "irChooseProject",
         "irClearTicks",
         "irCounts",
         "irDone",
@@ -82239,6 +82388,7 @@ Next: `;
         "irModel",
         "irModelBehind",
         "irNameOk",
+        "irNeedsProject",
         "irNextJob",
         "irNotNeeded",
         "irNote",
@@ -82264,6 +82414,8 @@ Next: `;
         "irSetGroup",
         "irSetStateFilter",
         "irSetView",
+        "irSkipped",
+        "irSkippedWords",
         "irSplitTail",
         "irStage",
         "irStageClick",
@@ -82323,6 +82475,7 @@ Next: `;
         "mcIsRun",
         "mcLine",
         "mcNew",
+        "mcNormalise",
         "mcPlaces",
         "mcStep",
         "mcStepText",
@@ -82687,6 +82840,7 @@ Next: `;
         "tx",
         "txReady",
         "typeWord",
+        "typedCalendar",
         "typedLinkUrl",
         "typing",
         "undatedCard",

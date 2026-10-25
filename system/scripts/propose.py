@@ -473,6 +473,13 @@ def learn_check(code, kind, value):
         return {**out, "ok": False, "reason": f"unknown kind {kind!r}"}
     if domain and domain in own_domains():
         return {**out, "ok": False, "reason": f"{domain} is your own company's domain; it's never a project signal"}
+    if kind == "domain":                                 # #328 security review: one plain host name, never a public mail provider
+        import mail_domains
+        bare = value.lower().strip().lstrip("@")
+        if not mail_domains.valid_domain(bare):
+            return {**out, "ok": False, "reason": "a domain signal is one plain host name (letters, digits, dots and hyphens)"}
+        if mail_domains.is_public_mail(bare):
+            return {**out, "ok": False, "reason": f"{bare} is a public mail provider; it's never a project signal"}
     if code in owners:
         return {**out, "ok": False, "reason": f"already a signal for {code}"}
     if shared:

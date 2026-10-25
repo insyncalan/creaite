@@ -9,6 +9,7 @@ import { IconButton } from "../IconButton.jsx";
 import { IrIcon } from "./icons.js";
 import { IR_STATE_CHIP, irFixed, irMeetingState } from "../../core/irFold.js";
 import { irRowKey, irRowMenu } from "./selection.js";
+import { irChooseProject, irDismissOffer, irLearnOffer, irOffer } from "./actions.js";
 import { irAskAbout, irAskReason, irBadName, irCanCheck, irCanProcess, irCanStop, irStop, irCanSetAside, irChooseKind, irCheck, irFileKind, irLater, irProcess, irOpenFolder, irProcessWord, irRemoveFile } from "./actions.js";
 
 /** What the sweep found for a waiting meeting's transcript, in words (the model's tx). */
@@ -148,6 +149,27 @@ export function FileFacts({ m, n, compact }) {
   </>;
 }
 
+/** #328: how sure the match is, in words, an icon and a colour (never colour alone), the reason under it, and for a Not sure
+    meeting up to three project buttons. A Matched or Likely project name is a control too: it opens the same choice. Not shown for a
+    private or confidential meeting. @param {{m: any}} props */
+export function MatchChip({ m }) {
+  if (m.src === "upload" || m.private || m.confidential || !m.level || m.p === "_portfolio") return null;
+  const lv = m.level, word = lv === "matched" ? "Matched" : lv === "likely" ? "Likely" : "Not sure";
+  const ic = lv === "matched" ? "mTick" : lv === "likely" ? "mTilde" : "mAsk";
+  const o = irOffer.value && irOffer.value.id === m.id ? irOffer.value : null;
+  return <div class="mchip" data-mlevel={lv}>
+    <span class="mlv" data-irmatch={lv}><IrIcon name={ic} /> {word}</span>
+    <span class="why"> {m.reason}</span>
+    {lv === "unsure" && m.cands && m.cands.length ? <span class="mcands">{m.cands.map((/** @type {string} */ c) =>
+      <button type="button" class="linkbtn" key={c} data-ircand={c} data-tip={`Use ${pName(c)} for every meeting with this title`}
+        onClick={() => irChooseProject(m, c)}>{pName(c)}</button>)}
+      <span class="why" data-ircandnote="1">Your pick is kept for every meeting with this title.</span></span> : null}
+    {o ? <div class="moffer" data-iroffer="1">Remember <b>{o.value}</b> for {pName(o.code)}?{" "}
+      <button type="button" class="linkbtn" data-irofferyes="1" onClick={() => irLearnOffer()}>Remember</button>{" "}
+      <button type="button" class="linkbtn" data-irofferno="1" onClick={() => irDismissOffer()}>No</button></div> : null}
+  </div>;
+}
+
 /** The Later button's tooltip: a waiting meeting comes back by itself; a ready one or a file stays until it is restored. @param {any} m */
 export const laterWords = m => (m.state === "waiting" ? "Hide it until its transcript arrives" : "Hide it; it stays in Later until you restore it");
 
@@ -191,6 +213,7 @@ export function MeetingRow({ m, live }) {
         {m.stale ? <> <span class="tag stale">Stale · {ageWords(m.age)}</span></> : null}
         {m.src === "upload" ? <FileFacts m={m} n={n} compact /> : <>
           <div class="why">{m.day ? fd(m.day) : ""}{m.start ? ` ${m.start}${m.end ? `–${m.end}` : ""}` : ""}{m.p && !m.private && !m.confidential ? ` · ${pName(m.p)}` : ""}</div>
+          <MatchChip m={m} />
           <IrStateLine m={m} n={n} />
         </>}
         {state === "running" ? <><div class="why">ask creaite waits until this ends</div><Progress words={irRunningWords(m)} /></> : null}

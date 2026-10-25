@@ -39,6 +39,16 @@ class Figures(unittest.TestCase):
     def test_other_figures_are_still_checked(self):
         self.assertEqual(figures("Budget 45 by 20-11-2026", "40, the 20th of November"), ["45"])
 
+    def test_a_year_the_speaker_did_not_say_is_missing(self):
+        self.assertEqual(figures("Send the pack by 20-11-2027", "I'll send it by the 20th of November, 2026"), ["20-11-2027"])
+        self.assertEqual(figures("Send the pack by 20-11-2026", "by the 20th of November, 2026"), [])
+        self.assertEqual(figures("Send the pack by 20-11-2026", "by November 20 2026"), [])
+
+    def test_may_the_verb_is_not_the_month(self):
+        self.assertEqual(figures("Review on 05-05-2026", "we may need 5 testers"), ["05-05-2026"])
+        self.assertEqual(figures("Review on 05-05-2026", "on the 5th of May"), [])
+        self.assertEqual(figures("Review on 05-05-2026", "May 5th works"), [])
+
 
 class Turns(unittest.TestCase):
     def test_one_turn_is_singular(self):

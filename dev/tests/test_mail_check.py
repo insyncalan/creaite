@@ -162,7 +162,7 @@ class Classifier(unittest.TestCase):
                "refresh my calendar please", "sweep now", "sweep please.", "sweep and apply", "sweep then approve", "sweep for the", "sweep for me", "what did the sweep find",
                "hello", "", "  sweep   mail  ", "sweep the last 7 days and apply", "check my mail for abc", "check my mail for the last 7 days", "x" * 130,
                "sweep the last ٧ days", "check my mail the last ٣ days", "sweep for ABC for the last ١٠ days", "sweep the last ٧ days and apply", "sweep\x85mail",
-               "sweep\ufeff", "sweep the ésend thread", "ſweep", "sweep the " + "é" * 60 + " thread", "sweep the " + "😀" * 71 + " thread", "x" * 120]
+               "sweep\ufeff", "\ufeffsweep", "sweep\ufeffmail", "refresh\ufeffcalendar", "refresh calendar\ufeff", "sweep the ésend thread", "ſweep", "sweep the " + "é" * 60 + " thread", "sweep the " + "😀" * 71 + " thread", "x" * 120]
 
     def test_a_saved_chat_is_a_mail_check_by_the_servers_own_words(self):
         """The page's answer equals the server's panel_sweep for every phrasing (live_server imported only here, to compare)."""
@@ -177,6 +177,20 @@ class Classifier(unittest.TestCase):
             self.assertTrue(by[yes], yes)
         for no in ("sweep and apply", "sweep then approve", "what did the sweep find", "hello", ""):
             self.assertFalse(by[no], no)
+
+    NORM = ["refresh calendar", "  refresh \t calendar  ", "\ufeffrefresh calendar", "refresh\ufeffcalendar", "refresh calendar\ufeff", "refresh\u00a0calendar",
+            "refresh\u2003calendar", "refresh\x85calendar", "refresh\u200bcalendar", "refresh\u180ecalendar", "\u3000refresh calendar\u3000", ""]
+
+    def test_u_feff_is_not_whitespace_on_the_page_as_on_the_server(self):
+        """The case 'U+FEFF is not whitespace': the page's normalised ask equals Python's ' '.join(text.split()) (what panel_sweep reads),
+        and the typed-calendar test in ask.js uses it, not JavaScript's trim() and \\s (which treat U+FEFF as a space)."""
+        o = run_node(script="""const f = await import(%s); console.log(JSON.stringify(%s.map(f.mcNormalise)));""" % ("%s", json.dumps(self.NORM)))
+        self.assertEqual(o, [" ".join(x.split()) for x in self.NORM])
+        self.assertNotEqual(" ".join("refresh\ufeffcalendar".split()), "refresh calendar")      # the case itself: it stays one word
+        ask = (REPO / "system/templates/dashboard/src/ask.js").read_text(encoding="utf-8")
+        line = re.search(r"^export const typedCalendar=.*$", ask, re.M).group(0)
+        self.assertIn("mcNormalise(q)", line)
+        self.assertNotIn('replace(/\\s+/g," ")', line)
 
     def test_the_catch_ups_own_asks_count(self):
         o = run_node(script="""const f = await import(%s); console.log(JSON.stringify(f.MC_PLAIN_ASKS.map(f.mcIsAsk)));""")
@@ -486,11 +500,13 @@ class MailCheckBrowser(_Live):
         self.finish()
         self.assertEqual(b.eval("document.querySelectorAll('#chLog .msg.runend').length"), 0)
 
-    def test_refresh_calendar_ends_with_nothing_new(self):
+    def test_refresh_calendar_is_the_calendar_run(self):
         self.begin("refresh calendar")
         self.finish()
-        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
-        self.assertEqual(end, "Finished. Nothing new to review.")
+        # #339 A: the calendar run's plain closure, not a mail check's (the stand-in saves nothing)
+        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].map(e=>e.textContent)")
+        self.assertEqual(len(end), 1, end)
+        self.assertTrue(end[0].startswith("The calendar was not saved"), end)
 
     def test_the_badge_with_the_chat_closed_shows_places_only_and_fits(self):
         b = self.b

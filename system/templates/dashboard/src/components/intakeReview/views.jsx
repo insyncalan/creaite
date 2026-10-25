@@ -9,7 +9,7 @@ import { fd } from "../../core/page.js";
 import { irBusy, irClickFold, irClickMeeting, irDone, irFileKinds, irFolded, irGroup, irHeld, irLiveCounts, irMailAll, irOpen, irQuery, irSel, irStage, irStateFilter } from "../../stores/intakeReview.js";
 import { ProposalGroups } from "./proposals.jsx";
 import { irRowKey, irRowMenu } from "./selection.js";
-import { FileFacts, IrNote, IrTick, MeetingRow, Progress, RowActions, StageTrack, IrStateLine, irRunningWords, irWhen } from "./rows.jsx";
+import { FileFacts, MatchChip, IrNote, IrTick, MeetingRow, Progress, RowActions, StageTrack, IrStateLine, irRunningWords, irWhen } from "./rows.jsx";
 
 /** The Board's columns: the work first, Arrived last (#340). */
 const IR_BOARD = ["drafted", "approved", "arrived"];
@@ -86,6 +86,7 @@ function BoardCard({ m }) {
       <div class="t"><IrTick m={m} /> {m.title}</div>
       {m.src === "upload" ? <FileFacts m={m} n={liveN(m)} /> : <>
         <div class="why">{m.p && !m.private && !m.confidential ? pName(m.p) : ""}</div>
+        <MatchChip m={m} />
         <IrStateLine m={m} n={liveN(m)} />
       </>}
       {irBusy.value.includes(m.id) ? <Progress words={irRunningWords(m)} /> : null}
@@ -138,7 +139,7 @@ export function TwoPanes({ model, list }) {
           <h2 style={{ margin: "0 0 4px" }}>{sel.title}</h2>
           <div class="why">{irWhen(sel)}{sel.src !== "upload" && sel.p && !hidden(sel) ? ` · ${pName(sel.p)}` : ""}</div>
           <div class="icrack"><StageTrack m={sel} /></div>
-          {sel.src === "upload" ? <FileFacts m={sel} n={liveN(sel)} /> : <IrStateLine m={sel} n={liveN(sel)} />}
+          {sel.src === "upload" ? <FileFacts m={sel} n={liveN(sel)} /> : <><MatchChip m={sel} /><IrStateLine m={sel} n={liveN(sel)} /></>}
           {sel.stage === "arrived" && sel.state === "waiting" ? <div class="empty">Waiting for the transcript. It appears here when the meeting’s transcript arrives.</div> : null}
           {irBusy.value.includes(sel.id) ? <Progress words={irRunningWords(sel)} /> : null}
           <IrNote m={sel} />

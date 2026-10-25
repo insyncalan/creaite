@@ -111,6 +111,7 @@ class Routes(IntakeBase):
         b = self.b
         self.stub()
         b.eval("window.GATE=new Promise(r=>{ window.RELEASE=r; }); 0")
+        b.eval("D.intake_review={...D.intake_review, meetings: D.intake_review.meetings.map(m=>m.src==='calendar'?{...m,level:'matched'}:m)}; irTick.value++; 0")   # #328: only Matched meetings run in Process all ready
         n = b.eval("irReady().length")
         self.assertGreaterEqual(n, 2, "the fixture has two ready meetings")
         b.click("#v-intake-review [data-ira=processall]")

@@ -16,7 +16,7 @@ import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irNextJob, irEsc, irF
 import { D, days, fd, S, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irSetShown, irTickedShown, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
-import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
+import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irSkipped, irSkippedWords, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { irAsideMany } from "./actions.js";
 import { irMenuItems, irTargets } from "./selection.js";
@@ -215,6 +215,7 @@ function IntakeReviewView() {
         <ul style={{ margin: "4px 0 0", paddingLeft: "18px" }}>{irAddProblems.value.map(p => <li>{p}</li>)}</ul>
         <button type="button" class="linkbtn" data-ira="dismissaddfail" onClick={() => { irAddProblems.value = []; }}>Dismiss</button>
       </div> : null}
+      {irSkipped().length ? <p class="icsub irheld" data-irheld="1">{irSkippedWords(irSkipped())}.</p> : null}
       {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: {IR_LEFT_WHY}.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
       {/* #343: a section with nothing in it is not drawn (no "Later 0 Show") */}

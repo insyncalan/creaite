@@ -11,7 +11,8 @@
 import { openChat } from "../../ask.js";
 import { calendarLive, jobLive, mtgBusy, mtgCheckable, mtgProcessFile, mtgSkip, processLive, stopRun, TXWHY, UPLOAD_TYPES, uploadInboxFile } from "../../core/intakeApi.js";
 import { D, fd, fdText, TODAY } from "../../core/page.js";
-import { api, OLDSERVER, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
+import { api, OLDSERVER, oneLine, reloadData, snack, viaServer, writeSettings } from "../../core/server.js";
+import { signal } from "@preact/signals";
 import { addFailed, needsConnection, plainSay } from "../../core/say.js";
 import { shared } from "../../core/state.js";
 import { openFiled } from "../../stores/minutesFiling.js";
@@ -39,8 +40,17 @@ export const IR_LEFT_WHY = "private, confidential, not sure what it is or name n
 /** Whether a file's name cannot be sent to ask creaite (a control character, backtick, double quote or angle bracket): it must be
     renamed first, and Process and Process all ready skip it. @param {any} m */
 export const irBadName = m => !!m && m.src === "upload" && !irNameOk(m.path || m.title);
+/** #328 (Alan, Jarvis, 26-10-2026; fails closed after the security review): a calendar meeting whose project is not Matched (Likely, Not sure, or no
+    level at all) waits for Alan to pick it. Process all ready
+    skips it and lists it; Process on the row itself is the pick and still works. A private or confidential meeting is left out
+    by irLeaveOut (counts only), never named here. @param {any} m */
+export const irNeedsProject = m => !!m && m.src === "calendar" && !m.private && !m.confidential && m.p !== "_portfolio" && m.level !== "matched";
 /** The rows Process all ready would run. */
-export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irBusy.value.includes(m.id));
+export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irNeedsProject(m) && !irBusy.value.includes(m.id));
+/** The ready meetings Process all ready skips until a project is picked (titles are shown; never a project guess). */
+export const irSkipped = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && irNeedsProject(m) && !irBusy.value.includes(m.id));
+/** "Skipped 2 meetings until you pick a project: A, B" (at most three titles), or "". @param {any[]} held */
+export const irSkippedWords = held => !held.length ? "" : `Skipped ${held.length === 1 ? "1 meeting" : `${held.length} meetings`} until you pick a project: ${held.slice(0, 3).map(m => m.title).join(", ")}${held.length > 3 ? ` and ${held.length - 3} more` : ""}`;
 /** The ready rows it leaves out (counts only: a confidential meeting is never named). */
 export const irLeftOut = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !!irLeaveOut(m) && !irBusy.value.includes(m.id));
 /** What a row's main button says: a transcript file is made into minutes, a minutes file is checked for work items, a meeting is processed.
@@ -127,14 +137,14 @@ export function irAskAbout(m) {
 export async function irProcessAll() {
   if (!viaServer()) { snack(needsConnection("Processing")); return; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
-  const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length;
+  const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length, held = irSkippedWords(irSkipped());
   irStopped = false; let ran = 0;
   for (const id of ids) {
     if (irStopped) break;
     const m = rowOf(id); if (m) { await irProcess(m); ran++; }
   }
   if (irStopped) { snack(`Stopped: ${ids.length - ran} not started`); irStopped = false; return; }
-  if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);   /* counts only: a confidential meeting is never named */
+  if (left || held) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${held ? `${held}. ` : ""}${left ? `${left} left out: ${IR_LEFT_WHY}` : ""}`.trim());   /* counts only for a confidential meeting: never named */
 }
 
 /** The clear route's item for a row. @param {any} m @param {Record<string, any>} [extra] */
@@ -325,4 +335,44 @@ export function irPickFiles() {
   el.addEventListener("cancel", () => el.remove());
   document.body.appendChild(el);
   el.click();
+}
+
+
+/* #328: the project Alan picks for a meeting whose match was only Likely or Not sure (or whose Matched project he changes). The
+   choice is kept for the meeting's series (settings prep.series, as the Prep brief does); nothing is filed, loaded or read because
+   of it. Then, once, one concrete signal is offered for the register (irOffer), which propose.learn_check still checks. */
+export const irOffer = signal(/** @type {{id: string, code: string, kind: string, value: string} | null} */ (null));
+const OFFER_ASKED = "creaite-ir-offers";
+const offerAsked = () => { try { return JSON.parse(localStorage.getItem(OFFER_ASKED) || "[]"); } catch (x) { return []; } };
+const offerMark = (/** @type {string} */ k) => { try { localStorage.setItem(OFFER_ASKED, JSON.stringify([...offerAsked(), k].slice(-200))); } catch (x) { /* storage blocked: it may be asked again */ } };
+
+/** @param {any} m @param {string} code */
+export async function irChooseProject(m, code) {
+  if (!m || !code || !m.series) return false;
+  if (!viaServer()) { snack(needsConnection("Choosing a project")); return false; }
+  const map = { ...((D.prep || {}).series || {}), [m.series]: code };
+  const kept = await writeSettings({ "prep.series": map });
+  if (!kept) return false;
+  D.prep.series = map;
+  const o = m.offer;
+  irOffer.value = o && !offerAsked().includes(`${code}|${o.kind}|${o.value}`) ? { id: m.id, code, kind: o.kind, value: o.value } : null;
+  await reloadData();
+  return true;
+}
+
+/** Yes to the offer: remember the signal for the project (the existing, undoable learn route). */
+export async function irLearnOffer() {
+  const o = irOffer.value;
+  if (!o) return;
+  offerMark(`${o.code}|${o.kind}|${o.value}`);
+  irOffer.value = null;
+  const res = await api("/api/learn", { code: o.code, kind: o.kind, value: o.value });
+  snack(res.ok ? `Remembered for ${pName(o.code)} once saved` : oneLine(res.message) || "Not remembered");
+}
+
+/** No to the offer: not asked again for the same signal and project. */
+export function irDismissOffer() {
+  const o = irOffer.value;
+  if (o) offerMark(`${o.code}|${o.kind}|${o.value}`);
+  irOffer.value = null;
 }

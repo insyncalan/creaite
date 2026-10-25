@@ -173,6 +173,8 @@ def _project_of(d, m):
     series, how "remembered"); a guess (matched, likely) stays on the screen and is not chosen, so the page is the all-projects
     view and files in the portfolio folder until he picks the project."""
     code = m.get("p") or ""
+    if m.get("how") == "likely":                          # #328: a Likely guess is never a chosen project
+        return "_portfolio", False
     if (m.get("invite") or {}).get("confidential") and m.get("how") != "remembered":
         return "_portfolio", False
     chosen = code == "_portfolio" or any(p["code"] == code for p in d.get("projects") or []) if code else False

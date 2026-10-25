@@ -138,7 +138,7 @@ export function mcStepText(label) {
    fails if any of them differs. Used only to draw a saved chat, where the run record is gone. */
 export const MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|sweep(?: mail)? the last \\p{Nd}{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\p{Nd}{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
 export const MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
-export const MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
+export const MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|save|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
 export const MC_SWEEP_FOR = "(?<![\\p{L}\\p{N}_])for ([a-z][a-z0-9]{2,6})(?![\\p{L}\\p{N}_])";
 /** The asks creaite itself writes for a run it starts (live_server.PLAIN_ASK "sweep" and "calendar"). */
 export const MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
@@ -146,6 +146,8 @@ const SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "iu"), NOT_RE = new RegExp(
 /* Python's str.split() whitespace (no U+FEFF, which JavaScript's \s has), as code points: a regex class would need control characters */
 const MC_SPACE_CODES = new Set([9, 10, 11, 12, 13, 28, 29, 30, 31, 32, 0x85, 0xa0, 0x1680, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000]);
 const mcIsSpace = ch => { const c = ch.codePointAt(0) ?? 0; return MC_SPACE_CODES.has(c) || (c >= 0x2000 && c <= 0x200a); };
+/** The ask with the server's whitespace rule applied: split on Python's whitespace, joined by one space (U+FEFF is not whitespace). */
+export const mcNormalise = text => mcSplitSpaces(text || "").join(" ");
 const mcSplitSpaces = text => { const out = []; let cur = ""; for (const ch of String(text)) { if (mcIsSpace(ch)) { if (cur) out.push(cur); cur = ""; } else cur += ch; } if (cur) out.push(cur); return out; };
 const codeOk = code => code.toLowerCase() === "the" || code === code.toUpperCase() || /\d/.test(code) || (code.length <= 3 && !MC_SWEEP_COMMON.includes(code.toLowerCase()));
 

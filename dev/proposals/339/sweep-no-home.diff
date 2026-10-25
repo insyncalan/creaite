@@ -1,0 +1,17 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e..0f400c5 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2592,10 +2592,10 @@ def guard_args(run_id, mode, held, session, files=None, as_minutes=None):
+ 
+ def run_dirs(policy, guarded):
+     """A run's --add-dir folders: none for a tool-less run; the home folder too for a guarded chat or sweep (BL-141); the
+-    projects folder only otherwise (#264: a Process run too)."""
++    projects folder only otherwise (#264: a Process run too). #339 A: a sweep needs only the vault and the projects folder."""
+     if policy in TOOLLESS_KINDS or policy == "calendar":       # #265: the calendar refresh reads no project file
+         return []
+-    return reach_dirs() if guarded and policy not in ("process", "reextract") else extra_dirs()
++    return reach_dirs() if guarded and policy not in ("process", "reextract", "sweep") else extra_dirs()
+ 
+ 
+ def budget_gate(req):
