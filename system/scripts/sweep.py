@@ -779,7 +779,13 @@ def calendar_lock(wait=20.0):
     try:
         import fcntl
         CAL_LOCK.parent.mkdir(parents=True, exist_ok=True)
+        fresh = not CAL_LOCK.exists()
         fd = os.open(str(CAL_LOCK), os.O_RDWR | os.O_CREAT, 0o644)
+        if fresh:
+            try:                            # the lock holds nothing: a new one must not look like a newer input to the live page's cache
+                os.utime(str(CAL_LOCK), (0, 0))
+            except OSError:         # harmless: the page cache just rebuilds once
+                pass
         end = time.monotonic() + wait
         while True:
             try:
