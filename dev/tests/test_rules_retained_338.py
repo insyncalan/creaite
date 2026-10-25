@@ -37,7 +37,33 @@ SUBS_347 = [
     ('"reject…", "apply", "undo last apply", "import excel"',
      '"reject…", "save", "apply", "undo last save", "undo last apply", "import excel"'),
 ]
-STATE = {"347": False}         # whether the tree holds the 347 wording (set by setUpClass; fixture() reads it)
+# #339 (v2.6.7): dev/proposals/339/creaite-rules.diff inserts one sentence into the "What ask creaite may touch" bullet (the typed
+# "refresh calendar" run; a sweep reads no home folder). It adds a sentence and removes none. Handled like 347: stripped before the 338
+# state is worked out, put back on both sides, and checked against the real diff.
+RULES_339 = REPO / "dev/proposals/339/creaite-rules.diff"
+MARK_339 = 'a typed "refresh calendar" starts the small calendar run'
+INSERT_339 = '**#339 (Alan\'s decision pending):** a typed "refresh calendar" starts the small calendar run, as the Calendar import button does (its own tools and two input files, no chat, no session, mode `calendar`; its closure is kept in the day\'s "Runs creaite started"), and a sweep run reads the vault and the projects folder, not the home folder.'
+AT_339 = "is a plain chat (BL-309). Every change goes through"
+STATE = {"347": False, "339": False}         # whether the tree holds each patch's wording (set by states(); fixture() reads it)
+
+
+def with_339(text):
+    return text if INSERT_339 in text else text.replace(AT_339, "is a plain chat (BL-309). " + INSERT_339 + " Every change goes through", 1)
+
+
+def without_339(text):
+    return text.replace(" " + INSERT_339, "", 1)
+
+
+def strip(text):
+    """The rules as the 338 diffs were cut: without the 347 and the 339 wording."""
+    return without_339(without_347(text))
+
+
+def restore(text):
+    """`text` with back the wording of the patches the tree holds."""
+    text = with_347(text) if STATE["347"] else text
+    return with_339(text) if STATE["339"] else text
 
 
 def with_347(text):
@@ -419,11 +445,10 @@ def git_apply(text, diff, reverse=False):
 def states():
     """(original, slim) for the tree's state, whichever way round the tree is."""
     tree = RULES.read_text(encoding="utf-8")
-    STATE["347"] = MARK_347 in tree
-    if STATE["347"]:
-        tree = without_347(tree)          # work out the 338 state on the wording the 338 diffs were cut on
-        orig, slim = _states(tree)
-        return with_347(orig), with_347(slim)
+    STATE["347"], STATE["339"] = MARK_347 in tree, MARK_339 in tree
+    if STATE["347"] or STATE["339"]:
+        orig, slim = _states(strip(tree))          # work out the 338 state on the wording the 338 diffs were cut on
+        return restore(orig), restore(slim)
     return _states(tree)
 
 
@@ -528,10 +553,19 @@ class RetainedRules(unittest.TestCase):
         same file (so the substitutions cannot drift from the diff)."""
         if not RULES_347.exists():
             self.skipTest("no 347 diff in this tree")
-        plain = without_347(RULES.read_text(encoding="utf-8"))
+        plain = strip(RULES.read_text(encoding="utf-8"))
         applied = git_apply(plain, RULES_347)
         self.assertIsNotNone(applied, "dev/proposals/347/creaite-rules.md.diff no longer applies to the rules")
         self.assertEqual(applied, with_347(plain))
+
+    def test_the_339_insertion_is_what_the_339_diff_does(self):
+        """INSERT_339 stands in for the 339 diff, as SUBS_347 does for the 347 diff."""
+        if not RULES_339.exists():
+            self.skipTest("no 339 diff in this tree")
+        plain = strip(RULES.read_text(encoding="utf-8"))
+        applied = git_apply(plain, RULES_339)
+        self.assertIsNotNone(applied, "dev/proposals/339/creaite-rules.diff no longer applies to the rules")
+        self.assertEqual(applied, with_339(plain))
 
     def test_the_non_negotiables_and_the_development_guard_are_unchanged(self):
         self.assertNotEqual(section(self.orig, "Non-negotiables"), "")
@@ -573,12 +607,12 @@ class RetainedRules(unittest.TestCase):
         self.assertIn("YYYY-MM-DD", self.slim)
 
     def test_the_diffs_apply_forward_and_reverse(self):
-        orig, slim = without_347(self.orig), without_347(self.slim)      # the 338 diffs were cut before the 347 wording
+        orig, slim = strip(self.orig), strip(self.slim)      # the 338 diffs were cut before the 347 and 339 wording
         self.assertEqual(git_apply(orig, DIFFS[1 if self.chain else 0]), slim)
         self.assertEqual(git_apply(slim, DIFFS[1 if self.chain else 0], reverse=True), orig)
 
     def test_the_line_diff_adds_no_chain_wording(self):
-        line_slim = git_apply(without_347(self.orig), DIFFS[0]) if not self.chain else None
+        line_slim = git_apply(strip(self.orig), DIFFS[0]) if not self.chain else None
         if line_slim is not None:
             for word in ("Follow check", "Create draft in Outlook", "People you follow"):
                 self.assertNotIn(word, line_slim)
