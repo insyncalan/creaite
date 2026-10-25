@@ -2,10 +2,8 @@
  "expected_lines": [
   "Revisión del plan de adopción: calendario y formación.",
   "",
-  "Llamar al:",
-  "+34 91 123 45 67",
-  "ID de la reunión:",
-  "612 740 118",
+  "Llamar al: | +34 91 123 45 67",
+  "ID de la reunión: | 612 740 118",
   "",
   "Opciones de la reunión"
  ],

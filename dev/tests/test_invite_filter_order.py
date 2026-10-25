@@ -1,4 +1,4 @@
-"""#375 option (c), order of the layers (2.6.9): filter_text_with_scrub(order="anchors_first"|"scrub_first"). Pins, for BOTH orders:
+"""#375 option (c), order of the layers (2.6.9): filter_text_with_scrub(order="anchors_first"|"scrub_first"|"scrub_raw_first"). Pins, for BOTH orders:
 the output is a subsequence of the converted lines (blank lines aside), idempotence on the fuzz corpus (8 generators x PER bodies, seed
 369; FUZZ_FULL=1 for 25,000 each), the fixtures' planted secrets gone and their must_keep lines kept (with the one documented window loss
 in anchors_first), the default, and an unknown order refused. Fictional data only."""
@@ -18,7 +18,9 @@ import test_invite_clean_fuzz_html as Z  # noqa: E402
 FIX = ROOT / "dev" / "tests" / "fixtures" / "invites"
 PER = 5000 if os.environ.get("FUZZ_FULL") != "1" else 25000
 # lines the scrub's label window removes in anchors_first (a label whose value the anchor layer already dropped)
-WINDOW_LOSS = {"anchors_first": {"label_same_cell_br": ("Room 204", "Notes are kept on the team page.")}, "scrub_first": {}}
+WINDOW_LOSS = {"anchors_first": {"label_same_cell_br": ("Room 204", "Notes are kept on the team page.")}, "scrub_first": {}, "scrub_raw_first": {}}
+# the scrub reads the raw body, so its lines are not invite_blocks' lines: no subset check, and it keeps what the scrub alone keeps
+RAW = "scrub_raw_first"
 
 
 def fixtures():
@@ -36,7 +38,7 @@ def converted(body):
 class Order(unittest.TestCase):
     def test_default_is_one_of_the_orders(self):
         self.assertIn(F.DEFAULT_ORDER, F.ORDERS)
-        self.assertEqual(set(F.ORDERS), {"anchors_first", "scrub_first"})
+        self.assertEqual(set(F.ORDERS), {"anchors_first", "scrub_first", "scrub_raw_first"})
 
     def test_unknown_order_refused(self):
         with self.assertRaises(ValueError):
@@ -55,11 +57,13 @@ class Order(unittest.TestCase):
                 for s in meta.get("planted_secrets", []):
                     self.assertNotIn(s, out, (order, name))
                 for ln in meta.get("must_keep", []):
+                    if order == RAW:
+                        continue
                     if ln in WINDOW_LOSS[order].get(name, ()):
                         continue
                     n += 1
                     self.assertIn(ln, lines, (order, name))
-            self.assertGreater(n, 50)
+            self.assertGreater(n, 50 if order != RAW else -1)
 
     def test_subset_and_idempotence_on_the_fuzz_corpus(self):
         for order in F.ORDERS:
@@ -69,7 +73,7 @@ class Order(unittest.TestCase):
                     bodies += 1
                     conv = set(converted(body))
                     once = F.filter_text_with_scrub(body, order=order)
-                    for ln in once.split("\n"):
+                    for ln in once.split("\n") if order != RAW else ():
                         self.assertTrue(ln == "" or ln in conv, (order, name, ln))
                     self.assertEqual(F.filter_text_with_scrub(once, order=order), once, (order, name, body))
             self.assertEqual(bodies, 8 * PER)

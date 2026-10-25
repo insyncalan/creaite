@@ -119,6 +119,41 @@ Reading.
 
 Tests: `dev/tests/test_invite_filter_order.py` (both orders: subset up to blank lines and idempotence on the 40,000 fuzz bodies, fixtures' secrets gone and must_keep kept, default, unknown order refused, blank tidy).
 
+## 1d. Table rows as one line, and composition D (26-10-2026)
+
+Root cause of 1c's extra leaks: `invite_blocks.to_lines` put every cell of a data table on its own line, so the scrub no longer saw a row. Fixed in `invite_blocks`: **a data-table row is one line, cells joined by ` | `** (header rows too). Layout tables, cell paragraphs and a row with a multi-line cell (label, br, value: one line per cell line, as before) are unchanged. `invite_filter._shape_drop_line` judges a row cell by cell (a value cell is still shape-dropped). Fixtures' `expected_lines` regenerated for 8 fixtures (broken_html, dialin_es, dialin_table, header_row_passcode, label_next_cell, label_same_cell_br, layout_nested_tables, webex): only rows merged. The test helpers read a cell of a row as a line for togetherness; mutants m3/m4 now cut rows and cells in `_render_row`. New order `scrub_raw_first` (D): the scrub runs on the raw body, then the anchor layer, shape gate and cap; its lines are the scrub's, so no subset check, idempotence is tested.
+
+Same 40,000 bodies, same harness.
+
+| Leak bodies of 5,000 | scrub alone | A anchors-first | B scrub-first | C parallel | D scrub_raw_first |
+|---|---|---|---|---|---|
+| html_table | 299 | 231 | 337 | 231 | 299 |
+| blockquote | 2 | 0 | 0 | 0 | 2 |
+| qualified | 0 | 44 | 0 | 0 | 0 |
+| soft_dates | 3 | 3 | 3 | 3 | 3 |
+| other 4 generators | 0 | 0 | 0 | 0 | 0 |
+| **Total (of 40,000)** (1c: 304 / 425 / 643 / 461 / 304) | **304** | **278** | **340** | **234** | **304** |
+| Idempotence failures | 0 | 0 | 0 | 0 | 0 |
+| Leak items, digit-bearing | 4 | 34 | 31 | 23 | 4 |
+| Leak items, word-only | 309 | 253 | 321 | 220 | 309 |
+| Bodies outside the scrub's listed classes | 0 | 62 | 26 | 18 | 0 |
+
+| Utility | E1 min | scrub alone | A | B | C | D |
+|---|---|---|---|---|---|---|
+| must_keep kept (of 59) | 59 | 50 | 58 | 59 | 59 | 50 |
+| Planted secrets surviving | 2 | 11 | 0 | 0 | 0 | 0 |
+| Non-secret fixture lines kept (of 130; the denominator was 148 before rows merged, so not comparable with 1c) | 89 (68.5%) | 86 (66.2%) | 75 (57.7%) | 90 (69.2%) | 76 (58.5%) | 79 (60.8%) |
+| 200-line agenda set kept | 200 | 150 | 150 | 150 | 150 | 150 |
+| Trap lines kept (of 80) | 80 | 39 | 39 | 39 | 39 | 39 |
+
+Reading. The row fix works: A 425 to 278, B 643 to 340, C 461 to 234, and every E1 composition is now at or below the scrub alone on total leak bodies except B. But all three still add **digit-bearing** leaks (A 34, B 31, C 23, against 4), and the decision rule is leaks first with no digit-bearing regression. Only D meets it, tying the scrub alone (304, 4), with 0 planted secrets surviving on the fixtures (the scrub alone: 11) because the anchor layer runs after it.
+
+**Ship: `scrub_raw_first` (D); `DEFAULT_ORDER = "scrub_raw_first"`.** Cost: D keeps the scrub's utility (must_keep 50 of 59, agenda 150 of 200), below B (59, same agenda). C has the fewest total bodies (234) but 23 digit-bearing items, so it is not shipped.
+
+Remaining leaks outside the scrub's listed classes (A, B, C only; D has none): one class in this corpus, **a header row whose label word is qualified ("PIN below", "Passcode required") followed by a short digit value row** (`PIN below | Other` then `9601 | AOB`). The header row is dropped and the value row survives: A 62 bodies, B 26, C 18 (digits of 4 to 6, below the anchor layer's seven). The same pair leaks in the scrub-first orders, so it is a label-layer rule (a dropped pipe header row must take the next pipe row with it), not a conversion fault: `invite_blocks` cannot close it. A small rule in `invite_filter` could (drop the next row after a dropped header row); not built, since D does not need it.
+
+Tests: `test_invite_blocks.py` (rows), `test_invite_filter_order.py` (three orders).
+
 ## 2. Readers of calendar.json (on `v268-bare21`)
 
 | # | Reader (file:line) | Today | Needs from the gateway |

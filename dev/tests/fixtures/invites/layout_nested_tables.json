@@ -6,10 +6,8 @@
   "1. Status",
   "2. Funding",
   "",
-  "Join",
-  "https://rooms.example.org/r/board",
-  "Passcode",
-  "8841 0362"
+  "Join | https://rooms.example.org/r/board",
+  "Passcode | 8841 0362"
  ],
  "planted_secrets": [
   "https://rooms.example.org/r/board",

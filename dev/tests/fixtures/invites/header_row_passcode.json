@@ -2,10 +2,8 @@
  "expected_lines": [
   "Security review kick-off with the platform team.",
   "",
-  "Passcode",
-  "Other",
-  "Zx81pQ44",
-  "See the wiki page",
+  "Passcode | Other",
+  "Zx81pQ44 | See the wiki page",
   "",
   "Pre-read: the threat model summary."
  ],

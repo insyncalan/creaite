@@ -143,6 +143,13 @@ def _shape_drop(s):
     return len(s) >= 6
 
 
+def _shape_drop_line(s):
+    """The shape gate on a line; a table row ('a | b', #375 1d) is judged cell by cell, as each cell was a line of its own before."""
+    if " | " in s:
+        return any(_shape_drop(c.strip()) for c in s.split(" | "))
+    return _shape_drop(s)
+
+
 # ---------------------------------------------------------------- layers 1 and 2
 
 _WHOLE_BLOCK = True       # test hooks for the mutation tests; never changed in production
@@ -195,7 +202,7 @@ def _anchor_layer(lines):
     _block_drops(kinds, strong, drop)
     if _USE_REGIONS:
         _region_drops(kinds, strong, drop)
-    return [i for i, s in enumerate(skels) if not drop[i] and not (kinds[i] == _TEXT and _shape_drop(s))]
+    return [i for i, s in enumerate(skels) if not drop[i] and not (kinds[i] == _TEXT and _shape_drop_line(s))]
 
 
 # ---------------------------------------------------------------- layer 3: labelled values (S1b)
@@ -412,15 +419,16 @@ def _tidy_blanks(lines):
     return out
 
 
-ORDERS = ("scrub_first", "anchors_first")
-# fewest leak bodies of the two (425 against 643 in 40,000); see dev/proposals/375/PLAN.md section 1c
-DEFAULT_ORDER = "anchors_first"
+ORDERS = ("scrub_first", "anchors_first", "scrub_raw_first")
+# the scrub on the raw body first: 304 leak bodies of 40,000, 4 digit-bearing items, the scrub's own numbers (no E1 order is as low
+# on digit-bearing leaks); see dev/proposals/375/PLAN.md section 1d
+DEFAULT_ORDER = "scrub_raw_first"
 
 
 def _label_layer(lines, order=None):
     """The body label layer in one of two orders (both return a subsequence of the input lines, up to the scrub's own blank lines).
 
-    anchors_first: anchor layer and shape gate, then the scrub on the surviving lines (the default: fewest leaks, section 1c).
+    anchors_first: anchor layer and shape gate, then the scrub on the surviving lines (section 1c).
     scrub_first: the scrub on the original converted lines, then the anchor layer and shape gate on what it kept. A label's value is
     still there when the scrub's window runs, so the window cannot eat an innocent neighbour, and a qualified label ("PIN to follow")
     is judged with its value present. See PLAN.md sections 1b and 1c."""
@@ -441,9 +449,19 @@ def _scrub_key(mod, line):
 def filter_text_with_scrub(text, html=None, order=None):
     """Option (c), the 2.6.9 body filter: html/blocks conversion, the anchor layer and shape gate (second_layer=False), then the
     2.6.8 scrub (via _scrub_pairs) as the label layer on the surviving lines, then the CAP.
-    Same conversion rules as filter_text. order: see _label_layer (default DEFAULT_ORDER)."""
+    Same conversion rules as filter_text. order: see _label_layer (default DEFAULT_ORDER).
+    order="scrub_raw_first" (D): the scrub runs on the RAW body (it reads the HTML itself), then the anchor layer, shape gate and CAP
+    on the lines it kept. Its lines are the scrub's, not invite_blocks' (so not a subset of the converted lines), but still whole
+    lines of the body as the scrub left them."""
     if order is not None and order not in ORDERS:
         raise ValueError("order must be one of %r" % (ORDERS,))
+    if (order or DEFAULT_ORDER) == "scrub_raw_first":
+        scrub = _scrub_module()
+        if scrub is None:
+            return ""
+        raw = text[:BODY_MAX * 5]
+        kept = _tidy_blanks(keep_lines(_cut(scrub.invite_text(raw)).split("\n"), second_layer=False))
+        return "\n".join(_capped(kept))
     mod = _blocks_module()
     if html is None or html:
         if mod is None:
