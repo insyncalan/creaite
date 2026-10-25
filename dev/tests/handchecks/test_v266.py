@@ -52,8 +52,10 @@ class V266(unittest.TestCase):
     def test_c02_notes(self):
         wn = read("system/templates/help/whats-new.md")
         heads = re.findall(r"^## creaite (\d+\.\d+\.\d+)\s*$", wn, re.M)
-        self.assertEqual(heads[:2], ["2.6.6", "2.6.5"])
-        sec = wn.split("## creaite 2.6.5\n")[0]
+        self.assertIn("2.6.6", heads)                       # a later release's section may sit above it
+        i = heads.index("2.6.6")
+        self.assertEqual(heads[i:i + 2], ["2.6.6", "2.6.5"])
+        sec = wn.split("## creaite 2.6.6\n")[1].split("## creaite 2.6.5\n")[0]
         for n in ("341", "358", "362"):
             self.assertIn(f"(#{n})", sec, f"What's new does not mention #{n}")
         self.assertTrue((REPO / "dev/release-notes/2.6.6-plain.md").exists())
