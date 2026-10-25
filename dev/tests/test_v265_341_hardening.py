@@ -33,6 +33,8 @@ class Hardening(unittest.TestCase):
         o.dropped = f.pdPrune(st, rows, name); o.after = Object.keys(st.collapsed).sort();
         const none = f.pdNormalise({ group: "none", collapsed: { "org|Gone Ltd": true } }); o.noneDropped = f.pdPrune(none, rows, name); o.noneKept = Object.keys(none.collapsed);
         o.sameAgain = f.pdPrune(st, rows, name);
+        const sw = f.pdNormalise({ group: "role", collapsed: { "org|Acme": true, "role|PM": true, "role|Gone": true } });
+        o.otherDropped = f.pdPrune(sw, rows, name); o.otherKept = Object.keys(sw.collapsed).sort();
         console.log(JSON.stringify(o));""" % json.dumps((CORE / "peopleDisplay.js").as_uri())
         cls.o = node(js)
 
@@ -42,9 +44,14 @@ class Hardening(unittest.TestCase):
 
     def test_folds_of_groups_nobody_is_in_are_dropped(self):
         self.assertEqual(len(self.o["before"]), 5)
-        self.assertEqual(self.o["dropped"], 3)
-        self.assertEqual(self.o["after"], ["org|Acme", "org|Acme|role|PM"])
+        self.assertEqual(self.o["dropped"], 2)
+        self.assertEqual(self.o["after"], ["org|Acme", "org|Acme|role|PM", "proj|ABC"])   # the project folds belong to another grouping: kept
         self.assertEqual(self.o["sameAgain"], 0)
+
+    def test_switching_grouping_does_not_lose_the_other_groupings_folds(self):
+        self.assertIn("proj|ABC", self.o["after"])
+        self.assertEqual(self.o["otherKept"], ["org|Acme", "role|PM"])
+        self.assertEqual(self.o["otherDropped"], 1)
 
     def test_no_grouping_keeps_the_folds_for_later(self):
         self.assertEqual((self.o["noneDropped"], self.o["noneKept"]), (0, ["org|Gone Ltd"]))

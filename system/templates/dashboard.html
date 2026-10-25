@@ -36611,7 +36611,8 @@ system/scripts/run launch.py agent ${what}`;
       if (st2.sub !== "none") for (const g22 of pdGroup(g5.items, st2.sub, projectName)) live.add(pdKey(st2.group, g5.key, st2.sub, g22.key));
     }
     let n4 = 0;
-    for (const k5 of Object.keys(st2.collapsed)) if (!live.has(k5)) {
+    const mine = st2.group + "|";
+    for (const k5 of Object.keys(st2.collapsed)) if (k5.startsWith(mine) && !live.has(k5)) {
       delete st2.collapsed[k5];
       n4++;
     }
@@ -78600,7 +78601,7 @@ ${d5.text}`);
           chip || irStateWords(m5, n4),
           d5 ? ` ${d5}` : ""
         ] }),
-        waiting && (irBadName(m5) || !irFileKind(m5)) ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
+        waiting && (irBadName(m5) || !irFileKind(m5) || !irFixed(m5)) ? /* @__PURE__ */ u4(FileKind, { m: m5 }) : null
       ] });
     }
     return /* @__PURE__ */ u4(S2, { children: [

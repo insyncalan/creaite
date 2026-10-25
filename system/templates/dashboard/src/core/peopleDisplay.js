@@ -72,7 +72,7 @@ export function pdGroup(list, g, projectName) {
     @param {string} g @param {string} v @param {string} [sub] @param {string} [sv] */
 /** (#341 hardening) Forget folded groups that no longer exist: a key holds an organisation, role or project, so one that nobody has
     any more must not stay in this browser for good. Keeps only the keys the current grouping (and sub-grouping) can make from everyone.
-    With no grouping nothing is touched (the folds come back when a grouping is chosen again). @template T
+    Only keys of the current grouping are judged; with no grouping nothing is touched (the folds come back when a grouping is chosen again). @template T
     @param {PdState} st @param {(T & PdPerson)[]} everyone @param {(code: string) => string} projectName @returns {number} how many were dropped */
 export function pdPrune(st, everyone, projectName) {
   if (st.group === "none") return 0;
@@ -82,7 +82,8 @@ export function pdPrune(st, everyone, projectName) {
     if (st.sub !== "none") for (const g2 of pdGroup(g.items, st.sub, projectName)) live.add(pdKey(st.group, g.key, st.sub, g2.key));
   }
   let n = 0;
-  for (const k of Object.keys(st.collapsed)) if (!live.has(k)) { delete st.collapsed[k]; n++; }
+  const mine = st.group + "|";   /* only this grouping's own keys: the folds of the other groupings wait until that grouping is used again */
+  for (const k of Object.keys(st.collapsed)) if (k.startsWith(mine) && !live.has(k)) { delete st.collapsed[k]; n++; }
   return n;
 }
 export const pdKey = (g, v, sub, sv) => `${g}|${v}${sub ? `|${sub}|${sv}` : ""}`;
