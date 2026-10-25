@@ -33,6 +33,7 @@ def matrix(macos, limit=LIMIT):
 
 
 def main(argv):
+    """Print the job matrix (or its size) for the CI workflow."""
     ap = argparse.ArgumentParser(prog="ci_plan.py")
     ap.add_argument("--macos", action="store_true", help="the run also starts the macOS job (3 shards)")
     ap.add_argument("--limit", type=int, default=int(os.environ.get("CREAITE_CI_LIMIT") or LIMIT))
