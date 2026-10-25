@@ -16,8 +16,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-DIFFS = [REPO / "dev/proposals/369/live_server-rescrub-v2.diff", REPO / "dev/proposals/369/live_server-rescrub.diff"]
-DIFF = DIFFS[0]                  # v2 takes the server's job lock; v1 (6cdba005...) is kept for the record
+DIFFS = [REPO / f"dev/proposals/369/live_server-rescrub{v}.diff" for v in ("-v3", "-v2", "")]
+DIFF = DIFFS[0]       # v3: retries within 5 minutes and does not hold the job lock during the clean; v1 and v2 are kept for the record
 sys.path.insert(0, str(HERE))
 from test_tracker import Vault  # noqa: E402
 
@@ -75,17 +75,27 @@ class Rescrub(unittest.TestCase):
         self.assertEqual(r.stdout.strip().splitlines()[-1], "None")
         self.assertEqual(cal.read_bytes(), before)                        # byte for byte
 
-    def test_the_job_holds_the_server_lock_and_skips_when_it_is_taken(self):
+    def test_the_job_skips_while_the_lock_is_taken_and_tries_again_within_five_minutes(self):
         v, cal = patched_vault(self)
         before = cal.read_bytes()
-        r = run(v, "assert live_server.LOCK.acquire(blocking=False)\ntry:\n    print(live_server.calendar_rescrub_job())\n"
-                   "finally:\n    live_server.LOCK.release()\nprint(live_server.calendar_rescrub_job())")
+        r = run(v, "import threading\nmade = []\nclass T:\n    def __init__(self, delay, fn, *a, **k):\n        made.append((delay, fn.__name__)); self.daemon = False\n"
+                   "    def start(self): pass\n    def is_alive(self): return False\nthreading.Timer = T\n"
+                   "assert live_server.LOCK.acquire(blocking=False)\ntry:\n    print(live_server.calendar_rescrub_job())\nfinally:\n    live_server.LOCK.release()\n"
+                   "print(made)\nprint(live_server.calendar_rescrub_job())")
         self.assertEqual(r.returncode, 0, r.stderr[-300:])
-        first, second = r.stdout.strip().splitlines()[-2:]
+        first, made, second = r.stdout.strip().splitlines()[-3:]
         self.assertEqual(first, "None")                                   # a restore (or another job) holds the lock: nothing is touched
-        self.assertIn("1 saved meeting", second)                          # and the next pass, with the lock free, cleans
+        self.assertEqual(made, "[(300, 'calendar_rescrub_job')]")         # and a retry is set for five minutes, not an hour
+        self.assertIn("1 saved meeting", second)                          # with the lock free the next call cleans
         self.assertNotEqual(cal.read_bytes(), before)
-        self.assertEqual(run(v, "print(live_server.LOCK.acquire(blocking=False))").stdout.strip().splitlines()[-1], "True")        # released
+        self.assertEqual(before == cal.read_bytes(), False)
+
+    def test_the_job_lock_is_not_held_during_the_clean(self):
+        v, _cal = patched_vault(self)
+        r = run(v, "seen = []\nreal = sweep.rescrub_calendar\n"
+                   "def spy(*a, **k):\n    free = live_server.LOCK.acquire(blocking=False)\n    seen.append(free)\n    if free: live_server.LOCK.release()\n    return real(*a, **k)\n"
+                   "sweep.rescrub_calendar = spy\nlive_server.calendar_rescrub_job()\nprint(seen)")
+        self.assertEqual(r.stdout.strip().splitlines()[-1], "[True]", r.stdout + r.stderr[-300:])
 
     def test_an_exception_never_stops_the_server(self):
         v, cal = patched_vault(self)
@@ -118,12 +128,25 @@ class Mutants(unittest.TestCase):
         run(v, "live_server.calendar_rescrub_job()")
         self.assertNotIn("swordfish", cal.read_text(encoding="utf-8").lower())      # the sample was rewritten: what the guard prevents
 
-    def test_job_without_the_lock_runs_over_a_restore(self):
-        old = "+    if not LOCK.acquire(blocking=False):\n+        return None"
-        v, cal = patched_vault(self, self.mutated(old, "+    if False:\n+        return None"))
+    def test_job_without_the_lock_check_runs_over_a_restore(self):
+        old = "+    if not LOCK.acquire(blocking=False):\n+        calendar_rescrub_retry()\n+        return None"
+        v, cal = patched_vault(self, self.mutated(old, "+    if False:\n+        calendar_rescrub_retry()\n+        return None"))
         before = cal.read_bytes()
         run(v, "assert live_server.LOCK.acquire(blocking=False)\ntry:\n    live_server.calendar_rescrub_job()\nfinally:\n    live_server.LOCK.release()")
-        self.assertNotEqual(cal.read_bytes(), before)                     # rewritten while the lock was held: what the lock prevents
+        self.assertNotEqual(cal.read_bytes(), before)                     # rewritten while the lock was held: what the check prevents
+
+    def test_job_that_holds_the_lock_during_the_clean(self):
+        v, _cal = patched_vault(self, self.mutated("+    LOCK.release()\n", "+    pass\n"))
+        r = run(v, "seen = []\nreal = sweep.rescrub_calendar\n"
+                   "def spy(*a, **k):\n    seen.append(live_server.LOCK.acquire(blocking=False))\n    return real(*a, **k)\n"
+                   "sweep.rescrub_calendar = spy\nlive_server.calendar_rescrub_job()\nprint(seen)")
+        self.assertEqual(r.stdout.strip().splitlines()[-1], "[False]")
+
+    def test_job_without_the_retry(self):
+        v, _cal = patched_vault(self, self.mutated("+        calendar_rescrub_retry()\n+        return None", "+        pass\n+        return None"))
+        r = run(v, "import threading\nmade = []\nthreading.Timer = lambda *a, **k: made.append(a) or type('T', (), {'daemon': False, 'start': lambda s: None, "
+                   "'is_alive': lambda s: False})()\nassert live_server.LOCK.acquire(blocking=False)\nlive_server.calendar_rescrub_job()\nprint(made)")
+        self.assertEqual(r.stdout.strip().splitlines()[-1], "[]")
 
     def test_hook_without_its_call_fails(self):
         v, cal = patched_vault(self, self.mutated("+        n = sweep.rescrub_calendar()", "+        n = 0"))

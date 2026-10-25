@@ -13,3 +13,7 @@ Not on any chain list.
 ## v2 (live_server-rescrub-v2.diff)
 
 `live_server-rescrub.diff` (sha256 6cdba005...) stays as it was. The review found that its job ran outside the server's job lock (`LOCK`), where a restore could overlap it. `live_server-rescrub-v2.diff` makes `calendar_rescrub_job()` take `LOCK` without waiting and skip until the next hourly pass when it is held. It applies cleanly on origin/main, and `test_live_rescrub_369.py` uses it (and also works when either diff is already applied: it takes the applied diff off before it tries the changed copies).
+
+## v3 (live_server-rescrub-v3.diff): show Alan this one
+
+v1 (6cdba005...) and v2 (ecb0f097...) stay as they were. v3 fixes the two notes on v2: the job no longer holds the server's job lock (`LOCK`) while it cleans (it only checks that the lock is free, so a restore in progress is not overlapped; the calendar's own file lock, `sweep.calendar_lock`, guards the file against a sweep's save), and a skipped job is tried again after five minutes (`CALENDAR_RETRY`, one daemon timer) instead of after the hour, so an early daily zip does not hold the raw file. It applies cleanly on origin/main; `test_live_rescrub_369.py` uses it and takes any applied diff off before it tries the changed copies.
