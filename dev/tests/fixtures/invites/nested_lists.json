@@ -19,8 +19,6 @@
  ],
  "must_keep": [
   "Release readiness check.",
-  "Feature flags reviewed",
-  "Owner: Mei Tan",
   "Open actions",
   "Decisions needed"
  ]

@@ -49,11 +49,12 @@ _CONFUSABLES = str.maketrans({p[0]: p[1].lower() for p in _CONFUSABLE_PAIRS.spli
 
 
 def _skeleton(line):
-    """The line as it is judged: NFKC, invisible (Cf) characters removed, look-alikes mapped, lower case, spaces collapsed."""
+    """The line as it is judged: NFKD, accents (Mn) and invisible (Cf) characters removed, NFKC, look-alikes mapped, lower case."""
     s = line
     if not s.isascii():
+        s = unicodedata.normalize("NFKD", s)          # accents split off (š -> s + mark) so an accented label still reads
+        s = "".join(c for c in s if unicodedata.category(c) not in ("Cf", "Mn"))
         s = unicodedata.normalize("NFKC", s)
-        s = "".join(c for c in s if unicodedata.category(c) != "Cf")
         s = s.translate(_CONFUSABLES)
     return " ".join(s.lower().split())
 
@@ -314,6 +315,36 @@ def _capped(lines):
     return out
 
 
-def filter_text(text, *, second_layer=True):
-    """The body filter for stored text: BODY_MAX cut, split on newline, keep_lines, join, then the CAP (whole lines only)."""
+def _blocks_module():
+    """invite_blocks, imported on first use; None when it cannot be had (then HTML is not converted)."""
+    try:
+        import invite_blocks
+        return invite_blocks
+    except ImportError:
+        return None
+
+
+def blocks_from_html(html_or_text):
+    """The plan's name for invite_blocks.blocks: the text as blocks (lists of consecutive non-blank lines)."""
+    mod = _blocks_module()
+    return mod.blocks(html_or_text) if mod else []
+
+
+def filter_text(text, *, second_layer=True, html=None):
+    """The body filter for stored text: BODY_MAX cut, split on newline, keep_lines, join, then the CAP (whole lines only).
+
+    html=None (auto): text with real tags (invite_blocks.looks_like_html) goes through invite_blocks.to_lines; True: forced; False: never.
+    Plain text is split on newline after CRLF and CR become newline (not with html=False). The output is a subsequence of those lines.
+    If invite_blocks is missing, HTML is not served (""), never the raw markup."""
+    if html is None or html:
+        mod = _blocks_module()
+        if mod is None:
+            if html:
+                return ""
+        elif html or mod.looks_like_html(text):
+            lines = mod.to_lines(text)
+            kept = keep_lines(_cut("\n".join(lines)).split("\n"), second_layer=second_layer)
+            return "\n".join(_capped(kept))
+    if html is not False:
+        text = text.replace("\r\n", "\n").replace("\r", "\n")  # a CR must not hide a line from the rules
     return "\n".join(_capped(keep_lines(_cut(text).split("\n"), second_layer=second_layer)))

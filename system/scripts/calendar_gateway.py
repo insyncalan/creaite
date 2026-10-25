@@ -13,7 +13,7 @@ rescrub write, and they stamp (clean_row / stamp_rows). Nothing unfiltered is ev
 of an unstamped row is dropped (fails closed).
 
 THE FILTER. FILTER is a module-level hook, callable(text) -> text. None means invite_filter.filter_text, imported lazily on first use
-(called with html=True when it accepts that). Tests inject a stand-in. SHORT is the same kind of hook for an unstamped row's short fields
+(called with html=None: HTML detected). Tests inject a stand-in. SHORT is the same kind of hook for an unstamped row's short fields
 (title, place, organiser, names): callable(row) -> row without a body; None means invite_clean.clean_row, imported lazily (the short
 fields keep the label rule, plan section 1 rule 7); without it the row is cut to a bare "Meeting".
 
@@ -39,7 +39,6 @@ confidential event gets only HEAD (title "Busy" when private) whatever the purpo
 """
 import contextlib
 import copy
-import inspect
 import json
 import os
 import re
@@ -101,12 +100,7 @@ def _filter_fn():
         fn = invite_filter.filter_text
     except (ImportError, AttributeError):
         return None
-    try:
-        if "html" in inspect.signature(fn).parameters:
-            return lambda text: fn(text, html=True)
-    except (TypeError, ValueError):
-        pass  # no signature to read: the plain call below
-    return fn
+    return lambda text: fn(text, html=None)
 
 
 def filter_body(body):
