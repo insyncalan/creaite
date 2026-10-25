@@ -88,6 +88,10 @@ def world(v, confidential=False):
     ev["recurrence"] = "weekly"
     if confidential:
         ev.update({"sensitivity": "confidential", "body": "Board secret: the merger plan", "where": "Room 7", "attendees": []})
+        sp = v.root / "system/config/settings.json"          # #362: a confidential meeting shows a project only when Alan chose it
+        st = json.loads(sp.read_text())
+        st.setdefault("prep", {}).setdefault("series", {})[__import__("build_dashboard").series_of(ev["title"])] = "ABC"
+        sp.write_text(json.dumps(st))
     (v.root / "system/staging/calendar.json").write_text(json.dumps(cal))
 
 
