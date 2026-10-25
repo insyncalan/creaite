@@ -294,6 +294,14 @@ NOT_COVERED = [
     ("Turkish sifre", "Sync Sifre hunterxyz", "hunterxyz"),
     ("Romanian parola", "Sync Parola hunterxyz", "hunterxyz"),
     ("a letter-by-letter label of other kinds", "Sync P a s s hunterxyz", "hunterxyz"),
+    ("Greek passcode", "Sync \u039a\u03c9\u03b4\u03b9\u03ba\u03cc\u03c2: hunterxyz", "hunterxyz"),                  # scripts without rules (2.6.8 notes)
+    ("Hebrew password", "Sync \u05e1\u05d9\u05e1\u05de\u05d4: hunterxyz", "hunterxyz"),
+    ("Hindi password", "Sync \u092a\u093e\u0938\u0935\u0930\u094d\u0921: hunterxyz", "hunterxyz"),
+    ("Thai password", "Sync \u0e23\u0e2b\u0e31\u0e2a\u0e1c\u0e48\u0e32\u0e19: hunterxyz", "hunterxyz"),
+    ("Russian control code", "Sync \u041a\u043e\u043d\u0442\u0440\u043e\u043b\u044c\u043d\u044b\u0439 \u043a\u043e\u0434: hunterxyz", "hunterxyz"),
+    ("sifre with a plain word", "Sync sifre hunterxyz", "hunterxyz"),
+    ("Turkish Sifre on its own line", "Sync \u015eifre hunterxyz", "hunterxyz"),
+    ("Meeting ID and a word value", "Sync Meeting ID hunterxyz", "hunterxyz"),
 ]
 
 

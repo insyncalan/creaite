@@ -20,6 +20,8 @@
 
 **Accents.** An accent or other combining mark on a label letter no longer hides the label ("Pásscode: 1234", "Piń: 1234", "Passwörd hunter", "Sécret"). Words that differ from a label only by accents are read as the label, so "Códe sprint", "Piñ board" and "Tokén of appreciation" lose their text to "Meeting" like their plain forms; "Códe review" and "Piñ pad" stay, and "Passwörter" is a different word and stays. The text that is kept keeps its accents. A markdown link whose text is a label ("[Passcode](http://...)") is read as that label.
 
+**Odd characters.** A character that would turn into more than four characters when normalised (a ligature such as U+FDFA, which stands for eighteen letters, or a unit sign) is read as a space before it is expanded, so a hostile invite cannot make reading slow. No label letter expands that far.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
@@ -31,3 +33,6 @@
 - a secret that contains digits is handled by the older rules only.
 - runs of punctuation between a label and its secret beyond the simple cases, and an escaped "&amp; swordfish" written after a phrase;
 - Key, Access, Login, Credentials, Pass, Codice, Codigo, Sifre and Parola followed by a plain word (listed above) are known limits, as is a secret written before its label.
+- labels in scripts without rules: Greek (Κωδικός), Hebrew (סיסמה), Hindi (पासवर्ड), Thai (รหัสผ่าน) and Russian "Контрольный код" followed by a plain word;
+- "şifre hunterxyz" and "Şifre" (Turkish) with a plain word on the same or the next line;
+- "Meeting ID" followed by a plain word with no digit and no separator ("Meeting ID hunterxyz").

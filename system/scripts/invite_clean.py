@@ -18,6 +18,7 @@ alphabets are read as the Latin ones (confusables.py). A label alone on a line t
 its value in the next cell), and "Pass" and "code" split by tags are joined. Not covered: letters spaced out one by one ("P I N")
 are not found as a key, and a link to a provider this module does not know with no word of joining near it.
 """
+import functools
 import html as htmllib
 import re
 import unicodedata
@@ -158,10 +159,29 @@ JOIN_LINE = re.compile(
     r"this meeting is being recorded|join microsoft teams meeting)", re.I)
 
 
+MAX_EXPANSION = 4          # no character may stand for more than this many after NFKC / NFKD: a text is at most 4 times as long
+
+
+@functools.lru_cache(maxsize=None)
+def _unit(c):
+    """The character itself, or a space when its NFKC or NFKD form is longer than MAX_EXPANSION characters (a ligature such as the 18
+    letters of U+FDFA, a fraction, a unit sign). Such a character is never a label letter and a label cannot hide inside one, so
+    nothing is lost; without this a hostile invite of 40,000 of them made every read take seconds. The most any label letter
+    expands to is 3 (a ligature "ffi", a Hangul syllable); test_invite_clean_expansion.py checks it for every label."""
+    if len(unicodedata.normalize("NFKC", c)) > MAX_EXPANSION or len(unicodedata.normalize("NFKD", c)) > MAX_EXPANSION:
+        return " "
+    return c
+
+
+def _bounded(text):
+    """The text with every character that would expand too far replaced by a space (ASCII is never touched)."""
+    return text if text.isascii() else "".join(map(_unit, text))
+
+
 def normal(text, marks=False):
     """NFKC, with control and private-use characters (but not line breaks) and every format character (zero-width, bidi, soft
-    hyphen) removed; `marks` keeps the two link markers."""
-    t = unicodedata.normalize("NFKC", str(text if text is not None else ""))
+    hyphen) removed; `marks` keeps the two link markers. A character that would expand to more than MAX_EXPANSION is a space."""
+    t = unicodedata.normalize("NFKC", _bounded(str(text if text is not None else "")))
     return "".join(c for c in t if c in "\n\r\t" or (marks and c in (OPEN, CLOSE))
                    or unicodedata.category(c) not in ("Cf", "Cc", "Co"))
 
@@ -173,7 +193,7 @@ def skeleton(text):
     """What a test matches on: NFKD with every combining mark removed (an accent on a label letter must not hide the label: "Pásscode",
     "Piń", "Passwörd"; NFKC would COMPOSE e + U+0301 first, leaving nothing to strip), recomposed (Hangul, kana), Arabic tatweel removed,
     escapes and URL encoding decoded. Only a copy used for matching: the text that is kept is never changed by this."""
-    d = unicodedata.normalize("NFKD", normal(text))
+    d = unicodedata.normalize("NFKD", _bounded(normal(text)))
     kept = (c for c in d if (unicodedata.category(c) not in ("Mn", "Me") or c in _KEEP_MARKS) and c != "ـ")
     t = unicodedata.normalize("NFC", "".join(kept))
     for _ in range(3):
