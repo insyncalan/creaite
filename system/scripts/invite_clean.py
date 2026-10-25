@@ -60,15 +60,16 @@ _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*co
                r"(?:access|participant|conference|attendee|host|meeting|moderator|presenter|guest|security|entry|"
                r"dial[- ]?in|audio|phone|call[- ]?in|room|webinar|panell?ist|leader)[\s-]*(?:code|pin)s?")
 _WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
-               r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
+               r"clave\s+de\s+acceso|pw|pswd|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
                r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
-# v2.6.8 (k26-b-bare, Full review): after these labels the next word IS the value even with no digit and no capital ("Password
-# swordfish", "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta", "Token abcd"). Fail closed: any word follows = a value, except
-# the few ordinary words below, each the second word of a common phrase (tests: dev/tests/test_invite_clean_bare.py, one row each).
-# An allow-listed word protects only when what follows it is the end of the field, closing punctuation, or a word of BARE_FOLLOW
-# ("Password reset for new starters", "Code of conduct"); a colon or equals, or any other word, after it is a value ("Password reset:
-# hunter", "PIN entry swordfish", "Code of hunter"). Only that one more word is looked at ("Password reset for hunter" keeps it).
+# v2.6.8 (k26-b-bare, Full review x2): after these labels the next word IS the value even with no digit and no capital ("Password
+# swordfish", "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta", "Token abcd"). Fail closed, and as a whole phrase: every
+# word after the label, to the end of the field, must be an allow-listed word for that label (BARE_NEXT, each the second word of a
+# common phrase) or a word of BARE_FOLLOW (small function and topic words). The first word that is neither is a value and the field
+# goes; so do a colon, equals, dash or bracket after the label or after any such word, and punctuation before the value
+# ("Password , hunter"). "Password reset", "Password reset request", "Code of conduct" stay; "Password reset for hunter",
+# "Password reset for new hires", "PIN entry: swordfish", "Code of the swordfish" go. Tests: dev/tests/test_invite_clean_bare.py.
 BARE_NEXT = (
     (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|pw|pswd",
      ("reset", "policy", "manager", "management", "expiry", "rotation", "audit", "change")),
@@ -82,17 +83,25 @@ BARE_NEXT = (
 )
 BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or", "request", "requests", "process", "plan",
                "planning", "workshop", "session", "review", "rollout", "update", "changes", "findings", "redesign", "supplier", "call",
-               "move", "conduct", "sync", "retrospective")
+               "move", "conduct", "sync", "retrospective", "sow")
+
+
+# a phrase that ends on one of these has its value on the next line
+BARE_FUNCTION = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or")
 
 
 def _bare_next(lab, ok):
     okx = "|".join(ok)
-    fol = "|".join(BARE_FOLLOW)
-    return (rf"(?:{lab})(?![\w-])\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w"
-            rf"|(?:{okx})(?![\w-])(?!\s*[.,;)\]!?\"']*\s*$|\s+(?:{fol})(?![\w-])))")
+    words = "|".join((*ok, *BARE_FOLLOW))                                       # what may stand after the first allowed word
+    run = rf"(?:\s+(?:{words})(?![\w-]))*"
+    bad = (rf"(?:\s*[:=\-\u2013\u2014(\[]|\s*[,;.!?]+\s*[\w\"'(\[]|\s+(?!(?:{words})(?![\w-]))[\w\"'(\[])")
+    return (rf"(?:{lab})(?![\w-])(?:\s*[,;.]+\s*\w|\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w|(?:{okx})(?![\w-]){run}{bad}))")
 
 
 _BARE_NEXT = "|".join(_bare_next(lab, ok) for lab, ok in BARE_NEXT)
+_BARE_OPEN = re.compile(                                                         # a phrase that stops on a function word: its value is next
+    rf"(?<![\w-])(?:{'|'.join(lab for lab, _ok in BARE_NEXT)})(?![\w-])(?:\s+(?:{'|'.join(w for _l, ok in BARE_NEXT for w in ok)}"
+    rf"|{'|'.join(BARE_FOLLOW)})(?![\w-]))*\s+(?:{'|'.join(BARE_FUNCTION)})\s*[.,;]*\s*$", re.I)
 _SPACED = re.compile(r"(?<![\w])p[ .\-]{1,2}i[ .\-]{1,2}n\.?(?![\w])", re.I)       # "P I N", "P.I.N.", "P-I-N" read as PIN
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
@@ -275,6 +284,8 @@ def invite_text(body):
         if ln and (_drop_line(ln) or (tail and _drop_line(tail + " " + ln))):
             waiting, blanks = _alone(ln), 0
             continue
+        if ln and any(_BARE_OPEN.search(v) for v in _views(_MARK.sub(" ", ln))):
+            waiting, blanks = True, 0                  # "Password reset for" then the value on the next line: that line goes too
         kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
 

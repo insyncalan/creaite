@@ -68,6 +68,40 @@ BARE = [
     ("pw", "Sync Pw abcdq", "abcdq"),
     ("pswd", "Sync Pswd abcdq", "abcdq"),
     ("passphrase", "Sync Passphrase abcdq", "abcdq"),
+    ("rv-00", "Password reset for hunter", "hunter"),   # Full review round 2
+    ("rv-01", "Password reset and hunter", "hunter"),   # Full review round 2
+    ("rv-02", "Password reset the hunter", "hunter"),   # Full review round 2
+    ("rv-03", "Password reset to hunter", "hunter"),   # Full review round 2
+    ("rv-04", "Password reset with hunter", "hunter"),   # Full review round 2
+    ("rv-05", "Password reset in hunter", "hunter"),   # Full review round 2
+    ("rv-06", "Password reset a hunter", "hunter"),   # Full review round 2
+    ("rv-07", "Password reset or hunter", "hunter"),   # Full review round 2
+    ("rv-08", "Password reset call swordfish", "swordfish"),   # Full review round 2
+    ("rv-09", "Password reset sync swordfish", "swordfish"),   # Full review round 2
+    ("rv-10", "Password reset plan swordfish", "swordfish"),   # Full review round 2
+    ("rv-11", "Password reset update swordfish", "swordfish"),   # Full review round 2
+    ("rv-12", "Password reset move swordfish", "swordfish"),   # Full review round 2
+    ("rv-13", "Password reset request swordfish", "swordfish"),   # Full review round 2
+    ("rv-14", "Code of the swordfish", "swordfish"),   # Full review round 2
+    ("rv-15", "Code review of hunter", "hunter"),   # Full review round 2
+    ("rv-16", "PIN entry and hunter", "hunter"),   # Full review round 2
+    ("rv-17", "PIN pad for hunter", "hunter"),   # Full review round 2
+    ("rv-18", "Password audit for hunter", "hunter"),   # Full review round 2
+    ("rv-19", "Password change request hunter", "hunter"),   # Full review round 2
+    ("rv-20", "Code standards with hunter", "hunter"),   # Full review round 2
+    ("rv-21", "Password reset of: hunter", "hunter"),   # Full review round 2
+    ("rv-22", "Password reset for: hunter", "hunter"),   # Full review round 2
+    ("rv-23", "Password reset to=hunter", "hunter"),   # Full review round 2
+    ("rv-24", "Password reset for\nhunter", "hunter"),   # Full review round 2
+    ("rv-25", "Password reset for new hires", "hires"),   # Full review round 2
+    ("rv-26", "Password reset - hunter", "hunter"),   # Full review round 2
+    ("rv-27", "Password reset (hunter)", "hunter"),   # Full review round 2
+    ("rv-28", "Pw: hunter", "hunter"),   # Full review round 2
+    ("rv-29", "Pswd: hunter", "hunter"),   # Full review round 2
+    ("rv-30", "Pw=hunter", "hunter"),   # Full review round 2
+    ("rv-31", "Pw - hunter", "hunter"),   # Full review round 2
+    ("rv-32", "Password , hunter", "hunter"),   # Full review round 2
+    ("rv-33", "Password ; hunter", "hunter"),   # Full review round 2
     ("password-connecting-word", "Password for the room is hunterxyz", "hunterxyz"),   # "for" is taken as the value: fail closed
 ]
 # HTML is read only in an invite body (a title, place or name is plain text from Outlook), so these rows are judged in the body only.
@@ -115,14 +149,17 @@ ALLOWED = [
     ("source-code-repository", "Source code repository move", ("code", "repository")),
     ("code-handover", "Source code handover", ("code", "handover")),
 ]
+FOLLOW_ROWS = ["Code review of the supplier SOW", "Code review sync", "Token Ring retrospective", "Password reset request", "Code of conduct session", "Password reset call",
+               "Password change update", "PIN entry redesign", "Secret manager rollout", "Code freeze planning", "Code standards workshop"]
 # Ordinary text with no label near it stays whatever it holds.
 CONTROLS = ["Quarterly business review", "Pilot readiness review", "Key milestones workshop", 
             "Passenger numbers", "Zipcode lookup", "Budget sync", "Pass the baton"]
+# Titles that lose their whole text to "Meeting" (fail closed; named in the 2.6.8 notes). Each is a documented over-removal.
+OVER_REMOVED = ["Pin the roadmap", "Password for all staff", "Code sprint", "Code clinic", "Code Red", "Pin board", "Secret Santa party",
+                "Secret sauce", "Token of appreciation", "Secret project Falcon", "Password reset for new hires"]
 # What this change does NOT do, pinned so that a change is noticed (each is a text that is still kept today).
 NOT_COVERED = [
     ("a value before its label", "swordfish is the password", "swordfish"),
-    ("a value after an allow-listed word and a function word", "Password reset for hunterxyz", "hunterxyz"),
-    ("a value after a follow-on word", "Code review for hunterxyz", "hunterxyz"),
     ("the key label", "Sync Key hunterxyz", "hunterxyz"),
     ("the access label", "Sync Access hunterxyz", "hunterxyz"),
     ("the login label", "Sync Login hunterxyz", "hunterxyz"),
@@ -154,6 +191,9 @@ def fails(mod, table=None):
     for rid, text, val in BODY_ONLY:
         if val.lower() in mod.invite_text("Agenda: budget\n" + text + "\nEnd").lower():
             bad.append(f"{rid}:body")
+    for text in FOLLOW_ROWS:                     # the follow-on words (BARE_FOLLOW) that old titles need
+        if mod.scrub(text, 140) != text:
+            bad.append("follow:" + text)
     for rid, text, _entry in ALLOWED:
         if mod.scrub(text, 140) != text:
             bad.append(f"allowed:{rid}:title")
@@ -221,7 +261,7 @@ class Controls(unittest.TestCase):
 
     def test_known_over_removal(self):
         """Fail closed costs a few ordinary titles: any word after pin / password / code that is not on the allow-list is a value."""
-        for t in ("Pin the roadmap on the wall", "Password for all staff"):
+        for t in OVER_REMOVED:
             self.assertEqual(I.scrub(t, 140), "", t)
 
     def test_every_allow_list_entry_is_tested(self):
@@ -326,16 +366,36 @@ class Mutants(unittest.TestCase):
                 m = mutant(src_old, '"zzznever"')
                 self.assertNotEqual(fails(m), [], f"removing {w!r} from the allow-list changed nothing")
 
-    def test_follow_on_check_removed(self):
-        bad = fails(mutant('(?!\\s*[.,;)\\]!?\\"\']*\\s*$|\\s+(?:{fol})(?![\\w-])))', ')'))
-        self.assertTrue(any(b.startswith("allowed:") for b in bad), bad)
-        # and the opposite mutant: the allow-list protecting whatever follows it lets the reviewer's examples through
-        bad = fails(mutant("(?:{okx})(?![\\w-])(?!", "(?!)(?:{okx})(?![\\w-])(?!", 1))
-        self.assertTrue(any(b.startswith(("reset", "entry", "policy", "code-of")) for b in bad), bad)
+    def test_whole_phrase_check_removed(self):
+        """The rule that every word to the end must be listed: with a single following word looked at (the old rule), the round-2 examples live."""
+        bad = fails(mutant("|\\s+(?!(?:{words})(?![\\w-]))[\\w\\\"'(\\[])", ")"))
+        self.assertTrue(any(b.startswith("rv-") for b in bad), bad)
+
+    def test_function_word_exemption(self):
+        """Any word allowed after the first listed word (the exemption widened to everything) lets the round-2 examples through."""
+        bad = fails(mutant('words = "|".join((*ok, *BARE_FOLLOW))', 'words = r"\\w+"'))
+        self.assertTrue(any(b.startswith("rv-") for b in bad), bad)
+
+    def test_punctuation_check_off(self):
+        bad = fails(mutant("\\s*[:=\\-\\u2013\\u2014(\\[]|", ""))
+        self.assertTrue(any(b in ("rv-21:title", "rv-22:title", "rv-26:title", "rv-27:title") or b.startswith(("rv-21", "rv-26")) for b in bad), bad)
+
+    def test_cross_line_check_off(self):
+        m = mutant("if ln and any(_BARE_OPEN.search(v)", "if False and any(_BARE_OPEN.search(v)")
+        self.assertIn("hunter", m.invite_text("Agenda: budget\nPassword reset for\nhunter\nEnd"))
+        self.assertNotIn("hunter", I.invite_text("Agenda: budget\nPassword reset for\nhunter\nEnd"))
+
+    def test_pw_pswd_separator_rule_off(self):
+        bad = fails(mutant("clave\\s+de\\s+acceso|pw|pswd|pin", "clave\\s+de\\s+acceso|pin"))
+        self.assertTrue(any(b.startswith(("rv-28", "rv-29", "rv-30", "rv-31")) for b in bad), bad)
+
+    def test_punctuation_before_value_off(self):
+        bad = fails(mutant("(?:\\s*[,;.]+\\s*\\w|\\s+[", "(?:\\s+["))
+        self.assertTrue(any(b.startswith(("rv-32", "rv-33")) for b in bad), bad)
 
     def test_follow_list_entry_removed(self):
-        for w in ("workshop", "rollout", "conduct", "supplier"):
-            self.assertNotEqual(fails(mutant(f'"{w}"', '"zzznever"', 2)), [], w)
+        for w in ("workshop", "rollout", "conduct", "supplier", "sync", "retrospective", "sow"):
+            self.assertNotEqual(fails(mutant(f'"{w}"', '"zzznever"', 3)), [], w)
 
     def test_spaced_pin_off(self):
         bad = fails(mutant('    s = _SPACED.sub("PIN", s)\n', ""))
