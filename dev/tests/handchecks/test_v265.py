@@ -45,7 +45,7 @@ def tree(sub):
 def git(*a):
     return subprocess.run(["git", *a], cwd=REPO, capture_output=True, text=True)
 
-KIND = {n: "scriptable" for n in range(1, 13)}
+KIND = {n: "scriptable" for n in range(1, 14)}
 LIVE_ONLY = {}
 
 
