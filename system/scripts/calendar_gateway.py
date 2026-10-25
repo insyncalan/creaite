@@ -1,0 +1,330 @@
+"""#375 E1, slice S3: the one read path for the saved calendar (system/staging/calendar.json).
+
+    read(purpose, path=None) -> {"fetched", "to", "days"}   same shape as invite_clean.read_calendar returns today, rows limited to
+                                                          what `purpose` may see (a reader switches by changing one call)
+    view(ev, purpose)        -> dict                       one event row limited to the purpose (new dicts, never the caller's)
+    purpose_names()          -> tuple of the closed set of purposes (an unknown one raises UnknownPurpose, a LookupError: the readers
+                                                          catch OSError and ValueError, so a typo is not swallowed as "no calendar")
+    clean_row(row), stamp_row(row), stamp_rows(days), stamp_calendar(cal), lock()   for the writers (sweep), later
+
+THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int). A row with no stamp, or a lower one, is filtered IN MEMORY
+on every read and served filtered; a stamped row is served as stored. read() never writes: only the sweep's save and the start-up
+rescrub write, and they stamp (clean_row / stamp_rows). Nothing unfiltered is ever served: when the filter cannot be loaded, the body
+of an unstamped row is dropped (fails closed).
+
+THE FILTER. FILTER is a module-level hook, callable(text) -> text. None means invite_filter.filter_text, imported lazily on first use
+(called with html=True when it accepts that). Tests inject a stand-in. SHORT is the same kind of hook for an unstamped row's short fields
+(title, place, organiser, names): callable(row) -> row without a body; None means invite_clean.clean_row, imported lazily (the short
+fields keep the label rule, plan section 1 rule 7); without it the row is cut to a bare "Meeting".
+
+THE CACHE. Per path, keyed (mtime_ns, size, inode, CLEAN, id(FILTER), id(SHORT)) and checked again after the file is read: a file that
+changed meanwhile is not cached. What is cached is the filtered calendar of that exact content; every call builds fresh views.
+
+FIELDS PER PURPOSE (a field not listed is absent; "body" is whole lines only, in order, never above its length). A private or
+confidential event gets only HEAD (title "Busy" when private) whatever the purpose, as invite_clean.sensitivity fails closed.
+
+    HEAD  = id, start, end, all_day, title, private, sensitivity
+    DAY   = HEAD + where, teams, organiser, recurrence, attendees (name, type, response only)
+
+    purpose      fields                                                         body
+    meta         id only (rows exist so days and meetings can be counted)       none
+    day          DAY                                                            none
+    prep_rank    DAY + attachments                                              1,500
+    prep_panel   DAY + attachments + organiser_email                            1,500
+    prep_page    DAY + attachments                                              1,500
+    agenda       DAY                                                            1,500 (the draft shows 400 of it)
+    shape        HEAD                                                           600
+
+(attendees are in DAY: plan question Q4's default, so drafts' attendee lookup needs only "day".)
+"""
+import contextlib
+import copy
+import inspect
+import json
+import os
+import re
+import time
+import unicodedata
+
+import paths
+
+CLEAN = 1                  # the stamp: bump to make every older row filtered again on read
+BODY_MAX = 20000           # a saved body is cut here before the filter, as invite_clean does
+BODY_CAP = 1500            # plan: the cap on a stored body, whole lines
+FILTER = None              # hook: callable(text) -> text; None = invite_filter.filter_text (lazy)
+SHORT = None               # hook: callable(row) -> row without a body; None = invite_clean.clean_row (lazy)
+LOCK = paths.STAGING / "calendar.lock"
+
+HEAD = ("id", "start", "end", "all_day", "title", "private", "sensitivity")
+DAY = HEAD + ("where", "teams", "organiser", "recurrence", "attendees")
+# purpose -> (fields, body length or 0)
+PURPOSES = {
+    "meta": (("id",), 0),
+    "day": (DAY, 0),
+    "prep_rank": (DAY + ("attachments",), BODY_CAP),
+    "prep_panel": (DAY + ("attachments", "organiser_email"), BODY_CAP),
+    "prep_page": (DAY + ("attachments",), BODY_CAP),
+    "agenda": (DAY, BODY_CAP),
+    "shape": (HEAD, 600),
+}
+# exactly what sweep.calendar_row writes (invite_clean.ROW_KEYS); anything else in a saved row is dropped
+ROW_KEYS = ("id", "start", "end", "all_day", "title", "where", "teams", "private", "organiser", "sensitivity", "organiser_email",
+            "recurrence", "body", "attendees", "attachments")
+_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_CACHE = {}
+
+
+class UnknownPurpose(LookupError):
+    """A purpose that is not in PURPOSES."""
+
+
+def purpose_names():
+    """The closed set of purposes."""
+    return tuple(PURPOSES)
+
+
+def _spec(purpose):
+    try:
+        return PURPOSES[purpose]
+    except (KeyError, TypeError):
+        raise UnknownPurpose(f"unknown calendar purpose {purpose!r}; one of {', '.join(PURPOSES)}") from None
+
+
+# ---- the filter and the short-field hooks -------------------------------------------------------------------------------------
+
+def _filter_fn():
+    """The body filter, or None when it cannot be had (then no body is served)."""
+    if FILTER is not None:
+        return FILTER
+    try:
+        import invite_filter
+        fn = invite_filter.filter_text
+    except (ImportError, AttributeError):
+        return None
+    try:
+        if "html" in inspect.signature(fn).parameters:
+            return lambda text: fn(text, html=True)
+    except (TypeError, ValueError):
+        pass  # no signature to read: the plain call below
+    return fn
+
+
+def filter_body(body):
+    """A body (text or HTML) through the filter, whole lines, at most BODY_CAP characters; "" for anything else or when the filter fails."""
+    if not isinstance(body, str) or not body.strip():
+        return ""
+    fn = _filter_fn()
+    if fn is None:
+        return ""
+    try:
+        out = fn(body[:BODY_MAX])
+    except Exception:  # noqa: BLE001  (a filter fault must never serve the raw body)
+        return ""
+    return _cap(out if isinstance(out, str) else "", BODY_CAP)
+
+
+def _cap(text, limit):
+    """Whole lines, in order, until `limit` characters; a line that would cross is dropped and the rest too. Never edits a line."""
+    if not isinstance(text, str) or limit <= 0:
+        return ""
+    out, size = [], 0
+    for line in text.split("\n"):
+        size += len(line) + (1 if out else 0)
+        if size > limit:
+            break
+        out.append(line)
+    return "\n".join(out).strip("\n")
+
+
+def _short_fields(row):
+    """An unstamped row's short fields cleaned (no body)."""
+    fn = SHORT
+    if fn is None:
+        try:
+            import invite_clean
+            fn = invite_clean.clean_row
+        except ImportError:
+            fn = None
+    if fn is not None:
+        try:
+            return {k: v for k, v in fn({**row, "body": ""}).items() if k != "body"}
+        except Exception:  # noqa: BLE001  (a faulty cleaner falls through to the bare row below: never the raw one)
+            fn = None
+    return {"id": str(row.get("id", ""))[:512], "start": str(row.get("start", ""))[:12], "end": str(row.get("end", ""))[:12],
+            "title": "Meeting", "private": False, "sensitivity": "confidential"}
+
+
+# ---- sensitivity (fails closed, as invite_clean.sensitivity) --------------------------------------------------------------------
+
+def _flag(value):
+    if isinstance(value, str):
+        return unicodedata.normalize("NFKC", value).strip().lower() not in ("", "false", "0", "no", "none", "null", "off")
+    return bool(value)
+
+
+def _sens(ev):
+    """"private", "confidential" or "normal"; anything unexpected is confidential."""
+    if _flag(ev.get("private")):
+        return "private"
+    raw = ev.get("sensitivity")
+    text = raw if isinstance(raw, str) else ("" if raw is None else str(raw))
+    v = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", text)).strip().lower()
+    if v in ("", "normal", "none"):
+        return "confidential" if _flag(ev.get("confidential")) else "normal"
+    return "private" if ("private" in v or "personal" in v) else "confidential"
+
+
+# ---- rows: clean (writer side) and normalise (reader side) --------------------------------------------------------------------
+
+def is_stamped(row):
+    """Whether a row carries the current stamp."""
+    c = row.get("clean") if isinstance(row, dict) else None
+    return isinstance(c, int) and not isinstance(c, bool) and c >= CLEAN
+
+
+def clean_row(row):
+    """A row as the sweep should save it: short fields cleaned, the body filtered (whole lines, at most BODY_CAP), only ROW_KEYS kept,
+    stamped "clean": CLEAN. A confidential or private row keeps no body. Cleaning a cleaned row gives the same row."""
+    row = row if isinstance(row, dict) else {}
+    out = _short_fields(row)
+    if _sens(row) == "normal" and _sens(out) == "normal":
+        body = filter_body(row.get("body"))
+        if body:
+            out["body"] = body
+    out = {k: out[k] for k in ROW_KEYS if k in out}
+    out["clean"] = CLEAN
+    return out
+
+
+def stamp_row(row):
+    """A stamped row is returned as it is (a copy); any other is cleaned and stamped."""
+    return copy.deepcopy(row) if is_stamped(row) else clean_row(row)
+
+
+def stamp_rows(days):
+    """`days` ({day: [row]}) with every row stamped (see stamp_row); keys and order kept, non-list days and non-dict rows dropped."""
+    return {d: [stamp_row(r) for r in rows if isinstance(r, dict)] for d, rows in (days if isinstance(days, dict) else {}).items()
+            if isinstance(rows, list)}
+
+
+def stamp_calendar(cal):
+    """A calendar dict ready to save: every row stamped and the top level stamped too (a file stamp alone would lie after a merge)."""
+    cal = cal if isinstance(cal, dict) else {}
+    out = {k: cal[k] for k in ("fetched", "to") if isinstance(cal.get(k), str)}
+    out["days"] = stamp_rows(cal.get("days"))
+    out["clean"] = CLEAN
+    return out
+
+
+@contextlib.contextmanager
+def lock(wait=20.0):
+    """The calendar's write lock (flock on system/staging/calendar.lock, the same file the sweep uses). Yields True when held, False when
+    it could not be taken within `wait` seconds. Readers never take it."""
+    fd, got = None, False
+    try:
+        import fcntl
+        LOCK.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(LOCK), os.O_RDWR | os.O_CREAT, 0o644)
+        end = time.monotonic() + wait
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                got = True
+                break
+            except OSError:
+                if time.monotonic() >= end:
+                    break
+                time.sleep(0.02)
+    except (ImportError, OSError):
+        got = False
+    try:
+        yield got
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+def _normal_row(row):
+    """A saved row as the cache holds it: stamped rows as stored (ROW_KEYS only), unstamped ones filtered in memory."""
+    if not is_stamped(row):
+        return clean_row(row)
+    out = {k: row[k] for k in ROW_KEYS if k in row}
+    if "body" in out:
+        out["body"] = _cap(out["body"], BODY_CAP) if isinstance(out["body"], str) else ""
+    return out
+
+
+def _normal_calendar(cal):
+    if not isinstance(cal, dict):
+        return {"days": {}}
+    days = cal.get("days")
+    out = {k: cal[k] for k in ("fetched", "to") if isinstance(cal.get(k), str)}
+    out["days"] = {d: [_normal_row(r) for r in rows if isinstance(r, dict)]
+                   for d, rows in (days if isinstance(days, dict) else {}).items()
+                   if isinstance(d, str) and _DAY.match(d) and isinstance(rows, list)}
+    return out
+
+
+# ---- views ---------------------------------------------------------------------------------------------------------------------
+
+def _people(att):
+    return [{k: a[k] for k in ("name", "type", "response") if isinstance(a.get(k), str)} for a in att or [] if isinstance(a, dict)]
+
+
+def _limited(ev, fields, sens):
+    """The fields of `fields` that `ev` holds, copied; a private or confidential event gets its flags forced."""
+    out = {}
+    for k in fields:
+        if k in ev:
+            v = ev[k]
+            out[k] = _people(v) if k == "attendees" else (list(v) if isinstance(v, list) else v)
+    if sens != "normal":
+        if "sensitivity" in fields:
+            out["sensitivity"] = sens
+        if "private" in fields:
+            out["private"] = sens == "private"
+        if sens == "private" and "title" in fields:
+            out["title"] = "Busy"
+    return out
+
+
+def view(ev, purpose):
+    """One event row limited to `purpose` (see the table above). New dicts and lists: the caller may change the result freely."""
+    fields, limit = _spec(purpose)
+    if not isinstance(ev, dict):
+        return {}
+    sens = _sens(ev)
+    if sens != "normal":
+        fields, limit = tuple(f for f in fields if f in HEAD), 0
+    out = _limited(ev, fields, sens)
+    if limit and isinstance(ev.get("body"), str):
+        body = _cap(ev["body"], limit)
+        if body:
+            out["body"] = body
+    return out
+
+
+def read(purpose, path=None):
+    """The saved calendar for `purpose`: {"fetched", "to", "days"} with every row through view(). Unstamped rows are filtered in memory,
+    stamped rows are served as stored; the file is never written. Raises OSError (missing) or ValueError (not JSON), as read_calendar."""
+    _spec(purpose)
+    path = path if path is not None else paths.CALENDAR
+    key = str(path)
+    st = path.stat()
+    sig = (st.st_mtime_ns, st.st_size, st.st_ino, CLEAN, id(FILTER), id(SHORT))
+    hit = _CACHE.get(key)
+    if hit and hit[0] == sig:
+        cal = hit[1]
+    else:
+        cal = _normal_calendar(json.loads(path.read_text(encoding="utf-8")))
+        st2 = path.stat()
+        if (st2.st_mtime_ns, st2.st_size, st2.st_ino, CLEAN, id(FILTER), id(SHORT)) == sig:
+            _CACHE[key] = (sig, cal)
+    out = {k: cal[k] for k in ("fetched", "to") if k in cal}
+    out["days"] = {d: [view(r, purpose) for r in rows] for d, rows in cal["days"].items()}
+    return out
+
+
+def clear_cache():
+    """Forget every cached calendar (tests)."""
+    _CACHE.clear()
