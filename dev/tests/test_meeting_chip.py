@@ -56,7 +56,7 @@ class Chip(unittest.TestCase):
         self.assertNotIn("VIP", (rows + acts).replace("VIPs", ""))
 
     def test_css_uses_tokens_only(self):
-        block = css.split("#328 Intake")[1]
+        block = css.split("#328 Intake")[1].split("\n/*")[0]          # the #328 rules only, up to the next section comment
         self.assertNotRegex(block, r"#[0-9A-Fa-f]{3,6}\b")
 
 

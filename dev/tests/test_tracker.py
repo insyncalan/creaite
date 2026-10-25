@@ -73,7 +73,7 @@ def make_vault():
               "minutes_destination.py",                            # #324, #326, #332: where minutes are filed (live_server imports it)
               "vip_schedule.py",                                   # #97: the alert check's quiet hours
               "notes.py",                                          # BL-301: the note format, read by search
-              "meeting_match.py", "capture.py",                                        # BL-301 C: the capture drawer's server side
+              "meeting_match.py", "mail_domains.py", "capture.py",                                        # BL-301 C: the capture drawer's server side
               "edit_ai.py",                                        # BL-301 D: AI on selected text
               "sneak_peek.py",                                     # BL-322
               "notes_find.py",                                     # BL-301 E: Find updates

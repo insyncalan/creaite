@@ -2864,7 +2864,7 @@ def _inbox_match(title, ev, private, conf, projects, remembered):
     prep_match's own answer, anything else is meeting_match's (#328: matched, likely or unsure)."""
     code, how = (None, "private") if private else prep_match(title, projects, remembered)
     match = {} if private or how == "portfolio" else meeting_answer(title, ev, projects, remembered, conf)
-    if match and how != "remembered":
+    if match and (how != "remembered" or match["level"] == "unsure"):     # a series never overrides attendees who point elsewhere
         code, how = match["p"], match["level"]
     return code, how, match
 

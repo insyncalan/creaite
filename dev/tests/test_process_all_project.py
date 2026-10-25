@@ -18,7 +18,7 @@ src = ACT.read_text()
 
 class Source(unittest.TestCase):
     def test_the_rule_is_in_the_ready_list_not_in_single_process(self):
-        self.assertIn('m.src === "calendar" && !m.private && !m.confidential && (m.level === "likely" || m.level === "unsure")', src)
+        self.assertIn('m.src === "calendar" && !m.private && !m.confidential && m.p !== "_portfolio" && m.level !== "matched"', src)
         self.assertIn("!irNeedsProject(m)", src.split("export const irReady")[1].split("\n")[0])
         self.assertNotIn("irNeedsProject", src.split("export const irCanProcess")[1].split("\n")[0])      # single Process unchanged
         self.assertNotIn("irNeedsProject", src.split("export async function irProcess(m)")[1].split("\n}")[0])
@@ -52,6 +52,17 @@ class ProcessAll(IntakeBase):
         self.assertFalse(any("Weekly sync" in q for q in asked), asked)               # skipped
         self.assertTrue(any("ABC Steering" in q or ".vtt" in q for q in asked), asked)  # the matched one and the files ran
         b.wait("/until you pick a project: Weekly sync 12/.test(document.getElementById('snackT').textContent)")
+
+    def test_a_row_with_no_level_is_skipped_too(self):
+        """Fails closed (security review): a calendar row the matcher gave no level needs a project like a Likely one."""
+        b = self.b
+        self.stage_stub()
+        self.patch("ABC Steering", level="matched")
+        self.patch("Weekly sync 12", level="matched")
+        n = b.eval("irReady().length")
+        b.eval("(()=>{ D.intake_review={...D.intake_review, meetings: D.intake_review.meetings.map(m=>m.title==='Weekly sync 12'?{...m,level:undefined}:m)}; irTick.value++; })()")
+        self.assertEqual(b.eval("irReady().length"), n - 1)
+        self.assertEqual(b.eval("irSkipped().map(m=>m.title)"), ["Weekly sync 12"])
 
     def test_an_explicit_process_on_a_likely_row_still_works(self):
         b = self.b

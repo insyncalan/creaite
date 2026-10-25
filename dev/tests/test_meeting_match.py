@@ -114,10 +114,11 @@ class Offer(unittest.TestCase):
 
     def test_offer(self):
         att = [{"email": "a@newco.example"}, {"email": "b@newco.example"}, {"email": "c@orchard.example"}]
-        self.assertEqual(mm.offer_signal(att, ROWS), {"kind": "domain", "value": "newco.example"})
+        self.assertEqual(mm.offer_signal(att, ROWS, own_domains=["mine.example"]), {"kind": "domain", "value": "newco.example"})
+        self.assertIsNone(mm.offer_signal(att, ROWS))                        # no own domains set: nothing is offered
         self.assertEqual(mm.offer_signal(att, ROWS, own_domains=["newco.example"]), None)
-        self.assertIsNone(mm.offer_signal([{"email": "a@gmail.com"}], ROWS))
-        self.assertIsNone(mm.offer_signal(att, ROWS, confidential=True))
+        self.assertIsNone(mm.offer_signal([{"email": "a@gmail.com"}], ROWS, own_domains=["mine.example"]))
+        self.assertIsNone(mm.offer_signal(att, ROWS, own_domains=["mine.example"], confidential=True))
 
 
 class EntryMatch(unittest.TestCase):

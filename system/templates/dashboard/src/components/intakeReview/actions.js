@@ -40,10 +40,11 @@ export const IR_LEFT_WHY = "private, confidential, not sure what it is or name n
 /** Whether a file's name cannot be sent to ask creaite (a control character, backtick, double quote or angle bracket): it must be
     renamed first, and Process and Process all ready skip it. @param {any} m */
 export const irBadName = m => !!m && m.src === "upload" && !irNameOk(m.path || m.title);
-/** #328 (Alan, Jarvis, 26-10-2026): a calendar meeting whose project is only Likely or Not sure waits for Alan to pick it. Process all ready
+/** #328 (Alan, Jarvis, 26-10-2026; fails closed after the security review): a calendar meeting whose project is not Matched (Likely, Not sure, or no
+    level at all) waits for Alan to pick it. Process all ready
     skips it and lists it; Process on the row itself is the pick and still works. A private or confidential meeting is left out
     by irLeaveOut (counts only), never named here. @param {any} m */
-export const irNeedsProject = m => !!m && m.src === "calendar" && !m.private && !m.confidential && (m.level === "likely" || m.level === "unsure");
+export const irNeedsProject = m => !!m && m.src === "calendar" && !m.private && !m.confidential && m.p !== "_portfolio" && m.level !== "matched";
 /** The rows Process all ready would run. */
 export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irNeedsProject(m) && !irBusy.value.includes(m.id));
 /** The ready meetings Process all ready skips until a project is picked (titles are shown; never a project guess). */

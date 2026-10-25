@@ -78059,7 +78059,7 @@ ${d5.text}`);
   var irLeaveOut = (m5) => m5.private || m5.confidential ? "private" : irBadName(m5) ? "name" : irUnsure(m5, irFileKinds.value) ? "type" : "";
   var IR_LEFT_WHY = "private, confidential, not sure what it is or name not allowed";
   var irBadName = (m5) => !!m5 && m5.src === "upload" && !irNameOk(m5.path || m5.title);
-  var irNeedsProject = (m5) => !!m5 && m5.src === "calendar" && !m5.private && !m5.confidential && (m5.level === "likely" || m5.level === "unsure");
+  var irNeedsProject = (m5) => !!m5 && m5.src === "calendar" && !m5.private && !m5.confidential && m5.p !== "_portfolio" && m5.level !== "matched";
   var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && !irNeedsProject(m5) && !irBusy.value.includes(m5.id));
   var irSkipped = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && irNeedsProject(m5) && !irBusy.value.includes(m5.id));
   var irSkippedWords = (held) => !held.length ? "" : `Skipped ${held.length === 1 ? "1 meeting" : `${held.length} meetings`} until you pick a project: ${held.slice(0, 3).map((m5) => m5.title).join(", ")}${held.length > 3 ? ` and ${held.length - 3} more` : ""}`;
@@ -78753,7 +78753,21 @@ ${d5.text}`);
         " ",
         m5.reason
       ] }),
-      lv === "unsure" && m5.cands && m5.cands.length ? /* @__PURE__ */ u4("span", { class: "mcands", children: m5.cands.map((c5) => /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ircand": c5, onClick: () => irChooseProject(m5, c5), children: pName(c5) }, c5)) }) : null,
+      lv === "unsure" && m5.cands && m5.cands.length ? /* @__PURE__ */ u4("span", { class: "mcands", children: [
+        m5.cands.map((c5) => /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "linkbtn",
+            "data-ircand": c5,
+            "data-tip": `Use ${pName(c5)} for every meeting with this title`,
+            onClick: () => irChooseProject(m5, c5),
+            children: pName(c5)
+          },
+          c5
+        )),
+        /* @__PURE__ */ u4("span", { class: "why", "data-ircandnote": "1", children: "Your pick is kept for every meeting with this title." })
+      ] }) : null,
       o5 ? /* @__PURE__ */ u4("div", { class: "moffer", "data-iroffer": "1", children: [
         "Remember ",
         /* @__PURE__ */ u4("b", { children: o5.value }),

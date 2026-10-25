@@ -16,6 +16,7 @@ sentences that name projects (by the register's name) and never an address, a do
 import re
 
 import capture
+import mail_domains
 import paths  # noqa: F401
 
 MAX_CANDS = 3
@@ -100,6 +101,8 @@ def _verdict(strong, medium, weak, mem, names):
     if strong:
         (code,) = strong
         return {"p": code, "level": "matched", "reason": "Named in the title", "cands": [code]}
+    if mem and set(medium) - {mem}:                      # a series Alan chose never overrides attendees who point to another project
+        return _unsure({mem} | set(medium), names, "Two projects fit")
     if mem:
         return {"p": mem, "level": "matched", "reason": "You chose this for the series before", "cands": [mem]}
     if len(medium) > 1:
@@ -119,22 +122,22 @@ def _unsure(codes, names, lead):
             "reason": lead + ": " + " or ".join(names[c] for c in ordered)}
 
 
-PUBLIC_DOMAINS = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com", "yahoo.com", "icloud.com", "me.com",
-                  "aol.com", "proton.me", "protonmail.com"}
+PUBLIC_DOMAINS = mail_domains.PUBLIC_MAIL
 
 
 def offer_signal(attendees, rows, own_domains=(), confidential=False):
     """The one concrete signal worth offering to remember after Alan picks a project for a meeting: the email domain of an
-    attendee that no project lists yet (never Alan's own, a public mail provider or a confidential meeting's), else None.
+    attendee that no project lists yet (never Alan's own, a public mail provider or a sub-domain of one, a value that is not a
+    plain host name, or a confidential meeting's; and nothing at all while his own domains are not set), else None.
     {"kind": "domain", "value": "client.example"}. propose.learn_check still has the last word."""
-    if confidential:
-        return None
     own = {str(d).lower().lstrip("@") for d in own_domains or []}
+    if confidential or not own:                          # without Alan's own domains set, his own could be offered: offer nothing
+        return None
     listed = {d for r in rows for d in r["domains"]}
     counts = {}
     for a in _addresses(attendees):
         d = a.split("@")[-1]
-        if d not in own and d not in listed and d not in PUBLIC_DOMAINS:
+        if d not in own and d not in listed and mail_domains.valid_domain(d) and not mail_domains.is_public_mail(d):
             counts[d] = counts.get(d, 0) + 1
     if not counts:
         return None

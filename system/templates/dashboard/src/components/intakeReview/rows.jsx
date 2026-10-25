@@ -161,7 +161,9 @@ export function MatchChip({ m }) {
     <span class="mlv" data-irmatch={lv}><IrIcon name={ic} /> {word}</span>
     <span class="why"> {m.reason}</span>
     {lv === "unsure" && m.cands && m.cands.length ? <span class="mcands">{m.cands.map((/** @type {string} */ c) =>
-      <button type="button" class="linkbtn" key={c} data-ircand={c} onClick={() => irChooseProject(m, c)}>{pName(c)}</button>)}</span> : null}
+      <button type="button" class="linkbtn" key={c} data-ircand={c} data-tip={`Use ${pName(c)} for every meeting with this title`}
+        onClick={() => irChooseProject(m, c)}>{pName(c)}</button>)}
+      <span class="why" data-ircandnote="1">Your pick is kept for every meeting with this title.</span></span> : null}
     {o ? <div class="moffer" data-iroffer="1">Remember <b>{o.value}</b> for {pName(o.code)}?{" "}
       <button type="button" class="linkbtn" data-irofferyes="1" onClick={() => irLearnOffer()}>Remember</button>{" "}
       <button type="button" class="linkbtn" data-irofferno="1" onClick={() => irDismissOffer()}>No</button></div> : null}
