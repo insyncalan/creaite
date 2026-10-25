@@ -2,9 +2,12 @@
 # Base: origin/main at the 2.6.8 cut (apply on the release commit).
 # Guarded files only: system/scripts/live_server.py, system/scripts/client_leak.py, system/scripts/backup.py.
 #
-# #365: a transcript load that never got the calendar event: per-result debug log, the day-window search with one retry, and the check/load kind prompt (no CLAUDE.md, no session start)
+# #365 (frozen, approved bytes): per tool result of a job run one debug-log line (tool, ok or error, length; never text); the load prompt
+# searches the meeting's day (its start and end, no title words) and tries once more with a slightly wider day window if the search errors;
+# check and load get their own KIND_PROMPTS text that tells the model not to follow CLAUDE.md or session start. It does NOT start the run
+# context-less and sets no search limit: those (Cap's MEDIUMs) are in the follow-up pair, which is not in this chain.
 dev/proposals/365/live_server-365.diff
-# #365 tools delta
+# #365 tools (frozen, approved bytes): KIND_TOOLS and KIND_ARGS for check and load: the calendar search and read_resource only, ToolSearch the only built-in
 dev/proposals/365/live_server-365-tools.diff
 # #368: the client report check reads the sent line in every form
 dev/proposals/368/client_leak.py.diff

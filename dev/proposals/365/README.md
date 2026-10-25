@@ -7,7 +7,7 @@ Landing order: live_server-365.diff, live_server-365-tools.diff, tests-pins.diff
 
 ## What the diffs do
 - live_server-365.diff: a debug-log line per tool result of a job run (tool, ok or error, length); the load prompt searches the
-  day's window, not the title, with one retry; `check` and `load` get their own prompt (no CLAUDE.md, no session start).
+  day's window, not the title, with one retry; `check` and `load` get their own prompt text that tells the model not to follow CLAUDE.md or session start (the run still starts as before; a context-less start is only in the follow-up pair, which is not in the tree).
 - live_server-365-tools.diff (M2, approved by Alan, bytes frozen): `KIND_TOOLS` and `KIND_ARGS` for check and load: the calendar
   search and read_resource only, ToolSearch the only built-in.
 - Unguarded and already on the branch: transcripts.py says which way a load failed and logs counts; M1 (a read of the asked event
