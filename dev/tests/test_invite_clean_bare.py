@@ -105,6 +105,28 @@ BARE = [
     ("rv-33", "Password ; hunter", "hunter"),   # Full review round 2
     ("label-slash", "Sync API key / hunter", "hunter"),
     ("label-pipe", "Sync Secret | hunter", "hunter"),
+    ("u-bold", "__Passcode:__ 4417", "4417"),                                              # #369 shape 1, Cap's exact strings
+    ("u-italic", "_Passcode_: 4417", "4417"),
+    ("u-joined", "Meeting_ID: 987 654 321", "987 654 321"),
+    ("u-glued", "Passcode_4417", "4417"),
+    ("u-mid", "Weekly sync __PIN__ 4417", "4417"),
+    ("u-star", "*Passcode:* 4417", "4417"),
+    ("u-tilde", "~~Passcode~~ 4417", "4417"),
+    ("u-backtick", "`Passcode`: 4417", "4417"),
+    ("u-word-value", "__Password__ hunter", "hunter"),
+    ("id-zoom", "Zoom ID 4417", "4417"),                                                    # shape 8: meeting-ID labels
+    ("id-room", "Room ID - 4417", "4417"),
+    ("id-mtg", "Mtg ID 4417", "4417"),
+    ("id-join-with", "Join with ID 987 654 321", "987 654 321"),
+    ("id-hash", "Meeting #: 987 654 321", "987 654 321"),
+    ("id-meeting-colon", "Meeting: 987 654 321", "987 654 321"),
+    ("id-is", "ID is 4417", "4417"),
+    ("split-pass-code", "Pass-code: 4417", "4417"),                                         # shape 10
+    ("se-token", "Token! 4417", "4417"),                                                    # shape 5: a sentence end, then digits
+    ("se-secret", "Secret? 4417", "4417"),
+    ("se-code", "Code! 4417", "4417"),
+    ("se-key", "Key. 4417", "4417"),
+    ("se-access", "Access, 4417", "4417"),
     ("password-connecting-word", "Password for the room is hunterxyz", "hunterxyz"),   # "for" is taken as the value: fail closed
 ]
 # HTML is read only in an invite body (a title, place or name is plain text from Outlook), so these rows are judged in the body only.
@@ -227,6 +249,20 @@ NEXT_LINE = [
     ("s-meeting-id-semi", "Meeting ID; 123", "123"),
     ("s-pwd-dot-digit", "Pwd. xk7q", "xk7q"),
     ("s-access-code-dot", "Access code. 4417", "4417"),
+    ("m-two-labels", "Meeting ID: Passcode:\n987 654 321\n4417\nBye", "4417"),                  # shape 9
+    ("m-two-labels-first", "Meeting ID: Passcode:\n987 654 321\n4417\nBye", "987 654 321"),
+    ("m-and", "Meeting ID and Passcode:\n987 654 321\n4417\nBye", "4417"),
+    ("m-slash", "ID/Passcode:\n987 654 321\n4417\nBye", "4417"),
+    ("m-removed-line", "Meeting ID:\nPasscode: 4417\n987 654 321\nBye", "987 654 321"),
+    ("m-join-url", "Meeting ID:\nhttps://zoom.example.invalid/j/5550001111\n987 654 321\nBye", "987 654 321"),
+    ("m-stop-digits", "Meeting ID.\n987 654 321\nBye", "987 654 321"),
+    ("m-zoom-id-alone", "Zoom ID:\n987 654 321", "987 654 321"),
+    ("m-underscore-next", "__Passcode:__\n4417", "4417"),
+    ("m-underscore-two", "__Meeting ID:__ __Passcode:__\n987 654 321\n4417\nBye", "4417"),
+    ("m-td", "<td>Meeting ID: Passcode:</td><td>987 654 321</td><td>4417</td>", "4417"),
+    ("m-td-removed", "<td>Meeting ID:</td><td>Passcode: 4417</td><td>987 654 321</td>", "987 654 321"),
+    ("m-li", "<ul><li>__Passcode:__</li><li>4417</li></ul>", "4417"),
+    ("m-li-ids", "<ul><li>Meeting ID: Passcode:</li><li>987 654 321</li><li>4417</li></ul>", "4417"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
@@ -390,6 +426,13 @@ class Controls(unittest.TestCase):
         # a bare label such as "Password!" on its own line still hides the next lines (the three-line window), so only the
         # same-line "Password! hunter" and a stand-alone label such as "Passcode." keep the word-only value
 
+    def test_snake_case_and_decoration_over_removal(self):
+        """Underscores and markdown wrappers are read as spaces: a label inside an identifier is a label (fail closed), an allowed phrase stays."""
+        for t in ("code_review sync", "Code_review", "my_password_manager plan", "see meeting_id here"):
+            self.assertEqual(I.scrub(t, 140), t, t)
+        for t in ("pass_code", "meeting_id 4417", "Pin_board", "api_key abc", "snake_case_token abcdq"):
+            self.assertEqual(I.scrub(t, 140), "", t)
+
     def test_known_over_removal(self):
         """Fail closed costs a few ordinary titles: any word after pin / password / code that is not on the allow-list is a value."""
         for t in OVER_REMOVED:
@@ -476,9 +519,9 @@ def mutant_with_cap():
     """invite_text as it was before round 5: a label alone keeps its value only up to two blank lines on."""
     src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
     old = re.search(r"            kept\.append\(ln\)  +# a blank line is transparent[^\n]*", src).group(0)
-    src = src.replace("    kept, window, pending = [], 0, 0", "    kept, window, pending, blanks = [], 0, 0, 0", 1)
+    src = src.replace("    kept, window, pending, digit_wait = [], 0, 0, False", "    kept, window, pending, digit_wait, blanks = [], 0, 0, False, 0", 1)
     src = src.replace(old, "            blanks += 1\n            pending = pending if blanks <= 2 else 0\n            kept.append(ln)", 1)
-    src = src.replace("        consumed = pending > 0 or window > 0 or dropped\n", "        consumed = pending > 0 or window > 0 or dropped\n        blanks = 0\n", 1)
+    src = src.replace("        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)\n", "        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)\n        blanks = 0\n", 1)
     spec = importlib.util.spec_from_loader("invite_clean_cap", loader=None)
     mod = importlib.util.module_from_spec(spec)
     mod.__file__ = str(SCRIPTS / "invite_clean.py")
@@ -552,11 +595,11 @@ class Mutants(unittest.TestCase):
 
     def test_labels_in_a_row_do_not_add_up(self):
         src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
-        old = src[src.index("            pending += 1"):].split("\n")[0]
+        old = "        return pending + _label_count(ln)"
         spec = importlib.util.spec_from_loader("invite_clean_row_mutant", loader=None)
         mod = importlib.util.module_from_spec(spec)
         mod.__file__ = str(SCRIPTS / "invite_clean.py")
-        exec(compile(src.replace(old, "            pending = 1", 1), "invite_clean_row_mutant", "exec"), mod.__dict__)
+        exec(compile(src.replace(old, "        return 1", 1), "invite_clean_row_mutant", "exec"), mod.__dict__)
         bad = self.next_line_bad(mod)
         self.assertTrue({"b-meeting-id-pair", "b-blanks-between"} <= set(bad), bad)
 
@@ -571,7 +614,7 @@ class Mutants(unittest.TestCase):
     def test_each_separator_removed(self):
         """The one separator class: with a single character taken out of it, the row that uses that character leaks."""
         need = {"-": "nl-hyphen", "\u2013": "nl-en-dash", "\u2014": "nl-em-dash", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
-                "[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe", "\u2192": "p-arrow", "~": "p-tilde"}
+                "[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe", "\u2192": "p-arrow"}
         base = 'BARE_SEPARATORS = r"[^\\w\\s.,;!?]"'
         for ch, rid in need.items():
             m = mutant(base, f'BARE_SEPARATORS = r"[^\\w\\s.,;!?{re.escape(ch)}]"')
@@ -580,7 +623,7 @@ class Mutants(unittest.TestCase):
     def test_separator_class_reduced_to_colon_equals_hash(self):
         m = mutant('BARE_SEPARATORS = r"[^\\w\\s.,;!?]"', 'BARE_SEPARATORS = r"[:=#]"')
         bad = self.next_line_bad(m)
-        self.assertTrue({"p-hyphen", "p-en-dash", "p-em-dash", "p-pipe", "p-slash", "p-arrow", "p-tilde", "p-paren", "p-colon-hyphen",
+        self.assertTrue({"p-hyphen", "p-en-dash", "p-em-dash", "p-pipe", "p-slash", "p-arrow", "p-paren", "p-colon-hyphen",
                          "p-meeting-id-hyphen"} <= set(bad), bad)
 
     def test_is_tail_removed(self):
@@ -599,11 +642,28 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"s-dots"} <= set(bad), bad)
 
     def test_digit_rule_removed(self):
-        m = mutant('rf"|(?<![\\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\\w-])\\s*[.,;!?\\u2026]+\\s*\\S*\\d"', 'rf"|(?!)"')
+        m = mutant('rf"|(?<![\\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\\w-])\\s*[.,;!?\\u2026]+\\s*\\S*\\d"', 'rf"|(?!)"')
         for t in ("Meeting ID. 123 456", "Meeting ID, 123 456", "Meeting ID; 123", "Pwd. xk7q", "Access code. 4417"):
             self.assertEqual(I.scrub(t, 140), "", t)
             if t.startswith("Meeting ID"):                      # Pwd and Access code are secrets with or without a value
                 self.assertNotEqual(m.scrub(t, 140), "", f"{t!r}: the digit rule is not what removes it")
+
+    def test_underscore_and_wrapper_reading_removed(self):
+        m = mutant('[_DECORATION.sub(" ", s)] if _DECORATION.search(s) else []', "[]")
+        bad = {b.split(":")[0] for b in fails(m)} | set(self.next_line_bad(m))
+        self.assertTrue({"u-bold", "u-italic", "u-joined", "u-glued", "u-mid", "u-word-value", "m-underscore-next"} <= bad, bad)
+
+    def test_several_labels_count_removed(self):
+        m = mutant("return pending + _label_count(ln)", "return pending + 1")
+        self.assertTrue({"m-two-labels", "m-and", "m-slash"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+
+    def test_removed_line_uses_up_a_value(self):
+        m = mutant("return pending - 1 if pending and not dropped else pending", "return pending - 1 if pending else pending")
+        self.assertTrue({"m-removed-line", "m-join-url"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+
+    def test_digit_after_stop_off(self):
+        m = mutant("value = digit_wait and bool(re.search", "value = False and bool(re.search")
+        self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     def test_key_label_rule_off(self):
         m = mutant("(?:{_BARE}|{_BARE_LABELS})(?![\\w-]){_ALONE_TAIL}", "(?:{_BARE_LABELS})(?![\\w-]){_ALONE_TAIL}")
