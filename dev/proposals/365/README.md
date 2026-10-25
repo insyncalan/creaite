@@ -8,8 +8,11 @@ Landing order: live_server-365.diff, live_server-365-tools.diff, tests-pins.diff
 ## What the diffs do
 - live_server-365.diff: a debug-log line per tool result of a job run (tool, ok or error, length); the load prompt searches the
   day's window, not the title, with one retry; `check` and `load` get their own prompt (no CLAUDE.md, no session start).
-- live_server-365-tools.diff (M2): `KIND_TOOLS` and `KIND_ARGS` for check and load: the calendar search and read_resource only,
-  ToolSearch the only built-in.
+- live_server-365-tools.diff (M2, Cap's three MEDIUMs): `KIND_TOOLS` and `KIND_ARGS` for check and load: the calendar search and
+  read_resource only, ToolSearch the only built-in. `CONTEXTLESS_JOBS`: both start in an empty folder outside the vault with
+  `--setting-sources ""` (so no CLAUDE.md), no `--add-dir`, as #183's draft run does. The prompt searches one hour either side of the
+  meeting first, then the whole day, then the exact start and end (three searches at most), and takes only the event whose id is
+  exactly the asked one. The narrower first window also shows fewer of the day's other titles.
 - Unguarded and already on the branch: transcripts.py says which way a load failed and logs counts; M1 (a read of the asked event
   clears `wrong`, a neighbour read after it changes nothing).
 
