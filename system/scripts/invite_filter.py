@@ -881,7 +881,7 @@ def _raw_first(text):
     if scrub is None:
         return ""
     raw = text[:BODY_MAX * 5]
-    aug, flags = _with_boundaries(raw, _fit(_cut(scrub.invite_text(raw)).split("\n")))
+    aug, flags = _with_boundaries(raw, _fit([x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]))
     kept = _tidy_blanks([aug[i] for i in keep_indices(aug, second_layer=False, extras=True) if not flags[i]])
     kept = _tidy_blanks(_without_orphans(raw, kept))
     for _ in range(4):
