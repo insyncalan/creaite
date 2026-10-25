@@ -4261,6 +4261,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icchg{font-size:var(--fs-md);line-height:var(--lh-22);font-weight:600;   /* #341 item 2 (Alan, 24-10-2026): 14 px like the title; emphasis by weight, not size */ color:var(--ink);margin:2px 0}
 #v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
 #v-intake-review .icchg .icsrc{font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
+#v-intake-review .icsrc{display:flex;align-items:baseline;justify-content:space-between;gap:12px} #v-intake-review .icsrc .srclink{flex:none;margin-left:auto}   /* #341: the link at the right edge, the text keeps the left */
 #v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);padding-left:10px;margin:4px 0}
 #v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 #v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
@@ -74061,17 +74062,34 @@ ${d5.text}`);
     const c5 = mcClassify(label);
     return c5 ? String(label) : "A creaite step";
   }
-  var MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|sweep(?: mail)? the last \\d{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\d{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
+  var MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|sweep(?: mail)? the last \\p{Nd}{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\p{Nd}{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
   var MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
-  var MC_SWEEP_NOT = "\\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\\b";
-  var MC_SWEEP_FOR = "\\bfor ([a-z][a-z0-9]{2,6})\\b";
+  var MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
+  var MC_SWEEP_FOR = "(?<![\\p{L}\\p{N}_])for ([a-z][a-z0-9]{2,6})(?![\\p{L}\\p{N}_])";
   var MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
-  var SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "i"), NOT_RE = new RegExp(MC_SWEEP_NOT, "i"), FOR_RE = new RegExp(MC_SWEEP_FOR, "ig");
+  var SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "iu"), NOT_RE = new RegExp(MC_SWEEP_NOT, "iu"), FOR_RE = new RegExp(MC_SWEEP_FOR, "igu");
+  var MC_SPACE_CODES = /* @__PURE__ */ new Set([9, 10, 11, 12, 13, 28, 29, 30, 31, 32, 133, 160, 5760, 8232, 8233, 8239, 8287, 12288]);
+  var mcIsSpace = (ch2) => {
+    const c5 = ch2.codePointAt(0) ?? 0;
+    return MC_SPACE_CODES.has(c5) || c5 >= 8192 && c5 <= 8202;
+  };
+  var mcSplitSpaces = (text) => {
+    const out = [];
+    let cur = "";
+    for (const ch2 of String(text)) {
+      if (mcIsSpace(ch2)) {
+        if (cur) out.push(cur);
+        cur = "";
+      } else cur += ch2;
+    }
+    if (cur) out.push(cur);
+    return out;
+  };
   var codeOk = (code) => code.toLowerCase() === "the" || code === code.toUpperCase() || /\d/.test(code) || code.length <= 3 && !MC_SWEEP_COMMON.includes(code.toLowerCase());
   function mcIsAsk(text) {
-    const t47 = String(text || "").trim().split(/\s+/).join(" ");
+    const t47 = mcSplitSpaces(text || "").join(" ");
     if (MC_PLAIN_ASKS.includes(t47)) return true;
-    if (!t47 || t47.length > 120) return false;
+    if (!t47 || [...t47].length > 120) return false;
     const m5 = SWEEP_RE.exec(t47);
     if (!m5 || m5.groups && m5.groups.subject && NOT_RE.test(m5.groups.subject)) return false;
     if (m5.groups && m5.groups.subject != null) return true;
@@ -78894,11 +78912,14 @@ ${d5.text}`);
     ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
     const match = r4.p ? null : r4.why;
     where2 = fdText(where2);
-    const bits = [where2, match ? String(match) : "", link].filter((x5) => x5);
-    return bits.length ? /* @__PURE__ */ u4("span", { class: "icsrc", children: bits.map((x5, i5) => /* @__PURE__ */ u4(S2, { children: [
-      i5 ? " · " : null,
-      x5
-    ] })) }) : null;
+    const bits = [where2, match ? String(match) : ""].filter((x5) => x5);
+    return bits.length || link ? /* @__PURE__ */ u4("span", { class: "icsrc", children: [
+      /* @__PURE__ */ u4("span", { class: "icsrct", children: bits.map((x5, i5) => /* @__PURE__ */ u4(S2, { children: [
+        i5 ? " · " : null,
+        x5
+      ] })) }),
+      link
+    ] }) : null;
   }
   function WeekendNote({ r: r4 }) {
     const f5 = WKRVF[
@@ -81936,6 +81957,7 @@ Next: `;
         "PageShape",
         "Peek",
         "PeoplePage",
+        "PrepHead",
         "PrepPage",
         "PrepPopup",
         "PrepShape",

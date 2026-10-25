@@ -160,7 +160,9 @@ class Classifier(unittest.TestCase):
                "sweep the apply thread", "check my mail", "check mail", "check my email", "check email", "check email and teams", "check my mail and teams",
                "check my mail for ABC", "check my mail for urgent", "check mail the last 2 days", "refresh calendar", "refresh the calendar", "refresh my calendar",
                "refresh my calendar please", "sweep now", "sweep please.", "sweep and apply", "sweep then approve", "sweep for the", "sweep for me", "what did the sweep find",
-               "hello", "", "  sweep   mail  ", "sweep the last 7 days and apply", "check my mail for abc", "check my mail for the last 7 days", "x" * 130]
+               "hello", "", "  sweep   mail  ", "sweep the last 7 days and apply", "check my mail for abc", "check my mail for the last 7 days", "x" * 130,
+               "sweep the last ٧ days", "check my mail the last ٣ days", "sweep for ABC for the last ١٠ days", "sweep the last ٧ days and apply", "sweep\x85mail",
+               "sweep\ufeff", "sweep the ésend thread", "ſweep", "sweep the " + "é" * 60 + " thread", "sweep the " + "😀" * 71 + " thread", "x" * 120]
 
     def test_a_saved_chat_is_a_mail_check_by_the_servers_own_words(self):
         """The page's answer equals the server's panel_sweep for every phrasing (live_server imported only here, to compare)."""
@@ -169,6 +171,8 @@ class Classifier(unittest.TestCase):
         o = run_node(script="""const f = await import(%s); console.log(JSON.stringify(%s.map(f.mcIsAsk)));""" % ("%s", json.dumps(self.PHRASES)))
         self.assertEqual(o, [bool(live_server.panel_sweep(x)) for x in self.PHRASES])
         by = dict(zip(self.PHRASES, o))
+        for yes in ("sweep the last ٧ days", "check my mail the last ٣ days", "sweep for ABC for the last ١٠ days"):
+            self.assertTrue(by[yes], yes)                                                  # Arabic-Indic digits, as the server reads them
         for yes in ("check my email", "check email", "check email and teams", "refresh my calendar", "sweep", "please sweep", "check my mail"):
             self.assertTrue(by[yes], yes)
         for no in ("sweep and apply", "sweep then approve", "what did the sweep find", "hello", ""):
@@ -198,9 +202,12 @@ class Classifier(unittest.TestCase):
         self.assertEqual(set(srv), {"PANEL_SWEEP_WORDS", "PANEL_SWEEP_FOR", "PANEL_SWEEP_NOT", "PANEL_SWEEP_COMMON"})
         page = MC.read_text(encoding="utf-8")
         grab = lambda name: json.loads(re.search(r"^export const %s = (\".*\");$" % name, page, re.M).group(1))
-        self.assertEqual(grab("MC_SWEEP_SRC"), srv["PANEL_SWEEP_WORDS"].replace("(?P<", "(?<"))
-        self.assertEqual(grab("MC_SWEEP_NOT"), srv["PANEL_SWEEP_NOT"])
-        self.assertEqual(grab("MC_SWEEP_FOR"), srv["PANEL_SWEEP_FOR"])
+        # the one intended difference: Python's \d matches every Unicode digit, so the page writes \p{Nd} (with the u flag)
+        self.assertEqual(grab("MC_SWEEP_SRC"), srv["PANEL_SWEEP_WORDS"].replace("(?P<", "(?<").replace("\\d", "\\p{Nd}"))
+        # the second intended difference: Python's \b is Unicode-aware, JavaScript's is not, so the page writes the word edges out
+        edge = lambda rx: rx.replace("\\b", "\0", 2).replace("\0", "(?<![\\p{L}\\p{N}_])", 1).replace("\0", "(?![\\p{L}\\p{N}_])", 1)
+        self.assertEqual(grab("MC_SWEEP_NOT"), edge(srv["PANEL_SWEEP_NOT"]))
+        self.assertEqual(grab("MC_SWEEP_FOR"), edge(srv["PANEL_SWEEP_FOR"]))
         common = json.loads(re.search(r"^export const MC_SWEEP_COMMON = (\[.*\]);$", page, re.M).group(1))
         self.assertEqual(sorted(common), srv["PANEL_SWEEP_COMMON"])
 
@@ -209,7 +216,7 @@ class Classifier(unittest.TestCase):
         self.assertNotEqual(page.replace("check (?:my )?", "check (?:my |the )?", 1), page)      # the mutation applies to the page's text
         mutated = json.loads(re.search(r"^export const MC_SWEEP_SRC = (\".*\");$", page.replace("check (?:my )?", "check (?:my |the )?", 1), re.M).group(1))
         server = LIVE.read_text(encoding="utf-8")
-        self.assertNotIn(mutated.replace("(?<", "(?P<"), server.replace("\n", ""))
+        self.assertNotIn(mutated.replace("(?<", "(?P<").replace("\\p{Nd}", "\\d"), server.replace("\n", ""))
 
     def test_the_steps_list_shows_fixed_phrases_only(self):
         self.assertEqual(self.o["stepText"], ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail",

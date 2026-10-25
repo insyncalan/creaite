@@ -13,7 +13,8 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - **Close the day** ticks its rows one by one from each row's own search, not all at once.
 
 ### The right project for a meeting
-- **A meeting in a remembered series no longer takes the wrong project.** If you had remembered a series such as "Weekly sync" for one project, a meeting titled "[DEF] Weekly sync" was processed under that first project, so its minutes and items could be filed under the wrong client. The project code in the meeting's title now wins. A meeting with no code still uses the remembered project, and a title with two different codes is left as Not sure. This affects 2.6.4 and earlier. (#362)
+- **A meeting in a remembered series no longer takes the wrong project.** If you had remembered a series such as "Weekly sync" for one project, a meeting titled "[DEF] Weekly sync" was processed under that first project, so its minutes and items could be filed under the wrong client. A project code in square brackets, or one at the very start of the title, now wins. A meeting with no such code still uses the remembered project, and a title with two different codes is left as Not sure. This affects 2.6.4 and earlier. (#362)
+- **For a confidential meeting you now choose the project before Shape is offered.** Once you have chosen it, creaite remembers it. A confidential meeting's lists, hub entries and next-day entries no longer show a guessed project. (#362)
 
 ### Design decisions
 - **Review** shows the "what changes" line at the same size as the title, with emphasis by weight or colour, not size. (#341)
@@ -47,7 +48,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - **Files** says Word, Transcript or Excel for a file's type. (#343)
 
 ### What's fixed
-- **A confidential meeting's Prep page and agenda no longer land in a project folder you didn't choose.** Until you pick the project, they go to the portfolio folder, and nothing sent to Claude names the project.
+- **A confidential meeting's Prep page and agenda no longer land in a project folder you didn't choose.** Until you pick the project, they go to the portfolio folder, and Claude isn't told which project it is.
 
 ### Behind the scenes
 - A failed Track change clears the Filed note, and renaming minutes follows an update item's source. (#355)
