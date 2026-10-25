@@ -174,7 +174,7 @@ class FilesNavigation(LiveBrowserCase):
         b = self.open()
         self.view("week")
         week = self.rows()
-        if not b.eval("document.querySelector('#fmenu.on')"):      # choosing a view leaves the menu open
+        if not b.eval("!!document.querySelector('#fmenu.on')"):      # choosing a view leaves the menu open
             b.click("#fmBtn")
         b.click("#fmenu input[name=fsType][value=vtt]")
         narrowed = self.rows()
