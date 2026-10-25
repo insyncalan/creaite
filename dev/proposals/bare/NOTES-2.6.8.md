@@ -10,6 +10,8 @@
 
 **Labels in a row.** When several labels stand alone one after another ("Meeting ID:", "Passcode:", "PIN:"), the next lines with text are removed one for each label, so a label list followed by its values loses exactly the values; if a label has no value of its own, one ordinary line after the list is lost with them. A / or | straight after a label ("API key / ...") now counts as a separator like a dash.
 
+**Separators.** After a label, any punctuation or symbol (not just a colon) means a secret follows: "Passcode –", "Passcode →", "Passcode is", "Passcode (", also "Key:" on its own line. The line after goes with it. This also removes titles such as "Access & Security review" or "Key (draft): plan" that have a label word followed by a symbol; a sentence end (full stop, comma, semicolon, ! or ?) does not count. "Key milestones" and "Key dates" are unaffected.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");

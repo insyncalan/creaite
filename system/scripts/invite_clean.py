@@ -48,9 +48,12 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
                       r"click\s+(?:here\s+)?to)\b", re.I)
 
 # ---- keys: passcodes, PINs, meeting IDs, dial-in numbers ----
+# ONE separator class for every label path (a label alone, a bare label, a phrase that stops): any punctuation or symbol (Unicode
+# P* and S*, and the rest of what is neither a letter, a digit nor a space) except a sentence end (. , ; ! ?).
+BARE_SEPARATORS = r"[^\w\s.,;!?]"
 # a label followed by a value: a separator, "is", a word with a digit, or (v2.6 review) a word that switches from a small
 # letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
-_VAL = r"(?:\s*(?:[:=#\-\u2013]\s*\S|\bis\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
+_VAL = rf"(?:\s*(?:{BARE_SEPARATORS}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
 _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
                r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
                r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
@@ -90,7 +93,7 @@ BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "
 BARE_FUNCTION = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or")
 
 
-BARE_SEPARATORS = r"[\-\u2013\u2014:=(\[/|]"                       # hyphen, en dash, em dash, colon, equals, bracket, slash, pipe
+
 
 
 def _bare_next(lab, ok):
@@ -119,7 +122,9 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))\s*[:=#]?\s*$", re.I)
+_ALONE_ITEM = rf"(?:\s*{BARE_SEPARATORS}|\s*_|\s+(?:is|are)(?![\w-]))"                       # a separator, "is" or "are"
+LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS})){_ALONE_ITEM}*\s*$"
+                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS})(?![\w-]){_ALONE_ITEM}+\s*$", re.I)    # "Key:", "Code is": needs one
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"

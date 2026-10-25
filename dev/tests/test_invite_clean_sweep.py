@@ -23,7 +23,7 @@ sys.path.insert(0, str(SCRIPTS))
 import invite_clean as I  # noqa: E402
 
 ALONE = ["Passcode:", "Passcode", "PIN:", "Password:", "Meeting ID:", "Host key:", "Access code:", "Dial-in code:", "Pwd:", "Passphrase:",
-         "Conference ID:", "Join code:"]
+         "Conference ID:", "Join code:", "Key:"]
 SEPARATED = ["Password -", "Pw:", "Pswd =", "Token –", "Secret |", "API key /", "PIN (", "Code —"]
 PHRASES = ["Password reset", "PIN entry", "Code review", "Token refresh", "Secret manager", "OTP setup", "Password reset for", "Code of",
            "API key rotation", "Password change request"]
@@ -61,7 +61,57 @@ def survivors(mod):
     return n, bad
 
 
+def separators():
+    """Every character of BARE_SEPARATORS' own list, the words that may follow a label, and a seeded sample (seed 232) of Unicode
+    punctuation and symbols (categories P* and S*) that are not sentence ends."""
+    import unicodedata
+    fixed = ["-", "\u2013", "\u2014", ":", "=", "#", "(", "[", "/", "|", "~", "\u2192", ":-", "is", "is:", "are", "- -", "::", "\u2022", "*", ">"]
+    def stays(c):                                   # a symbol that NFKC turns into a letter or digit (a Kangxi radical) is a word, not a separator
+        n = unicodedata.normalize("NFKC", c)
+        return len(n) == 1 and unicodedata.category(n)[0] in "PS" and n not in ".,;!?"
+    pool = [c for c in map(chr, range(0x21, 0x3000)) if unicodedata.category(c)[0] in "PS" and stays(c)]
+    return fixed + random.Random(232).sample(pool, 40)
+
+
+SEPS = separators()
+
+
+def label_sep_survivors(mod):
+    n, bad = 0, []
+    labels = [f for f in ALONE if f.endswith(":")]
+    for label, sep in itertools.product(labels, SEPS):
+        form = label[:-1] + " " + sep
+        for v in VALUES:
+            for gap in GAPS:
+                cases = [("lines", mod.invite_text("Agenda: budget\n" + form + gap + v + "\nok\nEnd")),
+                         ("td", mod.invite_text("<td>" + form + "</td><td>" + v + "</td>")),
+                         ("li", mod.invite_text("<ul><li>" + form + "</li><li>" + v + "</li></ul>"))]
+                for kind, out in cases:
+                    n += 1
+                    if v in out:
+                        bad.append((kind, form, len(gap), v))
+    return n, bad
+
+
 class Sweep(unittest.TestCase):
+    def test_every_label_with_every_separator(self):
+        n, bad = label_sep_survivors(I)
+        self.assertGreater(n, 5000)
+        self.assertEqual(bad[:8], [], f"{len(bad)} of {n} combinations leak")
+
+    def test_the_separator_sweep_sees_a_narrow_class(self):
+        """Mutant: the separator class reduced back to [:=#] leaks."""
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = 'BARE_SEPARATORS = r"[^\\w\\s.,;!?]"'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_narrow", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, 'BARE_SEPARATORS = r"[:=#]"', 1), "invite_clean_narrow", "exec"), mod.__dict__)
+        _n, bad = label_sep_survivors(mod)
+        self.assertTrue(bad)
+
+
     def test_no_value_survives_any_string_of_labels(self):
         n, bad = survivors(I)
         self.assertGreater(n, 20000)

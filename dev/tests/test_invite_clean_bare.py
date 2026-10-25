@@ -196,6 +196,21 @@ NEXT_LINE = [
     ("b-li-pair", "<ul><li>Passcode:</li><li>Passcode:</li><li>hunter</li></ul>", "hunter"),
     ("b-slash", "Sync API key / hunter", "hunter"),                                         # sweep finding: a / or | after a label
     ("b-pipe", "Sync Secret | hunter", "hunter"),
+    ("p-hyphen", "Passcode -\nhunter\nok", "hunter"),                                     # round 7: any separator after a label alone
+    ("p-en-dash", "Passcode \u2013\nhunter", "hunter"),
+    ("p-em-dash", "Passcode \u2014\nhunter", "hunter"),
+    ("p-pipe", "Passcode |\nhunter", "hunter"),
+    ("p-slash", "Passcode /\nhunter", "hunter"),
+    ("p-arrow", "Passcode \u2192\nhunter", "hunter"),
+    ("p-tilde", "Passcode ~\nhunter", "hunter"),
+    ("p-paren", "Passcode (\nhunter", "hunter"),
+    ("p-colon-hyphen", "Passcode :-\nhunter", "hunter"),
+    ("p-is-colon", "Passcode is:\nhunter", "hunter"),
+    ("p-is", "Passcode is\nhunter", "hunter"),
+    ("p-meeting-id-hyphen", "Meeting ID -\nhunter", "hunter"),
+    ("p-key", "Key:\nhunter", "hunter"),
+    ("p-key-dash", "Key \u2013\nhunter", "hunter"),
+    ("p-pair-dash", "Meeting ID -\nPasscode \u2013\n123 456\nhunter", "hunter"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
@@ -337,6 +352,18 @@ class Controls(unittest.TestCase):
     def test_follow_on_words_keep_their_phrase(self):
         for t in ("Code review sync", "Password reset request", "Code of conduct session", "Token Ring retrospective"):
             self.assertEqual(I.scrub(t, 140), t, t)
+
+    def test_key_label(self):
+        """"Key:" on a line of its own, or with a value, is a label; "Key milestones" and "Key dates" are not."""
+        for t in ("Key milestones", "Key dates", "Key risks and issues"):
+            self.assertEqual(I.scrub(t, 140), t, t)
+        self.assertEqual(I.scrub("Key: milestones", 140), "")                  # Key, a separator, a word: a value
+        self.assertEqual(I.invite_text("Welcome\nKey:\nhunter\nok\nEnd"), "Welcome\nok\nEnd")
+        self.assertEqual(I.invite_text("Key milestones\nok"), "Key milestones\nok")
+
+    def test_ampersand_over_removal(self):
+        """One separator class means "Access & Security review" loses its title (fail closed; in the notes)."""
+        self.assertEqual(I.scrub("Access & Security review", 140), "")
 
     def test_known_over_removal(self):
         """Fail closed costs a few ordinary titles: any word after pin / password / code that is not on the allow-list is a value."""
@@ -492,7 +519,7 @@ class Mutants(unittest.TestCase):
 
     def test_fragment_conversion_off(self):
         m = mutant("a|td|th|tr|li|ul|ol|h[1-6]|b|i|u|em|strong|font)", "a)")
-        self.assertTrue({"f-td", "f-li", "f-ul", "f-th"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+        self.assertTrue({"f-li", "f-ul", "f-th"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_label_line_inside_the_window_does_not_restart_it(self):
         m = mutant("window = WINDOW if label else (max(window - 1, 0) if consumed else 0)", "window = max(window - 1, 0) if consumed else 0")
@@ -512,10 +539,6 @@ class Mutants(unittest.TestCase):
         bad = self.next_line_bad(mod)
         self.assertTrue({"b-meeting-id-pair", "b-blanks-between"} <= set(bad), bad)
 
-    def test_separator_directly_after_a_label_off(self):
-        bad = fails(mutant("(?:\\s*(?:[,;.]+|{sep}+)\\s*\\w", "(?:\\s*[,;.]+\\s*\\w"))
-        self.assertTrue(bad)
-
     def test_finished_phrase_rule_off(self):
         m = mutant("or (not dropped and any(_BARE_END.search(v) for v in views))", "")
         self.assertIn("nl-finished", self.next_line_bad(m))
@@ -525,12 +548,27 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"nl-hyphen", "nl-function", "nl-slash"} & set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_each_separator_removed(self):
-        need = {r"\-": "nl-hyphen", r"\u2013": "nl-en-dash", r"\u2014": "nl-em-dash", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
-                r"\[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe"}
-        base = r'[\-\u2013\u2014:=(\[/|]"  '
+        """The one separator class: with a single character taken out of it, the row that uses that character leaks."""
+        need = {"-": "nl-hyphen", "\u2013": "nl-en-dash", "\u2014": "nl-em-dash", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
+                "[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe", "\u2192": "p-arrow", "~": "p-tilde"}
+        base = 'BARE_SEPARATORS = r"[^\\w\\s.,;!?]"'
         for ch, rid in need.items():
-            m = mutant(base, base.replace(ch, "", 1))
+            m = mutant(base, f'BARE_SEPARATORS = r"[^\\w\\s.,;!?{re.escape(ch)}]"')
             self.assertIn(rid, self.next_line_bad(m), f"removing {ch!r} from the separators changed nothing for {rid}")
+
+    def test_separator_class_reduced_to_colon_equals_hash(self):
+        m = mutant('BARE_SEPARATORS = r"[^\\w\\s.,;!?]"', 'BARE_SEPARATORS = r"[:=#]"')
+        bad = self.next_line_bad(m)
+        self.assertTrue({"p-hyphen", "p-en-dash", "p-em-dash", "p-pipe", "p-slash", "p-arrow", "p-tilde", "p-paren", "p-colon-hyphen",
+                         "p-meeting-id-hyphen"} <= set(bad), bad)
+
+    def test_is_tail_removed(self):
+        m = mutant('(?:\\s*{BARE_SEPARATORS}|\\s*_|\\s+(?:is|are)', '(?:\\s*{BARE_SEPARATORS}|\\s*_|\\s+(?:zzz|zzzz)')
+        self.assertTrue({"p-is", "p-is-colon"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+
+    def test_key_label_rule_off(self):
+        m = mutant("(?:{_BARE}|{_BARE_LABELS})(?![\\w-]){_ALONE_ITEM}+", "(?:{_BARE_LABELS})(?![\\w-]){_ALONE_ITEM}+")
+        self.assertIn("p-key", self.next_line_bad(m))
 
     def test_punctuation_before_value_off(self):
         bad = fails(mutant("(?:\\s*(?:[,;.]+|{sep}+)", "(?:\\s*(?:{sep}+)"))
