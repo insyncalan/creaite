@@ -317,7 +317,7 @@ class Idempotent(unittest.TestCase):
 class SecondLayerIsLast(unittest.TestCase):
     def test_keep_indices_calls_it_last(self):
         """With the second layer on, keep_indices is the second layer applied to what the anchor layer left; off, the anchor layer alone."""
-        lines = ["Agenda", "", "Passcode: 4417", "", "Dial ,,123456789#", "Closing"]
+        lines = ["Agenda", "", "Passcode: 4417", "", "Dial ,,123456789#", "", "Closing"]     # blank line: else Closing is in the dropped block
         on = F.keep_lines(lines, second_layer=True)
         off = F.keep_lines(lines, second_layer=False)
         self.assertNotIn("Passcode: 4417", on)
