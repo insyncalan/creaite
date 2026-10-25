@@ -170,10 +170,18 @@ _QUIET = r"[\s?~*`_]*"                                        # "Passcode?", "Pa
 # next lines go whatever they hold. A bare "Key" line with no marker keeps the older digit rule only (known limit: "Key" then "- hunter").
 KEY_ITEM = (r"^\s*(?:(?:[-*\u2022\u2013\u2014\u00b7\u25aa\u25cf\u25e6|>]|\d{1,3}[.)]|[A-Za-z][.)]|[ivxlcIVXLC]{2,5}[.)])\s*)+"
             r"(?:keys?)[\s|*_~`:]*$")
+# bare21 (Cap #369, HIGH): a QUALIFIED hard label stands alone too: the label, then a qualifier that starts with a function word and has at
+# most four more words ("for dial-in", "to join", "for the weekly call") and/or a bracketed group ("(Teams)", "(organiser only)"), then a
+# separator or the end of the line. Its value is on the next lines, as for an unqualified label. A word that is not a function word right
+# after the label ("Passcode policy review") is not a qualifier, so those lines behave as before.
+_QFUNC = r"(?:for|to|of|on|at|in|via|by|from|when|if|used|only|per|during|with|as)"
+_QUAL = (rf"(?:\s*[(\[](?!\d{{1,3}}[)\]])[^()\[\]\n]{{0,60}}[)\]]"      # a word with a digit is a value, not a qualifier
+         rf"|\s+{_QFUNC}(?![\w-])(?:\s+[^\W\d_](?:[^\W\d_]|['’-])*){{0,4}})")
+QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w){_QUAL}{{1,2}}(?:{_ALONE_TAIL})?{_QUIET}$"
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
                          rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
                          rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$"
-                         rf"|{KEY_ITEM}", re.I)
+                         rf"|{KEY_ITEM}|{QUALIFIED_ALONE}", re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
@@ -475,7 +483,6 @@ _LIST_STRIP = re.compile(r"^(?:\s*(?:\d{1,3}[.)]|[A-Za-z][.)]|[ivxlcIVXLC]{2,5}[
 # number, an ID or a mixed letters-and-digits token goes; a word-only line stays (an agenda line is kept; the known limit: a word-only
 # secret typed right under a soft heading stays). Hard labels (Passcode, PIN, Password, Access code, Meeting ID ... alone, with a stop,
 # glued, hyphenated or behind a provider) keep the full rule: the next lines go whatever they hold.
-_DATE_TIME = re.compile(r"\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b")
 _ID_NUMBER = re.compile(r"\d{4,}|(?<!\d)\d{3}(?:[ -]\d{2,4}){1,}(?!\d)")
 _DIGITS_ONLY = re.compile(r"[\s\-.()#+]*\d(?:[\s\-.]?\d){3,}[\s\-.()#+]*")  # 4+ digits only, any grouping
 
@@ -487,11 +494,36 @@ def id_number(line):
     return bool(_ID_NUMBER.search(t) or _DIGITS_ONLY.fullmatch(t.strip()))
 
 
-def _looks_like_value(line):
+# bare21 (Cap #369, MEDIUM): under a SOFT heading a date or a time is an agenda line, not a value. Plausible dates and times are taken out
+# before the line is judged ("12-11-2026", "2026-11-12", "12/11/2026", "12.11.2026", "12 Nov 2026", "12 November 2026", "Nov 12", "12:30",
+# "12:30-13:00", "9am-5pm", "14 Nov 2026 14:00"); what is left is judged as before, so "12 Nov 4417" still goes. Numbers that are not
+# valid dates (987-65-4321) are not taken out. Hard labels do not use this: a date right after "Passcode:" goes.
+_MONTH = (r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|"
+          r"dec(?:ember)?)")
+_DAY = r"(?:0?[1-9]|[12]\d|3[01])"
+_MON = r"(?:0?[1-9]|1[0-2])"
+_YEAR = r"(?:19|20)\d\d"
+_SEP = r"[-/.]"
+_Y2 = rf"(?:{_YEAR}|\d\d)"
+_TIME = r"(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:\s?[ap]\.?m\.?)?|(?:1[0-2]|0?[1-9])\s?[ap]\.?m\.?"
+_SOFT_DATE_TIME = re.compile(
+    rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
+    rf"|(?<![\w])(?:{_DAY}(?:st|nd|rd|th)?\s+{_MONTH}\.?(?:,?\s+{_YEAR})?|{_MONTH}\.?\s+{_DAY}(?:st|nd|rd|th)?(?:,?\s+{_YEAR})?)(?![\w])"
+    rf"|(?<![\d:.])(?:{_TIME})(?![\d:])", re.I)
+# bare21: id_number takes out only VALID dates (day 1-31, month 1-12, year 19xx/20xx or two digits) and times, so 987-65-4321,
+# 123-45-6789 and 1234-56-7890 are numbers (IDs), not dates; a real date or time is still not a number.
+_DATE_TIME = re.compile(
+    rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
+    r"|\b\d{1,2}:\d{2}(?::\d{2})?\b")
+
+
+def _looks_like_value(line, dates_ok=False):
     """Whether a line under a soft heading looks like a value rather than an agenda item: it holds a number as id_number reads it, a token
     that mixes letters and digits, a long hex-like string or 4 or more digits. A list marker (1., a), i), -, a bullet, and the <li> that
     plain_text makes into "- ") is stripped first and the rest judged the same way. A word-only line ("hunter") is NOT a value here."""
     rest = _LIST_STRIP.sub("", re.sub(r"^[\s_*~`>#]+", "", line.strip()))
+    if dates_ok:
+        rest = _SOFT_DATE_TIME.sub(" ", rest)
     tokens = rest.split()
     return bool(tokens) and (_strong_value(rest, tokens) or any(_mixed(w) for w in tokens)
                              or sum(c.isdigit() for c in rest) >= 4)
@@ -600,7 +632,7 @@ class _Reader:
             return False
         taken = dropped or reach or self.pending > 0
         label = not taken and (bool(_label_kind(ln, False)) or _ends_on_key_and_stop(ln))
-        looks = not taken and not label and _looks_like_value(ln)
+        looks = not taken and not label and _looks_like_value(ln, dates_ok=True)
         for window in self.soft:
             if not label:
                 window[0] -= 1
