@@ -97,10 +97,10 @@ class VendorManifest(unittest.TestCase):
         finally:
             v.cleanup()
 
-    def test_doctor_has_36_checks(self):
+    def test_doctor_has_37_checks(self):
         text = (REPO / "system/scripts/doctor.py").read_text(encoding="utf-8")
         main = text[text.index("def main():"):]
-        self.assertEqual(len(re.findall(r"^    check\(", main, re.M)), 36)   # #124: notes have a folder of their own; BL-328: the sweep lock; #252: the two zz Archive checks are gone (no rename offer); BL-10: archiving of old items; BL-03: old reports and minutes; BL-323: restore check, Tidy up; BL-260: staged minutes have their Word draft; BL-252: refused commands; BL-267: record changes refused; BL-255: script policy reports; BL-305: the launcher
+        self.assertEqual(len(re.findall(r"^    check\(", main, re.M)), 37)   # #132: no Claude key or host in the environment; #124: notes have a folder of their own; BL-328: the sweep lock; #252: the two zz Archive checks are gone (no rename offer); BL-10: archiving of old items; BL-03: old reports and minutes; BL-323: restore check, Tidy up; BL-260: staged minutes have their Word draft; BL-252: refused commands; BL-267: record changes refused; BL-255: script policy reports; BL-305: the launcher
 # ===== end BL-239 =====
 
 
@@ -690,7 +690,7 @@ class RunEnv(unittest.TestCase):
 
     def test_every_child_the_server_starts_gets_it(self):
         src = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
-        launches = re.findall(r'claude_path\(\), "-p".*?(subprocess\.(?:Popen|run)\((?:[^()]|\([^()]*\))*\))', src, re.S)
+        launches = re.findall(r'claude_path\(\), "-p".*?((?:subprocess\.(?:Popen|run)|opener)\((?:[^()]|\([^()]*\))*\))', src, re.S)   # #132 G4: the run engine's `opener` is Popen or the direct call
         # ask runs and the VIP check; with #183 (Draft email delivery) also its draft run, which merges NO_CONTEXT_ENV onto run_env()
         expected = 3 if "def draft_run(" in src else 2
         self.assertEqual(len(launches), expected)
