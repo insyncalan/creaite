@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_confidential_paths.py   (no browser, no model)
 One test per path, each with the title "[DEF] x" and sensitivity confidential (and the private one where it applies):
-the set-aside lists, the Prep entry, the hub records, the next-day list and "Note for this meeting" (capture.meeting).
+the set-aside lists, the hub records, the next-day list and "Note for this meeting" (capture.meeting).
 """
 import json
 import sys
@@ -29,11 +29,11 @@ class ConfidentialPaths(unittest.TestCase):
         self.assertEqual(later[0]["p"], "DEF")
 
     def test_prep_entry(self):
+        """Prep is Alan's own screen: a confidential meeting keeps its project there (Shape and the tracker items need it) but
+        never an attendee, place or body; a private or personal one has no brief at all."""
         ctx = {"projects": PROJECTS, "remembered": {}, "history": [], "items": None, "ms_names": {}, "vips": {}, "today": today()}
-        key, rec = bd.prep_entry(EV, today(), ctx)
-        self.assertEqual((rec["p"], rec["how"]), (None, "confidential"))
-        _, normal = bd.prep_entry({**EV, "sensitivity": "normal"}, today(), ctx)
-        self.assertEqual(normal["p"], "DEF")
+        _, rec = bd.prep_entry(EV, today(), ctx)
+        self.assertEqual((rec["p"], rec["how"]), ("DEF", "matched"))
         self.assertIsNone(bd.prep_entry({**EV, "sensitivity": "private"}, today(), ctx))
         self.assertIsNone(bd.prep_entry({**EV, "sensitivity": "personal"}, today(), ctx))
 

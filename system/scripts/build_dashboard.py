@@ -2595,11 +2595,23 @@ def saved_calendar_days():
 def prep_entry(ev, day, ctx):
     """(key, record) of one meeting's Prep brief entry, or None for a private or untitled one. The key is "HH:MM|title" today,
     "YYYY-MM-DD|HH:MM|title" any other day. ctx: {projects, remembered, history, items, ms_names, vips, today}."""
-    sens = invite_clean.sensitivity(ev)                  # fail closed: a private meeting has no brief, a confidential one no project
-    if sens == "private" or not ev.get("title"):
+    if invite_clean.sensitivity(ev) == "private" or not ev.get("title"):       # fail closed: "personal" or an odd value too
         return None
+    # A confidential meeting keeps its project GUESS here on purpose (#362): Prep is Alan's own screen, shaped from the text and the
+    # tracker (BL-301), and the entry holds no attendees, place or body. Only the screen uses it. Nothing persisted or sent takes it:
+    # prep_page._project_of ignores a guess for a confidential meeting (only a remembered choice counts), and the lists (Intake,
+    # set-aside, hub, next day, Note for this meeting) show none. The full table is dev/proposals/362/PERSISTED-PATHS.md:
+    #   path                                     persisted/sent        uses entry's project
+    #   Today / Prep screen, Week ahead          screen only           yes (a guess, shown to Alan)
+    #   prep_page.context: Agendas page file,    persisted (project    only a chosen one (_project_of)
+    #     prep-pages.json, stored content        folder, maybe shared)
+    #   research prompt, Shape, agenda, one-pager sent to Claude       only a chosen one (through context)
+    #   hub records, next-day list, aside lists, persisted/screen      no (p=None)
+    #     day_close, capture.meeting
+    #   dashboard.html / history snapshots       persisted, local only  yes (a guess; never synced or sent)
+    #   search index, tracker, staging proposals not written           no
     s = series_of(ev["title"])
-    code, how = (None, "confidential") if sens == "confidential" else prep_match(ev["title"], ctx["projects"], ctx["remembered"])
+    code, how = prep_match(ev["title"], ctx["projects"], ctx["remembered"])
     last = max((d for d, ser in ctx["history"] if ser == s and d < day.isoformat()), default=None)
     key = f"{ev.get('start', '')}|{ev['title']}" if day == ctx["today"] else f"{day.isoformat()}|{ev.get('start', '')}|{ev['title']}"
     m = {"series": s, "p": code, "how": how, "last": last, "day": day.isoformat(),
