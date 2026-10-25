@@ -548,7 +548,7 @@ def rules_imported():
     return True, "CLAUDE.md imports system/creaite-rules.md"
 
 
-PURE_MODULES = ("invite_filter.py", "invite_blocks.py")      # #375 E1: text in, text out; they touch no file, so no location to take from paths
+PURE_MODULES = ("invite_filter.py", "invite_blocks.py")      # #375 E1: text in, text out; no file, so no location
 
 
 def scripts_use_paths():
