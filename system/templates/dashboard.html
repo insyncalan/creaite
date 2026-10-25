@@ -74046,7 +74046,22 @@ ${d5.text}`);
     const c5 = mcClassify(label);
     return c5 ? String(label) : "A creaite step";
   }
-  var mcIsAsk = (text) => /^\s*(?:please\s+)?(?:sweep\b|check (?:my )?mail\b|refresh (?:the )?calendar\b)/i.test(String(text || ""));
+  var MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|sweep(?: mail)? the last \\d{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\d{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\d{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
+  var MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
+  var MC_SWEEP_NOT = "\\b(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)\\b";
+  var MC_SWEEP_FOR = "\\bfor ([a-z][a-z0-9]{2,6})\\b";
+  var MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
+  var SWEEP_RE = new RegExp(`^(?:${MC_SWEEP_SRC})$`, "i"), NOT_RE = new RegExp(MC_SWEEP_NOT, "i"), FOR_RE = new RegExp(MC_SWEEP_FOR, "ig");
+  var codeOk = (code) => code.toLowerCase() === "the" || code === code.toUpperCase() || /\d/.test(code) || code.length <= 3 && !MC_SWEEP_COMMON.includes(code.toLowerCase());
+  function mcIsAsk(text) {
+    const t47 = String(text || "").trim().split(/\s+/).join(" ");
+    if (MC_PLAIN_ASKS.includes(t47)) return true;
+    if (!t47 || t47.length > 120) return false;
+    const m5 = SWEEP_RE.exec(t47);
+    if (!m5 || m5.groups && m5.groups.subject && NOT_RE.test(m5.groups.subject)) return false;
+    if (m5.groups && m5.groups.subject != null) return true;
+    return [...t47.matchAll(FOR_RE)].every((x5) => codeOk(x5[1]));
+  }
 
   // core/closeDayRows.js
   var CD_LABELS = [
@@ -81779,6 +81794,11 @@ Next: `;
         "LCOLL",
         "MAC",
         "MC_MARKER",
+        "MC_PLAIN_ASKS",
+        "MC_SWEEP_COMMON",
+        "MC_SWEEP_FOR",
+        "MC_SWEEP_NOT",
+        "MC_SWEEP_SRC",
         "MFIRST",
         "MM",
         "MOD",
