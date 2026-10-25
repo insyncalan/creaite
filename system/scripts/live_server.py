@@ -354,6 +354,8 @@ def run_env(kind=None):
     set here only, never by the run, and never for ask creaite."""
     import launch as launcher
     env = dict(os.environ)
+    for name in paths.claude_billing_env(env):
+        env.pop(name, None)                 # #132: a key, token or host in the shell never reaches a run (it would bill a paid key)
     env.pop(PREP_ENV, None)                 # #60: only a run creaite starts itself says what kind it is
     env["PATH"] = launcher.run_path(env.get("PATH", ""))
     env["CREAITE_PYTHON"] = sys.executable
