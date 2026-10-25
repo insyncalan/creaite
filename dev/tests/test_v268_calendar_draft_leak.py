@@ -16,7 +16,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1] / "system" / "scripts"))
-from test_backups import Case, GIT  # noqa: E402
+from test_backups import Case  # noqa: E402
 from test_dashboard import today  # noqa: E402
 
 SECRET = "Zq7Passcode-4821"
