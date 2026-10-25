@@ -211,14 +211,14 @@ class ReasonMenu(LiveBrowserCase):
             self.skipTest("rejected by another test in this class's server")
         try:
             b.eval("S.drafting={...(S.drafting||{}),repeat:false}; irTick.value++")
-            b.click(f"{self.row(n1)} td.title", inset=3)
+            b.click(f"{self.row(n1)} td.title")
             b.wait("document.querySelector('#pkPropTop .pk-propline')")
             self.assertIsNone(b.eval("document.querySelector('#pkPropTop .rvdupnote')"))
             self.assertNotIn("Looks like", b.eval("document.getElementById('pkPropTop').textContent"))
             b.eval("closePanel()")
         finally:
             b.eval("S.drafting={...(S.drafting||{}),repeat:true}; irTick.value++")
-        b.click(f"{self.row(n1)} td.title", inset=3)
+        b.click(f"{self.row(n1)} td.title")
         b.wait("document.querySelector('#pkPropTop .rvdupnote')")
         b.eval("closePanel()")
 
@@ -279,7 +279,7 @@ class ReasonMenu(LiveBrowserCase):
         n1 = b.eval(f"(REV.find(r=>r.dup&&r.dup.id==={self.dup!r}&&!r.done)||{{}}).n")
         if not n1:
             self.skipTest("rejected by the other test in this class's server")
-        b.click(f'{self.row(n1)} td.title', inset=3)
+        b.click(f'{self.row(n1)} td.title')
         b.wait("document.querySelector('#pkPropTop .rvdupnote')")                       # BL-177: the peek layout keeps the note
         self.assertIn(f"Reject as duplicate of {self.dup}", b.eval("document.querySelector('#pkPropTop .rvdupnote').textContent"))
 
