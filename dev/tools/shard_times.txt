@@ -3,6 +3,9 @@
 # One file serves both Python versions, so these are the 3.14 times; 3.9 (the quick tier, 3 shards) runs the same files about 0.4 times as long (median of the 157 files over 10 s), so the ratios hold for it too.
 # These are per-file times under the shard's parallel load (-j), so a shard's sum is several times its wall time; only the ratios matter.
 # Every listed file was in that run's logs. Files not listed count as 30 s.
+# Added 26-10-2026: the 11 test files that were missing (test_328_cap_probes, test_328_security, test_ci_plan, test_header_waiting_343, test_inbox_confidential_row, test_lighter_runs_339, test_meeting_chip, test_meeting_match, test_process_all_project, test_series_vs_code_362, test_v265_plain_words), read from the 3.14 shard jobs of main push run 40206720866 (the "OK file.py (Ns)" lines).
+test_328_cap_probes.py 3
+test_328_security.py 1
 test_355_followups.py 0
 test_activity_actor_188.py 1
 test_activity_even_browser.py 19
@@ -95,6 +98,7 @@ test_check_jsdup.py 5
 test_check_py39.py 0
 test_check_wrappers.py 3
 test_choose_project.py 73
+test_ci_plan.py 0
 test_clear_day.py 11
 test_clear_day_sunday.py 21
 test_clear_day_thursday.py 8
@@ -239,6 +243,7 @@ test_guard_steerco_adhoc.py 422
 test_guarded_chain.py 30
 test_handcheck_report.py 0
 test_handcheck_runner.py 3
+test_header_waiting_343.py 0
 test_health_change_menu.py 46
 test_health_dismiss.py 13
 test_health_fixes.py 16
@@ -266,6 +271,7 @@ test_hover_standard.py 98
 test_hub_always.py 37
 test_hub_retired.py 54
 test_icons.py 72
+test_inbox_confidential_row.py 5
 test_inbox_upload_oserror.py 19
 test_insight.py 21
 test_instant_edits.py 129
@@ -316,6 +322,7 @@ test_item_history.py 206
 test_item_history_route.py 16
 test_item_links.py 285
 test_keys_chip.py 21
+test_lighter_runs_339.py 6
 test_link_renderers.py 63
 test_link_text.py 106
 test_live_server.py 45
@@ -332,6 +339,8 @@ test_malformed_note.py 36
 test_markdown_views.py 18
 test_match_check_project_code.py 5
 test_match_internal_race.py 163
+test_meeting_chip.py 0
+test_meeting_match.py 1
 test_meeting_sensitivity_rows.py 0
 test_meetings.py 65
 test_milestone_resize_301.py 17
@@ -440,6 +449,7 @@ test_prep_shape.py 153
 test_prep_updates.py 86
 test_prep_view.py 156
 test_probably_done.py 114
+test_process_all_project.py 18
 test_processed_filed_307.py 0
 test_profile_312.py 104
 test_project_names.py 50
@@ -526,6 +536,7 @@ test_search_tools_pinned.py 9
 test_security_headers.py 26
 test_sent_it_person_menu.py 124
 test_sent_lines_internal.py 18
+test_series_vs_code_362.py 0
 test_session_sweep.py 37
 test_settings_calmer.py 89
 test_settings_catalogue.py 20
@@ -594,6 +605,7 @@ test_ux172_clarity.py 7
 test_ux_sweep_fixes.py 18
 test_v265_341_hardening.py 1
 test_v265_341_structure.py 0
+test_v265_plain_words.py 0
 test_vault_cleanup.py 2
 test_vendor_preact.py 0
 test_vendor_tiptap.py 0
