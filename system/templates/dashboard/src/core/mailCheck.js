@@ -138,7 +138,7 @@ export function mcStepText(label) {
    fails if any of them differs. Used only to draw a saved chat, where the run record is gone. */
 export const MC_SWEEP_SRC = "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|sweep(?: mail)? the last \\p{Nd}{1,3} days?|check (?:my )?(?:mail|email)(?: and teams)?(?: for [a-z][a-z0-9]{2,6})?(?: for the last \\p{Nd}{1,3} days?)?|check (?:my )?(?:mail|email)(?: and teams)? the last \\p{Nd}{1,3} days?|sweep the (?<subject>[^\\n.,;:!?]{1,80}) thread|refresh (?:the |my )?calendar)(?: now)?(?: please)?[.!]?";
 export const MC_SWEEP_COMMON = ["the", "all", "any", "now", "you", "one", "two", "new", "day", "mail", "me", "my"];
-export const MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
+export const MC_SWEEP_NOT = "(?<![\\p{L}\\p{N}_])(?:and|then|also|plus|apply|save|approve|reject|undo|stage|confirm|delete|send|close)(?![\\p{L}\\p{N}_])";
 export const MC_SWEEP_FOR = "(?<![\\p{L}\\p{N}_])for ([a-z][a-z0-9]{2,6})(?![\\p{L}\\p{N}_])";
 /** The asks creaite itself writes for a run it starts (live_server.PLAIN_ASK "sweep" and "calendar"). */
 export const MC_PLAIN_ASKS = ["Sweep mail and Teams since the last sweep", "Refresh the calendar"];
