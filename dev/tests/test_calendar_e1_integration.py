@@ -38,7 +38,16 @@ def row(i, body):
 
 
 # lines the 2.6.8 scrub (the body label layer of option c) removes after a label inside its window
-SCRUB_WINDOW_LOSS = {"label_same_cell_br": ("Room 204", "Notes are kept on the team page.")}
+SCRUB_WINDOW_LOSS = {
+    "label_same_cell_br": ("Room 204", "Notes are kept on the team page."),
+    # composition D (scrub_raw_first, the default since PLAN 1d): must_keep 50 of 59, the scrub's own windows on the raw lines
+    "pre_block": ("End.",),
+    "outlook_footer": ("Please confirm attendance.",),
+    "nested_lists": ("Open actions", "Decisions needed"),
+    "entities_and_hidden": ("Q&A session \u2013 bring questions \u2039in writing>.",),
+    "definition_list": ("Questions welcome.",),
+    "broken_html": ("Second paragraph", "Contract review with legal."),
+}
 
 
 class E1Integration(unittest.TestCase):

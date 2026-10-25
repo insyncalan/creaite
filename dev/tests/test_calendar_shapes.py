@@ -279,6 +279,11 @@ class Mutants(unittest.TestCase):
         old = '    if not isinstance(cal, dict):\n        return {"days": {}}\n'
         self.assertIn(old, src)
         f.write_text(src.replace(old, "", 1), encoding="utf-8")
+        g = v.root / "system/scripts/calendar_gateway.py"                    # E1: the readers now go through the gateway's own guard
+        gsrc = g.read_text(encoding="utf-8")
+        gold = '    if not isinstance(cal, dict):\n        return {"days": {}}\n    days = cal.get("days")'
+        self.assertIn(gold, gsrc)
+        g.write_text(gsrc.replace(gold, '    days = cal.get("days")', 1), encoding="utf-8")
         self.assertNotEqual(run(v, READERS["dashboard day view"]).returncode, 0)
 
     def test_cache_key_without_size_or_time(self):
