@@ -67,6 +67,7 @@ def make_vault():
               "extraction.py", "quality.py",                       # sprint-drafts-extraction
               "claims.py",                                         # BL-314
               "settings_catalogue.py", "health.py",                # BL-320
+              "providers.py",                                      # #132: AI models
               "archive.py",                                        # BL-10, BL-03
               "usage_log.py", "usage_report.py",                   # #197, #238: the Usage figures in the page's data
               "usage_reviews.py",                                  # #238 delta (v2.5.3): Your reviews on the Usage tab

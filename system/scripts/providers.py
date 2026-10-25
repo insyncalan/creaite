@@ -517,3 +517,36 @@ def retry_kind(job, check_notes):
     """A quick edit whose plain-code check found a changed date, number, name or ID is tried once on the next kind up: that
     kind, or None (no retry: the check passed, or it isn't a quick edit)."""
     return KIND_UP.get(job) if check_notes else None
+
+
+# ── A tested key waiting for Done (the connect journey) ─────────────────────────────────────────────────────────────────
+# Test and connect asks the provider for its models; the key is kept here, in the live server's memory only, until Alan
+# presses Done (it then goes to the key store) or Cancel (it is dropped), and for PENDING_SECONDS at most. Only a built key
+# store (or the test fake) ever reaches this: the not-built lister refuses first.
+PENDING_SECONDS = 600
+_PENDING = {}
+
+
+def hold(provider, key, ids, now=None):
+    """Keep a tested key and its models until Done; returns the one-time id the page sends back."""
+    import secrets
+    import time
+    now = time.time() if now is None else now
+    for k in [k for k, v in _PENDING.items() if v["until"] < now]:
+        _PENDING.pop(k, None)
+    pid = secrets.token_urlsafe(16)
+    _PENDING[pid] = {"provider": provider, "key": key, "ids": list(ids), "until": now + PENDING_SECONDS}
+    return pid
+
+
+def take(pid, now=None):
+    """The held key's {provider, key, ids}, removed; None when there is none or it has run out."""
+    import time
+    now = time.time() if now is None else now
+    p = _PENDING.pop(pid, None) if isinstance(pid, str) else None
+    return p if p and p["until"] >= now else None
+
+
+def forget(pid):
+    """Drop a held key (Cancel)."""
+    return _PENDING.pop(pid, None) is not None if isinstance(pid, str) else False
