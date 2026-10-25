@@ -56,14 +56,14 @@ CLAUDE_MODELS = (
 # weaker choice risks (the popup's words).
 JOBS = {
     "guard": {"name": "Guard, permissions and data work",
-              "line": "The files that protect your data and who may write what; the live server's runs.",
+              "line": "The files that protect your data and who may write what; creaite's own runs.",
               "needs": ("uses tools", "costly if wrong"), "tools": True, "recommended": "claude:opus",
               "features": ("Guard and permission changes", "The writer and the data (apply, schema, migrations)",
                            "Backups and updates", "Run approvals and locking"),
               "warn": "These jobs change the files that protect your data. A weaker model is more likely to make a subtle "
                       "mistake there, and a mistake could weaken a safeguard."},
     "tools": {"name": "Work that uses tools",
-              "line": "Reads your mail, calendar, files and the tracker, or runs creaite's commands.",
+              "line": "Reads your mail, calendar, files and project items, or runs creaite's commands.",
               "needs": ("uses tools",), "tools": True, "recommended": "claude:sonnet",
               "features": ("ask creaite", "The sweep and minutes extraction", "Prep research",
                            "The check on people you follow (also needs exact IDs)"),
