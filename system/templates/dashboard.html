@@ -35542,13 +35542,12 @@ system/scripts/run launch.py agent ${what}`;
           date: r4.date || m5.day,
           title: r4.title || m5.title,
           code: r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "",
-          how: r4.code ? "meeting" : "",
+          how: "meeting",
           reason: r4.code ? "from the meeting's title" : ""
         });
         else capMsg.value = oneLine(r4.message || "");
       }
       load(n4);
-      if (!n4.code) guess();
     } else if (o5.body != null) {
       load({ ...blank(), body: o5.body });
       guess();

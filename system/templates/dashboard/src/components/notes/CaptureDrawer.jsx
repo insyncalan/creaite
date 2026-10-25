@@ -135,11 +135,10 @@ export async function openCapture(o = {}) {
     if (viaServer()) {
       const r = await api("/api/notes/capture/start", { meeting: m });
       if (r.ok) Object.assign(n, { body: r.body || "", with: r.with || [], date: r.date || m.day, title: r.title || m.title,
-        code: r.code && P.some(p => p.code === r.code) ? r.code : "", how: r.code ? "meeting" : "", reason: r.code ? "from the meeting's title" : "" });
+        code: r.code && P.some(p => p.code === r.code) ? r.code : "", how: "meeting", reason: r.code ? "from the meeting's title" : "" });   // #343: a meeting without a project stays unselected: no guess from its title (a confidential one must not file under a guess)
       else capMsg.value = oneLine(r.message || "");
     }
     load(n);
-    if (!n.code) guess();
   } else if (o.body != null) {
     load({ ...blank(), body: o.body });
     guess();

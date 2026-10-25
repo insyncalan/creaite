@@ -34,7 +34,8 @@ def calendar(v):
          "attendees": [{"name": "Alan Carter"}, {"name": "Jane Doe"}, {"name": "Omar Ali"}]},
         {"start": "11:00", "end": "12:00", "title": "Dentist", "private": True},
         {"start": "14:00", "end": "15:00", "title": "Board pay review", "sensitivity": "confidential",
-         "attendees": [{"name": "Someone Secret"}]}]}}), encoding="utf-8")
+         "attendees": [{"name": "Someone Secret"}]},
+        {"start": "16:00", "end": "16:30", "title": "[ABC] Redundancy talks", "sensitivity": "confidential"}]}}), encoding="utf-8")
 
 
 def load_vault(v):
@@ -399,6 +400,17 @@ class Drawer(LiveBrowserCase):
         b.wait("document.getElementById('capDrawer').hidden", 10)
         text = (self.v.root / ABC / "notes/ABC Steering.md").read_text()
         self.assertIn(f"date: {TODAY}\nwith: [Jane Doe, Omar Ali]", text)
+
+    def test_note_for_unchosen_confidential_meeting_has_no_project(self):
+        """#343 M1: the title's "ABC" is a guess, so the drawer opens with nothing selected (and never guesses while typing)."""
+        b = self.b
+        b.eval("go('today')")
+        b.eval("openCapture({meeting:{day:TODAY,start:'16:00',title:'[ABC] Redundancy talks'}})")
+        b.wait("!document.getElementById('capDrawer').hidden&&document.getElementById('capTitle').value==='[ABC] Redundancy talks'", 10)
+        got = b.eval("[document.getElementById('capProj').value, document.getElementById('capWhy').textContent]")
+        self.assertEqual(got[0], "")
+        self.assertNotIn("guessed", got[1])
+        self.assertEqual(b.errors, [])
 
     def test_note_in_ask_creaite_and_new_note_in_cmdk(self):
         b = self.b
