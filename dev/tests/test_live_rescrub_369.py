@@ -16,8 +16,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-DIFFS = [REPO / f"dev/proposals/369/live_server-rescrub{v}.diff" for v in ("-v3", "-v2", "")]
-DIFF = DIFFS[0]       # v3: retries within 5 minutes and does not hold the job lock during the clean; v1 and v2 are kept for the record
+DIFFS = [REPO / f"dev/proposals/369/live_server-rescrub{v}.diff" for v in ("-v4", "-v3", "-v2", "")]
+DIFF = DIFFS[0]       # v4: keeps retrying (v3 retried only once: the timer is alive in its own callback); v1 to v3 are kept for the record
 sys.path.insert(0, str(HERE))
 from test_tracker import Vault  # noqa: E402
 
@@ -90,6 +90,17 @@ class Rescrub(unittest.TestCase):
         self.assertNotEqual(cal.read_bytes(), before)
         self.assertEqual(before == cal.read_bytes(), False)
 
+    RETRIES = ("import threading, time\nlive_server.CALENDAR_RETRY = 0.3\ncalls = []\nreal = live_server.calendar_rescrub_job\n"
+               "def counting():\n    calls.append(1)\n    return real()\nlive_server.calendar_rescrub_job = counting\n"
+               "assert live_server.LOCK.acquire(blocking=False)\ntry:\n    counting()\n    time.sleep(2)\nfinally:\n    live_server.LOCK.release()\n"
+               "print(len(calls))")
+
+    def test_the_retry_keeps_retrying_while_the_lock_is_held(self):
+        """v3 scheduled only one retry (the timer calling the job was itself alive); with the lock held 2 s and a 0.3 s delay v4 calls it ~7 times."""
+        v, _cal = patched_vault(self)
+        r = run(v, self.RETRIES)
+        self.assertGreaterEqual(int(r.stdout.strip().splitlines()[-1]), 5, r.stdout + r.stderr[-300:])
+
     def test_the_job_lock_is_not_held_during_the_clean(self):
         v, _cal = patched_vault(self)
         r = run(v, "seen = []\nreal = sweep.rescrub_calendar\n"
@@ -147,6 +158,14 @@ class Mutants(unittest.TestCase):
         r = run(v, "import threading\nmade = []\nthreading.Timer = lambda *a, **k: made.append(a) or type('T', (), {'daemon': False, 'start': lambda s: None, "
                    "'is_alive': lambda s: False})()\nassert live_server.LOCK.acquire(blocking=False)\nlive_server.calendar_rescrub_job()\nprint(made)")
         self.assertEqual(r.stdout.strip().splitlines()[-1], "[]")
+
+    def test_retry_that_stops_after_one_is_caught(self):
+        old = " and timer is not threading.current_thread()"
+        text = DIFF.read_text(encoding="utf-8")
+        self.assertIn(old, text)
+        v, _cal = patched_vault(self, text.replace(old, "", 1))
+        r = run(v, Rescrub.RETRIES)
+        self.assertLess(int(r.stdout.strip().splitlines()[-1]), 5, r.stdout + r.stderr[-300:])      # the v3 behaviour: 2 calls
 
     def test_hook_without_its_call_fails(self):
         v, cal = patched_vault(self, self.mutated("+        n = sweep.rescrub_calendar()", "+        n = 0"))

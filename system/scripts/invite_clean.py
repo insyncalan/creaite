@@ -150,6 +150,7 @@ LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_N
                    rf"-(?:\s+|(?!(?:{GLUE_OK})(?![\w-])))[^\W_]"
                    rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])ids?\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
                    rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d\S*\d\S*\d"   # "ID 4417": 3 digits
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|ids?)(?=\d{{3,}})"      # glued: "PIN4417"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 # a footnote mark "(1)", a separator run, "_", "is" or "are"
 _ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
@@ -449,23 +450,45 @@ def _label_kind(ln, dropped):
     return "leads" if not dropped and any(_label_leads(v) for v in views) else ""
 
 
-_LIST_MARKER = re.compile(r"^\s*(?:\d{1,3}[.)]|[A-Za-z][.)]|[-*\u2022\u2013\u2014\u00b7])\s")
+_LIST_STRIP = re.compile(r"^(?:\s*(?:\d{1,3}[.)]|[A-Za-z][.)]|[-*\u2022\u2013\u2014\u00b7])\s+)+")
+_DATE_TIME = re.compile(r"\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b")
+_ID_NUMBER = re.compile(r"\d{4,}|(?<!\d)\d{3}(?:[ -]\d{2,4}){1,}(?!\d)")
+_DIGITS_ONLY = re.compile(r"[\s\-.()#+]*\d(?:[\s\-.]?\d){3,}[\s\-.()#+]*")  # 4+ digits only, any grouping
+
+
+def id_number(line):
+    """Whether a line holds a number that can be a meeting ID or passcode: 4 or more digits in a row, or digits in groups (3+3, 3+3+3,
+    spaces or dashes). Dates (25-10-2026) and times (12:30) are taken out first; "Room 4" and "Item 12" are not numbers of that kind."""
+    t = _DATE_TIME.sub(" ", line)
+    return bool(_ID_NUMBER.search(t) or _DIGITS_ONLY.fullmatch(t.strip()))
 
 
 def _looks_like_value(line):
-    """Whether a line after a valueless label looks like a value rather than an agenda item: never a numbered or bulleted line; yes for 4 or
-    more digits, a token that mixes letters and digits, or a long hex-like string; never a sentence (two words or more, ending in . ! ?);
-    else yes for one or two tokens and no for three or more plain words."""
-    t = line.strip()
-    if _LIST_MARKER.match(re.sub(r"^[\s_*~`>#]+", "", t)):
+    """Whether a line after a valueless label looks like a value rather than an agenda item. A list marker (1., a), -, bullet, and the
+    <li> that plain_text makes into "- ") is stripped first and the rest judged; a bulleted line needs a STRONG sign (a number as
+    id_number reads it, a token of 5 or more characters with 3 or more digits, a long hex-like string) and at most 3 words: a bulleted
+    word-only line ("- hunter", "<li>Budget</li>") cannot be told from an agenda item, so it stays (a documented limit, #369). An
+    unmarked line: yes for those signs or for one or two tokens, never a sentence (two words or more, ending in . ! ?), no for three or
+    more plain words."""
+    t = re.sub(r"^[\s_*~`>#]+", "", line.strip())
+    rest = _LIST_STRIP.sub("", t)
+    tokens = rest.split()
+    if not tokens:
         return False
-    tokens = t.split()
-    if sum(c.isdigit() for c in t) >= 4 or any(re.search(r"[^\W\d_]", w) and re.search(r"\d", w) for w in tokens) \
-            or any(re.fullmatch(r"[0-9a-fA-F]{8,}", w) for w in tokens):
+    strong = _strong_value(rest, tokens)
+    if rest != t:                                  # a bulleted line
+        return strong and len(tokens) <= 3
+    if strong or any(re.search(r"[^\W\d_]", w) and re.search(r"\d", w) for w in tokens) or sum(c.isdigit() for c in rest) >= 4:
         return True
-    if len(tokens) >= 2 and t[-1:] in ".!?":
+    if len(tokens) >= 2 and rest[-1:] in ".!?":
         return False
     return len(tokens) <= 2
+
+
+def _strong_value(rest, tokens):
+    """A number as id_number reads it, a token of 5 or more characters with 3 or more digits, or a long hex-like string."""
+    return (id_number(rest) or any(len(w) >= 5 and sum(c.isdigit() for c in w) >= 3 and re.search(r"[^\W\d_]", w) for w in tokens)
+            or any(re.fullmatch(r"[0-9a-fA-F]{8,}", w) for w in tokens))
 
 
 _HYPHEN_LABEL = re.compile(rf"(?<=\w)[-](?=(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS}|ids?)(?!\w))", re.I)
@@ -523,7 +546,7 @@ class _Reader:
 
     def _takes_number(self, ln, dropped):
         """The "Meeting ID." rule: the next line with a digit is the value (not a removed line, not one a label standing alone takes)."""
-        return self.digit_wait and not dropped and not self.pending and bool(re.search(r"\d", ln))
+        return self.digit_wait and not dropped and not self.pending and id_number(ln)
 
     def _tombstone(self, reach):
         if self.anchors and reach:

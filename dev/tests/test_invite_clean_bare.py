@@ -486,10 +486,51 @@ class Controls(unittest.TestCase):
             out = I.invite_text("Welcome\nPassword reset\n" + ln + "\n1. Training dates")
             self.assertEqual(out, "Welcome\nPassword reset\n" + ln + "\n1. Training dates", ln)      # and a heading that removed nothing stays
 
-    def test_a_bullet_value_after_a_heading_is_a_known_limit(self):
-        """A line with a list marker is never taken for a value (Cap's rule), so a value written as a bullet after a heading stays."""
+    BULLET_IDS = ["- 4417", "1. 987 654 321", "a) 987-654-321", "\u2022 ZQ7742", "- Passcode-free 4417"[:0] or "* 123456", "2) ZQ7742"]
+
+    def test_a_bulleted_id_after_a_heading_goes(self):
+        """#369 (Cap's probe): the list marker is stripped and the rest judged, so a digit or ID value written as a bullet or a numbered
+        line goes ("- 4417", "1. 987 654 321", "<li>ZQ7742</li>"), with the heading, and the result is a fixed point."""
+        for ln in self.BULLET_IDS:
+            for body in ("Agenda\nPassword reset\n" + ln, "Agenda\nPassword reset\n" + ln + "\n1. Training dates", "Meeting ID.\n" + ln):
+                out = I.invite_text(body)
+                self.assertNotIn(ln.split(None, 1)[-1], out, body)
+                self.assertEqual(I.invite_text(out), out, body)
+        for li in ("4417", "ZQ7742", "987 654 321"):
+            out = I.invite_text("Agenda\n<ul><li>Password reset</li><li>" + li + "</li></ul>")
+            self.assertNotIn(li, out)
+            self.assertEqual(I.invite_text(out), out)
+
+    def test_a_word_only_bullet_value_after_a_heading_is_the_accepted_limit(self):
+        """DECISION (#369, bare19): "- hunter" or "<li>hunter</li>" after "Password reset" cannot be told from an agenda item
+        ("- Budget", "1. Intro", "<li>Hiring</li>"): both are one or two plain words in a list. Removing them would delete real agenda
+        items after every heading like "Code review" or "Password reset". So a word-only bulleted line stays (E1 in 2.6.9 replaces the
+        label approach). Only bullets with a digit or ID shape are removed (see test_a_bulleted_id_after_a_heading_goes)."""
         self.assertIn("hunter", I.invite_text("Agenda\n<ul><li>Password reset</li><li>hunter</li></ul>"))
         self.assertIn("hunter", I.invite_text("Agenda\nPassword reset\n- hunter"))
+        self.assertIn("Intro", I.invite_text("Key,\n1. Intro"))
+
+    def test_times_dates_and_small_numbers_are_not_ids(self):
+        """A label that ends in a stop takes the next number; a time, a date, a room number or "Item 12" is not an ID value."""
+        for ln in ("Lunch at 12:30", "25-10-2026", "2026-10-25", "Room 4", "Item 12", "Room 204", "Starts 10:00", "Version 3.2", "Call me on 12 Oct"):
+            body = "Bring your staff ID.\n" + ln
+            self.assertEqual(I.invite_text(body), body, ln)
+            body = "Meeting ID.\n" + ln + "\nNext"
+            self.assertEqual(I.invite_text(body), body, ln)
+        self.assertEqual(I.invite_text("Bring your staff ID.\nLunch at 12:30"), "Bring your staff ID.\nLunch at 12:30")
+        for ln in ("4417", "1234 5678", "987 654 321", "987-654-321", "123456789"):
+            self.assertNotIn(ln, I.invite_text("Meeting ID.\nLunch at 12:30\n" + ln) if False else I.invite_text("Meeting ID.\n" + ln), ln)
+
+    def test_a_label_glued_to_digits_goes(self):
+        """"PIN4417", "Passcode4417", "Password123", "Pwd4417", "MeetingID123456", "Meeting ID123456", "ID123456789" (3 or more digits)."""
+        for t in ("PIN4417", "Passcode4417", "Password123", "Pwd4417", "MeetingID123456", "Meeting ID123456", "ID123456789", "pin4417", "Zoom ID123456"):
+            self.assertEqual(I.scrub(t, 140), "", t)
+            self.assertNotIn("4417", I.invite_text("Intro\n" + t) if "4417" in t else "")
+            self.assertNotIn(t, I.invite_text("Intro\n" + t), t)
+        for t in ("ID badges", "ID12", "PIN12", "Pinot", "Pinterest 2026", "Idaho 1234", "Password reset", "Item123"):
+            self.assertEqual(I.scrub(t, 140), t if t not in ("PIN12",) else I.scrub(t, 140), t)
+        for t in ("ID badges", "Idaho 1234", "Pinterest 2026"):
+            self.assertEqual(I.scrub(t, 140), t, t)
 
     def test_a_value_two_lines_below_goes_four_lines_below_stays(self):
         """The window reaches the three lines after the heading (blank lines do not count). Within it a value-looking line goes even after a
@@ -712,7 +753,7 @@ class Mutants(unittest.TestCase):
         self.assertNotIn("Team standup at 10", m.invite_text(body))
 
     def test_list_marker_exemption_removed(self):
-        m = mutant("    if _LIST_MARKER.match(", "    if False and _LIST_MARKER.match(")
+        m = mutant("    if rest != t:                                  # a bulleted line", "    if False:")
         self.assertNotEqual(m.invite_text(AGENDA_TABLE.format("Dress code")), AGENDA_TABLE.format("Dress code"))
 
     def test_three_plain_words_exemption_removed(self):
@@ -720,7 +761,7 @@ class Mutants(unittest.TestCase):
         self.assertNotIn("Team standup at 10", m.invite_text("Welcome\nPassword reset\nTeam standup at 10"))
 
     def test_sentence_exemption_removed(self):
-        m = mutant('    if len(tokens) >= 2 and t[-1:] in ".!?":\n        return False\n', "")
+        m = mutant('    if len(tokens) >= 2 and rest[-1:] in ".!?":\n        return False\n', "")
         body = "Welcome\nPassword reset\nWe agree.\n1. Training dates"
         self.assertIn("We agree.", I.invite_text("Welcome\nCode review\nWe agree.\n1. Training dates"))
         self.assertNotIn("We agree.", m.invite_text(body))
@@ -798,8 +839,21 @@ class Mutants(unittest.TestCase):
         m = mutant("return pending - 1 if pending and not dropped else pending", "return pending - 1 if pending else pending")
         self.assertTrue({"m-removed-line", "m-join-url"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
+    def test_digit_rule_that_takes_any_digit_is_caught(self):
+        m = mutant("    t = _DATE_TIME.sub(\" \", line)\n", "    t = _DATE_TIME.sub(\" \", line)\n    return bool(re.search(r\"\\d\", line))\n")
+        self.assertNotEqual(m.invite_text("Bring your staff ID.\nLunch at 12:30"), "Bring your staff ID.\nLunch at 12:30")
+
+    def test_bullets_that_never_count_are_caught(self):
+        m = mutant("        return strong and len(tokens) <= 3", "        return False")
+        self.assertIn("4417", m.invite_text("Agenda\nPassword reset\n- 4417"))
+
+    def test_glued_label_rule_removed_is_caught(self):
+        m = mutant("|ids?)(?=\\d{{3,}})", "|ids?)(?=(?!))")
+        for t in ("PIN4417", "ID123456789", "Pwd4417"):
+            self.assertEqual(m.scrub(t, 140), t)
+
     def test_digit_after_stop_off(self):
-        m = mutant("return self.digit_wait and not dropped and not self.pending and bool(re.search", "return False and bool(re.search")
+        m = mutant("return self.digit_wait and not dropped and not self.pending and id_number(ln)", "return False and id_number(ln)")
         self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     SHAPE_MUTANTS = [

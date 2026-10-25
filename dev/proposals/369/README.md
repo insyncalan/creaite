@@ -17,3 +17,7 @@ Not on any chain list.
 ## v3 (live_server-rescrub-v3.diff): show Alan this one
 
 v1 (6cdba005...) and v2 (ecb0f097...) stay as they were. v3 fixes the two notes on v2: the job no longer holds the server's job lock (`LOCK`) while it cleans (it only checks that the lock is free, so a restore in progress is not overlapped; the calendar's own file lock, `sweep.calendar_lock`, guards the file against a sweep's save), and a skipped job is tried again after five minutes (`CALENDAR_RETRY`, one daemon timer) instead of after the hour, so an early daily zip does not hold the raw file. It applies cleanly on origin/main; `test_live_rescrub_369.py` uses it and takes any applied diff off before it tries the changed copies.
+
+## v4 (live_server-rescrub-v4.diff): show Alan this one instead of v3
+
+v3 retried only once: `calendar_rescrub_retry` returns when the timer is alive, and when it is called from the timer's own callback that timer is alive. v4 adds `and timer is not threading.current_thread()`. Applies cleanly on origin/main (`git apply --check`); `test_live_rescrub_369.py` uses it, with a held-lock test of several retries (0.3 s delay, lock held 2 s) and a mutant that fails if only one retry happens.

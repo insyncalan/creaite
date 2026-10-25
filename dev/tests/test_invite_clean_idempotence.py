@@ -154,7 +154,67 @@ def fuzz_body(rnd, n):
     return "\n".join(lines), [v for v in values if v.strip("_")]
 
 
+MARKS = ["- ", "* ", "\u2022 ", "1. ", "2) ", "a) ", "  - ", ""]
+SAFE = ["Lunch at 12:30", "Room 4", "Item 12", "Starts 10:00", "25-10-2026", "Budget review", "1. Welcome", "- Hiring plan"]
+
+
+def fuzz_list_body(rnd, n, html=False):
+    """bare19: like fuzz_body, but the agenda lines, the labels' values and the headings are LIST ITEMS (a marker, or <li>), and times, dates
+    and small numbers stand among them. Returns (body, values): the values (digit or ID shaped, bulleted) must not survive pass one."""
+    items, values = [], []
+
+    class Items(list):                          # in HTML every line, label or value, is an <li>
+        def append(self, x):
+            super().append(f"<li>{x}</li>" if html and not x.startswith("<li>") else x)
+    items = Items()
+
+    def put(text, mark=None):
+        mark = rnd.choice(MARKS) if mark is None else mark
+        items.append(f"<li>{text}</li>" if html else mark + text)
+
+    for _ in range(rnd.randint(2, 7)):
+        pick = rnd.random()
+        if pick < 0.3:
+            put(rnd.choice(SAFE))
+        elif pick < 0.6:
+            put(rnd.choice(STOP_LABELS)) if rnd.random() < 0.5 else items.append(rnd.choice(STOP_LABELS))
+            if rnd.random() < 0.4:
+                items.append(rnd.choice(REMOVED))
+            v = rnd.choice([f"{rnd.randint(1000, 9999)}{n:05d}", f"{rnd.randint(100, 999)} {rnd.randint(100, 999)} {n:03d}", f"ZQ{n:05d}"])
+            put(v, rnd.choice(MARKS[:6]))
+            values.append(v)
+        elif pick < 0.8:
+            items.append(rnd.choice(["Password reset", "Code of conduct"]))
+            v = rnd.choice([f"{rnd.randint(1000, 9999)}{n:05d}", f"ZQ{n:05d}"])
+            put(v, rnd.choice(MARKS[:6]))
+            values.append(v)
+        else:
+            put(rnd.choice(AGENDA_LINES))
+    joiner = "" if html else "\n"
+    return ("<ul>" + joiner.join(items) + "</ul>" if html else joiner.join(items)), values
+
+
 class Fuzz(unittest.TestCase):
+    def test_forty_thousand_list_bodies_reach_a_fixed_point_with_no_value_after_pass_one(self):
+        rnd = random.Random(1369)
+        bad_fixed, bad_value = [], []
+        for n in range(FUZZ_BODIES):
+            body, values = fuzz_list_body(rnd, n, html=bool(n % 3 == 0))
+            once = I.invite_text(body)
+            if I.invite_text(once) != once:
+                bad_fixed.append(body)
+            if any(v in once for v in values):
+                bad_value.append(body)
+        self.assertEqual((len(bad_fixed), bad_fixed[:1]), (0, []), f"{len(bad_fixed)} list bodies are not a fixed point after one pass")
+        self.assertEqual((len(bad_value), bad_value[:1]), (0, []), f"{len(bad_value)} list bodies keep a value after one pass")
+
+    def test_times_dates_and_small_numbers_survive_when_no_label_is_near(self):
+        for ln in ("Lunch at 12:30", "Room 4", "Item 12", "25-10-2026", "Starts 10:00"):
+            body = "Welcome\n- " + ln + "\n1. " + ln + "\n<ul><li>" + ln + "</li></ul>"
+            once = I.invite_text(body)
+            self.assertEqual(once.count(ln), 3, ln)
+
+
     def test_forty_thousand_bodies_reach_a_fixed_point_with_no_value_after_pass_one(self):
         rnd = random.Random(369)
         bad_fixed, bad_value = [], []
@@ -170,7 +230,7 @@ class Fuzz(unittest.TestCase):
 
     def test_the_reviewers_examples(self):
         for body, values in (("Meeting ID.\nhttps://teams.microsoft.com/l/meetup-join/x\n1234", ["1234"]), ("Meeting ID.\nPasscode: abc\n1234", ["1234"]),
-                             ("Key,\nPasscode: abc\n1. Intro", ["Intro"]), ("Zoom ID!\nDial-in: +44 20 7946 0958,,1234#\n55 66", ["55 66"]),
+                             ("Key,\nPasscode: abc\n1. 987 654 321", ["987 654 321"]), ("Key.\n- 123456", ["123456"]), ("Zoom ID!\nDial-in: +44 20 7946 0958,,1234#\n55 66", ["55 66"]),
                              ("Passcode:\n_____\nZQ7742", ["ZQ7742"]), ("Passcode:\n\u2500\u2500\u2500\n\u2022 ZQ7742", ["ZQ7742"]),
                              ("Passcode:\n=====\n.....\n-----\n|||||\nZQ7742", ["ZQ7742"])):
             once = I.invite_text(body)
@@ -230,7 +290,7 @@ class Mutants(unittest.TestCase):
     def test_the_two_exact_cases_of_cap(self):
         for body, gone in (("Meeting ID.\nPasscode:\n4417\n987 654 321", ["4417", "987 654 321"]),
                            ("Meeting ID.\nhttps://teams.microsoft.com/l/meetup-join/x\n1234", ["1234"]),
-                           ("Meeting ID.\nPasscode: abc\n1234", ["1234"]), ("Key,\nPasscode: abc\n1. Intro", ["Intro"])):
+                           ("Meeting ID.\nPasscode: abc\n1234", ["1234"]), ("Key,\nPasscode: abc\n1. 987 654 321", ["987 654 321"]), ("Key.\n- 123456", ["123456"])):
             once = I.invite_text(body)
             self.assertEqual(I.invite_text(once), once, body)
             for v in gone:
