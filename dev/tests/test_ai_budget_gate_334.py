@@ -41,6 +41,7 @@ class FakeHandler:
         self.sent = (code, body)
 
     numbered = staticmethod(lambda: False)
+    panel_run = getattr(live_server.Handler, "panel_run", None)       # #339 A
 
     def follow(self, run, **kw):
         raise Reached()
@@ -152,7 +153,8 @@ class SweepsAreNeverHeld(unittest.TestCase):
     def test_the_ask_path(self):
         for at_limit in ("confirm", "stop"):
             for words in SWEEPS:
-                self.assertTrue(ask({"message": words}, status(500, at_limit=at_limit))[1], (at_limit, words))
+                sent, reached = ask({"message": words}, status(500, at_limit=at_limit))
+                self.assertTrue(reached or (sent and sent[0] in (400, 409)), (at_limit, words))  # #339 A
         sent, reached = ask({"message": "tell me about the pilot"}, status(500))
         self.assertFalse(reached)                                    # anything else is still held
         self.assertEqual(sent[0], 429)
@@ -178,7 +180,10 @@ class SweepsAreNeverHeld(unittest.TestCase):
     def test_the_queue_path(self):
         for at_limit in ("confirm", "stop"):
             for words in SWEEPS:
-                self.assertTrue(self.queued(words, status(500, at_limit=at_limit))[1], (at_limit, words))
+                q, reached = self.queued(words, status(500, at_limit=at_limit))
+                import calendar_refresh
+                refused = words == "refresh calendar" and q.get("why") == calendar_refresh.precheck()     # #339 A: its own reason
+                self.assertTrue(reached or refused, (at_limit, words))
         q, reached = self.queued("tell me about the pilot", status(500))
         self.assertFalse(reached)
         self.assertTrue(q["held"])
