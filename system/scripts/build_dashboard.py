@@ -2040,7 +2040,7 @@ def workstream_leads(con):
 def calendar(projects):
     """Alan's meetings saved by the sweep (Today's day view), each tagged with a project whose code or name it mentions."""
     try:
-        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        cal = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return None
     for events in (cal.get("days") or {}).values():
@@ -2587,7 +2587,7 @@ def prep(settings, projects, file_list, today, items=None, con=None):
 def saved_calendar_days():
     """calendar.json's {"YYYY-MM-DD": [event, …]} with every invite detail (prep reads them), or {} without one."""
     try:
-        return json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+        return invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8"))).get("days") or {}
     except (OSError, ValueError, AttributeError):
         return {}
 
@@ -2841,7 +2841,7 @@ def inbox_meetings(settings, projects, today):
     calendar) has id null and can't be picked until the calendar is refreshed."""
     start = meetings_start(settings, today)
     try:
-        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        cal = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return {"fetched": None, "from": start.isoformat(), "rows": [], "cleared": [], "later": []}
     entries = cleared_load(settings, today)

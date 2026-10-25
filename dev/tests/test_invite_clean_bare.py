@@ -92,6 +92,8 @@ ALLOWED = [
     ("token-expiry", "Token expiry changes", ("token", "expiry")),
     ("token-rotation", "Token rotation plan", ("token", "rotation")),
     ("token-economy", "Token economy workshop", ("token", "economy")),
+    ("token-economics", "Token economics workshop", ("token", "economics")),
+    ("token-ring", "Token Ring retrospective", ("token", "ring")),
     ("secret-santa", "Secret santa plan", ("secret", "santa")),
     ("secrets-management", "Secrets management review", ("secret", "management")),
     ("secret-manager", "Secret manager rollout", ("secret", "manager")),
@@ -211,6 +213,10 @@ for _rid, _text, _entry in ALLOWED:
 class Controls(unittest.TestCase):
     def test_ordinary_titles_survive(self):
         for t in CONTROLS:
+            self.assertEqual(I.scrub(t, 140), t, t)
+
+    def test_follow_on_words_keep_their_phrase(self):
+        for t in ("Code review sync", "Password reset request", "Code of conduct session", "Token Ring retrospective"):
             self.assertEqual(I.scrub(t, 140), t, t)
 
     def test_known_over_removal(self):

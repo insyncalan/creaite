@@ -101,6 +101,11 @@ class Probes(A.Audience):
             raise RuntimeError("followed alerts not recorded: " + (r.stdout + r.stderr)[-200:])
 
     # ── variants ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+    def drop_proposals(self):
+        """The planted pending proposal makes a weekly report refuse ("review first"); the report probes plant without it."""
+        for f in (self.v.root / "system/staging").glob("proposed-*.json"):
+            f.unlink()
+
     def test_client(self):
         self.plant()
         self.fresh()
@@ -117,7 +122,7 @@ class Probes(A.Audience):
             hit = seen_in(text)
             case(f"client report {name}", "LEAK" if hit else "PASS", f"holds {hit}" if hit else "no followed-person word, star or canary")
         spec = self.v.root / "system/staging/drafts/steerco.json"
-        spec.write_text(json.dumps({"code": "ABC", "version": "client", "summary": ["The programme is on course."]}))
+        spec.write_text(json.dumps({"code": "ABC", "version": "client", "summary": ["The programme is on course."], "force": True}))
         d = self.cmd("report.py", "steerco-data", "ABC", "--version", "client")
         hit = seen_in(d.stdout)
         case("client steerco-data", "LEAK" if hit else "PASS", f"holds {hit}" if hit else "clean")
@@ -128,12 +133,10 @@ class Probes(A.Audience):
         for f in made:
             hit = seen_in(self.text_of(f))
             case(f"client steerco one-pager {f.suffix}", "LEAK" if hit else "PASS", f"holds {hit}" if hit else "clean")
-        # a client-visible item OWNED by a followed person: the owner's name may show; the kind and the word never
-        e = self.export("html", "client", on_clash="number")
-        case("client export owner line", "PASS", "checked above")
 
     def test_reports(self):
         self.plant()
+        self.drop_proposals()
         wd = self.cmd("report.py", "weekly-data", "ABC")
         hit = seen_in(wd.stdout)
         case("weekly-data facts for the model (information)", "PASS", f"holds {hit} (the skill's own rule keeps it out of the report)" if hit else "no followed data")
@@ -177,6 +180,7 @@ class Probes(A.Audience):
         else:
             hit = seen_in(self.text_of(x))
             case("Excel export (tracker-view.xlsx)", "LEAK" if hit else "PASS", f"holds {hit}" if hit else "clean")
+        self.drop_proposals()
         # the report page's own data: the report draft route's answer and the page the export makes
         r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": WEEK})
         hit = seen_in(json.dumps(r))
@@ -232,9 +236,9 @@ class Probes(A.Audience):
 
     def drafts_contexts(self):
         reqs = [("status-form client", {"kind": "status-form", "code": "ABC", "form": "email", "audience": "client", "length": "short"}),
-                ("status-form internal", {"kind": "status-form", "code": "ABC", "form": "three-line", "audience": "internal", "length": "short"}),
+                ("status-form internal", {"kind": "status-form", "code": "ABC", "form": "three", "audience": "internal", "length": "short"}),
                 ("client wording", {"kind": "client", "id": "ABC-A-003"}), ("polish", {"kind": "polish", "text": "Dear Jane, a short update.", "tone": "warm"}),
-                ("update", {"kind": "update", "id": "ABC-A-003"}), ("health reason", {"kind": "health", "code": "ABC"})]
+                ("update", {"kind": "update", "id": "ABC-A-003"}), ("health reason", {"kind": "health", "code": "ABC", "to": "At risk"})]
         for label, req in reqs:
             p = self.cmd("drafts.py", "context", stdin=json.dumps(req))
             if p.returncode or not p.stdout.strip():
@@ -326,12 +330,12 @@ class Probes(A.Audience):
 
     def test_log(self):
         self.plant()
-        self.cmd("sweep.py", "vip", "show") if False else None
         self.fresh()
         self.export("html", "client", on_clash="number")
         self.cmd("drafts.py", "chase-pane", stdin=json.dumps({"id": "ABC-A-003"}))
         self.cmd("build_dashboard.py")
         logs = "".join(f.read_text(encoding="utf-8", errors="ignore") for f in sorted((self.v.root / "system/logs").glob("debug-*.log")))
+        case("debug log is not empty", "PASS" if logs.strip() else "LEAK", f"{len(logs)} bytes")      # an empty log judges nothing
         bad, cmd_lines = [], 0
         for ln in logs.splitlines():
             h = seen_in(ln)
@@ -347,14 +351,30 @@ class Probes(A.Audience):
 
 
 
+# Refusals that are the design, each with the reason; any other HELD means a probe made nothing and fails the test.
+EXPECTED_HELD = {
+    "draft context update": "nothing new since the last update: the model is never asked",
+    "draft context health reason": "the planted vault has no overdue action, risk or slip to explain a health with",
+    "weekly report export html": "a weekly report must be saved before it is exported; the saved draft is judged by 'weekly report' above",
+    "weekly report export docx": "as above",
+    "edit_ai client reply 'the VIP contact'": "the reply check drops a suggestion that is not client-safe: the check working",
+}
+MIN_PASS = {"test_client": 6, "test_reports": 4, "test_exports": 3, "test_api": 1, "test_drafts": 8, "test_prep": 1, "test_search": 8,
+            "test_log": 2}
+
+
 def _judged(fn):
-    """A probe test: every CASE that is LEAK fails it, and it must have judged something (a PASS), so one that makes nothing cannot pass."""
+    """A probe test: every CASE that is LEAK fails it; a HELD or SKIP that is not in EXPECTED_HELD fails it (the probe made nothing);
+    and it must have judged at least MIN_PASS cases, so one that quietly stops judging cannot pass."""
     def run(self):
         CASES.clear()
         fn(self)
         leaks = [c for c in CASES if c[1] == "LEAK"]
         self.assertEqual(leaks, [], "\n".join(f"{n}: {e}" for n, _s, e in leaks))
-        self.assertTrue([c for c in CASES if c[1] == "PASS"], "the probe judged nothing: " + repr(CASES))
+        held = [c for c in CASES if c[1] in ("HELD", "SKIP", "CTRL-FAIL") and c[0] not in EXPECTED_HELD]
+        self.assertEqual(held, [], "a probe made nothing:\n" + "\n".join(f"{n}: {e}" for n, _s, e in held))
+        passed = [c for c in CASES if c[1] == "PASS"]
+        self.assertGreaterEqual(len(passed), MIN_PASS[fn.__name__], "the probe judged too little: " + repr(CASES))
     run.__name__, run.__doc__ = fn.__name__, fn.__doc__
     return run
 
@@ -370,6 +390,9 @@ for _n in [n for n in dir(Probes) if n.startswith("test_")]:
 MUTANTS = [
     # (name, script, old, new, the probe test that must then fail)
     ("review_sheet_shows_the_flag", "excel_sync.py", 'if f != "vip")', 'if f != "never")', "test_exports"),
+    ("empty_debug_log", "log.py", "    try:\n        cfg = settings()\n        if level < 30", "    return\n    try:\n        cfg = settings()\n        if level < 30", "test_log"),
+    ("one_pager_made_nothing", "report.py", 'include_labelled") or ())\n    if data["blocked"] and not spec.get("force"):',
+     'include_labelled") or ())\n    if data["blocked"]:', "test_client"),
 ]
 
 

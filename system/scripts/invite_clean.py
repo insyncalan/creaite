@@ -75,14 +75,14 @@ BARE_NEXT = (
     (r"pin(?:\s*(?:code|number|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
     (r"codes?",                                                               # "Code review", "Code of conduct", "Source code repository"
      ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover", "walkthrough", "standards")),
-    (r"tokens?", ("expiry", "rotation", "refresh", "economy")),               # "Token refresh", "Token economy"
+    (r"tokens?", ("expiry", "rotation", "refresh", "economy", "economics", "ring")),   # "Token refresh", "Token Ring"
     (r"secrets?", ("management", "manager", "rotation", "santa")),            # "Secret santa", "Secrets management"
     (r"otp", ("setup", "rollout", "enrolment")),
     (r"api\s+keys?", ("rotation", "management", "review")),
 )
 BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or", "request", "requests", "process", "plan",
                "planning", "workshop", "session", "review", "rollout", "update", "changes", "findings", "redesign", "supplier", "call",
-               "move", "conduct")
+               "move", "conduct", "sync", "retrospective")
 
 
 def _bare_next(lab, ok):
@@ -330,3 +330,13 @@ def clean_row(row):
         files, people = _clean_names(row)
         out.update({k: v for k, v in (("body", body), ("attachments", files), ("attendees", people)) if v})
     return out
+
+
+def clean_calendar(cal):
+    """A saved calendar (calendar.json as loaded) with every meeting put through clean_row, so a reader never sees what an earlier
+    version kept (2.6.8). A cleaned row cleans to itself; anything that is not a day of meetings is returned as it is."""
+    days = cal.get("days") if isinstance(cal, dict) else None
+    if isinstance(days, dict):
+        cal = {**cal, "days": {d: ([clean_row(r) if isinstance(r, dict) else r for r in rows] if isinstance(rows, list) else rows)
+                              for d, rows in days.items()}}
+    return cal

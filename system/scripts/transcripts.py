@@ -28,6 +28,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import invite_clean  # noqa: E402  (2.6.8: a saved calendar is cleaned again when it is read)
 try:
     import log as debuglog  # BL-102: the debug log (not `log`: some scripts have a function of that name); optional
 except ImportError:
@@ -218,7 +219,7 @@ def classify(*, online, uri, count, error, past):
 def calendar_rows():
     """The timed meetings in system/staging/calendar.json, each with its day."""
     try:
-        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        cal = invite_clean.clean_calendar(json.loads(paths.CALENDAR.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return []
     out = []
