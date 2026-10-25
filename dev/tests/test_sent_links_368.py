@@ -112,8 +112,10 @@ class PatchedTextCheck(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         (tmp / "system" / "scripts").mkdir(parents=True)
         shutil.copy(ROOT / "system" / "scripts" / "client_leak.py", tmp / "system" / "scripts" / "client_leak.py")
-        r = subprocess.run(["git", "apply", str(DIFF)], cwd=tmp, capture_output=True, text=True)
-        assert r.returncode == 0, r.stderr
+        landed = subprocess.run(["git", "apply", "-R", "--check", str(DIFF)], cwd=tmp, capture_output=True, text=True).returncode == 0
+        if not landed:                                  # once the 2.6.8 chain has landed the tree already holds the diff
+            r = subprocess.run(["git", "apply", str(DIFF)], cwd=tmp, capture_output=True, text=True)
+            assert r.returncode == 0, r.stderr
         cls.patched = (tmp / "system" / "scripts" / "client_leak.py").read_text()
         (Path(cls.v.root) / "system" / "scripts" / "client_leak.py").write_text(cls.patched)
 
