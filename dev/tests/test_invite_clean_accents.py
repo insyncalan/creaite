@@ -163,7 +163,7 @@ class Mutants(unittest.TestCase):
                                                                               if v in mod.invite_text("Agenda: budget\n" + t + "\nEnd")]
 
     def test_nfkc_restored(self):
-        m = self.mutated('d = unicodedata.normalize("NFKD", normal(text))', "d = normal(text)")
+        m = self.mutated('d = unicodedata.normalize("NFKD", _bounded(normal(text)))', "d = normal(text)")
         self.assertTrue(self.leaks(m))
         self.assertTrue(sweep_survivors(m)[1])
 
