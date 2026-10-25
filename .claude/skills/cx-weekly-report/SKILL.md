@@ -5,7 +5,7 @@ description: creaite weekly report. For each active project, proposes health wit
 
 # cx-weekly-report
 
-A weekly picture of each project, drafted for review. Nothing is written or filed until "apply".
+A weekly picture of each project, drafted for review. Nothing is written or filed until "apply", or "save" (the same step: "save" counts only as the whole message ("save", "save ABC" or "save all"), only after a list of approved items shown in this session, never for a note, a setting or a draft; otherwise ask. Before running `tracker.py apply` for "save", first say "Saving n approved items: <IDs>"). "Save the draft" or "keep the draft" is never an apply.
 
 **Not from ask creaite (Alan, 19-10-2026).** Reports are the user's to edit in the Reporting hub. In an ask creaite chat (and in any run the live server starts) this skill never drafts, stages or writes a report or its draft: `reach.py`'s guard hook refuses `report.py weekly-stage`, an Edit or Write of a report file or draft, and a Bash call that names one. If asked there, say the report is made and edited in the Reporting hub (Generate, then edit) and offer to read it or answer questions about it. The steps below are for Alan's own Claude Code session only.
 

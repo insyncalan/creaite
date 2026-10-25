@@ -1,6 +1,6 @@
 ---
 name: cx-review
-description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "apply", "undo last apply", or "import excel".
+description: creaite review and approval. Shows everything pending (draft minutes, proposed items, Excel edits) grouped by project, records Alan's decisions, applies them through tracker.py, and can undo the last apply. "save" means "apply" only as the whole message ("save", "save ABC", "save all") after a review list shown in this session; "undo last save" means "undo last apply". Use when Alan says "review", "review ABC", "review minutes", "what's pending", "approve…", "reject…", gives an edit like "4 owner is Sara", "9 is DEF", "save", "apply", "undo last save", "undo last apply", or "import excel".
 ---
 
 # cx-review
@@ -37,8 +37,8 @@ Read `dev/staging-format.md` first. Only `system/scripts/tracker.py` writes. Thi
 | "review", "review ABC", "review minutes" | Show the review (everything, one project, or draft minutes only) |
 | Decisions (see below) | Record them in the proposal files; nothing is written yet |
 | "import excel" | Run `system/scripts/run excel_sync.py import`, then show the review |
-| "apply" | Run `system/scripts/run tracker.py apply` for every proposal with decided items |
-| "undo last apply" | Confirm first, then run `system/scripts/run tracker.py undo` |
+| "save" (or "apply") | Run `system/scripts/run tracker.py apply` for every proposal with decided items |
+| "undo last save" (or "undo last apply") | Confirm first, then run `system/scripts/run tracker.py undo` |
 
 Before showing a review, if `system/scripts/run excel_sync.py changed` reports unimported edits, offer to import them first.
 
@@ -113,7 +113,7 @@ Once filed, a report is Alan's document. Later edits to the filed copy don't cha
 
 ## Apply
 
-Only on an explicit "apply":
+Only on an explicit "apply", or "save" (the same step; "save" counts only as the whole message, "save", "save ABC" or "save all", and only after a review list shown in this session, never for a note, a setting or a draft; otherwise ask). Before running tracker.py apply for "save", first say "Saving n approved items: <IDs>":
 1. Run `tracker.py apply` on each proposal with decided items. In one transaction it:
    - backs up the database;
    - writes the approved items;
@@ -127,7 +127,7 @@ Only on an explicit "apply":
 
 If the apply fails, nothing is written. Show the error and the item it relates to.
 
-## Undo last apply
+## Undo last save (or apply)
 
 1. Show what the most recent apply did: items written or changed, meetings filed. Ask "Undo this?".
 2. On yes, run `tracker.py undo`. It:
@@ -136,7 +136,7 @@ If the apply fails, nothing is written. Show the error and the item it relates t
    - returns the undone items to pending (moving the proposal back from `applied/`);
    - **skips any item changed since that apply,** and reports it rather than overwriting newer data;
    - logs the undo itself.
-3. Repeating "undo last apply" steps back through earlier applies, one at a time.
+3. Repeating "undo last save" steps back through earlier applies, one at a time.
 
 
 ## Dates
