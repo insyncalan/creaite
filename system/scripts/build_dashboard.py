@@ -2595,11 +2595,13 @@ def saved_calendar_days():
 def prep_entry(ev, day, ctx):
     """(key, record) of one meeting's Prep brief entry, or None for a private or untitled one. The key is "HH:MM|title" today,
     "YYYY-MM-DD|HH:MM|title" any other day. ctx: {projects, remembered, history, items, ms_names, vips, today}."""
-    sens = invite_clean.sensitivity(ev)                  # fail closed: a private meeting has no brief, a confidential one no project
-    if sens == "private" or not ev.get("title"):
+    if invite_clean.sensitivity(ev) == "private" or not ev.get("title"):       # fail closed: "personal" or an odd value too
         return None
+    # A confidential meeting keeps its project here on purpose (#362): its Prep is Alan's own screen, shaped from the text and the
+    # tracker (BL-301), and needs the project; it holds no attendees, place or body. The lists (Intake, set-aside, hub, next day,
+    # Note for this meeting) show no project for it.
     s = series_of(ev["title"])
-    code, how = (None, "confidential") if sens == "confidential" else prep_match(ev["title"], ctx["projects"], ctx["remembered"])
+    code, how = prep_match(ev["title"], ctx["projects"], ctx["remembered"])
     last = max((d for d, ser in ctx["history"] if ser == s and d < day.isoformat()), default=None)
     key = f"{ev.get('start', '')}|{ev['title']}" if day == ctx["today"] else f"{day.isoformat()}|{ev.get('start', '')}|{ev['title']}"
     m = {"series": s, "p": code, "how": how, "last": last, "day": day.isoformat(),
