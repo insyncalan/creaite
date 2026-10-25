@@ -239,10 +239,33 @@ def lock(wait=20.0):
             os.close(fd)
 
 
-def _normal_row(row):
-    """A saved row as the cache holds it: stamped rows as stored (ROW_KEYS only), unstamped ones filtered in memory."""
-    if not is_stamped(row):
+_STR_KEYS = ("id", "start", "end", "title", "where", "organiser", "sensitivity", "organiser_email", "recurrence")
+_BOOL_KEYS = ("all_day", "teams", "private")
+
+
+def _well_formed(row):
+    """Is a (stamped) row of the shape the sweep writes: text where text is expected, flags that are booleans, lists of the right
+    things? A row that is not is re-filtered like an unstamped one (a hand edit or an import can add the stamp, finding 12)."""
+    checks = [(_STR_KEYS + ("body",), lambda v: isinstance(v, str)), (_BOOL_KEYS, lambda v: isinstance(v, bool)),
+              (("attendees",), lambda v: isinstance(v, list) and all(isinstance(a, dict) for a in v)),
+              (("attachments",), lambda v: isinstance(v, list) and all(isinstance(f, str) for f in v))]
+    return all(ok(row[k]) for keys, ok in checks for k in keys if k in row)
+
+
+def _safe_clean(row):
+    """clean_row, and when a cleaner faults on a strange row, the row cut to a bare head (never the raw row)."""
+    try:
         return clean_row(row)
+    except Exception:  # noqa: BLE001
+        sens = "private" if _flag(row.get("private")) else "confidential"
+        return {"id": str(row.get("id", ""))[:512], "title": "Busy" if sens == "private" else "Meeting",
+                "private": sens == "private", "sensitivity": sens, "clean": CLEAN}
+
+
+def _normal_row(row):
+    """A saved row as the cache holds it: well-formed stamped rows as stored (ROW_KEYS only), any other filtered in memory."""
+    if not is_stamped(row) or not _well_formed(row):
+        return _safe_clean(row)
     out = {k: row[k] for k in ROW_KEYS if k in row}
     if "body" in out:
         out["body"] = _cap(out["body"], BODY_CAP) if isinstance(out["body"], str) else ""
@@ -263,7 +286,26 @@ def _normal_calendar(cal):
 # ---- views ---------------------------------------------------------------------------------------------------------------------
 
 def _people(att):
-    return [{k: a[k] for k in ("name", "type", "response") if isinstance(a.get(k), str)} for a in att or [] if isinstance(a, dict)]
+    if not isinstance(att, list):
+        return []
+    return [{k: a[k] for k in ("name", "type", "response") if isinstance(a.get(k), str)} for a in att if isinstance(a, dict)]
+
+
+def _typed(k, v):
+    """(True, value) when `v` is a legal value for field `k`, else (False, None): a view never carries a wrongly typed field."""
+    if k == "id":
+        if isinstance(v, bool):
+            return False, None
+        return (True, v) if isinstance(v, str) else ((True, str(v)) if isinstance(v, int) else (False, None))
+    if k in _STR_KEYS:
+        return (True, v) if isinstance(v, str) else (False, None)
+    if k in _BOOL_KEYS:
+        return (True, v) if isinstance(v, bool) else (False, None)
+    if k == "attendees":
+        return True, _people(v)
+    if k == "attachments":
+        return (True, [f for f in v if isinstance(f, str)]) if isinstance(v, list) else (False, None)
+    return False, None
 
 
 def _limited(ev, fields, sens):
@@ -271,8 +313,9 @@ def _limited(ev, fields, sens):
     out = {}
     for k in fields:
         if k in ev:
-            v = ev[k]
-            out[k] = _people(v) if k == "attendees" else (list(v) if isinstance(v, list) else v)
+            ok, v = _typed(k, ev[k])
+            if ok:
+                out[k] = v
     if sens != "normal":
         if "sensitivity" in fields:
             out["sensitivity"] = sens
@@ -311,7 +354,10 @@ def read(purpose, path=None):
     if hit and hit[0] == sig:
         cal = hit[1]
     else:
-        cal = _normal_calendar(json.loads(path.read_text(encoding="utf-8")))
+        try:
+            cal = _normal_calendar(json.loads(path.read_text(encoding="utf-8")))
+        except RecursionError:
+            raise ValueError("calendar file is nested too deeply") from None
         st2 = path.stat()
         if (st2.st_mtime_ns, st2.st_size, st2.st_ino, CLEAN, id(FILTER), id(SHORT)) == sig:
             _CACHE[key] = (sig, cal)
