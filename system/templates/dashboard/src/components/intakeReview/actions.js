@@ -40,8 +40,16 @@ export const IR_LEFT_WHY = "private, confidential, not sure what it is or name n
 /** Whether a file's name cannot be sent to ask creaite (a control character, backtick, double quote or angle bracket): it must be
     renamed first, and Process and Process all ready skip it. @param {any} m */
 export const irBadName = m => !!m && m.src === "upload" && !irNameOk(m.path || m.title);
+/** #328 (Alan, Jarvis, 26-10-2026): a calendar meeting whose project is only Likely or Not sure waits for Alan to pick it. Process all ready
+    skips it and lists it; Process on the row itself is the pick and still works. A private or confidential meeting is left out
+    by irLeaveOut (counts only), never named here. @param {any} m */
+export const irNeedsProject = m => !!m && m.src === "calendar" && !m.private && !m.confidential && (m.level === "likely" || m.level === "unsure");
 /** The rows Process all ready would run. */
-export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irBusy.value.includes(m.id));
+export const irReady = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && !irNeedsProject(m) && !irBusy.value.includes(m.id));
+/** The ready meetings Process all ready skips until a project is picked (titles are shown; never a project guess). */
+export const irSkipped = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !irLeaveOut(m) && irNeedsProject(m) && !irBusy.value.includes(m.id));
+/** "Skipped 2 meetings until you pick a project: A, B" (at most three titles), or "". @param {any[]} held */
+export const irSkippedWords = held => !held.length ? "" : `Skipped ${held.length === 1 ? "1 meeting" : `${held.length} meetings`} until you pick a project: ${held.slice(0, 3).map(m => m.title).join(", ")}${held.length > 3 ? ` and ${held.length - 3} more` : ""}`;
 /** The ready rows it leaves out (counts only: a confidential meeting is never named). */
 export const irLeftOut = () => irModel().meetings.filter((/** @type {any} */ m) => irCanProcess(m) && !!irLeaveOut(m) && !irBusy.value.includes(m.id));
 /** What a row's main button says: a transcript file is made into minutes, a minutes file is checked for work items, a meeting is processed.
@@ -128,14 +136,14 @@ export function irAskAbout(m) {
 export async function irProcessAll() {
   if (!viaServer()) { snack(needsConnection("Processing")); return; }
   if (mtgBusy() || irBusy.value.length || irChecking.value.length) { snack(BUSY); return; }
-  const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length;
+  const ids = irReady().map((/** @type {any} */ m) => m.id), left = irLeftOut().length, held = irSkippedWords(irSkipped());
   irStopped = false; let ran = 0;
   for (const id of ids) {
     if (irStopped) break;
     const m = rowOf(id); if (m) { await irProcess(m); ran++; }
   }
   if (irStopped) { snack(`Stopped: ${ids.length - ran} not started`); irStopped = false; return; }
-  if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);   /* counts only: a confidential meeting is never named */
+  if (left || held) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${held ? `${held}. ` : ""}${left ? `${left} left out: ${IR_LEFT_WHY}` : ""}`.trim());   /* counts only for a confidential meeting: never named */
 }
 
 /** The clear route's item for a row. @param {any} m @param {Record<string, any>} [extra] */

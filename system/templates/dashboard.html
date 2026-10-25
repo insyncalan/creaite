@@ -6193,6 +6193,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
     irNameOk: () => irNameOk,
+    irNeedsProject: () => irNeedsProject,
     irNextJob: () => irNextJob,
     irNotNeeded: () => irNotNeeded,
     irNote: () => irNote,
@@ -6235,6 +6236,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetStateFilter: () => irSetStateFilter,
     irSetTick: () => irSetTick,
     irSetView: () => irSetView,
+    irSkipped: () => irSkipped,
+    irSkippedWords: () => irSkippedWords,
     irSplitTail: () => irSplitTail,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
@@ -78037,7 +78040,10 @@ ${d5.text}`);
   var irLeaveOut = (m5) => m5.private || m5.confidential ? "private" : irBadName(m5) ? "name" : irUnsure(m5, irFileKinds.value) ? "type" : "";
   var IR_LEFT_WHY = "private, confidential, not sure what it is or name not allowed";
   var irBadName = (m5) => !!m5 && m5.src === "upload" && !irNameOk(m5.path || m5.title);
-  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && !irBusy.value.includes(m5.id));
+  var irNeedsProject = (m5) => !!m5 && m5.src === "calendar" && !m5.private && !m5.confidential && (m5.level === "likely" || m5.level === "unsure");
+  var irReady = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && !irNeedsProject(m5) && !irBusy.value.includes(m5.id));
+  var irSkipped = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !irLeaveOut(m5) && irNeedsProject(m5) && !irBusy.value.includes(m5.id));
+  var irSkippedWords = (held) => !held.length ? "" : `Skipped ${held.length === 1 ? "1 meeting" : `${held.length} meetings`} until you pick a project: ${held.slice(0, 3).map((m5) => m5.title).join(", ")}${held.length > 3 ? ` and ${held.length - 3} more` : ""}`;
   var irLeftOut = () => irModel().meetings.filter((m5) => irCanProcess(m5) && !!irLeaveOut(m5) && !irBusy.value.includes(m5.id));
   var irProcessWord = (m5) => m5.src !== "upload" ? "Process" : irFileKind(m5) === "transcript" ? "Make minutes" : irFileKind(m5) === "minutes" ? "Find work items" : "Process";
   function irChooseKind(m5, kind) {
@@ -78166,7 +78172,7 @@ ${d5.text}`);
       snack(BUSY);
       return;
     }
-    const ids = irReady().map((m5) => m5.id), left = irLeftOut().length;
+    const ids = irReady().map((m5) => m5.id), left = irLeftOut().length, held = irSkippedWords(irSkipped());
     irStopped = false;
     let ran = 0;
     for (const id2 of ids) {
@@ -78182,7 +78188,7 @@ ${d5.text}`);
       irStopped = false;
       return;
     }
-    if (left) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${left} left out: ${IR_LEFT_WHY}`);
+    if (left || held) snack(`${ids.length ? `Processed ${ids.length}. ` : ""}${held ? `${held}. ` : ""}${left ? `${left} left out: ${IR_LEFT_WHY}` : ""}`.trim());
   }
   var asideItem = (m5, extra) => ({ key: m5.key || m5.path, day: m5.src === "upload" ? TODAY : m5.day, start: m5.start || "", title: m5.title, ...extra });
   async function setAside(ms2, extra, what, after = "") {
@@ -79833,6 +79839,10 @@ ${d5.text}`);
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "dismissaddfail", onClick: () => {
           irAddProblems.value = [];
         }, children: "Dismiss" })
+      ] }) : null,
+      irSkipped().length ? /* @__PURE__ */ u4("p", { class: "icsub irheld", "data-irheld": "1", children: [
+        irSkippedWords(irSkipped()),
+        "."
       ] }) : null,
       irLeftOut().length ? /* @__PURE__ */ u4("p", { class: "icsub irleft", "data-irleft": "1", children: [
         irLeftOut().length,
@@ -82301,6 +82311,7 @@ Next: `;
         "irAskAbout",
         "irBulk",
         "irBusy",
+        "irCanProcess",
         "irCapGroups",
         "irChanged",
         "irChecking",
@@ -82337,6 +82348,7 @@ Next: `;
         "irModel",
         "irModelBehind",
         "irNameOk",
+        "irNeedsProject",
         "irNextJob",
         "irNotNeeded",
         "irNote",
@@ -82362,6 +82374,8 @@ Next: `;
         "irSetGroup",
         "irSetStateFilter",
         "irSetView",
+        "irSkipped",
+        "irSkippedWords",
         "irSplitTail",
         "irStage",
         "irStageClick",
