@@ -2,7 +2,7 @@
 # Refreshed 25-10-2026 from the Python 3.14 shard jobs (1/12 to 12/12) of PR #40 (v266-release) run 40171834415: the lines "OK file.py (Ns)". A file the run did not list keeps its earlier time.
 # One file serves both Python versions, so these are the 3.14 times; 3.9 (the quick tier, 3 shards) runs the same files about 0.4 times as long (median of the 157 files over 10 s), so the ratios hold for it too.
 # These are per-file times under the shard's parallel load (-j), so a shard's sum is several times its wall time; only the ratios matter.
-# Every listed file was in that run's logs. 5 files that run had, which are not on main yet, are left out until their branch lands: test_mail_check.py, test_title_centre_click.py, test_title_code_wins.py, test_v265_341_hardening.py, test_v265_341_structure.py. Files in neither count as 30 s.
+# Every listed file was in that run's logs. Files not listed count as 30 s.
 test_355_followups.py 0
 test_activity_actor_188.py 1
 test_activity_even_browser.py 19
@@ -327,6 +327,7 @@ test_live_updates_page.py 106
 test_log_hygiene.py 31
 test_looks_like.py 81
 test_lost_click.py 214
+test_mail_check.py 356
 test_malformed_note.py 36
 test_markdown_views.py 18
 test_match_check_project_code.py 5
@@ -564,6 +565,8 @@ test_sweep_lock.py 60
 test_tab_title.py 5
 test_tiptap_pin.py 1
 test_tiptap_roundtrip.py 8
+test_title_centre_click.py 15
+test_title_code_wins.py 0
 test_today_brief.py 72
 test_today_days.py 16
 test_today_days_ui.py 130
@@ -589,6 +592,8 @@ test_usage_reviews_browser.py 39
 test_usage_wiring.py 11
 test_ux172_clarity.py 7
 test_ux_sweep_fixes.py 18
+test_v265_341_hardening.py 1
+test_v265_341_structure.py 0
 test_vault_cleanup.py 2
 test_vendor_preact.py 0
 test_vendor_tiptap.py 0
