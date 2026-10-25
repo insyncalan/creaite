@@ -503,7 +503,7 @@ class _Reader:
         if not self.soft:
             return False
         taken = dropped or reach or self.pending > 0
-        label = not taken and (_label_kind(ln, False) == "open" or _ends_on_key_and_stop(ln))
+        label = not taken and (bool(_label_kind(ln, False)) or _ends_on_key_and_stop(ln))
         looks = not taken and not label and _looks_like_value(ln)
         for window in self.soft:
             if not label:
