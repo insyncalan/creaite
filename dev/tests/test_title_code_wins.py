@@ -27,15 +27,33 @@ class TitleCodeWins(unittest.TestCase):
         self.assertEqual(bd.prep_match("[def] Weekly sync", PROJECTS, MEM), ("DEF", "matched"))
         self.assertEqual(bd.prep_match("[ def ] Weekly sync", PROJECTS, MEM), ("DEF", "matched"))
 
-    def test_bare_code_token(self):
+    def test_leading_code_wins(self):
         self.assertEqual(bd.prep_match("DEF Weekly sync", PROJECTS, {"def weekly sync": "ABC"}), ("DEF", "matched"))
+        self.assertEqual(bd.prep_match("DEF: Weekly sync", PROJECTS, {"def weekly sync": "ABC"}), ("DEF", "matched"))
+
+    def test_mid_title_code_does_not_beat_memory(self):         # #362 review LOW 5: only a [TAG] or a leading code has authority
+        for t in ("Budget review (follow-up from DEF)", "Re: DEF weekly sync", "Weekly sync with DEF"):
+            self.assertEqual(bd.title_codes(t, PROJECTS), set(), t)
+            self.assertEqual(bd.prep_match(t, PROJECTS, {bd.series_of(t): "ABC"}), ("ABC", "remembered"), t)
+
+    def test_a_longer_word_is_no_leading_code(self):
+        one = PROJECTS + [{"code": "ONE", "name": "One Thing"}]
+        self.assertEqual(bd.title_codes("Re: ONE-to-one", one), set())
+        self.assertEqual(bd.title_codes("ONE-to-one", one), set())
+        self.assertEqual(bd.title_codes("ONE to one", one), {"ONE"})
+
+    def test_long_and_odd_titles_are_bounded(self):
+        t = "[" * 5000 + "DEF" + "]" * 5000
+        self.assertEqual(bd.title_codes(t, PROJECTS), set())
+        self.assertTrue(len(bd.series_of("[a" * 50000)) <= 300)
+        self.assertEqual(bd.title_codes("[ﬀ] x", PROJECTS + [{"code": "FF", "name": "Ff"}]), set())             # non-ASCII is never upper-cased into a code
 
     def test_same_code_as_memory_is_still_remembered(self):
         self.assertEqual(bd.prep_match("[ABC] Weekly sync", PROJECTS, MEM), ("ABC", "remembered"))
         self.assertEqual(bd.prep_match("Weekly sync", PROJECTS, MEM), ("ABC", "remembered"))
 
     def test_two_codes_win_nothing(self):
-        for t in ("[ABC] [DEF] Weekly sync", "[abc][def] Weekly sync", "[DEF] Weekly sync with ABC"):
+        for t in ("[ABC] [DEF] Weekly sync", "[abc][def] Weekly sync", "ABC [DEF] Weekly sync"):
             self.assertEqual(bd.prep_match(t, PROJECTS, MEM), (None, "unsure"), t)
             self.assertEqual(bd.prep_match(t, PROJECTS, {}), (None, "unsure"), t)
 
@@ -45,7 +63,6 @@ class TitleCodeWins(unittest.TestCase):
 
     def test_unknown_tag_is_no_code(self):
         self.assertEqual(bd.prep_match("[ZZZ] Weekly sync", PROJECTS, MEM), ("ABC", "remembered"))
-        self.assertEqual(bd.prep_match("[Draft DEF] Weekly sync", PROJECTS, MEM), ("DEF", "matched"))   # DEF stands alone as a token
 
     def test_portfolio_choice_stands(self):
         self.assertEqual(bd.prep_match("[ABC] Weekly sync", PROJECTS, {"weekly sync": "_portfolio"}), ("_portfolio", "remembered"))

@@ -2485,7 +2485,7 @@ def weekend_warnings(con, settings, c):
 
 def series_of(title):
     """A meeting's series: its title in lower case without [CODE] tags, numbers and punctuation."""
-    t = re.sub(r"[^a-z0-9 ]", " ", re.sub(r"\[[^\]]*\]", " ", (title or "").lower()))
+    t = re.sub(r"[^a-z0-9 ]", " ", re.sub(r"\[[^\[\]]*\]", " ", (title or "")[:300].lower()))
     return " ".join(w for w in t.split() if not w.isdigit())
 
 
@@ -2507,18 +2507,23 @@ def past_meetings(file_list):
 def project_hits(text, projects):
     """Codes of the projects a text names: a code, a project name, or a register alias or keyword (BL-49, BL-54)."""
     low, codes = (text or "").lower(), {p["code"] for p in projects}
-    hits = {c for c in codes if re.search(rf"(?<![A-Za-z0-9]){c}(?![A-Za-z0-9])", text or "")}
+    hits = {c for c in codes if re.search(rf"(?<![A-Za-z0-9]){re.escape(c)}(?![A-Za-z0-9])", text or "")}
     hits |= {p["code"] for p in projects if p["name"] and p["name"].lower() in low}
     hits |= {c for c, words in register_signals() if c in codes and any(re.search(rf"\b{re.escape(w)}\b", low) for w in words)}
     return hits
 
 
 def title_codes(title, projects):
-    """#362: the active project codes a meeting title names: a [TAG] holding exactly a code, in any case ("[def]" is DEF), or a
-    code written as a whole upper-case token. Codes are matched whole (ORX is not ORX2C); a tag with other words is no code."""
+    """#362: the active project codes a meeting title names with authority: a [TAG] holding exactly a code, in any case ("[def]"
+    is DEF), or a code written upper-case as the title's first word ("DEF weekly sync", "DEF: weekly sync"). A code in the middle of
+    a title ("Budget review (follow-up from DEF)", "Re: ONE-to-one") names nothing with authority: it is only a hit for
+    project_hits. Codes are matched whole (ORX is not ORX2C); a tag with other words is no code. Only the first 300 characters
+    are read."""
     codes = {p["code"] for p in projects}
-    found = {t.strip().upper() for t in re.findall(r"\[([^\]]*)\]", title or "")} & codes
-    return found | {c for c in codes if re.search(rf"(?<![A-Za-z0-9]){c}(?![A-Za-z0-9])", title or "")}
+    t = (title or "")[:300]
+    found = {x.strip().upper() for x in re.findall(r"\[([^\[\]]*)\]", t) if x.isascii()} & codes
+    lead = {c for c in codes if re.match(rf"\s*{re.escape(c)}(?=\s|[:,;]|$)", t)}
+    return found | lead
 
 
 def prep_match(title, projects, remembered):
@@ -2540,6 +2545,19 @@ def prep_match(title, projects, remembered):
     if "portfolio" in (title or "").lower() or len(hits) > 1:
         return "_portfolio", "portfolio"
     return (hits.pop(), "matched") if hits else (None, "unsure")
+
+
+def ev_project(ev, title, projects, remembered):
+    """#362: the project code a calendar entry may show: none for a confidential one (fails closed), else the saved guess or the
+    brief's match."""
+    if invite_clean.sensitivity(ev) == "confidential":
+        return None
+    return ev.get("p") or prep_match(title, projects, remembered)[0]
+
+
+def ev_shown_p(ev):
+    """#362: an entry's saved project, none for a confidential one."""
+    return None if invite_clean.sensitivity(ev) == "confidential" else ev.get("p")
 
 
 def prep(settings, projects, file_list, today, items=None, con=None):
@@ -2577,10 +2595,11 @@ def saved_calendar_days():
 def prep_entry(ev, day, ctx):
     """(key, record) of one meeting's Prep brief entry, or None for a private or untitled one. The key is "HH:MM|title" today,
     "YYYY-MM-DD|HH:MM|title" any other day. ctx: {projects, remembered, history, items, ms_names, vips, today}."""
-    if ev.get("private") or not ev.get("title"):
+    sens = invite_clean.sensitivity(ev)                  # fail closed: a private meeting has no brief, a confidential one no project
+    if sens == "private" or not ev.get("title"):
         return None
     s = series_of(ev["title"])
-    code, how = prep_match(ev["title"], ctx["projects"], ctx["remembered"])
+    code, how = (None, "confidential") if sens == "confidential" else prep_match(ev["title"], ctx["projects"], ctx["remembered"])
     last = max((d for d, ser in ctx["history"] if ser == s and d < day.isoformat()), default=None)
     key = f"{ev.get('start', '')}|{ev['title']}" if day == ctx["today"] else f"{day.isoformat()}|{ev.get('start', '')}|{ev['title']}"
     m = {"series": s, "p": code, "how": how, "last": last, "day": day.isoformat(),
@@ -3066,8 +3085,9 @@ def _ir_aside_files(files, aside):
 def _ir_aside_lists(meetings, files, aside):
     """(later, not_needed): the meetings and uploaded files set aside, with their reason and note."""
     keep = ("key", "day", "start", "end", "title", "p", "private")
-    later = [{**{k: m.get(k) for k in keep}, "since": m.get("later_since")} for m in meetings.get("later") or []]
-    not_needed = [{**{k: m.get(k) for k in keep}, "reason": m.get("reason") or "", "note": m.get("note") or ""}
+    row = lambda m: {**{k: m.get(k) for k in keep}, **({"p": None} if m.get("confidential") else {})}  # noqa: E731  #362
+    later = [{**row(m), "since": m.get("later_since")} for m in meetings.get("later") or []]
+    not_needed = [{**row(m), "reason": m.get("reason") or "", "note": m.get("note") or ""}
                   for m in meetings.get("cleared") or []]
     later_files, gone_files = _ir_aside_files(files, aside)
     return later + later_files, not_needed + gone_files
@@ -3931,11 +3951,12 @@ def meeting_hub(settings, projects, today, cal, actions, raid, decisions, folder
     for day, events in ((cal or {}).get("days") or {}).items():
         for ev in events if isinstance(events, list) else []:
             title = str(ev.get("title") or "")
-            if ev.get("all_day") or ev.get("private") or not title or ("private" not in ev and title == "Busy" and not ev.get("where")):
+            busy = "private" not in ev and title == "Busy" and not ev.get("where")
+            if ev.get("all_day") or invite_clean.sensitivity(ev) == "private" or not title or busy:
                 continue
             eid = str(ev.get("id") or "") or None
             key = f"calendar:{eid}" if eid else f"cal:{day}|{ev.get('start', '')}|{title}"
-            code = ev.get("p") or prep_match(title, projects, remembered)[0]
+            code = ev_project(ev, title, projects, remembered)
             r = get(key, title=title, day=day, start=ev.get("start") or "", end=ev.get("end") or "", eid=eid)
             r["invite"], r["teams"] = True, bool(ev.get("teams"))
             if code and code in {p["code"] for p in projects} and code not in r["p"]:
@@ -4242,11 +4263,11 @@ def day_close(settings, con, today, cal):
              for r in (prep_page._registry() or {}).values()}
     meets = []
     for ev in ((cal or {}).get("days") or {}).get(nxt.isoformat()) or []:
-        if ev.get("all_day") or ev.get("private"):
+        if ev.get("all_day") or invite_clean.sensitivity(ev) == "private":
             continue
         slot = f"{ev.get('start', '')}|{ev.get('title', '')}"
-        meets.append({"start": ev.get("start") or "", "end": ev.get("end") or "", "title": ev.get("title") or "", "p": ev.get("p"),
-                      "id": ev.get("id"), "prep": (nxt.isoformat(), slot) in pages})
+        meets.append({"start": ev.get("start") or "", "end": ev.get("end") or "", "title": ev.get("title") or "",
+                      "p": ev_shown_p(ev), "id": ev.get("id"), "prep": (nxt.isoformat(), slot) in pages})
     meets.sort(key=lambda m: m["start"])
     days = day_closed_load()
     before = sorted(d for d in days if d < t)
