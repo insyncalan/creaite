@@ -40,7 +40,7 @@ export const IR_LEFT_WHY = "private, confidential, not sure what it is or name n
 /** Whether a file's name cannot be sent to ask creaite (a control character, backtick, double quote or angle bracket): it must be
     renamed first, and Process and Process all ready skip it. @param {any} m */
 export const irBadName = m => !!m && m.src === "upload" && !irNameOk(m.path || m.title);
-/** #328 (Alan, Jarvis, 26-10-2026; fails closed after the security review): a calendar meeting whose project is not Matched (Likely, Not sure, or no
+/** #328 (Alan, Jarvis, 25-10-2026; fails closed after the security review): a calendar meeting whose project is not Matched (Likely, Not sure, or no
     level at all) waits for Alan to pick it. Process all ready
     skips it and lists it; Process on the row itself is the pick and still works. A private or confidential meeting is left out
     by irLeaveOut (counts only), never named here. @param {any} m */
