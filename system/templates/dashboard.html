@@ -55466,7 +55466,8 @@ ${pre}**Current state title:** ${title}`);
     })();
     {
       const m5 = prepOf(shared.PREPEV) || {}, code = m5.p, body2 = $("#prepBody");
-      if (body2 && code && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
+      const guessed = !!(m5.invite && m5.invite.confidential) && m5.how !== "remembered" && m5.how !== "chosen";
+      if (body2 && code && !guessed && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
         const bar = `<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer() ? "" : "; needs creaite to be running"})</span></p>`;
         addHTML(body2, "afterbegin", raw(bar));
       }
