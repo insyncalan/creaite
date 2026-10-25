@@ -64193,7 +64193,7 @@ ${d5.text}`);
     const el2 = $("#pkSave");
     if (!el2) return;
     el2.classList.toggle("fail", state === "fail");
-    putHTML(el2, state === "busy" ? msg || "Saving…" : state === "fail" ? msg || "Not saved" : state === "ok" ? html`${raw(ic("check"))}${msg || "Saved for Review"}` : "");
+    putHTML(el2, state === "busy" ? msg || "Saving…" : state === "fail" ? msg || "Not saved" : state === "ok" ? html`${raw(ic("check"))}${msg || "Waiting to be saved"}` : "");
   }
   function pkStageDraw() {
     const st2 = $("#pkStage"), n4 = shared.PKS.length, m5 = new Set(shared.PKS.map((s5) => s5.id)).size;
@@ -64215,7 +64215,7 @@ ${d5.text}`);
     }
     const s5 = pkStagedOf(pkCid()), d5 = shared.PKDONE.filter((e4) => e4.id === pkCid());
     putHTML(el2, html`${raw(ic("history"))}<span>${s5.length ? html`You edited this ${s5[s5.length - 1].at.slice(11) === nowStamp().slice(11) ? "just now" : raw("at " + s5[s5.length - 1].at.slice(11))} · ${s5.length} change${s5.length === 1 ? "" : "s"} waiting to be saved` : d5.length ? html`Last saved ${fd(d5[d5.length - 1].at)}` : x5.upd_at ? html`Last updated ${fd(x5.upd_at)}` : ""}</span>`);
-    pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Saved for Review" : d5.length ? "Saved" : "");
+    pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Waiting to be saved" : d5.length ? "Saved" : "");
   }
   function markStagedRows() {
     const ids = /* @__PURE__ */ new Set([...shared.PKS.map((s5) => s5.id), ...(shared.PENDING || []).flatMap((p6) => p6.ids || [])]), sv = savingIds();
@@ -64919,7 +64919,7 @@ ${d5.text}`);
     const st2 = !!shared.CUR.staged, w6 = pkNewWord(k5);
     let el2 = $("#pkLast");
     if (el2) putHTML(el2, html`${raw(ic("history"))}<span>${st2 ? html`Waiting to be saved · created when you save` : shared.CUR.alert ? html`Not saved yet · Save (${MOD}↵) saves it for Review and dismisses the message` : html`Not saved yet · it is saved once it has a title and a project`}</span>`);
-    pkSaving(st2 ? "ok" : "", st2 ? "Saved for Review" : "");
+    pkSaving(st2 ? "ok" : "", st2 ? "Waiting to be saved" : "");
     putHTML($("#pkFeed"), st2 ? html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("pencil"))}</span><div><b>You</b> created this ${w6}<span class="pk-pill st">waiting</span></div></div>` : html`<div class="sub">Nothing here yet.</div>`);
     pkNewMarkDraw();
   }
@@ -71957,11 +71957,17 @@ ${d5.text}`);
   var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
   var DATE_FIG = /\b(\d{1,2})-(\d{2})-(\d{4})\b/g;
   var FIG_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  function saidInWords(low, d5, word, year) {
+    if (!word) return false;
+    const day = `0?${d5}(?:st|nd|rd|th)?`, yr2 = `(?:,?\\s*(\\d{4})\\b)?`;
+    const re2 = [new RegExp(`\\b${day}\\s+(?:of\\s+)?${word}\\b${yr2}`, "g"), new RegExp(`\\b${word}\\s+${day}\\b${yr2}`, "g")];
+    for (const r4 of re2) for (const m5 of low.matchAll(r4)) if (!m5[1] || m5[1] === year) return true;
+    return false;
+  }
   function figuresMissing(text, said2) {
     const low = String(said2 || "").toLowerCase(), out = /* @__PURE__ */ new Set();
-    const rest = String(text || "").replace(DATE_FIG, (all, d5, m5) => {
-      const word = FIG_MONTHS[+m5 - 1] || "", day = new RegExp(`\\b0?${+d5}(?:st|nd|rd|th)?\\b`);
-      if (!low.includes(all) && !(word && low.includes(word) && day.test(low))) out.add(all);
+    const rest = String(text || "").replace(DATE_FIG, (all, d5, m5, y5) => {
+      if (!low.includes(all) && !saidInWords(low, +d5, FIG_MONTHS[+m5 - 1] || "", y5)) out.add(all);
       return " ";
     });
     for (const f5 of new Set(rest.match(FIGURE) || [])) if (!said2.includes(f5)) out.add(f5);
