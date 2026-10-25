@@ -866,8 +866,7 @@ class Mutants(unittest.TestCase):
 
     def test_glued_label_rule_removed_is_caught(self):
         m = mutant("|ids?)(?=\\d{{3,}})", "|ids?)(?=(?!))")
-        for t in ("PIN4417", "ID123456789", "Pwd4417"):
-            self.assertEqual(m.scrub(t, 140), t)
+        self.assertEqual(m.scrub("ID123456789", 140), "ID123456789")      # bare20: PIN4417 and Pwd4417 are also caught by GLUED_VALUE (its own mutants)
 
     def test_digit_after_stop_off(self):
         m = mutant("return self.digit_wait and not dropped and not self.pending and id_number(ln)", "return False and id_number(ln)")

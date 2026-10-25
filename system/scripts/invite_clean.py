@@ -103,6 +103,13 @@ BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "
                "move", "conduct", "sync", "retrospective", "sow", "training", "staff")
 
 
+# bare20 (reviewer, rule: a digit leak blocks release): ANY hard label glued straight (no separator) to a value is a value. The value is
+# three or more digits, or a token that mixes letters and digits with at least one digit ("ZQ7742", "Q3A9", "H2K7"); a plain word
+# glued to a label ("Tokenise", "Secretary", "Pinot", "Optical") is just a longer word and stays. Used for every provider-prefixed
+# label too ("Zoom ID", "Webinar ID", "Host key", "Access code", "API key" ...).
+GLUED_VALUE = r"\d{3,}|(?=[^\W_]*\d)(?=[^\W_]*[^\W\d_])[^\W_]+"
+
+
 # a phrase that ends on one of these has its value on the next line
 # A dash glued to a label and a word after it: the word is a value unless it is one the lists already know (the allowed second words of
 # BARE_NEXT and BARE_FOLLOW) or one of these compound endings: "Password-based", "PIN-protected", "Code-review", "Key-account".
@@ -153,14 +160,20 @@ LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_N
                    rf"|(?<![\w-])meeting\s*[:=]\s*\d[\d ]{{5,}}|(?<![\w-])ids?\s+(?:is|are)\s+\S*\d"     # "Meeting: 987 654 321"
                    rf"|(?<![\w-])ids?(?![\w-])\s*[.,;!?\u2026]*\s*(?:{BARE_SEPARATORS}\s*)?\S*\d\S*\d\S*\d"   # "ID 4417": 3 digits
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|ids?)(?=\d{{3,}})"      # glued: "PIN4417"
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?:{GLUED_VALUE})"   # bare20: "Token4417"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 # a footnote mark "(1)", a separator run, "_", "is" or "are"
 _ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
 _ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
 _QUIET = r"[\s?~*`_]*"                                        # "Passcode?", "Passcode ?~": a question mark or markdown after a label
+# bare20: "Key" ALONE in a list item or a table cell ("- Key", "1. Key", "* Key", "| Key |", "> Key") is a hard label, like Passcode: the
+# next lines go whatever they hold. A bare "Key" line with no marker keeps the older digit rule only (known limit: "Key" then "- hunter").
+KEY_ITEM = (r"^\s*(?:(?:[-*\u2022\u2013\u2014\u00b7\u25aa\u25cf\u25e6|>]|\d{1,3}[.)]|[A-Za-z][.)]|[ivxlcIVXLC]{2,5}[.)])\s*)+"
+            r"(?:keys?)[\s|*_~`:]*$")
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
                          rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
-                         rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$", re.I)
+                         rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$"
+                         rf"|{KEY_ITEM}", re.I)
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"
