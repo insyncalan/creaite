@@ -27,6 +27,10 @@ END OF GUARDED -->
 - Reload any dashboard tab that was open before the update.
 - Open Intake with a few meetings and read the chips.
 
+### Smaller fixes
+- **The Review header tells the truth.** It says "Waiting to be saved" until you save, not "Saved for Review". (#343)
+- **A date the speaker did not say is flagged.** The figure check no longer lets "we may need 5" count as May, and a year the speaker says must match the date's year. (#343)
+
 ### Good to know
 - A meeting whose title has a project code, or a series you remembered, is Matched. A meeting you have not placed before is Likely or Not sure.
 - Process all ready skips Likely and Not sure meetings on purpose; choose a project and they join the next run.
