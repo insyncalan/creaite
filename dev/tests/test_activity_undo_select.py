@@ -91,9 +91,9 @@ class ActivitySelect(ActivityBase):
         b.click(cell(ok[0]))
         b.click(cell(ok[3]), modifiers=SHIFT)                                            # a range from the first to the fourth, over the disabled row
         self.assertEqual(self.sel_rows(), ok[:4])                                        # the range spans the disabled row without taking it
-        b.eval("document.querySelector('#actTbl tr:not([data-row]) input').click()")        # a disabled tick does nothing
+        b.eval("document.querySelector('#actTbl tbody tr:not([data-row]) input').click()")        # a disabled tick does nothing
         self.assertEqual(self.sel_rows(), ok[:4])
-        self.assertEqual(b.eval("document.querySelectorAll('#actTbl tr:not([data-row]) input:checked').length"), 0)
+        self.assertEqual(b.eval("document.querySelectorAll('#actTbl tbody tr:not([data-row]) input:checked').length"), 0)
         self.assertEqual(b.eval("document.getElementById('actUndoSel').textContent.trim()"), "Undo 4")
         self.assertEqual(b.eval("document.querySelectorAll('#actTbl input[disabled]').length"), 2)
 

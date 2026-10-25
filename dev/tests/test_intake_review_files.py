@@ -54,7 +54,7 @@ class FileRows(IntakeBase):
         t = self.text(VTT)
         self.assertIn("Added today · Likely project: Example Programme", t)              # the project by its name
         self.assertIn("File ready · Teams transcript · 1 KB", t)
-        self.assertIn("Transcript · It will be turned into minutes, then checked for work items.", t)
+        self.assertNotIn("It will be turned into minutes", t)                              # #341 item 8: a .vtt is always a transcript, so the List row is one line and says no more
         self.assertEqual(self.buttons(VTT)[0], "process:Make minutes")
         self.assertNotIn("It is minutes", t)                                               # a .vtt is always a transcript: no switch
         self.assertIn("It is minutes", self.text(TRN))                                     # any other transcript can be switched

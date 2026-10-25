@@ -49,11 +49,11 @@ class FilesNarrow(LiveBrowserCase):
         b.wait("document.querySelector('#fmBtn')")
         b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=archived]').click(); })()")
         b.wait("document.querySelector('#filesTbl [data-moveback]')")
+        b.eval("if(document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click()")      # the View choice leaves the Filter menu open; close it so it is not over the table
 
-    def test_at_320_the_folder_list_never_draws_over_the_archived_table(self):
+    def test_at_900_the_folder_list_never_draws_over_the_archived_table(self):
         b = self.b
-        self.archived(320)
-        b.wait("document.documentElement.classList.contains('railicons')")
+        self.archived(900)      # desktop and 900 px only (Alan, 15-10-2026): the old 320 px case is retargeted here, where the folder list stacks above the table
         for row in range(4):     # scroll each archived row to the top of the window in turn, as a person scrolling down would
             b.eval(f"document.querySelectorAll('#filesTbl tr[data-fp]')[{row}]?.scrollIntoView({{block:'start'}})")
             b.pump(0.1)

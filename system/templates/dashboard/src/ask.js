@@ -22,7 +22,7 @@ import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, now
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
-import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsRun, mcLine, mcNew, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
+import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsAsk, mcIsRun, mcLine, mcNew, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { previewInbox } from "./core/intakeApi.js";
@@ -576,7 +576,7 @@ export async function loadChat(chat,quiet,skipRun){
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
     if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
   setChat(rec.chat,rec.session); CHSTARTED=rec.started?{chat:rec.chat,started:rec.started}:null;
-  rec.messages.forEach((m,i)=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); const r=rec.messages[i+1]; if(m.run&&r&&r.plain&&r.run===m.run) runAsk(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: creaite stopped"); } }); dayDividers(); return rec; }
+  rec.messages.forEach((m,i)=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); const r=rec.messages[i+1]; if(m.run&&r&&r.plain&&r.run===m.run) runAsk(d); } else { { let g=null; const mcr=i>0&&rec.messages[i-1].who==="you"&&mcIsAsk(rec.messages[i-1].text);   /* #358: a saved mail check shows fixed phrases only */ (m.steps||[]).forEach(l=>g=stepGroup(g,mcr?mcStepText(l):l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: creaite stopped"); } }); dayDividers(); return rec; }
 /* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing. BL-316: the Menu
    block's menu (openMenu), opened from #chHist; a slow list shows the skeleton first (motion 15) */
 export function histClose(){ if(menuOpenFor($("#chHist"))) closeMenu(); }

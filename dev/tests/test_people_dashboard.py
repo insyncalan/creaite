@@ -204,7 +204,7 @@ class PeopleDashboardTests(unittest.TestCase):
 
     def test_counts_right_aligned_one_zero_style(self):
         r = self.r
-        self.assertEqual(r["numStyle"], ["right", "right", "none"])                          # #190
+        self.assertEqual(r["numStyle"], ["right", "right", "underline"])                     # #190 right-aligned; #341 item 10: a count that opens a list has the one dotted link style
         for row in r["peopleRows"] + r["noneRows"]:
             self.assertNotIn("—", row[5:9])                                                   # a zero is 0, never a dash (#248: the counts follow Email and Projects)
 

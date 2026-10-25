@@ -155,6 +155,62 @@ class Classifier(unittest.TestCase):
         self.assertEqual(e[15], "Stopped early. Looked in Outlook mail, Teams. Found 1 new so far, none need a project, and 1 update to an existing item.")
         self.assertEqual(e[16], "Stopped. Looked in Outlook mail, Teams. Nothing saved yet.")
 
+    PHRASES = ["sweep", "Sweep", "please sweep", "sweep mail", "sweep email", "sweep my mail", "sweep mail and teams", "sweep for ABC", "sweep mail for ABC",
+               "sweep the last 7 days", "sweep mail the last 7 days", "sweep for ABC for the last 3 days", "sweep the Budget review thread", "sweep the A and B thread",
+               "sweep the apply thread", "check my mail", "check mail", "check my email", "check email", "check email and teams", "check my mail and teams",
+               "check my mail for ABC", "check my mail for urgent", "check mail the last 2 days", "refresh calendar", "refresh the calendar", "refresh my calendar",
+               "refresh my calendar please", "sweep now", "sweep please.", "sweep and apply", "sweep then approve", "sweep for the", "sweep for me", "what did the sweep find",
+               "hello", "", "  sweep   mail  ", "sweep the last 7 days and apply", "check my mail for abc", "check my mail for the last 7 days", "x" * 130]
+
+    def test_a_saved_chat_is_a_mail_check_by_the_servers_own_words(self):
+        """The page's answer equals the server's panel_sweep for every phrasing (live_server imported only here, to compare)."""
+        sys.path.insert(0, str(REPO / "system/scripts"))
+        import live_server
+        o = run_node(script="""const f = await import(%s); console.log(JSON.stringify(%s.map(f.mcIsAsk)));""" % ("%s", json.dumps(self.PHRASES)))
+        self.assertEqual(o, [bool(live_server.panel_sweep(x)) for x in self.PHRASES])
+        by = dict(zip(self.PHRASES, o))
+        for yes in ("check my email", "check email", "check email and teams", "refresh my calendar", "sweep", "please sweep", "check my mail"):
+            self.assertTrue(by[yes], yes)
+        for no in ("sweep and apply", "sweep then approve", "what did the sweep find", "hello", ""):
+            self.assertFalse(by[no], no)
+
+    def test_the_catch_ups_own_asks_count(self):
+        o = run_node(script="""const f = await import(%s); console.log(JSON.stringify(f.MC_PLAIN_ASKS.map(f.mcIsAsk)));""")
+        self.assertEqual(o, [True, True])
+        sys.path.insert(0, str(REPO / "system/scripts"))
+        import live_server
+        src = LIVE.read_text(encoding="utf-8")
+        page = MC.read_text(encoding="utf-8")
+        for key in ("sweep", "calendar"):
+            self.assertIn(live_server.PLAIN_ASK[key], re.search(r"MC_PLAIN_ASKS = (\[.*?\]);", page).group(1))
+        self.assertIn("PLAIN_ASK = {", src)
+
+    def test_drift_the_page_list_equals_the_servers_list(self):
+        """DRIFT: reads live_server.py as text (ast, no import) and fails if the accepted forms and the page's copy differ by a character."""
+        import ast
+        tree = ast.parse(LIVE.read_text(encoding="utf-8"))
+        srv = {}
+        for n in tree.body:
+            if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") in ("PANEL_SWEEP_WORDS", "PANEL_SWEEP_FOR", "PANEL_SWEEP_NOT", "PANEL_SWEEP_COMMON"):
+                v = n.value
+                srv[n.targets[0].id] = ast.literal_eval(v.args[0]) if isinstance(v, ast.Call) and getattr(v.func, "attr", "") == "compile" else \
+                    sorted(ast.literal_eval(v.args[0])) if isinstance(v, ast.Call) else None
+        self.assertEqual(set(srv), {"PANEL_SWEEP_WORDS", "PANEL_SWEEP_FOR", "PANEL_SWEEP_NOT", "PANEL_SWEEP_COMMON"})
+        page = MC.read_text(encoding="utf-8")
+        grab = lambda name: json.loads(re.search(r"^export const %s = (\".*\");$" % name, page, re.M).group(1))
+        self.assertEqual(grab("MC_SWEEP_SRC"), srv["PANEL_SWEEP_WORDS"].replace("(?P<", "(?<"))
+        self.assertEqual(grab("MC_SWEEP_NOT"), srv["PANEL_SWEEP_NOT"])
+        self.assertEqual(grab("MC_SWEEP_FOR"), srv["PANEL_SWEEP_FOR"])
+        common = json.loads(re.search(r"^export const MC_SWEEP_COMMON = (\[.*\]);$", page, re.M).group(1))
+        self.assertEqual(sorted(common), srv["PANEL_SWEEP_COMMON"])
+
+    def test_the_drift_test_catches_a_change_on_either_side(self):
+        page = MC.read_text(encoding="utf-8")
+        self.assertNotEqual(page.replace("check (?:my )?", "check (?:my |the )?", 1), page)      # the mutation applies to the page's text
+        mutated = json.loads(re.search(r"^export const MC_SWEEP_SRC = (\".*\");$", page.replace("check (?:my )?", "check (?:my |the )?", 1), re.M).group(1))
+        server = LIVE.read_text(encoding="utf-8")
+        self.assertNotIn(mutated.replace("(?<", "(?P<"), server.replace("\n", ""))
+
     def test_the_steps_list_shows_fixed_phrases_only(self):
         self.assertEqual(self.o["stepText"], ["Sweeping (stages proposals only)", "Microsoft 365: outlook email search", "Searching mail",
                                               "A creaite step", "A creaite step", "A creaite step", "A creaite step", "A creaite step"])
@@ -400,6 +456,21 @@ class MailCheckBrowser(_Live):
             self.assertNotIn(bad, every)
         steps = b.eval("[...document.querySelectorAll('#chLog .step.steps li')].map(e=>e.textContent)")
         self.assertTrue(steps and set(steps) <= FIXED_STEPS, steps)
+
+    def test_a_saved_mail_check_chat_shows_fixed_phrases_only(self):
+        """The saved history keeps the raw step labels (a subject, the followed-people command); drawing it applies the allow-list."""
+        b = self.b
+        self.begin("sweep")
+        self.finish()
+        chat = b.eval("ASKCHAT")
+        saved = "".join(f.read_text() for f in (self.v.root / "system/staging/ask").glob("*.json"))
+        self.assertIn("SECRETSUBJECT", saved)                                   # the precondition: the raw label is in the saved chat
+        b.reload("typeof go==='function' && LIVE")                              # the live steps are gone: only the saved chat can draw them
+        b.eval(f"openChat(); loadChat({chat!r}, false); 0")
+        b.wait("document.querySelectorAll('#chLog .step.steps li').length>0", 20)
+        steps = b.eval("[...document.querySelectorAll('#chLog .step.steps li')].map(e=>e.textContent)")
+        self.assertTrue(set(steps) <= FIXED_STEPS, steps)
+        self.assertNotIn("SECRETSUBJECT", self.everything())
 
     def test_only_a_mail_check_loses_the_quip(self):
         b = self.b
