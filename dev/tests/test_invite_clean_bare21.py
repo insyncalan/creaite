@@ -148,6 +148,32 @@ class Dates(unittest.TestCase):
         self.assertEqual(out, "12-11-2026\nAOB")
 
 
+class StopLabelNumbers(unittest.TestCase):
+    NUMS = ["987-65-4321", "123-45-6789", "1234-56-7890", "987 654 321", "4417", "55 66 77 88"]
+
+    def test_number_shaped_values_after_every_hard_label_go(self):
+        for lab in ("Meeting ID.", "Zoom ID!", "Key,", "Conference ID?", "Passcode:", "PIN", "Passcode for dial-in:", "Meeting ID (Teams)",
+                    "Access code.", "Webinar ID;"):
+            for v in self.NUMS:
+                for body in (f"{lab}\n{v}\nAOB", f"{lab}\n- {v}\nAOB", f"{lab}\nhttps://teams.microsoft.com/l/meetup-join/x\n{v}\nAOB"):
+                    self.assertNotIn(v, I.invite_text(body), body)
+
+    def test_a_real_date_or_time_after_a_stop_label_stays_as_before(self):
+        for v in ("25-10-2026", "2026-10-25", "12:30", "Lunch at 12:30"):
+            self.assertIn(v, I.invite_text(f"Bring your staff ID.\n{v}\nAOB"), v)
+
+    def test_a_real_date_after_a_colon_label_goes(self):
+        for v in ("25-10-2026", "12:30"):
+            self.assertNotIn(v, I.invite_text(f"Passcode:\n{v}\nAOB"))
+
+    def test_loose_date_pattern_mutant_leaks(self):
+        m = mutant('rf"(?<![\\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\\d])"\n    r"|\\b',
+                   'r"\\b\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,4}\\b"\n    r"|\\b')
+        for v in ("987-65-4321", "123-45-6789"):
+            self.assertIn(v, m.invite_text(f"Meeting ID.\n{v}\nAOB"), v)
+            self.assertNotIn(v, I.invite_text(f"Meeting ID.\n{v}\nAOB"), v)
+
+
 def fuzz_mixed(rnd, n, with_values=True):
     """Dates, times and qualified labels among agenda lines. Returns (body, values, exempt): values must not survive pass one."""
     lines, values, exempt = [], [], []

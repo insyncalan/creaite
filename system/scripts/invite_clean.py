@@ -483,7 +483,6 @@ _LIST_STRIP = re.compile(r"^(?:\s*(?:\d{1,3}[.)]|[A-Za-z][.)]|[ivxlcIVXLC]{2,5}[
 # number, an ID or a mixed letters-and-digits token goes; a word-only line stays (an agenda line is kept; the known limit: a word-only
 # secret typed right under a soft heading stays). Hard labels (Passcode, PIN, Password, Access code, Meeting ID ... alone, with a stop,
 # glued, hyphenated or behind a provider) keep the full rule: the next lines go whatever they hold.
-_DATE_TIME = re.compile(r"\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b|\b\d{1,2}:\d{2}(?::\d{2})?\b")
 _ID_NUMBER = re.compile(r"\d{4,}|(?<!\d)\d{3}(?:[ -]\d{2,4}){1,}(?!\d)")
 _DIGITS_ONLY = re.compile(r"[\s\-.()#+]*\d(?:[\s\-.]?\d){3,}[\s\-.()#+]*")  # 4+ digits only, any grouping
 
@@ -511,6 +510,11 @@ _SOFT_DATE_TIME = re.compile(
     rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
     rf"|(?<![\w])(?:{_DAY}(?:st|nd|rd|th)?\s+{_MONTH}\.?(?:,?\s+{_YEAR})?|{_MONTH}\.?\s+{_DAY}(?:st|nd|rd|th)?(?:,?\s+{_YEAR})?)(?![\w])"
     rf"|(?<![\d:.])(?:{_TIME})(?![\d:])", re.I)
+# bare21: id_number takes out only VALID dates (day 1-31, month 1-12, year 19xx/20xx or two digits) and times, so 987-65-4321,
+# 123-45-6789 and 1234-56-7890 are numbers (IDs), not dates; a real date or time is still not a number.
+_DATE_TIME = re.compile(
+    rf"(?<![\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\d])"
+    r"|\b\d{1,2}:\d{2}(?::\d{2})?\b")
 
 
 def _looks_like_value(line, dates_ok=False):
