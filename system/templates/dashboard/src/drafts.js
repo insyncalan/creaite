@@ -281,7 +281,7 @@ export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase ne
   const picked=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)); if(!picked.length){ snack("Tick the items you sent it about"); return; }
   if(btn.disabled) return;
   const ids=picked.map(i=>i.id), mode=shared.DE.mode==="update"?"update":"chase", name=shared.DE.name, replyBy=shared.DE.replyBy;
-  if(!shared.DE.sendId) shared.DE.sendId="de"+Date.now()+Math.random().toString(36).slice(2,6);
+  if(!shared.DE.sendId||shared.DE.sendMode!==mode){ shared.DE.sendId="de"+Date.now()+Math.random().toString(36).slice(2,6); shared.DE.sendMode=mode; }   /* fix5: a new mode is a new send */
   const sid=shared.DE.sendId, st=sendState(sid), fresh=ids.filter(i=>!st.rec.has(i));
   btn.disabled=true;
   if(fresh.length){ const r=await api("/api/chases",{ids:fresh,mode});

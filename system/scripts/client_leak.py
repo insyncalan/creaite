@@ -224,7 +224,7 @@ def text_findings(con, code, text, skip=()):
             found.append(f"{why}, but its ID appears")
     found += _memory_findings(code, low)
     import linktext                                            # #153: an "I sent it" line is internal
-    if linktext.sent_has(as_shown(text)):
+    if linktext.sent_has(text) or linktext.sent_has(raw):     # fix5: on edit_ai.normal's form, any case and spacing
         found.append("a chase log line (a dated 'Chased/Emailed/Asked … by email') is internal")
     try:                                                       # BL-94's floor
         found += _label_findings(con, code, text, low, ids)

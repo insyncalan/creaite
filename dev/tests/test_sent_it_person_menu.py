@@ -338,6 +338,61 @@ class LogEdges(SentCase):
         self.assertEqual(len(recs), len(recs0) + 1, "the chase is recorded once, not again on the retry")
         self.assertEqual(sorted(recs[-1]["ids"]), sorted(picked))
 
+    def test_fix5_switching_the_mode_mid_retry_starts_a_new_send(self):
+        """fix5: a failed update-mode press, then a switch to Chase overdue items: the chase is a new send (its own record, mode chase,
+        each ticked item logged with the chase line), never the update send's record carried over."""
+        b = self.b
+        self.open_person_email("update")
+        recs0 = self.chase_records()
+        b.eval("window.__w=shared.VW.write; window.__n=0; shared.VW.write=async function(...a){ if(window.__n++===0) throw new Error('disk full'); return window.__w.apply(this,a); }; 0")
+        try:
+            b.click("#deSent")
+            b.pump(1.0)
+            self.assertTrue(b.eval("document.getElementById('deDlg').open"))
+        finally:
+            b.eval("shared.VW.write=window.__w")
+        old = b.eval("shared.DE.sendId")
+        self.assertTrue(old)
+        self.assertEqual(self.chase_records()[-1]["mode"], "update")
+        b.eval("document.querySelector('[data-demode=\"chase\"]').click()")
+        b.wait("shared.DE&&shared.DE.mode==='chase'&&document.querySelector('#deInc [data-deit]')")
+        self.assertFalse(b.eval("shared.DE.sendId"), "a new mode is a new send")
+        picked = b.eval("[...document.querySelectorAll('#deInc [data-deit]')].filter(c=>c.checked).map(c=>c.dataset.deit.split(':')[1])")
+        self.assertTrue(picked)
+        before = {i: len(staged(self.v.root, i)) for i in picked}
+        b.eval("document.getElementById('deSent').click()")                                     # the failure's toast sits over it
+        b.wait("!document.getElementById('deDlg').open")
+        b.pump(0.4)
+        recs = self.chase_records()
+        self.assertEqual(len(recs), len(recs0) + 2, "the update send and the chase send are recorded once each")
+        self.assertEqual((recs[-1]["mode"], sorted(recs[-1]["ids"])), ("chase", sorted(picked)))
+        for i in picked:
+            ch = staged(self.v.root, i)
+            self.assertEqual(len(ch), before[i] + 1, i)
+            self.assertRegex(ch[-1][1]["changes"]["latest_update"].split("\n")[0], rf"^{shown(b)}: Chased Sara Example by email", i)
+        self.assertEqual(b.errors, [])
+
+    def test_fix5_a_mode_changed_in_place_is_a_new_send_too(self):
+        """fix5: however the mode changes after a failed press, the next press is a new send under the new mode."""
+        b = self.b
+        self.open_person_email("update")
+        recs0 = self.chase_records()
+        b.eval("window.__w=shared.VW.write; window.__n=0; shared.VW.write=async function(...a){ if(window.__n++===0) throw new Error('disk full'); return window.__w.apply(this,a); }; 0")
+        try:
+            b.click("#deSent")
+            b.pump(1.0)
+        finally:
+            b.eval("shared.VW.write=window.__w")
+        old = b.eval("shared.DE.sendId")
+        b.eval("shared.DE.mode='chase'; document.getElementById('deSent').click()")
+        b.wait("!document.getElementById('deDlg').open")
+        b.pump(0.4)
+        recs = self.chase_records()
+        self.assertEqual(len(recs), len(recs0) + 2)
+        self.assertEqual(recs[-1]["mode"], "chase")
+        self.assertNotEqual(b.eval("Object.keys(shared.SENT).pop()"), old)
+        self.assertEqual(b.errors, [])
+
     def test_the_review_menu_has_two_plain_draft_email_items_for_an_overdue_item(self):
         """#153 (Alan): no 'Chase <name>' label; both items are plain Draft email and each opens the right mode in the popup."""
         b = self.b

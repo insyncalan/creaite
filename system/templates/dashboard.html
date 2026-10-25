@@ -53765,7 +53765,10 @@ ${d5.text}`);
     }
     if (btn.disabled) return;
     const ids = picked.map((i5) => i5.id), mode = shared.DE.mode === "update" ? "update" : "chase", name = shared.DE.name, replyBy = shared.DE.replyBy;
-    if (!shared.DE.sendId) shared.DE.sendId = "de" + Date.now() + Math.random().toString(36).slice(2, 6);
+    if (!shared.DE.sendId || shared.DE.sendMode !== mode) {
+      shared.DE.sendId = "de" + Date.now() + Math.random().toString(36).slice(2, 6);
+      shared.DE.sendMode = mode;
+    }
     const sid = shared.DE.sendId, st2 = sendState(sid), fresh = ids.filter((i5) => !st2.rec.has(i5));
     btn.disabled = true;
     if (fresh.length) {

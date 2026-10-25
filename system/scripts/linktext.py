@@ -187,17 +187,34 @@ def write(words_, href):
 # reply asked for by 19-10-2026.", "...: Emailed Tom Reid by message asking for an update.", "...: Asked Chris Dunn for a decision by
 # email.". They sit in an action's Latest update, a risk's Response or a decision's Reasoning (drafts.js sentLine writes one fixed
 # shape), so plain code recognises them by that shape and no client path carries them; no schema change is needed.
-SENT_LINE = re.compile(r"^[ \t]*\d{2}-\d{2}-\d{4}: (?:Chased|Emailed|Asked) [^\n]*?\bby (?:email|message)\b[^\n]*$", re.M)
+# Fix5 (client-safe review): read on edit_ai.normal's text (no-break and full-width spaces, a full-width colon, look-alike hyphens and
+# invisible characters made plain), any case, any run of spaces, anywhere on a line (a bullet before it, a sentence before it, HTML
+# round it), the name allowed to break over one line. The date, its colon, the verb and "by email|message" must all be there, so
+# ordinary prose that only says "chased" or "asked" is never matched.
+_NL = "\n\r\v\f\x85\u2028\u2029"
+SENT_LINE = re.compile(rf"(?<!\d)\d{{2}}\s*-\s*\d{{2}}\s*-\s*\d{{4}}\s*:\s*(?:chased|emailed|asked)\s+"
+                       rf"(?:[^{_NL}]*?(?:\r\n|[{_NL}])[ \t]*)?[^{_NL}]*?\bby\s+(?:email|message)\b[^{_NL}]*", re.I)
+
+
+def _sent_form(text):
+    import edit_ai
+    return edit_ai.normal(text or "")
 
 
 def sent_has(text):
-    """Whether a text holds an "I sent it" line."""
-    return bool(SENT_LINE.search(text or ""))
+    """Whether a text holds an "I sent it" line, however it is spaced, cased or written (read on edit_ai.normal's form)."""
+    return bool(SENT_LINE.search(_sent_form(text)))
 
 
 def sent_strip(text):
-    """The text without its "I sent it" lines (and the blank lines they leave); the rest as it was."""
-    if not text or not SENT_LINE.search(text):
+    """The text without its "I sent it" lines (and the blank lines they leave). A text without one comes back as it was; a text
+    with one comes back in edit_ai.normal's form (the form the line was found in), the line cut from its date to the line's end."""
+    if not text:
         return text
-    return SENT_LINE.sub("", text).strip("\n").strip()
+    t = _sent_form(text)
+    if not SENT_LINE.search(t):
+        return text
+    t = SENT_LINE.sub("", t)
+    t = re.sub(r"(?m)^[ \t]*[-*\u2022\u2013][ \t]*$\n?", "", t)       # a bullet the cut line leaves on its own
+    return t.strip()
 # ===== end #153 =====
