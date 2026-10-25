@@ -324,22 +324,25 @@ def plain_text(body):
 
 
 def _pieces(line):
-    """A line, or a very long one cut at spaces into pieces of at most LINE_MAX characters (each is judged on its own)."""
-    out = []
+    """A line, or a very long one cut into pieces of at most LINE_MAX characters (each is judged on its own): [(piece, glue)], where glue
+    is what stood where the line was cut: " " at a space, "" in the middle of a word (so a label cut in two is joined again as it was)."""
+    out, glue = [], " "
     while len(line) > LINE_MAX:
-        cut = line.rfind(" ", 0, LINE_MAX) + 1 or LINE_MAX
-        out.append(line[:cut].strip())
+        at = line.rfind(" ", 0, LINE_MAX) + 1
+        cut = at or LINE_MAX
+        out.append((line[:cut].strip(), glue))
+        glue = " " if at else ""
         line = line[cut:]
-    return out + [line]
+    return out + [(line, glue)]
 
 
 def _lines(t):
-    """(line, tail): each line of the text, a very long one in pieces; a piece after the first carries the end of the one before
-    it, so a label cut from its value is still seen."""
+    """(line, tail, glue): each line of the text, a very long one in pieces; a piece after the first carries the end of the one before it
+    and the glue to join them with, so a label cut from its value (or cut in two) is still seen."""
     for x in t.split("\n"):
         tail = ""
-        for piece in _pieces(re.sub(r"[ \t]+", " ", x).strip()):
-            yield piece, tail
+        for piece, glue in _pieces(re.sub(r"[ \t]+", " ", x).strip()):
+            yield piece, tail, glue
             tail = piece[-60:] if piece else ""
 
 
@@ -355,11 +358,24 @@ def _views_of(ln):
 WINDOW = 3                                  # lines (blank ones do not count) that go after a line that ends a label phrase
 
 
+_PROSE = re.compile(r"[:;,.!?\-\u2013\u2014|()\[\]/]")
+
+
+def _label_leads(view):
+    """Whether a finished label phrase ("Password reset") leads its line: at most three plain words (and a list marker) before it, no
+    punctuation. "IT update: password reset" is an agenda item, not a label whose value follows, and opens no window."""
+    m = _BARE_END.search(view)
+    if not m:
+        return False
+    before = re.sub(r"^[\s\-*\u2022\d.)(]*", "", view[:m.start()])
+    return not _PROSE.search(before) and len(before.split()) <= 3
+
+
 def _label_line(ln, dropped):
     """Whether this line ends a bare label phrase whose value may follow: a phrase that stops on a function word or a separator
-    (a removed line too), or (a line that is kept) a finished phrase such as "Password reset"."""
+    (a removed line too), or (a line that is kept) a finished phrase such as "Password reset" that leads the line."""
     views = _views_of(ln)
-    return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_BARE_END.search(v) for v in views))
+    return any(_BARE_OPEN.search(v) for v in views) or (not dropped and any(_label_leads(v) for v in views))
 
 
 _LABEL_TOKEN = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?<![\w-])id(?![\w-])|(?:{_OTHER_ALPHABETS})", re.I)
@@ -383,28 +399,54 @@ def _pending_after(ln, dropped, pending):
     return pending - 1 if pending and not dropped else pending      # a removed line (a link, a line with its own value) is no label's value
 
 
+class _Reader:
+    """The state of invite_text: the lines kept so far, the open window of a label phrase, the labels standing alone whose value is
+    still to come, and the kept label line (the anchor) that an ordinary line removed after it would make a tombstone of."""
+
+    def __init__(self):
+        self.kept, self.window, self.pending, self.digit_wait, self.anchor = [], 0, 0, False, None
+
+    def feed(self, ln, tail, glue):
+        """Take the next line (and the end of the piece before it, with the glue between them)."""
+        dropped = bool(ln) and (_drop_line(ln) or bool(tail and _drop_line(tail + glue + ln)))
+        if not ln or (not dropped and not re.search(r"\w", ln)):
+            self.kept.append(ln)               # a blank or symbols-only line is transparent: any number, for a label alone as for a window
+            return
+        value = self.digit_wait and bool(re.search(r"\d", ln))     # "Meeting ID." then "987 654 321": the number is the value
+        reach = self.window > 0 or value                           # a window or a value rule reaches this line
+        if self.anchor is not None and reach and not dropped:
+            self.kept[self.anchor] = None      # an ordinary line was removed after this label line: the label goes too (idempotence)
+            self.anchor = None
+        consumed = self.pending > 0 or reach or dropped
+        self._advance(ln, dropped, _label_line(ln, dropped), consumed, reach)
+
+    def _advance(self, ln, dropped, label, consumed, reach):
+        self.window = WINDOW if label else (max(self.window - 1, 0) if consumed else 0)
+        self.pending = _pending_after(ln, dropped, self.pending)
+        self.digit_wait = _ends_on_key_and_stop(ln)
+        if consumed:
+            self.anchor = self.anchor if reach else None
+        else:
+            self.kept.append(_MARK.sub("", ln))
+            self.anchor = len(self.kept) - 1 if (label or self.digit_wait) else None
+
+
 def invite_text(body):
     """An invite body as plain text: HTML removed (also a bare table cell or list item), every line with a join link or a key to the
     meeting dropped; the next line with text (any number of blank lines on) after a label that stands alone
     (after k such labels in a row, the next k lines); and after a line that ends a
     bare label phrase ("Password reset", "Password reset for", "Password reset -", also one that was itself removed) the next WINDOW
-    lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed."""
+    lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed.
+
+    IDEMPOTENT: invite_text(invite_text(x)) == invite_text(x). A label line that is KEPT and whose window then removed an ordinary line is
+    itself removed (a tombstone), so a later pass finds no label to open a window on and cannot eat more lines. A finished phrase opens a
+    window only when it leads its line ("Password reset", not "IT update: password reset"). Lines made only of symbols (a table rule, a
+    lone colon) are transparent, like blank lines."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, window, pending, digit_wait = [], 0, 0, False      # pending: labels standing alone whose value is not seen yet
-    for ln, tail in _lines(t):
-        if not ln:
-            kept.append(ln)                    # a blank line is transparent: any number, for a label alone as for a window
-            continue
-        dropped = _drop_line(ln) or bool(tail and _drop_line(tail + " " + ln))
-        label = _label_line(ln, dropped)
-        value = digit_wait and bool(re.search(r"\d", ln))       # "Meeting ID." then "987 654 321": the number is the value
-        consumed = pending > 0 or window > 0 or dropped or value
-        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)
-        pending = _pending_after(ln, dropped, pending)
-        digit_wait = _ends_on_key_and_stop(ln)
-        if not consumed:
-            kept.append(_MARK.sub("", ln))
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
+    reader = _Reader()
+    for ln, tail, glue in _lines(t):
+        reader.feed(ln, tail, glue)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(k for k in reader.kept if k is not None)).strip()[:BODY_MAX]
 
 
 def _flag(value):

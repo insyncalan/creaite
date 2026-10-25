@@ -329,7 +329,7 @@ def fails(mod, table=None):
     for rid, text, _entry in ALLOWED:
         if mod.scrub(text, 140) != text:
             bad.append(f"allowed:{rid}:title")
-        if text not in mod.invite_text("Agenda: budget\n" + text + "\nEnd"):
+        if text not in mod.invite_text("Agenda: budget\n" + text):
             bad.append(f"allowed:{rid}:body")
     return bad
 
@@ -372,7 +372,7 @@ for _rid, _text, _val in BODY_ONLY:
 def _allowed_test(rid, text):
     def t(self):
         self.assertEqual(I.scrub(text, 140), text)
-        self.assertIn(text, I.invite_text("Agenda: budget\n" + text + "\nEnd"))
+        self.assertIn(text, I.invite_text("Agenda: budget\n" + text))
         self.assertIn(text, json.dumps(I.clean_row({"id": "e", "start": "09:00", "end": "10:00", "title": text,
                                                                            "sensitivity": "normal"})))
     return t
@@ -528,10 +528,11 @@ class Saved(unittest.TestCase):
 def mutant_with_cap():
     """invite_text as it was before round 5: a label alone keeps its value only up to two blank lines on."""
     src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
-    old = re.search(r"            kept\.append\(ln\)  +# a blank line is transparent[^\n]*", src).group(0)
-    src = src.replace("    kept, window, pending, digit_wait = [], 0, 0, False", "    kept, window, pending, digit_wait, blanks = [], 0, 0, False, 0", 1)
-    src = src.replace(old, "            blanks += 1\n            pending = pending if blanks <= 2 else 0\n            kept.append(ln)", 1)
-    src = src.replace("        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)\n", "        window = WINDOW if label else (max(window - 1, 0) if consumed else 0)\n        blanks = 0\n", 1)
+    old = re.search(r"            self\.kept\.append\(ln\)  +# a blank or symbols-only line[^\n]*", src).group(0)
+    src = src.replace("        self.kept, self.window, self.pending, self.digit_wait, self.anchor = [], 0, 0, False, None",
+                      "        self.kept, self.window, self.pending, self.digit_wait, self.anchor, self.blanks = [], 0, 0, False, None, 0", 1)
+    src = src.replace(old, "            self.blanks += 1\n            self.pending = self.pending if self.blanks <= 2 else 0\n            self.kept.append(ln)", 1)
+    src = src.replace("        value = self.digit_wait and", "        self.blanks = 0\n        value = self.digit_wait and", 1)
     spec = importlib.util.spec_from_loader("invite_clean_cap", loader=None)
     mod = importlib.util.module_from_spec(spec)
     mod.__file__ = str(SCRIPTS / "invite_clean.py")
@@ -592,11 +593,11 @@ class Mutants(unittest.TestCase):
         self.assertNotIn("nl-finished", bad)                       # one and two lines are still caught: only the third leaks
 
     def test_blank_lines_consume_the_window(self):
-        m = mutant("            kept.append(ln)                    # a blank line is transparent", "            window = max(window - 1, 0)\n            kept.append(ln)                    # a blank line is transparent")
+        m = mutant("            self.kept.append(ln)               # a blank or symbols-only line", "            self.window = max(self.window - 1, 0)\n            self.kept.append(ln)               # a blank or symbols-only line")
         self.assertTrue({"w-blanks-5", "w-blanks-between"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_label_line_inside_the_window_does_not_restart_it(self):
-        m = mutant("window = WINDOW if label else (max(window - 1, 0) if consumed else 0)", "window = max(window - 1, 0) if consumed else 0")
+        m = mutant("self.window = WINDOW if label else (max(self.window - 1, 0) if consumed else 0)", "self.window = max(self.window - 1, 0) if consumed else 0")
         self.assertIn("w-restart", self.next_line_bad(m))
 
     def test_blank_line_cap_restored(self):
@@ -614,7 +615,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"b-meeting-id-pair", "b-blanks-between"} <= set(bad), bad)
 
     def test_finished_phrase_rule_off(self):
-        m = mutant("or (not dropped and any(_BARE_END.search(v) for v in views))", "")
+        m = mutant("or (not dropped and any(_label_leads(v) for v in views))", "")
         self.assertIn("nl-finished", self.next_line_bad(m))
 
     def test_open_phrase_rule_off(self):
@@ -672,7 +673,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"m-removed-line", "m-join-url"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_digit_after_stop_off(self):
-        m = mutant("value = digit_wait and bool(re.search", "value = False and bool(re.search")
+        m = mutant("value = self.digit_wait and bool(re.search", "value = False and bool(re.search")
         self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     def test_key_label_rule_off(self):
