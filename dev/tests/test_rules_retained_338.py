@@ -42,7 +42,7 @@ SUBS_347 = [
 # state is worked out, put back on both sides, and checked against the real diff.
 RULES_339 = REPO / "dev/proposals/339/creaite-rules.diff"
 MARK_339 = 'a typed "refresh calendar" starts the small calendar run'
-INSERT_339 = '**#339 (Alan\'s decision pending):** a typed "refresh calendar" starts the small calendar run, as the Calendar import button does (its own tools and two input files, no chat, no session, mode `calendar`; its closure is kept in the day\'s "Runs creaite started"), and a sweep run reads the vault and the projects folder, not the home folder.'
+INSERT_339 = '**#339:** a typed "refresh calendar" starts the small calendar run, as the Calendar import button does (its own tools and two input files, no chat, no session, mode `calendar`; its closure is kept in the day\'s "Runs creaite started"), and a sweep run reads the vault and the projects folder, not the home folder.'
 AT_339 = "is a plain chat (BL-309). Every change goes through"
 STATE = {"347": False, "339": False}         # whether the tree holds each patch's wording (set by states(); fixture() reads it)
 
