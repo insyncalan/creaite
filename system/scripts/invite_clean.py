@@ -75,7 +75,7 @@ _EVERYWHERE = (r"pass[\s-]*codes?|pass[\s-]*phrases?|pass[\s-]*keys?|pwd|passwd|
 _WITH_VALUE = (r"pass[\s-]*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|"
                r"clave\s+de\s+acceso|pw|pswd|pins?(?:[\s-]*(?:codes?|numbers?|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
                r"(?:meeting|webinar|event|session|conference|conf|meet|video|goto|gotomeeting|call|phone\s+conference|zoom|room|mtg|teams|"
-               r"webex)"
+               r"webex|skype|blue\s*jeans|whereby|jitsi|chime)"
                r"[\s-]*(?:ids?|numbers?|no\.?)(?:\s+(?:number|no\.?))?|"
                r"(?:meeting|webinar|conference|conf|event|session|zoom|room|mtg|meet|video|goto)\s*#|join(?:ing)?\s+(?:with\s+)?id")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
