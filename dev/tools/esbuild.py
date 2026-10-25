@@ -2,12 +2,12 @@
 
 Run: python3.14 dev/tools/esbuild.py -- --bundle main.js --format=iife
 
-It downloads esbuild's native binary for this machine (`@esbuild/darwin-arm64` or `@esbuild/linux-x64`, version PINNED)
+It downloads esbuild's native binary for this machine (`@esbuild/darwin-arm64`, `@esbuild/linux-x64` or `@esbuild/linux-arm64`, version PINNED)
 as the npm registry's tarball with urllib, checks the tarball against the SHA-256 written below, unpacks only
 `package/bin/esbuild` into dev/.cache/esbuild/ and runs it with the arguments after `--`. No Node, no npm. A tarball whose
 hash differs is refused and nothing is written. The build imports it: `binary()` returns the path, `run(args)` runs it.
 Nothing in system/ may import or depend on this file: the live vault never installs anything (NFR-12).
-To move to a new version: change PINNED and both hashes (check each against the registry's `dist.integrity` sha512).
+To move to a new version: change PINNED and all three hashes (check each against the registry's `dist.integrity` sha512).
 """
 import hashlib
 import io
@@ -22,7 +22,8 @@ from pathlib import Path
 
 PINNED = "0.28.2"
 SHA256 = {"darwin-arm64": "1980cde09749094452b20d36ff267585ccb3f72749c7bc97291cd9996ccf5a2a",
-          "linux-x64": "9573bb2233aab0f9ea7647d5cca9726113cc1768de61d66b17267f4db84488f6"}
+          "linux-x64": "9573bb2233aab0f9ea7647d5cca9726113cc1768de61d66b17267f4db84488f6",
+          "linux-arm64": "a96dbfa41d3ef5dbd1ef22b1c10d5187be9267e86093a870f06402a7ec931596"}   # 25-10-2026: `npm pack` of the pinned version; its sha512 equals the registry's dist.integrity
 MEMBER = "package/bin/esbuild"
 CACHE = Path(__file__).resolve().parents[1] / ".cache" / "esbuild"
 
@@ -32,14 +33,16 @@ class EsbuildError(RuntimeError):
 
 
 def platform_key(system=None, machine=None):
-    """The npm package suffix for this machine (`darwin-arm64` or `linux-x64`); anything else is refused."""
+    """The npm package suffix for this machine (`darwin-arm64`, `linux-x64` or `linux-arm64`); anything else is refused."""
     system = (system or sys.platform).lower()
     machine = (machine or platform.machine()).lower()
     if system == "darwin" and machine in ("arm64", "aarch64"):
         return "darwin-arm64"
     if system.startswith("linux") and machine in ("x86_64", "amd64"):
         return "linux-x64"
-    raise EsbuildError(f"esbuild is pinned only for macOS on Apple silicon and Linux x86-64, not {system} {machine}")
+    if system.startswith("linux") and machine in ("arm64", "aarch64"):
+        return "linux-arm64"
+    raise EsbuildError(f"esbuild is pinned only for macOS on Apple silicon and Linux (x86-64 and arm64), not {system} {machine}")
 
 
 def tarball_url(key):

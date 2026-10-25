@@ -81,18 +81,20 @@ class EsbuildPinTest(unittest.TestCase):
 
 
 class PlatformTest(unittest.TestCase):
-    """Only the two pinned platforms are accepted."""
+    """Only the three pinned platforms are accepted."""
 
     def test_platforms(self):
-        """macOS arm64 and Linux x86-64 map to their packages; Windows and Intel Macs are refused clearly."""
+        """macOS arm64, Linux x86-64 and Linux arm64 map to their packages; Windows, Intel Macs and other chips are refused clearly."""
         self.assertEqual(esbuild.platform_key("darwin", "arm64"), "darwin-arm64")
         self.assertEqual(esbuild.platform_key("linux", "x86_64"), "linux-x64")
-        for system, machine in (("win32", "AMD64"), ("darwin", "x86_64"), ("linux", "aarch64")):
+        self.assertEqual(esbuild.platform_key("linux", "aarch64"), "linux-arm64")      # the cloud boxes (CAX, 25-10-2026)
+        self.assertEqual(esbuild.platform_key("linux", "arm64"), "linux-arm64")
+        for system, machine in (("win32", "AMD64"), ("darwin", "x86_64"), ("linux", "riscv64"), ("linux", "ppc64le")):
             with self.assertRaisesRegex(esbuild.EsbuildError, "pinned only for"):
                 esbuild.platform_key(system, machine)
 
     def test_pins_are_sha256(self):
-        """Both pins are 64 lowercase hex characters and the URL names the pinned version."""
+        """All three pins are 64 lowercase hex characters and the URL names the pinned version."""
         for key, value in esbuild.SHA256.items():
             self.assertRegex(value, r"^[0-9a-f]{64}$")
             self.assertTrue(esbuild.tarball_url(key).endswith(f"/{key}-{esbuild.PINNED}.tgz"))
