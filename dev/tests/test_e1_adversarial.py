@@ -21,7 +21,6 @@ The generator tests assert what holds today: no exception, (a), (b) and a ratche
 down). Every finding is also a minimal test marked expectedFailure with the reason; fixing the finding turns it into an "unexpected
 success", which is the signal to delete the marker (and lower the ratchet).
 """
-import copy
 import json
 import os
 import random
@@ -471,7 +470,6 @@ def gen_phones(rng):
     canon = compact(num)
     ctx = rng.choice(["dialin", "prose", "list", "signature", "email_pin", "hash_pin"])
     label = rng.choice(["Dial-in", "Call", "Tel", "Phone", "Mobile", "M:"])
-    keepers = []
     if ctx == "dialin":
         pin = digits(rng, rng.choice([6, 9]))
         text = "Dial-in numbers\n%s %s\nPIN: %s#" % (label, num, pin)
@@ -1112,7 +1110,7 @@ class GatewayProps(unittest.TestCase):
 
     def test_read_never_writes(self):
         rng = random.Random(1)
-        for t in range(60):
+        for _ in range(60):
             rows = [row("e%d" % k, body=gen_templates(rng).text, clean=G.CLEAN if rng.random() < 0.5 else None) for k in range(4)]
             rows = [{k: v for k, v in r.items() if v is not None} for r in rows]
             write(self.path, self.cal(rows))
@@ -1138,7 +1136,7 @@ class GatewayProps(unittest.TestCase):
     def test_purposes_never_return_other_fields(self):
         rng = random.Random(2)
         extra = {"secret": "x", "clean": G.CLEAN, "ics": "BEGIN", "joinurl": "https://x.test", "notes": "n", "organiser_email": "a@b.test"}
-        for t in range(40):
+        for _ in range(40):
             r = row("e", body=gen_templates(rng).text, **extra)
             r["sensitivity"] = rng.choice(["normal", "confidential", "private", "Normal ", "", None, 5])
             r["private"] = rng.choice([False, True, "false", "yes", 0, None])
