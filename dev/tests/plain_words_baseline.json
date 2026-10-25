@@ -65,6 +65,26 @@
    "count": 1,
    "text": "Apply"
   },
+  "core/mailCheck.js | proposal | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | stage | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | sweep | 6613c4df284d": {
+   "count": 1,
+   "text": "Sweeping (stages proposals only)"
+  },
+  "core/mailCheck.js | sweep | c01586240876": {
+   "count": 1,
+   "text": "Sweep mail and Teams since the last sweep"
+  },
+  "core/mailCheck.js | sweep | d914230b225a": {
+   "count": 1,
+   "text": "(?:please )?(?:sweep(?: (?:mail|email|my mail|mail and teams))?(?: for [a-z][a-z0-9]{2,6})?(?: for t"
+  },
   "core/page.js | path | 04747237af0a": {
    "count": 1,
    "text": "cd {} && python3 system/scripts/live_server.py"

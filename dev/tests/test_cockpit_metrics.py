@@ -35,7 +35,7 @@ class Metrics(LiveBrowserCase):
         rows = self.cockpit(slip=21)
         labels = [r["l"] for r in rows]
         self.assertNotIn("No due date", labels)
-        self.assertEqual(labels[:4], ["Overdue actions", "Urgent risks", "Milestone slip", f"Due {self.b.eval('S.dueSoon')}d"])
+        self.assertEqual(labels[:4], ["Overdue actions", "Urgent risks", "Late milestones", f"Due {self.b.eval('S.dueSoon')}d"])
         self.assertEqual(rows[2]["v"], "21d")
         self.assertTrue(self.b.eval("!!document.getElementById('undatedCard')||P.find(p=>p.code==='ABC').undated.total===0"))   # FR-95's card is untouched
 
@@ -56,8 +56,8 @@ class Metrics(LiveBrowserCase):
                 continue                                                   # nothing to show when there are none
             self.assertTrue(r["click"], r)
             self.assertEqual(r["role"], "link", r)
-        b.eval(f"{ROW}.find(e=>e.querySelector('.l').textContent==='Milestone slip').querySelector('svg').dispatchEvent(new MouseEvent('click',{{bubbles:true}}))")
-        b.wait("VIEW==='milestones'&&MV.view==='move'")                    # the icon is part of the target: BL-186, Milestone slip opens Movement
+        b.eval(f"{ROW}.find(e=>e.querySelector('.l').textContent==='Late milestones').querySelector('svg').dispatchEvent(new MouseEvent('click',{{bubbles:true}}))")
+        b.wait("VIEW==='milestones'&&MV.view==='move'")                    # the icon is part of the target: BL-186, Late milestones opens Movement
         self.cockpit(slip=0)
         b.click("#v-cockpit .evrow .evbox[data-nav^='raid:urgentonly'] .l")
         b.wait("VIEW==='work' && WT==='raid'")

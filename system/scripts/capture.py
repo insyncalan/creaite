@@ -338,7 +338,12 @@ def meeting(day, start, title, projects, remembered=None, me=""):
     sens = build_dashboard.invite_clean.sensitivity(ev) if ev else "private"
     if sens == "private":
         return None
-    if sens == "confidential":                           # leak fix: title and date only; no project, no people
-        return {"title": title, "date": day, "with": [], "code": None, "how": "confidential"}
+    if sens == "confidential":                           # #362: title and date only; no people
+        # A confidential meeting's project counts only when Alan chose it (a remembered series, prep_page._project_of's rule);
+        # a guess from the title shows nothing selected (#343 M1). The drawer then does not guess either.
+        code, how = build_dashboard.prep_match(title, projects, remembered or {})
+        chosen = how == "remembered" and code and code != "_portfolio"
+        return {"title": title, "date": day, "with": [], "code": code if chosen else None,
+                "how": "remembered" if chosen else "confidential"}
     code, how = build_dashboard.prep_match(title, projects, remembered or {})
     return {"title": title, "date": day, "with": _attendees(ev, me), "code": code or None, "how": how}

@@ -54,7 +54,7 @@ class FileRows(IntakeBase):
         t = self.text(VTT)
         self.assertIn("Added today · Likely project: Example Programme", t)              # the project by its name
         self.assertIn("File ready · Teams transcript · 1 KB", t)
-        self.assertIn("Transcript · It will be turned into minutes, then checked for work items.", t)
+        self.assertNotIn("It will be turned into minutes", t)                              # #341 item 8: a .vtt is always a transcript, so the List row is one line and says no more
         self.assertEqual(self.buttons(VTT)[0], "process:Make minutes")
         self.assertNotIn("It is minutes", t)                                               # a .vtt is always a transcript: no switch
         self.assertIn("It is minutes", self.text(TRN))                                     # any other transcript can be switched
@@ -279,7 +279,7 @@ class Round2(IntakeBase):
     def test_a_vtt_has_no_switch_and_is_always_a_transcript(self):
         b = self.b
         self.assertFalse(b.eval(f"!!{self.row(VTT)}.querySelector('[data-ira=ftype]')"))
-        self.assertIn("Transcript · It will be turned into minutes", b.eval(f"{self.row(VTT)}.innerText"))
+        self.assertNotIn("It will be turned into minutes", b.eval(f"{self.row(VTT)}.innerText"))     # #341 item 8: a .vtt's List row is one line; the meaning is in the Two panes' detail
         self.assertTrue(b.eval("D.intake_review.meetings.find(m=>m.title==='%s').fixed" % VTT))
         b.eval("(m=>{ irChooseKind(m,'minutes'); irFileKinds.value={...irFileKinds.value, [m.path]:{k:'minutes',size:m.size,day:m.day}}; })(D.intake_review.meetings.find(m=>m.title==='%s'))" % VTT)
         self.assertEqual(b.eval("irFileKind(D.intake_review.meetings.find(m=>m.title==='%s'))" % VTT), "transcript")   # even a choice written by hand

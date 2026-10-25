@@ -171,7 +171,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
         b.wait("!!document.getElementById('filesTbl')", 15)
         b.eval("refreshFiles(true)")
         b.wait(f"(D.files_archived||[]).some(f=>f.n==={json.dumps(title + '.md')})", 20)
-        b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
+        b.eval("(()=>{ if(!document.querySelector('#fmenu.on')) document.querySelector('#fmBtn').click(); document.querySelector('#fmenu input[name=fsView][value=archived]').click(); })()")
         sel = f"#filesTbl [data-moveback$={json.dumps('/' + title + '.md')}]"
         b.wait(f"!!document.querySelector({json.dumps(sel)})", 15)
         self.assertEqual(b.eval(f"document.querySelector({json.dumps(sel)}).dataset.mbkind"), "notes")

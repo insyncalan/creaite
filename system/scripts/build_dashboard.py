@@ -2485,7 +2485,7 @@ def weekend_warnings(con, settings, c):
 
 def series_of(title):
     """A meeting's series: its title in lower case without [CODE] tags, numbers and punctuation."""
-    t = re.sub(r"[^a-z0-9 ]", " ", re.sub(r"\[[^\]]*\]", " ", (title or "").lower()))
+    t = re.sub(r"[^a-z0-9 ]", " ", re.sub(r"\[[^\[\]]*\]", " ", (title or "")[:300].lower()))
     return " ".join(w for w in t.split() if not w.isdigit())
 
 
@@ -2507,18 +2507,40 @@ def past_meetings(file_list):
 def project_hits(text, projects):
     """Codes of the projects a text names: a code, a project name, or a register alias or keyword (BL-49, BL-54)."""
     low, codes = (text or "").lower(), {p["code"] for p in projects}
-    hits = {c for c in codes if re.search(rf"(?<![A-Za-z0-9]){c}(?![A-Za-z0-9])", text or "")}
+    hits = {c for c in codes if re.search(rf"(?<![A-Za-z0-9]){re.escape(c)}(?![A-Za-z0-9])", text or "")}
     hits |= {p["code"] for p in projects if p["name"] and p["name"].lower() in low}
     hits |= {c for c, words in register_signals() if c in codes and any(re.search(rf"\b{re.escape(w)}\b", low) for w in words)}
     return hits
 
 
+def title_codes(title, projects):
+    """#362: the active project codes a meeting title names with authority: a [TAG] holding exactly a code, in any case ("[def]"
+    is DEF), or a code written upper-case as the title's first word ("DEF weekly sync", "DEF: weekly sync"). A code in the middle of
+    a title ("Budget review (follow-up from DEF)", "Re: ONE-to-one") names nothing with authority: it is only a hit for
+    project_hits. Codes are matched whole (ORX is not ORX2C); a tag with other words is no code. Only the first 300 characters
+    are read."""
+    codes = {p["code"] for p in projects}
+    t = (title or "")[:300]
+    found = {x.strip().upper() for x in re.findall(r"\[([^\[\]]*)\]", t) if x.isascii()} & codes
+    lead = {c for c in codes if re.match(rf"\s*{re.escape(c)}(?=\s|[:,;]|$)", t)}
+    return found | lead
+
+
 def prep_match(title, projects, remembered):
-    """(code, how) for a meeting: remembered for its series, matched by a code, name, alias or keyword in the title,
-    the portfolio when it says so or names several projects, else (None, "unsure")."""
+    """(code, how) for a meeting. The rule for a code in the title (#362, a client-leak guard): one project code in the title
+    always wins, over the series Alan chose before, and is "matched"; two different codes win nothing, and the answer is
+    (None, "unsure"), whatever was remembered. Otherwise: the remembered series ("_portfolio", Alan's no-project choice, stands
+    even against a code); a name, alias or keyword in the title; the portfolio when it says so or names several projects; else
+    (None, "unsure")."""
     s = series_of(title)
-    if remembered.get(s):
-        return remembered[s], "remembered"
+    coded = title_codes(title, projects)
+    if len(coded) > 1:
+        return None, "unsure"
+    mem = remembered.get(s)
+    if coded and mem != "_portfolio":
+        return next(iter(coded)), ("remembered" if mem in coded else "matched")
+    if mem:
+        return mem, "remembered"
     hits = project_hits(title, projects)
     if "portfolio" in (title or "").lower() or len(hits) > 1:
         return "_portfolio", "portfolio"
@@ -2526,15 +2548,15 @@ def prep_match(title, projects, remembered):
 
 
 def ev_project(ev, title, projects, remembered):
-    """Leak fix: the project code a calendar entry may show: none for a confidential one (fails closed), else the saved guess or
-    the brief's match."""
+    """#362: the project code a calendar entry may show: none for a confidential one (fails closed), else the saved guess or the
+    brief's match."""
     if invite_clean.sensitivity(ev) == "confidential":
         return None
     return ev.get("p") or prep_match(title, projects, remembered)[0]
 
 
 def ev_shown_p(ev):
-    """Leak fix: an entry's saved project, none for a confidential one."""
+    """#362: an entry's saved project, none for a confidential one."""
     return None if invite_clean.sensitivity(ev) == "confidential" else ev.get("p")
 
 
@@ -2573,10 +2595,20 @@ def saved_calendar_days():
 def prep_entry(ev, day, ctx):
     """(key, record) of one meeting's Prep brief entry, or None for a private or untitled one. The key is "HH:MM|title" today,
     "YYYY-MM-DD|HH:MM|title" any other day. ctx: {projects, remembered, history, items, ms_names, vips, today}."""
-    if invite_clean.sensitivity(ev) == "private" or not ev.get("title"):      # fail closed: "personal" or an odd value too
+    if invite_clean.sensitivity(ev) == "private" or not ev.get("title"):       # fail closed: "personal" or an odd value too
         return None
+    # A confidential meeting shows NO project on any screen or path unless Alan chose it (a remembered series), the same rule as
+    # prep_page._project_of (#362): a guess (title code, name, keyword, attendees) gives p None and how "confidential", so the
+    # Prep header says "Choose the project" and he picks it once. Table: dev/proposals/362/PERSISTED-PATHS.md.
+    #   Today / Prep popup and page, Week ahead   screen        chosen only (this entry)
+    #   Agendas page file, prep-pages.json, stored content, research prompt, Shape, agenda, one-pager
+    #     (all through prep_page.context)   chosen only
+    #   hub records, next-day list, aside lists, day_close, capture.meeting   p None
+    #   dashboard.html / history snapshots   local only, hold what the screen holds
     s = series_of(ev["title"])
     code, how = prep_match(ev["title"], ctx["projects"], ctx["remembered"])
+    if invite_clean.sensitivity(ev) == "confidential" and how != "remembered":
+        code, how = None, "confidential"
     last = max((d for d, ser in ctx["history"] if ser == s and d < day.isoformat()), default=None)
     key = f"{ev.get('start', '')}|{ev['title']}" if day == ctx["today"] else f"{day.isoformat()}|{ev.get('start', '')}|{ev['title']}"
     m = {"series": s, "p": code, "how": how, "last": last, "day": day.isoformat(),
@@ -3062,7 +3094,7 @@ def _ir_aside_files(files, aside):
 def _ir_aside_lists(meetings, files, aside):
     """(later, not_needed): the meetings and uploaded files set aside, with their reason and note."""
     keep = ("key", "day", "start", "end", "title", "p", "private")
-    row = lambda m: {**{k: m.get(k) for k in keep}, **({"p": None} if m.get("confidential") else {})}  # noqa: E731  leak fix
+    row = lambda m: {**{k: m.get(k) for k in keep}, **({"p": None} if m.get("confidential") else {})}  # noqa: E731  #362
     later = [{**row(m), "since": m.get("later_since")} for m in meetings.get("later") or []]
     not_needed = [{**row(m), "reason": m.get("reason") or "", "note": m.get("note") or ""}
                   for m in meetings.get("cleared") or []]
@@ -4243,8 +4275,8 @@ def day_close(settings, con, today, cal):
         if ev.get("all_day") or invite_clean.sensitivity(ev) == "private":
             continue
         slot = f"{ev.get('start', '')}|{ev.get('title', '')}"
-        meets.append({"start": ev.get("start") or "", "end": ev.get("end") or "", "title": ev.get("title") or "", "p": ev_shown_p(ev),
-                      "id": ev.get("id"), "prep": (nxt.isoformat(), slot) in pages})
+        meets.append({"start": ev.get("start") or "", "end": ev.get("end") or "", "title": ev.get("title") or "",
+                      "p": ev_shown_p(ev), "id": ev.get("id"), "prep": (nxt.isoformat(), slot) in pages})
     meets.sort(key=lambda m: m["start"])
     days = day_closed_load()
     before = sorted(d for d in days if d < t)
