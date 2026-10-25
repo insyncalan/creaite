@@ -1,0 +1,28 @@
+{
+ "expected_lines": [
+  "Agenda for the budget review",
+  "",
+  "1. Q3 variance 2. Hiring plan 3. Risks",
+  "",
+  "________________________________________________________________________________",
+  "Microsoft Teams meeting",
+  "Join: Join the meeting now",
+  "Meeting ID: 312 445 901 22",
+  "Passcode: aB3dE9",
+  "________________________________________________________________________________",
+  "Need help? Help | Meeting options",
+  "",
+  "Please read the finance pack before we meet."
+ ],
+ "planted_secrets": [
+  "312 445 901 22",
+  "aB3dE9",
+  "meetup-join",
+  "meetingOptions"
+ ],
+ "must_keep": [
+  "Agenda for the budget review",
+  "1. Q3 variance 2. Hiring plan 3. Risks",
+  "Please read the finance pack before we meet."
+ ]
+}

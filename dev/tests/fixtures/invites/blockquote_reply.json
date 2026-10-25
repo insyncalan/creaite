@@ -1,0 +1,24 @@
+{
+ "expected_lines": [
+  "Moving this to Thursday; same agenda as below.",
+  "",
+  "On Monday, Omar Haddad wrote:",
+  "",
+  "Agenda: supplier contract, hiring freeze.",
+  "",
+  "Join: https://teams.example.org/l/meetup-join/quoted",
+  "",
+  "Passcode: pQ92xD",
+  "",
+  "Thanks, Sara"
+ ],
+ "planted_secrets": [
+  "meetup-join/quoted",
+  "pQ92xD"
+ ],
+ "must_keep": [
+  "Moving this to Thursday; same agenda as below.",
+  "Agenda: supplier contract, hiring freeze.",
+  "Thanks, Sara"
+ ]
+}

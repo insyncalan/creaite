@@ -1,0 +1,19 @@
+{
+ "expected_lines": [
+  "Supplier QBR. Agenda attached.",
+  "",
+  "Please confirm attendance.",
+  "",
+  "________________________________________",
+  "",
+  "This message and any attachments are confidential. Visit https://legal.example.org/disclaimer"
+ ],
+ "planted_secrets": [
+  "99887766",
+  "https://legal.example.org/disclaimer"
+ ],
+ "must_keep": [
+  "Supplier QBR. Agenda attached.",
+  "Please confirm attendance."
+ ]
+}
