@@ -90,18 +90,22 @@ BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "
 BARE_FUNCTION = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or")
 
 
+BARE_SEPARATORS = r"[\-\u2013\u2014:=(\[/|]"                       # hyphen, en dash, em dash, colon, equals, bracket, slash, pipe
+
+
 def _bare_next(lab, ok):
     okx = "|".join(ok)
     words = "|".join((*ok, *BARE_FOLLOW))                                       # what may stand after the first allowed word
     run = rf"(?:\s+(?:{words})(?![\w-]))*"
     bad = (rf"(?:\s*[:=\-\u2013\u2014(\[]|\s*[,;.!?]+\s*[\w\"'(\[]|\s+(?!(?:{words})(?![\w-]))[\w\"'(\[])")
-    return (rf"(?:{lab})(?![\w-])(?:\s*[,;.]+\s*\w|\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w|(?:{okx})(?![\w-]){run}{bad}))")
+    sep = BARE_SEPARATORS                                                        # straight after the label too
+    return (rf"(?:{lab})(?![\w-])(?:\s*(?:[,;.]+|{sep}+)\s*\w"
+            rf"|\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w|(?:{okx})(?![\w-]){run}{bad}))")
 
 
 _BARE_NEXT = "|".join(_bare_next(lab, ok) for lab, ok in BARE_NEXT)
 _BARE_LABELS = "|".join(lab for lab, _ok in BARE_NEXT)
 BARE_LISTED = frozenset(w for _l, ok in BARE_NEXT for w in ok) | frozenset(BARE_FOLLOW)       # every word a label-free phrase may use
-BARE_SEPARATORS = r"[\-\u2013\u2014:=(\[/|]"                       # hyphen, en dash, em dash, colon, equals, bracket, slash, pipe
 _BARE_RUN = rf"(?<![\w-])(?:{_BARE_LABELS})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*"
 _BARE_OPEN = re.compile(                                  # a label phrase that stops on a function word or a separator: its value is next
     rf"{_BARE_RUN}(?:\s+(?:{'|'.join(BARE_FUNCTION)})|\s*{BARE_SEPARATORS}+)\s*[.,;]*\s*$", re.I)
@@ -291,20 +295,24 @@ def _label_line(ln, dropped):
 
 def invite_text(body):
     """An invite body as plain text: HTML removed (also a bare table cell or list item), every line with a join link or a key to the
-    meeting dropped; the next line with text (any number of blank lines on) after a label that stands alone; and after a line that ends a
+    meeting dropped; the next line with text (any number of blank lines on) after a label that stands alone
+    (after k such labels in a row, the next k lines); and after a line that ends a
     bare label phrase ("Password reset", "Password reset for", "Password reset -", also one that was itself removed) the next WINDOW
     lines with text, blank lines skipped and not counted. A label line inside the window starts it again. Blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, window, alone = [], 0, False
+    kept, window, pending = [], 0, 0                   # pending: labels that stand alone whose value has not been seen yet
     for ln, tail in _lines(t):
         if not ln:
             kept.append(ln)                    # a blank line is transparent: any number, for a label alone as for a window
             continue
         dropped = _drop_line(ln) or bool(tail and _drop_line(tail + " " + ln))
         label = _label_line(ln, dropped)
-        consumed = alone or window > 0 or dropped
+        consumed = pending > 0 or window > 0 or dropped
         window = WINDOW if label else (max(window - 1, 0) if consumed else 0)
-        alone = dropped and _alone(ln) and not alone
+        if dropped and _alone(ln):
+            pending += 1                       # "Meeting ID:" then "Passcode:": a label never uses up another's value
+        elif pending:
+            pending -= 1
         if not consumed:
             kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]

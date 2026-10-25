@@ -16,6 +16,7 @@ whole field (or the line, in a body) goes, except the few ordinary words in ALLO
 All values are made up.
 """
 import importlib.util
+import re
 import json
 import sys
 import unittest
@@ -102,6 +103,8 @@ BARE = [
     ("rv-31", "Pw - hunter", "hunter"),   # Full review round 2
     ("rv-32", "Password , hunter", "hunter"),   # Full review round 2
     ("rv-33", "Password ; hunter", "hunter"),   # Full review round 2
+    ("label-slash", "Sync API key / hunter", "hunter"),
+    ("label-pipe", "Sync Secret | hunter", "hunter"),
     ("password-connecting-word", "Password for the room is hunterxyz", "hunterxyz"),   # "for" is taken as the value: fail closed
 ]
 # HTML is read only in an invite body (a title, place or name is plain text from Outlook), so these rows are judged in the body only.
@@ -185,6 +188,14 @@ NEXT_LINE = [
     ("a-zero-width-lines", "Passcode:\n\u200b\n\u200b\n\u200b\n\u200b\nhunter", "hunter"),
     ("a-br-br-br", "Passcode:<br><br><br><br>hunter", "hunter"),
     ("a-pin-alone", "PIN\n\n\n\nswordfish", "swordfish"),
+    ("b-pair", "Passcode:\nPasscode:\nhunter", "hunter"),                                 # round 6: labels in a row
+    ("b-meeting-id-pair", "Meeting ID:\nPasscode:\n123 456\nhunter", "hunter"),
+    ("b-triple", "Meeting ID:\nPasscode:\nPIN:\n123 456\n7890\nhunter", "hunter"),
+    ("b-blanks-between", "Passcode:\n\n\n\nPasscode:\n\n\n\n123\nhunter", "hunter"),
+    ("b-td-pair", "<td>Meeting ID:</td><td>Passcode:</td><td>123 456</td><td>hunter</td>", "hunter"),
+    ("b-li-pair", "<ul><li>Passcode:</li><li>Passcode:</li><li>hunter</li></ul>", "hunter"),
+    ("b-slash", "Sync API key / hunter", "hunter"),                                         # sweep finding: a / or | after a label
+    ("b-pipe", "Sync Secret | hunter", "hunter"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
@@ -412,11 +423,10 @@ class Saved(unittest.TestCase):
 def mutant_with_cap():
     """invite_text as it was before round 5: a label alone keeps its value only up to two blank lines on."""
     src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
-    import re
     old = re.search(r"            kept\.append\(ln\)  +# a blank line is transparent[^\n]*", src).group(0)
-    src = src.replace("    kept, window, alone = [], 0, False\n", "    kept, window, alone, blanks = [], 0, False, 0\n", 1)
-    src = src.replace(old, "            blanks += 1\n            alone = alone and blanks <= 2\n            kept.append(ln)", 1)
-    src = src.replace("        alone = dropped and _alone(ln) and not alone\n", "        alone, blanks = (dropped and _alone(ln) and not alone), 0\n", 1)
+    src = src.replace("    kept, window, pending = [], 0, 0", "    kept, window, pending, blanks = [], 0, 0, 0", 1)
+    src = src.replace(old, "            blanks += 1\n            pending = pending if blanks <= 2 else 0\n            kept.append(ln)", 1)
+    src = src.replace("        consumed = pending > 0 or window > 0 or dropped\n", "        consumed = pending > 0 or window > 0 or dropped\n        blanks = 0\n", 1)
     spec = importlib.util.spec_from_loader("invite_clean_cap", loader=None)
     mod = importlib.util.module_from_spec(spec)
     mod.__file__ = str(SCRIPTS / "invite_clean.py")
@@ -492,6 +502,20 @@ class Mutants(unittest.TestCase):
         bad = self.next_line_bad(mutant_with_cap())
         self.assertTrue({"a-blanks-3", "a-blanks-5", "a-blanks-20", "a-br-br-br"} <= set(bad), bad)
 
+    def test_labels_in_a_row_do_not_add_up(self):
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = src[src.index("            pending += 1"):].split("\n")[0]
+        spec = importlib.util.spec_from_loader("invite_clean_row_mutant", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, "            pending = 1", 1), "invite_clean_row_mutant", "exec"), mod.__dict__)
+        bad = self.next_line_bad(mod)
+        self.assertTrue({"b-meeting-id-pair", "b-blanks-between"} <= set(bad), bad)
+
+    def test_separator_directly_after_a_label_off(self):
+        bad = fails(mutant("(?:\\s*(?:[,;.]+|{sep}+)\\s*\\w", "(?:\\s*[,;.]+\\s*\\w"))
+        self.assertTrue(bad)
+
     def test_finished_phrase_rule_off(self):
         m = mutant("or (not dropped and any(_BARE_END.search(v) for v in views))", "")
         self.assertIn("nl-finished", self.next_line_bad(m))
@@ -508,12 +532,8 @@ class Mutants(unittest.TestCase):
             m = mutant(base, base.replace(ch, "", 1))
             self.assertIn(rid, self.next_line_bad(m), f"removing {ch!r} from the separators changed nothing for {rid}")
 
-    def test_pw_pswd_separator_rule_off(self):
-        bad = fails(mutant("clave\\s+de\\s+acceso|pw|pswd|pin", "clave\\s+de\\s+acceso|pin"))
-        self.assertTrue(any(b.startswith(("rv-28", "rv-29", "rv-30", "rv-31")) for b in bad), bad)
-
     def test_punctuation_before_value_off(self):
-        bad = fails(mutant("(?:\\s*[,;.]+\\s*\\w|\\s+[", "(?:\\s+["))
+        bad = fails(mutant("(?:\\s*(?:[,;.]+|{sep}+)", "(?:\\s*(?:{sep}+)"))
         self.assertTrue(any(b.startswith(("rv-32", "rv-33")) for b in bad), bad)
 
     def test_follow_list_entry_removed(self):

@@ -8,6 +8,8 @@
 
 **Plainly, what the lines rule costs.** If an invite has the line "Password reset" (or "Code review", "PIN entry" and so on) followed by "Team standup at 10" and the lines after it, those three lines are lost; the fourth line stays, by design. A label on a line of its own ("Passcode:") removes the next line with text however many blank lines come between. Older label gaps that the cleaning never handled stay as they were.
 
+**Labels in a row.** When several labels stand alone one after another ("Meeting ID:", "Passcode:", "PIN:"), the next lines with text are removed one for each label, so a label list followed by its values loses exactly the values; if a label has no value of its own, one ordinary line after the list is lost with them. A / or | straight after a label ("API key / ...") now counts as a separator like a dash.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
