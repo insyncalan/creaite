@@ -2552,8 +2552,11 @@ def prep_match_ev(title, ev, projects, remembered):
     or unsure. Remembered and portfolio answers are prep_match's own; the rest also read the attendees' addresses. A confidential
     meeting is matched on its title alone."""
     code, how = prep_match(title, projects, remembered)
-    if how in ("remembered", "portfolio") or not isinstance(ev, dict):
+    if how == "portfolio" or code == "_portfolio" or not isinstance(ev, dict):
         return code, how
+    if how == "remembered":                         # #328 M1: a series Alan chose never overrides attendees who point elsewhere
+        a = meeting_answer(title, ev, projects, remembered, invite_clean.sensitivity(ev) == "confidential")
+        return (None, "unsure") if a["level"] == "unsure" and a["cands"] else (code, how)     # a real conflict only
     a = meeting_answer(title, ev, projects, remembered, invite_clean.sensitivity(ev) == "confidential")
     if a["p"] is None and code:        # the matcher read no register row for it: keep prep_match's own answer (a title code)
         return code, how
@@ -3058,7 +3061,7 @@ def _ir_row(src, ident, rows, base_state, today, stale_after, **f):
 
 def _ir_cal_match(m):
     """The match fields a calendar row carries (level, reason, cands, offer, series); none for a confidential meeting (#232-A, #362)."""
-    return {} if m.get("confidential") else {k: m[k] for k in ("level", "reason", "cands", "offer", "series") if k in m}
+    return {} if m.get("confidential") else {k: m[k] for k in ("level", "reason", "cands", "offer", "series", "how") if k in m}
 
 
 def _ir_cal_project(m, rows):
