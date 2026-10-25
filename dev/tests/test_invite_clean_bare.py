@@ -317,6 +317,20 @@ NEXT_LINE = [
     ("c-hangul-filler", "Pa\u3164sscode: 4417", "4417"),
     ("c-braille-blank", "Meeting\u2800ID: 4417", "4417"),
     ("h-restart", "Password reset for\nplan\nPassword reset \u2013\nsync\nplan\nhunter", "hunter"),       # a hard window restarted by a label line
+    ("k-ref-def", "[Meeting ID][1]:\nhunter\n\n[1]: https://example.invalid/m \"Meeting\"", "hunter"),       # Cap's markdown forms (bare17 20:03)
+    ("k-ref-def-digits", "[Meeting ID][1]:\n987 654 321\n\n[1]: https://example.invalid/m", "987 654 321"),
+    ("k-image", "![Passcode](http://x.example.invalid/a.png)\nhunter", "hunter"),
+    ("k-url-parens", "[Passcode](https://x.example.invalid/a_(b))\nhunter", "hunter"),
+    ("k-url-parens-2", "[Passcode](https://x.example.invalid/a_(b)_(c))\nhunter", "hunter"),
+    ("k-angle-label", "<p>x</p>\n<Passcode>: hunter", "hunter"),
+    ("k-angle-label-nl", "<p>x</p>\n<Passcode>\nhunter", "hunter"),
+    ("k-definition", "[Passcode]: https://x.example.invalid/p \"Passcode\"\nhunter", "hunter"),
+    ("k-autolink", "<https://x.example.invalid/j/1>\nPasscode: hunter", "hunter"),
+    ("k-bold-link", "[**Passcode**](u)\nhunter", "hunter"),
+    ("k-code-link", "[`Passcode`](u):\nhunter", "hunter"),
+    ("k-nested", "[[Meeting ID]](http://x.example.invalid):\n987 654 321", "987 654 321"),
+    ("x-two-labels-4417", "Meeting ID.\nPasscode:\n4417\n987 654 321", "987 654 321"),            # Cap's exact case
+    ("x-two-labels-first", "Meeting ID.\nPasscode:\n4417\n987 654 321", "4417"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-th", "<th>PIN entry</th><td>swordfish</td>", "swordfish"),
@@ -614,10 +628,9 @@ def mutant_with_cap():
     """invite_text as it was before round 5: a label alone keeps its value only up to two blank lines on."""
     src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
     old = re.search(r"            self\.kept\.append\(ln\)  +# a blank or symbols-only line[^\n]*", src).group(0)
-    src = src.replace("        self.kept, self.window, self.pending, self.digit_wait, self.anchor = [], 0, 0, False, None",
-                      "        self.kept, self.window, self.pending, self.digit_wait, self.anchor, self.blanks = [], 0, 0, False, None, 0", 1)
+    src = src.replace("        self.soft = []   ", "        self.blanks = 0\n        self.soft = []   ", 1)
     src = src.replace(old, "            self.blanks += 1\n            self.pending = self.pending if self.blanks <= 2 else 0\n            self.kept.append(ln)", 1)
-    src = src.replace("        value = self.digit_wait and", "        self.blanks = 0\n        value = self.digit_wait and", 1)
+    src = src.replace("        value = self._takes_number(ln, dropped)", "        self.blanks = 0\n        value = self._takes_number(ln, dropped)", 1)
     spec = importlib.util.spec_from_loader("invite_clean_cap", loader=None)
     mod = importlib.util.module_from_spec(spec)
     mod.__file__ = str(SCRIPTS / "invite_clean.py")
@@ -786,13 +799,13 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"m-removed-line", "m-join-url"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_digit_after_stop_off(self):
-        m = mutant("value = self.digit_wait and not dropped and not self.pending and bool(re.search", "value = False and bool(re.search")
+        m = mutant("return self.digit_wait and not dropped and not self.pending and bool(re.search", "return False and bool(re.search")
         self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     SHAPE_MUTANTS = [
         # (what is removed, source text, replacement, rows that must then leak)
         ("the glue of a cut label", 'glue = " " if at else ""', 'glue = " "', {"c-cut-label", "c-cut-pin", "c-cut-webinar"}),
-        ("titled links", "\\([^()\\n]{0,500}\\)", "\\((?!)\\)", {"c-md-titled", "c-md-angle"}),
+        ("titled links", "\\((?:[^()\\n]|\\([^()\\n]{0,200}\\)){0,500}\\)", "\\((?!)\\)", {"c-md-titled", "c-md-angle", "k-url-parens"}),
         ("double brackets", "_DOUBLE.sub(r\"[\\1]\", s)", "s", {"c-md-double"}),
         ("the footnote mark", "\\s*[(\\[]\\d{{1,3}}[)\\]]|", "", {"c-footnote"}),
         ("joining dashes", "t = _JOINING_DASH.sub(", "t = (lambda f, x: x)(", {"c-nb-hyphen-pin", "c-nb-hyphen-api", "c-nb-hyphen-pass"}),

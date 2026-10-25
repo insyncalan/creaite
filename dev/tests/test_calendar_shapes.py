@@ -127,6 +127,36 @@ class Recurrence(unittest.TestCase):
         self.assertTrue(sweep)
 
 
+class OrganiserAddress(unittest.TestCase):
+    """The organiser's address is kept like an attendee's address; a passcode in the display name is not."""
+
+    def test_the_address_is_kept_and_the_name_is_scrubbed(self):
+        import sweep
+        row = sweep.calendar_row({"id": "e", "title": "Sync", "organiser": "Pat Passcode: 4417", "organiser_email": "Pat <pat.doe@client.example>",
+                                  "attendees": [{"name": "Sam", "email": "sam@client.example"}]}, "09:00", "10:00", False)
+        self.assertEqual(row["organiser_email"], "pat.doe@client.example")
+        self.assertIs(row["organiser"], False)                                        # the name carried a passcode: dropped
+        cleaned = I.clean_row(row)
+        self.assertEqual(cleaned["organiser_email"], "pat.doe@client.example")
+        self.assertEqual(I.clean_row({**row, "organiser": "Pat Doe"})["organiser"], "Pat Doe")
+
+    def test_an_address_that_carries_a_secret_is_dropped(self):
+        row = I.clean_row({"id": "e", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal",
+                           "organiser_email": "passcode-4417@client.example"})
+        self.assertNotIn("organiser_email", row)
+
+    def test_mutant_without_the_address(self):
+        src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+        old = '        out["organiser_email"] = addr.strip()[:254]'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("invite_clean_noaddr", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "invite_clean.py")
+        exec(compile(src.replace(old, "        pass", 1), "invite_clean_noaddr", "exec"), mod.__dict__)
+        self.assertNotIn("organiser_email", mod.clean_row({"id": "e", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal",
+                                                           "organiser_email": "pat.doe@client.example"}))
+
+
 class Readers(unittest.TestCase):
     def test_no_reader_fails_on_an_odd_file(self):
         v, _cal = vault(self)

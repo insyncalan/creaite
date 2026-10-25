@@ -230,8 +230,8 @@ def _ellipsis(m):
     return m.group() if set(m.group().replace(" ", "").replace("\t", "").replace("\n", "")) == {","} else "\u2026"
 
 
-# [Passcode](http://x), [Passcode](u "t"), [Passcode][1]: the text is the label
-_MDLINK = re.compile(r"\[([^\[\]]{0,200})\](?:\([^()\n]{0,500}\)|\[[^\[\]\n]{0,100}\])")
+# [Passcode](http://x), [Passcode](u "t"), [Passcode][1], ![Passcode](x), a URL with one level of parentheses: the text is the label
+_MDLINK = re.compile(r"!?\[([^\[\]]{0,200})\](?:\((?:[^()\n]|\([^()\n]{0,200}\)){0,500}\)|\[[^\[\]\n]{0,100}\])")
 _DOUBLE = re.compile(r"\[\[([^\[\]]{0,200})\]\]")                                  # [[Meeting ID]](url): one pair of brackets
 _DECORATION = re.compile(r"[_*~`]+")                                          # markdown emphasis and underscores: read as a space
 
@@ -340,6 +340,18 @@ _TAG_START = re.compile(r"<(html|body|div|p|br|span|table|a|td|th|tr|li|ul|ol|h[
 _INLINE = r"span|b|i|u|em|strong|font|a|small|big|sup|sub|mark|wbr|code|kbd|abbr|cite|q|s|del|ins|bdi|bdo|label|o:p|v:\w{1,20}"
 
 
+_HTML_TAGS = frozenset(
+    "html head body title meta link style script div p span table thead tbody tfoot tr td th ul ol li dl dt dd a b i u em strong font "
+    "small big sup sub mark br hr img pre blockquote section article header footer nav center code kbd samp var abbr cite q s del ins "
+    "label button form input select option textarea o:p wbr bdi bdo h1 h2 h3 h4 h5 h6".split())
+
+
+def _angle_words(m):
+    """"<Passcode>" is not a tag: its words stay; a real tag name goes (and is replaced by a space)."""
+    inner = m.group(1)
+    return " " if inner.split()[0].lower() in _HTML_TAGS else f" {inner} "
+
+
 def _strip_tags(t):
     """HTML removed from a text: script, style and head blocks and comments gone, line breaks kept, inline tags without a gap (so
     "Pass<b>code</b>" and "P<wbr>asscode" are one word), any other tag a space. Every pattern is bounded."""
@@ -349,6 +361,7 @@ def _strip_tags(t):
     t = re.sub(r"(?i)<br\s{0,20}/?>|</(p|div|li|tr|h\d)>", "\n", t)
     t = re.sub(r"(?i)<li\b[^<>]{0,2000}>", "\n- ", t)
     t = re.sub(rf"(?i)</?(?:{_INLINE})\b[^<>]{{0,2000}}>", "", t)
+    t = re.sub(r"<([^<>=/\"'!?]{1,200})>", _angle_words, t)
     return re.sub(r"<[^<>]{1,2000}>", " ", t)
 
 
@@ -478,6 +491,10 @@ def _pending_after(ln, dropped, pending):
     return pending - 1 if pending and not dropped else pending      # a removed line (a link, a line with its own value) is no label's value
 
 
+def _is_dropped(ln, tail, glue):
+    return bool(ln) and (_drop_line(ln) or bool(tail and _drop_line(tail + glue + ln)))
+
+
 class _Reader:
     """The state of invite_text: the lines kept so far; the hard window of a label phrase that stops on a function word or a separator
     (the next three lines are its value); the soft window of a finished phrase that leads its line ("Password reset"), which removes only
@@ -491,16 +508,22 @@ class _Reader:
 
     def feed(self, ln, tail, glue):
         """Take the next line (and the end of the piece before it, with the glue between them)."""
-        dropped = bool(ln) and (_drop_line(ln) or bool(tail and _drop_line(tail + glue + ln)))
+        dropped = _is_dropped(ln, tail, glue)
         if not ln or (not dropped and not re.search(r"[^\W_]", ln)):
             self.kept.append(ln)               # a blank or symbols-only line is transparent: any number, for a label alone as for a window
             return
-        value = self.digit_wait and not dropped and not self.pending and bool(re.search(r"\d", ln))     # "Meeting ID." then a number
+        value = self._takes_number(ln, dropped)
         reach = self.window > 0 or value                           # a hard window or a value rule reaches this line
         self._tombstone(reach)
+        kind = _label_kind(ln, dropped)
+        heading = kind == "leads"                  # a heading is not the value of a label standing alone: it opens its own window
         soft = self._soft_step(ln, dropped, reach)
-        consumed = self.pending > 0 or reach or dropped or soft
-        self._advance(ln, dropped or soft, _label_kind(ln, dropped), consumed, reach, value)
+        consumed = (self.pending > 0 and not heading) or reach or dropped or soft
+        self._advance(ln, dropped or soft or heading, kind, consumed, reach, value)
+
+    def _takes_number(self, ln, dropped):
+        """The "Meeting ID." rule: the next line with a digit is the value (not a removed line, not one a label standing alone takes)."""
+        return self.digit_wait and not dropped and not self.pending and bool(re.search(r"\d", ln))
 
     def _tombstone(self, reach):
         if self.anchors and reach:
