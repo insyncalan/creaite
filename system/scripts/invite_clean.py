@@ -83,7 +83,7 @@ BARE_NEXT = (
 )
 BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or", "request", "requests", "process", "plan",
                "planning", "workshop", "session", "review", "rollout", "update", "changes", "findings", "redesign", "supplier", "call",
-               "move", "conduct", "sync", "retrospective", "sow")
+               "move", "conduct", "sync", "retrospective", "sow", "training", "staff")
 
 
 # a phrase that ends on one of these has its value on the next line
@@ -99,9 +99,21 @@ def _bare_next(lab, ok):
 
 
 _BARE_NEXT = "|".join(_bare_next(lab, ok) for lab, ok in BARE_NEXT)
-_BARE_OPEN = re.compile(                                                         # a phrase that stops on a function word: its value is next
-    rf"(?<![\w-])(?:{'|'.join(lab for lab, _ok in BARE_NEXT)})(?![\w-])(?:\s+(?:{'|'.join(w for _l, ok in BARE_NEXT for w in ok)}"
-    rf"|{'|'.join(BARE_FOLLOW)})(?![\w-]))*\s+(?:{'|'.join(BARE_FUNCTION)})\s*[.,;]*\s*$", re.I)
+_BARE_LABELS = "|".join(lab for lab, _ok in BARE_NEXT)
+BARE_LISTED = frozenset(w for _l, ok in BARE_NEXT for w in ok) | frozenset(BARE_FOLLOW)       # every word a label-free phrase may use
+BARE_SEPARATORS = r"[\-\u2013\u2014:=(\[/|]"                       # hyphen, en dash, em dash, colon, equals, bracket, slash, pipe
+_BARE_RUN = rf"(?<![\w-])(?:{_BARE_LABELS})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*"
+_BARE_OPEN = re.compile(                                  # a label phrase that stops on a function word or a separator: its value is next
+    rf"{_BARE_RUN}(?:\s+(?:{'|'.join(BARE_FUNCTION)})|\s*{BARE_SEPARATORS}+)\s*[.,;]*\s*$", re.I)
+_BARE_END = re.compile(rf"{_BARE_RUN}\s*[.,;!?]*\s*$", re.I)           # a finished label phrase ("Password reset"): the next line is judged
+
+
+def _plain_phrase(line):
+    """Whether a line is clearly label-free ordinary text: only listed words (BARE_LISTED), no separator."""
+    words = re.findall(r"[^\W_]+", line.lower())
+    return bool(words) and all(w in BARE_LISTED for w in words) and not re.search(BARE_SEPARATORS, line)
+
+
 _SPACED = re.compile(r"(?<![\w])p[ .\-]{1,2}i[ .\-]{1,2}n\.?(?![\w])", re.I)       # "P I N", "P.I.N.", "P-I-N" read as PIN
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
@@ -269,24 +281,39 @@ def _alone(line):
     return any(LABEL_ALONE.search(s) for s in _views(_MARK.sub(" ", line)))
 
 
+def _views_of(ln):
+    return _views(_MARK.sub(" ", ln))
+
+
+def _waiting_after(ln, dropped):
+    """What the line after this one is: "hard" (a value: after a label alone, or a label phrase that stops on a function word or a
+    separator, a removed line too), "soft" (after a finished label phrase: kept only if plain) or None."""
+    views = _views_of(ln)
+    if any(_BARE_OPEN.search(v) for v in views) or (dropped and _alone(ln)):
+        return "hard"
+    return "soft" if not dropped and any(_BARE_END.search(v) for v in views) else None
+
+
 def invite_text(body):
     """An invite body as plain text: HTML removed, every line with a join link or a key to the meeting dropped, and the next
-    line with text (up to two blank lines on) after a label that stands alone; blank runs collapsed."""
+    line with text (up to two blank lines on) after a label that stands alone, after a label phrase that stops on a function word or a
+    separator ("Password reset for", "Password reset –"), also on a dropped line; and after a finished label phrase ("Password reset")
+    the next line unless it is itself only listed words; blank runs collapsed."""
     t = re.sub(r"(?i)\b(pass)\s+(code|word|phrase)", r"\1\2", plain_text(body))
-    kept, waiting, blanks = [], False, 0
+    kept, waiting, blanks = [], None, 0                # waiting: None, "hard" (the next line is a value) or "soft" (kept if plain)
     for ln, tail in _lines(t):
         if waiting and not ln:
             blanks += 1
-            waiting = blanks <= 2
-        elif waiting:
-            waiting = False                    # the value of a label that stood alone
+            waiting = waiting if blanks <= 2 else None
+            kept.append(ln)
             continue
-        if ln and (_drop_line(ln) or (tail and _drop_line(tail + " " + ln))):
-            waiting, blanks = _alone(ln), 0
+        if waiting and ln and (waiting == "hard" or not _plain_phrase(ln)):
+            waiting = None                     # the value of a label: gone with it
             continue
-        if ln and any(_BARE_OPEN.search(v) for v in _views(_MARK.sub(" ", ln))):
-            waiting, blanks = True, 0                  # "Password reset for" then the value on the next line: that line goes too
-        kept.append(_MARK.sub("", ln))
+        dropped = bool(ln) and (_drop_line(ln) or bool(tail and _drop_line(tail + " " + ln)))
+        waiting, blanks = (_waiting_after(ln, dropped) if ln else None), 0
+        if not dropped:
+            kept.append(_MARK.sub("", ln))
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()[:BODY_MAX]
 
 

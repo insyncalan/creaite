@@ -149,8 +149,31 @@ ALLOWED = [
     ("source-code-repository", "Source code repository move", ("code", "repository")),
     ("code-handover", "Source code handover", ("code", "handover")),
 ]
-FOLLOW_ROWS = ["Code review of the supplier SOW", "Code review sync", "Token Ring retrospective", "Password reset request", "Code of conduct session", "Password reset call",
+FOLLOW_ROWS = ["Password reset for staff", "Code of conduct training", "Code review of the supplier SOW", "Code review sync", "Token Ring retrospective", "Password reset request", "Code of conduct session", "Password reset call",
                "Password change update", "PIN entry redesign", "Secret manager rollout", "Code freeze planning", "Code standards workshop"]
+# A value on the NEXT line of an invite body (round 3). Each is judged with invite_text only.
+NEXT_LINE = [
+    ("nl-finished", "Password reset\nhunter", "hunter"),
+    ("nl-finished-pin", "PIN entry\nswordfish", "swordfish"),
+    ("nl-blank", "Password reset\n\n\nhunter", "hunter"),
+    ("nl-function", "Password reset for\nhunter", "hunter"),
+    ("nl-hyphen", "Password reset for -\nhunter", "hunter"),
+    ("nl-en-dash", "Password reset for \u2013\nhunter", "hunter"),
+    ("nl-em-dash", "Password reset for \u2014\nhunter", "hunter"),
+    ("nl-colon", "Password reset for :\nhunter", "hunter"),
+    ("nl-equals", "Password reset for =\nhunter", "hunter"),
+    ("nl-paren", "Password reset (\nhunter", "hunter"),
+    ("nl-bracket", "Password reset [\nhunter", "hunter"),
+    ("nl-slash", "Password reset /\nhunter", "hunter"),
+    ("nl-pipe", "Password reset |\nhunter", "hunter"),
+    ("nl-after-sep-no-function", "Password reset \u2013\nhunter", "hunter"),
+    ("nl-code", "Code review\nswordfish", "swordfish"),
+    ("nl-token", "Token refresh\nabcdq", "abcdq"),
+]
+# The over-removal chosen for the next line (documented in the notes): after a finished label phrase the next line is kept only
+# when every word of it is listed (an allow-listed or function word) and it holds no separator.
+NEXT_LINE_LOST = ["Team standup at 10", "Agenda: budget", "Code review", "Room 4", "Notes"]
+NEXT_LINE_KEPT = ["Review and update", "Workshop for staff", "Plan"]
 # Ordinary text with no label near it stays whatever it holds.
 CONTROLS = ["Quarterly business review", "Pilot readiness review", "Key milestones workshop", 
             "Passenger numbers", "Zipcode lookup", "Budget sync", "Pass the baton"]
@@ -250,7 +273,30 @@ for _rid, _text, _entry in ALLOWED:
     setattr(Rows, "test_allowed_" + _rid.replace("-", "_"), _allowed_test(_rid, _text))
 
 
+def _next_test(text, val):
+    def t(self):
+        out = I.invite_text("Agenda: budget\n" + text + "\nEnd").lower()
+        self.assertNotIn(val, out, text)
+    return t
+
+
+for _rid, _text, _val in NEXT_LINE:
+    setattr(Rows, "test_next_line_" + _rid.replace("-", "_"), _next_test(_text, _val))
+
+
 class Controls(unittest.TestCase):
+    def test_next_line_over_removal_is_as_documented(self):
+        for ln in NEXT_LINE_LOST:
+            out = I.invite_text("Welcome\nPassword reset\n" + ln + "\nEnd")
+            self.assertNotIn(ln, out, ln)                           # the line after a finished label phrase is lost
+            self.assertIn("Password reset", out)
+        for ln in NEXT_LINE_KEPT:
+            self.assertIn(ln, I.invite_text("Welcome\nPassword reset\n" + ln + "\nEnd"), ln)
+
+    def test_lines_far_from_a_label_are_untouched(self):
+        self.assertEqual(I.invite_text("Agenda: budget\nTeam standup at 10\nEnd"), "Agenda: budget\nTeam standup at 10\nEnd")
+
+
     def test_ordinary_titles_survive(self):
         for t in CONTROLS:
             self.assertEqual(I.scrub(t, 140), t, t)
@@ -381,9 +427,35 @@ class Mutants(unittest.TestCase):
         self.assertTrue(any(b in ("rv-21:title", "rv-22:title", "rv-26:title", "rv-27:title") or b.startswith(("rv-21", "rv-26")) for b in bad), bad)
 
     def test_cross_line_check_off(self):
-        m = mutant("if ln and any(_BARE_OPEN.search(v)", "if False and any(_BARE_OPEN.search(v)")
+        m = mutant('    views = _views_of(ln)\n    if any(_BARE_OPEN', '    return None\n    if any(_BARE_OPEN')
         self.assertIn("hunter", m.invite_text("Agenda: budget\nPassword reset for\nhunter\nEnd"))
         self.assertNotIn("hunter", I.invite_text("Agenda: budget\nPassword reset for\nhunter\nEnd"))
+
+    def next_line_bad(self, m):
+        return [rid for rid, text, val in NEXT_LINE if val in m.invite_text("Agenda: budget\n" + text + "\nEnd").lower()]
+
+    def test_next_line_rule_off(self):
+        m = mutant('return "soft" if not dropped and any(_BARE_END.search(v) for v in views) else None', 'return None')
+        bad = self.next_line_bad(m)
+        self.assertIn("nl-finished", bad)
+        self.assertIn("nl-finished-pin", bad)
+
+    def test_dropped_line_open_off(self):
+        m = mutant('if any(_BARE_OPEN.search(v) for v in views) or (dropped and _alone(ln)):',
+                   'if (not dropped and any(_BARE_OPEN.search(v) for v in views)) or (dropped and _alone(ln)):')
+        self.assertTrue({"nl-hyphen", "nl-en-dash", "nl-em-dash", "nl-function"} & set(self.next_line_bad(m)), self.next_line_bad(m))
+
+    def test_each_separator_removed(self):
+        need = {r"\-": "nl-hyphen", r"\u2013": "nl-en-dash", r"\u2014": "nl-em-dash", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
+                r"\[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe"}
+        base = r'[\-\u2013\u2014:=(\[/|]"  '
+        for ch, rid in need.items():
+            m = mutant(base, base.replace(ch, "", 1))
+            self.assertIn(rid, self.next_line_bad(m), f"removing {ch!r} from the separators changed nothing for {rid}")
+
+    def test_plain_phrase_exemption_too_wide(self):
+        m = mutant("return bool(words) and all(w in BARE_LISTED for w in words)", "return bool(words)")
+        self.assertIn("hunter", m.invite_text("Agenda: budget\nPassword reset\nhunter\nEnd"))
 
     def test_pw_pswd_separator_rule_off(self):
         bad = fails(mutant("clave\\s+de\\s+acceso|pw|pswd|pin", "clave\\s+de\\s+acceso|pin"))
@@ -394,7 +466,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue(any(b.startswith(("rv-32", "rv-33")) for b in bad), bad)
 
     def test_follow_list_entry_removed(self):
-        for w in ("workshop", "rollout", "conduct", "supplier", "sync", "retrospective", "sow"):
+        for w in ("workshop", "rollout", "conduct", "supplier", "sync", "retrospective", "sow", "training", "staff"):
             self.assertNotEqual(fails(mutant(f'"{w}"', '"zzznever"', 3)), [], w)
 
     def test_spaced_pin_off(self):

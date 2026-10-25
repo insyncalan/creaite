@@ -4,6 +4,8 @@
 
 **You may notice (on purpose).** To be safe, after one of those labels every word up to the end must belong to a short list of ordinary phrases, otherwise the first other word counts as the secret. These titles now show as "Meeting": Pin the roadmap, Password for all staff, Code sprint, Code clinic, Code Red, Pin board, Secret Santa party, Secret sauce, Token of appreciation, Secret project Falcon, Password reset for new hires. These phrases stay (alone, or followed only by words such as for, and, the, request, plan, workshop, session, review, sync): Password reset, policy, manager, management, expiry, rotation, audit, change; PIN entry, PIN pad; Code review, reviews, of conduct, base, freeze, quality, repository, handover, walkthrough, standards; Token refresh, expiry, rotation, economy, economics, Ring; Secret santa, management, manager, rotation; OTP setup, rollout, enrolment; API key rotation, management, review. A colon, equals sign, dash or bracket after the label or after one of those words always means a secret: "Password reset: hunter", "PIN entry swordfish" and "Password reset for hunter" are removed.
 
+**The line after a label.** In an invite's text, a line that ends on one of those labels or phrases ("Password reset", "Password reset for", "Password reset –") makes the NEXT line go too, unless that next line is made only of the listed words and has no colon, dash, equals or bracket. So "Password reset" followed by "Team standup at 10", "Agenda: budget", "Room 4" or "Notes" loses the second line; followed by "Review and update" it stays. A label line that is itself removed does the same.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");
@@ -13,3 +15,5 @@
 - labels in other alphabets beyond those already listed;
 - HTML in a title or place (only the invite text is read as HTML);
 - a secret that contains digits is handled by the older rules only.
+- runs of punctuation between a label and its secret beyond the simple cases, and an escaped "&amp; swordfish" written after a phrase;
+- Key, Access, Login, Credentials, Pass, Codice, Codigo, Sifre and Parola followed by a plain word (listed above) are known limits, as is a secret written before its label.
