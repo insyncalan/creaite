@@ -1,0 +1,23 @@
+{
+ "expected_lines": [
+  "Vendor demo.",
+  "",
+  "Link",
+  "https://rooms.example.org/r/demo",
+  "Passcode",
+  "vB6nM3",
+  "Host",
+  "Chen Wu",
+  "",
+  "Questions welcome."
+ ],
+ "planted_secrets": [
+  "https://rooms.example.org/r/demo",
+  "vB6nM3"
+ ],
+ "must_keep": [
+  "Vendor demo.",
+  "Chen Wu",
+  "Questions welcome."
+ ]
+}

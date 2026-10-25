@@ -1,0 +1,24 @@
+{
+ "expected_lines": [
+  "Risk workshop: bring your top three risks.",
+  "",
+  "Passcode",
+  "mR4tY81x",
+  "Room 204",
+  "",
+  "Access code",
+  "",
+  "6602 117",
+  "",
+  "Notes are kept on the team page."
+ ],
+ "planted_secrets": [
+  "mR4tY81x",
+  "6602 117"
+ ],
+ "must_keep": [
+  "Risk workshop: bring your top three risks.",
+  "Room 204",
+  "Notes are kept on the team page."
+ ]
+}

@@ -1,0 +1,30 @@
+{
+ "expected_lines": [
+  "Weekly delivery sync. Topics: milestones, vendor update.",
+  "",
+  "Click here to join the meeting",
+  "",
+  "Join with a video conferencing device",
+  "video@example.org",
+  "Video ID: 117 604 118 3",
+  "Alternate VTC instructions",
+  "",
+  "Or call in (audio only)",
+  "+44 20 7946 0123,,48201733# United Kingdom, London",
+  "Phone Conference ID: 482 017 33#",
+  "",
+  "Find a local number | Reset PIN",
+  "",
+  "Learn More | Meeting options"
+ ],
+ "planted_secrets": [
+  "117 604 118 3",
+  "48201733",
+  "482 017 33",
+  "+44 20 7946 0123",
+  "classic"
+ ],
+ "must_keep": [
+  "Weekly delivery sync. Topics: milestones, vendor update."
+ ]
+}

@@ -1,0 +1,27 @@
+{
+ "expected_lines": [
+  "Occurs every Tuesday from 09:30 to 10:00 (UTC+00:00) London",
+  "",
+  "Daily stand-up for the integration squad.",
+  "Blockers go on the board first.",
+  "",
+  ". . . . . . . . . . . . . . . .",
+  "Join: https://teams.example.org/l/meetup-join/recur",
+  "Meeting ID: 221 908 334 56",
+  "Passcode: Lk5nB2",
+  ". . . . . . . . . . . . . . . .",
+  "",
+  "See you there."
+ ],
+ "planted_secrets": [
+  "https://teams.example.org/l/meetup-join/recur",
+  "221 908 334 56",
+  "Lk5nB2"
+ ],
+ "must_keep": [
+  "Occurs every Tuesday from 09:30 to 10:00 (UTC+00:00) London",
+  "Daily stand-up for the integration squad.",
+  "Blockers go on the board first.",
+  "See you there."
+ ]
+}

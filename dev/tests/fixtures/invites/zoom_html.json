@@ -1,0 +1,24 @@
+{
+ "expected_lines": [
+  "Retro for the platform team: what went well, what to change.",
+  "",
+  "Alice Marsh is inviting you to a scheduled Zoom meeting.",
+  "Topic: Platform retro",
+  "Time: Nov 5, 2026 02:00 PM London",
+  "Join Zoom Meeting",
+  "https://zoom.example.org/j/99887766554?pwd=cXdlcnR5",
+  "Meeting ID: 998 8776 6554",
+  "Passcode: 551203",
+  "Please add retro items to the shared board beforehand."
+ ],
+ "planted_secrets": [
+  "99887766554",
+  "998 8776 6554",
+  "551203",
+  "cXdlcnR5"
+ ],
+ "must_keep": [
+  "Retro for the platform team: what went well, what to change.",
+  "Please add retro items to the shared board beforehand."
+ ]
+}

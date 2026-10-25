@@ -1,0 +1,20 @@
+{
+ "expected_lines": [
+  "Handover notes.",
+  "",
+  "Line one of notes",
+  "Passcode: 3321 4490",
+  "Line three of notes",
+  "",
+  "End."
+ ],
+ "planted_secrets": [
+  "3321 4490"
+ ],
+ "must_keep": [
+  "Handover notes.",
+  "Line one of notes",
+  "Line three of notes",
+  "End."
+ ]
+}

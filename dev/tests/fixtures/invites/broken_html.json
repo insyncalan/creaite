@@ -1,0 +1,25 @@
+{
+ "expected_lines": [
+  "Contract review with legal.",
+  "",
+  "Second paragraph",
+  "",
+  "unclosed div bold both",
+  "",
+  "Passcode",
+  "jH2kL9",
+  "Dial-in",
+  "+44 20 7946 0909",
+  "",
+  "after table text tail"
+ ],
+ "planted_secrets": [
+  "jH2kL9",
+  "+44 20 7946 0909",
+  "1234567890"
+ ],
+ "must_keep": [
+  "Contract review with legal.",
+  "Second paragraph"
+ ]
+}
