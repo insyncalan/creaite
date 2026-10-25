@@ -113,18 +113,39 @@ const sentPlain = text => {
   if (SENT_TAGS.test(t)) t = sentUnescape(t.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, ""));
   return t.replace(/ /g, " ");
 };
-/** The plain text on the matching form, a character at a time, and where in the plain text each character of it came from. @param {string} plain */
+const SENT_MARKS = "*_~`\\", SENT_FRONT = "*_~`\\| \t";   /* markdown marks the check drops; marks, table bars and spaces before a cut line go with it */
+const SENT_RUN = /[\x20-\x29\x2b-\x5b\x5d-\x5e\x61-\x7b\x7d\t\n]+/y;
+const SENT_ONE = new Map();
+const sentNormOne = c => { let r = SENT_ONE.get(c); if (r === undefined) { if (SENT_ONE.size > 20000) SENT_ONE.clear(); r = sentNormal(c); SENT_ONE.set(c, r); } return r; };
+/** The link markup a [words](address) (any address: fail closed) adds round its words (to leave out), and where each link's words are (to take a cut back to its start). @param {string} plain */
+const sentLinkPieces = plain => {
+  const cuts = [], starts = [];
+  if (plain.includes("](")) for (const m of plain.matchAll(LINK)) {
+    const o = m.index, w1 = o + 1 + m[1].length;
+    cuts.push([o, o + 1], [w1, o + m[0].length]);
+    starts.push([o + 1, w1, o]);
+  }
+  return { cuts, starts };
+};
+/** The plain text on the matching form, a character at a time (link markup, markdown marks and escapes left out, a table bar a space), and where in the plain text each character of it came from. @param {string} plain */
 const sentMap = plain => {
-  const out = [], at = [], run = /[\x20-\x7e\t\n]+/y;
-  let pos = 0;
+  const { cuts } = sentLinkPieces(plain), out = [], at = [];
+  let pos = 0, ci = 0;
   while (pos < plain.length) {
-    run.lastIndex = pos;
-    const m = run.exec(plain);
-    if (m) { out.push(m[0]); for (let k = 0; k < m[0].length; k++) at.push(pos + k); pos += m[0].length; continue; }
-    const ch = String.fromCodePoint(plain.codePointAt(pos)), n = sentNormal(ch);
-    out.push(n);
-    for (let k = 0; k < n.length; k++) at.push(pos);
-    pos += ch.length;
+    if (ci < cuts.length && pos >= cuts[ci][0]) { pos = Math.max(pos, cuts[ci][1]); ci++; continue; }
+    const limit = ci < cuts.length ? cuts[ci][0] : plain.length, seg = cuts.length ? plain.slice(pos, limit) : plain;   // a piece between two cuts, copied once
+    let k = cuts.length ? 0 : pos;
+    const base = pos - k;
+    while (k < seg.length) {
+      SENT_RUN.lastIndex = k;
+      const m = SENT_RUN.exec(seg);
+      if (m) { out.push(m[0]); for (let j = 0; j < m[0].length; j++) at.push(base + k + j); k += m[0].length; continue; }
+      const ch = String.fromCodePoint(seg.codePointAt(k)), n = SENT_MARKS.includes(ch) ? "" : ch === "|" ? " " : sentNormOne(ch);
+      out.push(n);
+      for (let j = 0; j < n.length; j++) at.push(base + k);
+      k += ch.length;
+    }
+    pos = limit;
   }
   return { form: out.join(""), at };
 };
@@ -133,8 +154,16 @@ export function sentHas(text) { return new RegExp(SENT_SRC, "i").test(sentMap(se
 /** @param {unknown} text */
 export function sentStrip(text) {
   if (!text) return String(text == null ? "" : text);
-  const plain = sentPlain(text), { form, at } = sentMap(plain);
-  const spans = [...form.matchAll(new RegExp(SENT_SRC, "gi"))].map(m => [at[m.index], at[m.index + m[0].length - 1] + 1]);
+  const plain = sentPlain(text), { form, at } = sentMap(plain), { starts } = sentLinkPieces(plain);
+  const spans = [];
+  for (const m of form.matchAll(new RegExp(SENT_SRC, "gi"))) {
+    let a = at[m.index];
+    const w = starts.find(([w0, w1]) => a >= w0 && a < w1);
+    if (w) a = w[2];                                                         // inside a link's words: take the whole link
+    while (a > 0 && SENT_FRONT.includes(plain[a - 1]) && (!spans.length || a - 1 >= spans[spans.length - 1][1])) a--;
+    const e = m.index + m[0].length;
+    spans.push([a, e < form.length ? at[e] : plain.length]);                 // the match runs to the line's end: take what the form left out
+  }
   if (!spans.length) return String(text);
   let t = "", last = 0;
   for (const [a, b] of spans) { t += plain.slice(last, a) + SENT_CUT; last = b; }
