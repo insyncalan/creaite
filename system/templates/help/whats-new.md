@@ -4,24 +4,40 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ## creaite 2.6.8
 
-2.6.8 contains all of 2.6.7. The headline: passwords and PINs in meeting invites no longer reach your calendar, and your own "I sent it" lines stay out of client text in more shapes.
+2.6.8 contains all of 2.6.7. The headline: passwords, PINs and meeting IDs in meeting invites no longer reach your saved calendar, Prep, drafts or minutes, and the check that keeps your own "sent" lines out of client text now reads every form of the text.
 
-### Passwords and PINs in meeting invites
-- **A word after a label is now removed.** A meeting title, place or invite text that says Password, PIN, code, token, secret, OTP, API key, Pw or Pswd (also "P I N" and "P.I.N.") followed by a plain word, for example "Password swordfish", now treats that word as the secret. The whole title or place is dropped (a title becomes "Meeting"), or the line is dropped from the invite text. This fails closed. (#369)
-- **Old calendar entries are cleaned.** Calendar entries saved by an earlier version are cleaned whenever they are read, and again when a session starts. (#369)
-- **You may notice, on purpose.** After one of those labels every word up to the end must be an ordinary phrase, otherwise the first other word counts as the secret. These titles now show as "Meeting": Pin the roadmap, Password for all staff, Code sprint, Code clinic, Code Red, Pin board, Secret Santa party, Secret sauce, Token of appreciation, Secret project Falcon, Password reset for new hires. These stay when alone, or followed only by words such as for, and, the, request, plan, workshop, session, review, sync: Password reset, PIN entry, Code review, Token refresh, Secret santa, OTP setup, API key rotation. A colon, equals sign, dash or bracket after the label always means a secret. (#369)
-- **The line after a label.** In an invite's text, a line that ends on one of those labels or phrases ("Password reset", "Password reset for", a label alone) makes the next three lines with text go too, whatever they say. So "Password reset" followed by "Team standup at 10" and two more lines loses those three lines; the fourth stays. (#369)
+### Passwords, PINs and meeting IDs in invites
+- **A leak fixed, also in 2.6.7 and earlier.** A passcode or meeting ID written between underscores or markdown marks (`_Passcode_: 4417`), after a dash or arrow, with several labels on one line, with more than two blank lines after the label, glued to its label ("PIN4417", "Meeting ID123456"), or as "Zoom ID 4417" or "Pass-code: 4417", was kept in a saved calendar title, place or invite text. From there it could reach Prep, the agenda and follow-up drafts, and the minutes. All of these are now removed. (#369)
+- **Labels with a qualifier count too.** "Passcode for dial-in:" or "Meeting ID (Teams)" followed by the value on the next line: the value goes. Accents and look-alike letters no longer hide a label ("Pásscode", "Piń"). (#369)
+- **After a heading like "Password reset" or "Code review", only value-looking lines go**: a number, an ID, or a mix of letters and digits. Words, numbered items, bullets, dates and times stay. (#369)
+- **Cleaning again changes nothing.** A saved calendar is cleaned again when a session starts and before Today, Prep, drafts, Close the day or transcripts read it, and a second clean never removes more. (#369, #377)
+- **An unreadable calendar reply is thrown away.** It no longer leaves a raw draft in your working folder or in the daily backup. (#378)
+- **You may notice, on purpose.** To be safe, some ordinary titles that carry a label word show as "Meeting", for example "Pin the roadmap", "Password for all staff", "Code sprint", "Secret Santa party" and "Token of appreciation". A title with a label word glued to digits ("Weekly Zoom Meeting ID4417") loses the digits. "Password reset", "Code review", "PIN entry", "Token refresh" and "API key rotation" stay.
 
-### Your "I sent it" lines in client text
-- **More shapes are caught.** A line saying you chased or emailed something is now found when written with upper-case BY, non-breaking hyphens, a full-width colon, a name split over two lines, entities (such as &#32;) or look-alike letters, both in the check and in the page, so it stays out of client text and email bodies. Only the sent line is cut; the rest of the text keeps its accents and characters. (#368)
+### Sent lines in client text
+- **The client-safe check reads every form of a sent line.** Lines like "chased … by email" are found whichever way they are written: as given, as shown, raw, with web character codes or invisible characters. It fails closed. (#368)
+
+### Load the transcript
+- **It searches the meeting's day by its start and end, not by its title, and tries once more on a wider day** if the search fails, so a title with quotes or symbols can no longer break it. (#365)
+- **It keeps to its job.** A transcript check or load gets its own instructions: do not read your notes file or start a session, make no other call, write nothing. Its tools are narrowed to the calendar search and reading the one event, the transcript and the meeting chat. (#365)
+- **It says which way a load failed**, and the log keeps counts only (the tool, ok or error, the length), so a failure names the real cause. Nothing from a meeting is kept. (#365)
+- **Good to know:** loading a transcript now searches the meeting's whole day, so that run sees the other titles of the day (including confidential ones) while it runs. creaite keeps none of them. The cause of the earlier failures is still not proven; the new log will name it.
 
 - Update from the release zip as usual.
 - Reload any dashboard tab that was open before the update.
-- Look at today's meetings once for any ordinary title that now reads "Meeting".
+- Look at Today and Prep once for a few real meetings, to see what the clean-up keeps.
 
 ### Good to know
-- Not covered yet in invites: a secret written before its label; Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word; Codice, Codigo, Sifre and Parola followed by a plain word; a label spelled letter by letter other than PIN; HTML in a title or place. A secret with digits is handled by the older rules.
-- For sent lines, a line padded with more than 50 characters of spacing, or a name over 400 characters, is not matched; real sent lines are one short line.
+- **Agenda lines can still be lost.** To be safe, a label word can take the lines after it: a heading such as "Password reset" or "Code review" followed by one- or two-word lines with no list marker, or a label word followed by an ordinary word that is not on the lists ("Dress code for visitors", "Cost code changes", "Pin board", "Token budget"). Under a hard label ("Passcode:", "PIN", "Meeting ID:") the next lines with text go, whatever they say.
+- **Still leaks (known limits):**
+  - a word-only secret typed right under a soft heading ("Password reset" then "hunter"), because it looks like an agenda line;
+  - a date or time typed as a passcode under a soft heading, and a two-character code such as "X9";
+  - a value of three plain words on a line of its own, or more than three lines below its heading;
+  - a secret written before its label ("swordfish is the password");
+  - a table whose header row carries the label and whose values sit in the rows below, and a word-only value in a table cell;
+  - the labels Key, Access, Login, Credentials and Guest wifi key followed by a plain word, and Codice, Codigo, Sifre and Parola followed by a plain word.
+- **Your old backup copies still hold an earlier raw calendar.** The daily backup copies, including the copies in OneDrive, keep it for their retention period. creaite cannot change a closed zip: delete the old ones once a clean one exists. A refused calendar reply no longer adds to them.
+- The paths on screen and a structural rewrite of this clean-up (one rule that drops whole join blocks, instead of label by label) come in 2.6.9, together with two follow-ups to Load the transcript (starting the run without any context, and a limit on its searches).
 
 ## creaite 2.6.7
 
