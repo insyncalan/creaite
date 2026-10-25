@@ -46,7 +46,7 @@ class V268(unittest.TestCase):
             t = sec(t) if p.endswith("whats-new.md") else t
             self.assertEqual(t.count("<!--"), t.count("-->"))
             self.assertNotIn("GUARDED", t)
-            for w in ("Pin the roadmap", "Secret Santa party", "the lines after it", "Meeting", "### Good to know", "look-alike"):
+            for w in ("Pin the roadmap", "Secret Santa party", "the lines after them", "Meeting", "### Good to know", "look-alike"):
                 self.assertIn(w, unguarded(t), f"{p} lacks {w!r}")
             self.assertNotRegex(unguarded(t), r"(?i)#358|amber|rescrub|client_leak")
         r = subprocess.run([sys.executable, str(REPO / "dev/tests/test_no_real_names.py")], cwd=REPO, capture_output=True, text=True)
