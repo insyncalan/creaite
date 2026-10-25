@@ -63,19 +63,37 @@ _WITH_VALUE = (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|c
                r"clave\s+de\s+acceso|pin(?:\s*(?:code|number|no\.?))?|toplant[\u0131i]\s+kimli[\u011fg]i|"
                r"(?:meeting|webinar|event|session|conference|call|phone\s+conference)[\s-]*(?:id|number|no\.?)")
 _BARE = r"secret|codes?|keys?|tokens?|otp|access|codice|c[o\u00f3]digo|[s\u015f]ifre|parola"       # a value must follow these
-# v2.6.8 (k26-b-bare): after these labels the next word IS the value even with no digit and no capital ("Password swordfish",
-# "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta"). Fail closed: any word follows = a value, except the few ordinary
-# words below, each the second word of a common phrase (tests: dev/tests/test_invite_clean_bare.py, one per entry). Only the
-# word straight after the label is looked at; "Password reset hunter" keeps "hunter" (not covered, see the test file).
+# v2.6.8 (k26-b-bare, Full review): after these labels the next word IS the value even with no digit and no capital ("Password
+# swordfish", "PIN rtyu", a table's "PIN" then "kqzxyw", "Code alphabeta", "Token abcd"). Fail closed: any word follows = a value, except
+# the few ordinary words below, each the second word of a common phrase (tests: dev/tests/test_invite_clean_bare.py, one row each).
+# An allow-listed word protects only when what follows it is the end of the field, closing punctuation, or a word of BARE_FOLLOW
+# ("Password reset for new starters", "Code of conduct"); a colon or equals, or any other word, after it is a value ("Password reset:
+# hunter", "PIN entry swordfish", "Code of hunter"). Only that one more word is looked at ("Password reset for hunter" keeps it).
 BARE_NEXT = (
-    (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord",
-     ("reset", "policy", "manager", "management", "expiry", "rotation", "audit", "change")),   # "Password reset", "Password policy", a manager tool
+    (r"pass\s*words?|passwort|kennwort|mot\s+de\s+passe|mot-de-passe|contrase[n\u00f1]a|contrasena|senha|wachtwoord|pw|pswd",
+     ("reset", "policy", "manager", "management", "expiry", "rotation", "audit", "change")),
     (r"pin(?:\s*(?:code|number|no\.?))?", ("entry", "pad")),                 # "PIN entry", "PIN pad"
     (r"codes?",                                                               # "Code review", "Code of conduct", "Source code repository"
-     ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover", "walkthrough",
-      "standards")),
+     ("review", "reviews", "of", "base", "freeze", "quality", "repository", "handover", "walkthrough", "standards")),
+    (r"tokens?", ("expiry", "rotation", "refresh", "economy")),               # "Token refresh", "Token economy"
+    (r"secrets?", ("management", "manager", "rotation", "santa")),            # "Secret santa", "Secrets management"
+    (r"otp", ("setup", "rollout", "enrolment")),
+    (r"api\s+keys?", ("rotation", "management", "review")),
 )
-_BARE_NEXT = "|".join(rf"(?:{lab})(?![\w-])\s+[\"'(\[]?(?!(?:{'|'.join(ok)})(?![\w-]))[^\W_]" for lab, ok in BARE_NEXT)
+BARE_FOLLOW = ("for", "of", "and", "the", "to", "with", "in", "on", "at", "a", "an", "or", "request", "requests", "process", "plan",
+               "planning", "workshop", "session", "review", "rollout", "update", "changes", "findings", "redesign", "supplier", "call",
+               "move", "conduct")
+
+
+def _bare_next(lab, ok):
+    okx = "|".join(ok)
+    fol = "|".join(BARE_FOLLOW)
+    return (rf"(?:{lab})(?![\w-])\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w"
+            rf"|(?:{okx})(?![\w-])(?!\s*[.,;)\]!?\"']*\s*$|\s+(?:{fol})(?![\w-])))")
+
+
+_BARE_NEXT = "|".join(_bare_next(lab, ok) for lab, ok in BARE_NEXT)
+_SPACED = re.compile(r"(?<![\w])p[ .\-]{1,2}i[ .\-]{1,2}n\.?(?![\w])", re.I)       # "P I N", "P.I.N.", "P-I-N" read as PIN
 _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر|رمز الدخول|رمز الوصول|رمز الاجتماع|رمز الانضمام|الرقم السري|"
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
@@ -126,6 +144,7 @@ def _bad_url(url):
 def _views(text):
     """The skeleton, and the same with look-alike letters (a Cyrillic "а" for an "a") read as the Latin ones."""
     s = skeleton(str(text if text is not None else "")[:LINE_MAX + 200])       # every test runs on a bounded text (timing)
+    s = _SPACED.sub("PIN", s)
     t = s.translate(confusables.TABLE)
     return [s, t] if t != s else [s]
 

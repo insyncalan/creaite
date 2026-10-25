@@ -49,6 +49,25 @@ BARE = [
     ("pin-cyrillic-a", "Sync PіN mnbvcx", "mnbvcx"),
     ("code-word", "Sync Code alphabeta", "alphabeta"),
     ("code-lower", "Town hall code gammadelta", "gammadelta"),
+    ("reset-colon", "Password reset: hunter", "hunter"),                      # Full review HIGH 1: an allow-listed word is no shelter
+    ("reset-bare", "Password reset hunter", "hunter"),
+    ("reset-digits", "Password reset hunter2x", "hunter2x"),
+    ("reset-equals", "Password reset = hunter", "hunter"),
+    ("entry-bare", "PIN entry swordfish", "swordfish"),
+    ("entry-colon", "PIN entry: swordfish", "swordfish"),
+    ("policy-bare", "Password policy hunter", "hunter"),
+    ("code-of-bare", "Code of hunter", "hunter"),
+    ("password-underscore", "Password _swordfish", "swordfish"),
+    ("spaced-pin", "Sync P I N abcdq", "abcdq"),
+    ("dotted-pin", "Sync P.I.N. abcdq", "abcdq"),
+    ("dashed-pin", "Sync P-I-N abcdq", "abcdq"),
+    ("token", "Sync Token abcdq", "abcdq"),
+    ("secret", "Sync Secret abcdq", "abcdq"),
+    ("otp", "Sync OTP abcdq", "abcdq"),
+    ("api-key", "Sync API key abcdq", "abcdq"),
+    ("pw", "Sync Pw abcdq", "abcdq"),
+    ("pswd", "Sync Pswd abcdq", "abcdq"),
+    ("passphrase", "Sync Passphrase abcdq", "abcdq"),
     ("password-connecting-word", "Password for the room is hunterxyz", "hunterxyz"),   # "for" is taken as the value: fail closed
 ]
 # HTML is read only in an invite body (a title, place or name is plain text from Outlook), so these rows are judged in the body only.
@@ -69,12 +88,26 @@ ALLOWED = [
     ("password-change", "Password change process", ("password", "change")),
     ("code-walkthrough", "Code walkthrough", ("code", "walkthrough")),
     ("code-standards", "Code standards workshop", ("code", "standards")),
+    ("token-refresh", "Token refresh redesign", ("token", "refresh")),
+    ("token-expiry", "Token expiry changes", ("token", "expiry")),
+    ("token-rotation", "Token rotation plan", ("token", "rotation")),
+    ("token-economy", "Token economy workshop", ("token", "economy")),
+    ("secret-santa", "Secret santa plan", ("secret", "santa")),
+    ("secrets-management", "Secrets management review", ("secret", "management")),
+    ("secret-manager", "Secret manager rollout", ("secret", "manager")),
+    ("secret-rotation", "Secret rotation plan", ("secret", "rotation")),
+    ("otp-setup", "OTP setup plan", ("otp", "setup")),
+    ("otp-rollout", "OTP rollout plan", ("otp", "rollout")),
+    ("otp-enrolment", "OTP enrolment session", ("otp", "enrolment")),
+    ("api-key-rotation", "API key rotation plan", ("api", "rotation")),
+    ("api-key-management", "API key management review", ("api", "management")),
+    ("api-key-review", "API key review", ("api", "review")),
     ("pin-entry", "PIN entry redesign", ("pin", "entry")),                          # a screen
     ("pin-pad", "PIN pad supplier call", ("pin", "pad")),                           # a device
     ("code-review", "Code review", ("code", "review")),
     ("code-reviews", "Code reviews", ("code", "reviews")),
     ("code-of-conduct", "Code of conduct session", ("code", "of")),
-    ("code-base", "Code base walkthrough", ("code", "base")),
+    ("code-base", "Code base review", ("code", "base")),
     ("code-freeze", "Code freeze planning", ("code", "freeze")),
     ("code-quality", "Code quality update", ("code", "quality")),
     ("source-code-repository", "Source code repository move", ("code", "repository")),
@@ -85,10 +118,21 @@ CONTROLS = ["Quarterly business review", "Pilot readiness review", "Key mileston
             "Passenger numbers", "Zipcode lookup", "Budget sync", "Pass the baton"]
 # What this change does NOT do, pinned so that a change is noticed (each is a text that is still kept today).
 NOT_COVERED = [
-    ("a value before its label", "swordfish password", "swordfish"),
-    ("a value after an allow-listed word", "Password reset hunterxyz", "hunterxyz"),
-    ("the key, token and access labels", "Sync Token hunterxyz", "hunterxyz"),
-    ("a spaced-out label", "Sync P I N hunterxyz", "hunterxyz"),
+    ("a value before its label", "swordfish is the password", "swordfish"),
+    ("a value after an allow-listed word and a function word", "Password reset for hunterxyz", "hunterxyz"),
+    ("a value after a follow-on word", "Code review for hunterxyz", "hunterxyz"),
+    ("the key label", "Sync Key hunterxyz", "hunterxyz"),
+    ("the access label", "Sync Access hunterxyz", "hunterxyz"),
+    ("the login label", "Sync Login hunterxyz", "hunterxyz"),
+    ("the credentials label", "Sync Credentials hunterxyz", "hunterxyz"),
+    ("the pass label", "Sync Pass hunterxyz", "hunterxyz"),
+    ("a guest wifi key", "Guest wifi key hunterxyz", "hunterxyz"),
+    ("the dial-in label", "Sync Dial-in hunterxyz", "hunterxyz"),
+    ("Italian codice", "Sync Codice hunterxyz", "hunterxyz"),
+    ("Spanish codigo", "Sync Codigo hunterxyz", "hunterxyz"),
+    ("Turkish sifre", "Sync Sifre hunterxyz", "hunterxyz"),
+    ("Romanian parola", "Sync Parola hunterxyz", "hunterxyz"),
+    ("a letter-by-letter label of other kinds", "Sync P a s s hunterxyz", "hunterxyz"),
 ]
 
 
@@ -181,12 +225,23 @@ class Controls(unittest.TestCase):
         self.assertEqual(sum(len(ok) for _l, ok in I.BARE_NEXT), len(ALLOWED))
 
     def test_allow_list_is_short(self):
-        self.assertLessEqual(sum(len(ok) for _l, ok in I.BARE_NEXT), 20)   # never "for", "the", "all" or other function words
+        self.assertLessEqual(sum(len(ok) for _l, ok in I.BARE_NEXT), 40)   # never "for", "the", "all" or other function words
 
     def test_not_covered_is_still_so(self):
         """Pins the gaps the release notes name; if one closes, move its row to BARE."""
         for why, text, val in NOT_COVERED:
             self.assertIn(val, I.scrub(text, 140), why)
+
+
+class Timing(unittest.TestCase):
+    def test_long_lines_stay_fast(self):
+        import time
+        for unit in ("Password reset ", "PIN entry: ", "Code of conduct ", "P I N ", "Token ", "a" * 50 + " ", "pass " * 3, "- . "):
+            text = (unit * (2000 // len(unit) + 1))[:2000]
+            t0 = time.time()
+            I.scrub(text, 140)
+            I.invite_text("Agenda\n" + text)
+            self.assertLess(time.time() - t0, 2.0, unit)
 
 
 class Saved(unittest.TestCase):
@@ -265,8 +320,28 @@ class Mutants(unittest.TestCase):
                 m = mutant(src_old, '"zzznever"')
                 self.assertNotEqual(fails(m), [], f"removing {w!r} from the allow-list changed nothing")
 
+    def test_follow_on_check_removed(self):
+        bad = fails(mutant('(?!\\s*[.,;)\\]!?\\"\']*\\s*$|\\s+(?:{fol})(?![\\w-])))', ')'))
+        self.assertTrue(any(b.startswith("allowed:") for b in bad), bad)
+        # and the opposite mutant: the allow-list protecting whatever follows it lets the reviewer's examples through
+        bad = fails(mutant("(?:{okx})(?![\\w-])(?!", "(?!)(?:{okx})(?![\\w-])(?!", 1))
+        self.assertTrue(any(b.startswith(("reset", "entry", "policy", "code-of")) for b in bad), bad)
+
+    def test_follow_list_entry_removed(self):
+        for w in ("workshop", "rollout", "conduct", "supplier"):
+            self.assertNotEqual(fails(mutant(f'"{w}"', '"zzznever"', 2)), [], w)
+
+    def test_spaced_pin_off(self):
+        bad = fails(mutant('    s = _SPACED.sub("PIN", s)\n', ""))
+        self.assertTrue(any("spaced" in b or "dotted" in b or "dashed" in b for b in bad), bad)
+
+    def test_each_new_label_removed(self):
+        for lab in ("tokens?", "secrets?", "otp", "api"):
+            bad = fails(mutant(f'(r"{lab}', '(r"neverx9'))
+            self.assertTrue(bad, lab)
+
     def test_fail_open_when_allow_list_is_everything(self):
-        self.assertNotEqual(fails(mutant("[^\\W_]", "(?!)")), [])
+        self.assertNotEqual(fails(mutant("(?:(?!(?:{okx})(?![\\w-]))\\w", "(?:(?!)\\w")), [])
 
 
 if __name__ == "__main__":
