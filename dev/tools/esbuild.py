@@ -23,7 +23,8 @@ from pathlib import Path
 PINNED = "0.28.2"
 SHA256 = {"darwin-arm64": "1980cde09749094452b20d36ff267585ccb3f72749c7bc97291cd9996ccf5a2a",
           "linux-x64": "9573bb2233aab0f9ea7647d5cca9726113cc1768de61d66b17267f4db84488f6",
-          "linux-arm64": "a96dbfa41d3ef5dbd1ef22b1c10d5187be9267e86093a870f06402a7ec931596"}   # 25-10-2026: `npm pack` of the pinned version; its sha512 equals the registry's dist.integrity
+          # linux-arm64, 25-10-2026: `npm pack` of the pinned version; its sha512 equals the registry's dist.integrity
+          "linux-arm64": "a96dbfa41d3ef5dbd1ef22b1c10d5187be9267e86093a870f06402a7ec931596"}
 MEMBER = "package/bin/esbuild"
 CACHE = Path(__file__).resolve().parents[1] / ".cache" / "esbuild"
 
@@ -42,7 +43,8 @@ def platform_key(system=None, machine=None):
         return "linux-x64"
     if system.startswith("linux") and machine in ("arm64", "aarch64"):
         return "linux-arm64"
-    raise EsbuildError(f"esbuild is pinned only for macOS on Apple silicon and Linux (x86-64 and arm64), not {system} {machine}")
+    raise EsbuildError("esbuild is pinned only for macOS on Apple silicon and Linux (x86-64 and arm64), "
+                       f"not {system} {machine}")
 
 
 def tarball_url(key):
