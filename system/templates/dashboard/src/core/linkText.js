@@ -16,6 +16,7 @@
    - linkWrite(words, href): one link in the stored form. */
 import { esc } from "./dom.js";
 import { linkUrl } from "./linkUrl.js";
+import { SENT_CONFUSABLES } from "./sentConfusables.js";
 
 /** A link as stored. Group 1 the words (escaped), group 2 the address. */
 const LINK = /\[((?:[^[\]\\\n]|\\[[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
@@ -76,10 +77,10 @@ const SENT_DATE = "(?:\\d{2}\\s*-\\s*\\d{2}\\s*-\\s*\\d{4}|\\d{4}\\s*-\\s*\\d{2}
 const SENT_SRC = `(?<!\\d)${SENT_DATE}\\s*:\\s*(?:chased|emailed|asked)\\s+(?:[^${SENT_NL}]*?(?:\\r\\n|[${SENT_NL}])[ \\t]*)?[^${SENT_NL}]*?\\bby\\s+(?:email|message)\\b[^${SENT_NL}]*`;
 const SENT_CUT = "\uE000";
 const SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
-const SENT_LOOK = {"А":"A","В":"B","Е":"E","К":"K","М":"M","Н":"H","О":"O","С":"C","Т":"T","Х":"X","а":"a","е":"e","о":"o","с":"c","х":"x","р":"p","і":"i","ѕ":"s","ԁ":"d","у":"y","Α":"A","Β":"B","Ε":"E","Ζ":"Z","Η":"H","Κ":"K","Μ":"M","Ν":"N","Ο":"O","Τ":"T","Υ":"Y","Χ":"X","ο":"o","ν":"v","ι":"i"};
+const SENT_LOOK = Object.fromEntries(Object.entries(SENT_CONFUSABLES).flatMap(([to, from]) => [...from].map(c => [c, to])));   /* generated from Python's table */
 const SENT_UNSEEN = new RegExp("[\\p{Cf}\\u00ad\\u034f\\u115f\\u1160\\u17b4\\u17b5\\u180b-\\u180f\\u3164\\ufe00-\\ufe0f\\uffa0\\ufff0-\\ufff8\\u{e0000}-\\u{e0fff}\\u0000-\\u0008\\u000e-\\u001f\\u007f-\\u0084\\u0086-\\u009f]", "gu");
-const sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "g");
-const sentLook = t => t.replace(/[\u2010-\u2015\u2212\ufe58\ufe63\uff0d]/g, "-").replace(sentLookRe, c => SENT_LOOK[c]);
+const sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "gu");
+const sentLook = t => t.replace(sentLookRe, c => SENT_LOOK[c]);
 const SENT_LINEISH = new RegExp("[\\u000b\\u000c\\u001c-\\u001e\\u0085]", "g");
 const sentUnseen = t => t.replace(SENT_LINEISH, "\n").replace(SENT_UNSEEN, "").replace(/⠀/g, " ");
 const sentUnmark = t => t.normalize("NFKD").replace(/\p{M}/gu, "");

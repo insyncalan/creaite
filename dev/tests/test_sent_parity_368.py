@@ -23,8 +23,8 @@ FIX = ["Keep this\n" + v + "\nand this" for v in SHAPES.values()] + list(SHAPES.
 SCRIPT = """import(%s).then(m=>{const f=JSON.parse(%s);console.log(JSON.stringify(f.map(t=>[m.sentHas(t),m.sentStrip(t)])));})"""
 
 
-def run_js(path=JS):
-    r = subprocess.run(["node", "-e", SCRIPT % (json.dumps(Path(path).as_uri()), json.dumps(json.dumps(FIX)))], capture_output=True, text=True, timeout=60)
+def run_js(path=JS, fix=None):
+    r = subprocess.run(["node", "-e", SCRIPT % (json.dumps(Path(path).as_uri()), json.dumps(json.dumps(FIX if fix is None else fix)))], capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr
     return json.loads(r.stdout)
 
@@ -55,12 +55,89 @@ class Parity(unittest.TestCase):
 
     def test_mutants_are_caught(self):
         for shape, old, new in (("upper case BY", '"i").test(sentPlain', '"").test(sentPlain'),
-                                ("non-breaking hyphens", "[\\u2010-\\u2015", "[\\u0001"),
+                                
                                 ("full-width colon", '.normalize("NFK', '.concat("NFK'),
                                 ("name over two lines", "(?:[^${SENT_NL}]*?(?:\\\\r\\\\n|[${SENT_NL}])[ \\\\t]*)?", ""),
                                 ("bullet and ISO date", "\\\\d{4}\\\\s*-\\\\s*\\\\d{2}\\\\s*-\\\\s*\\\\d{2}", "\\\\d{9}")):
             got = self.mutant(old, new)
             self.assertFalse(got[SHAPES[shape]][0], shape)
+
+
+class Generated(unittest.TestCase):
+    def test_the_map_is_what_the_generator_writes(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "dev" / "tools"))
+        import gen_linktext_confusables as g
+        self.assertIsNone(g.stale())
+
+
+LINES = ["17-10-2026: Chased Sara by email.", "17-10-2026: CHASED SARA BY EMAIL.", "17-10-2026: Emailed Tom by message asking.",
+         "17-10-2026: EMAILED TOM BY MESSAGE.", "17-10-2026: Asked Chris by email.", "17-10-2026: ASKED CHRIS BY EMAIL.",
+         "17-10-2026: chased sara by email.", "17-10-2026: emailed tom by message.", "17-10-2026: asked chris by email."]
+
+
+def fuzz_cases():
+    """(line) for every confusable of every letter the pattern needs, one at a time, plus seeded random combinations."""
+    import random
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "dev" / "tools"))
+    import gen_linktext_confusables as g
+    tab = g.table()
+    out = []
+    for to, chars in tab.items():
+        for ch in chars:
+            for line in LINES:
+                if to == "-":
+                    out.append(line.replace("-", ch, 1))                     # the date's first hyphen
+                else:
+                    k = line.find(to, line.index(":"))
+                    if k > 0:
+                        out.append(line[:k] + ch + line[k + 1:])
+    rnd = random.Random(368)
+    for _ in range(300):
+        line = rnd.choice(LINES)
+        cs = list(line)
+        for k in rnd.sample(range(line.index(":") + 1, len(line)), 4):
+            if cs[k] in tab and tab[cs[k]]:
+                cs[k] = rnd.choice(tab[cs[k]])
+        out.append("".join(cs))
+    return out
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class Fuzz(unittest.TestCase):
+    cases = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cases = fuzz_cases()
+
+    def test_every_confusable_reads_the_same_in_both(self):
+        self.assertGreater(len(self.cases), 500)
+        for t, (has, out) in zip(self.cases, run_js(fix=self.cases)):
+            self.assertTrue(linktext.sent_has(t), repr(t))                 # Python recognises it (fail closed)
+            self.assertEqual(has, True, repr(t))
+            self.assertEqual(out, linktext.sent_strip(t), repr(t))
+
+    def test_dropping_one_map_entry_fails_the_fuzz(self):
+        src = JS.read_text()
+        mp = (JS.parent / "sentConfusables.js").read_text()
+        import re
+        ran = 0
+        for to in ("-", "A", "e", "S"):
+            m = re.search(r'"%s": "((?:\\u[0-9a-f]{4})+)"' % re.escape(to), mp)
+            if not m:
+                continue
+            first = m.group(1)[:6]
+            tmpm, tmpj = JS.parent / "_mutant_368_map.js", JS.parent / "_mutant_368.js"
+            tmpm.write_text(mp.replace(first, "", 1))
+            tmpj.write_text(src.replace("./sentConfusables.js", "./_mutant_368_map.js"))
+            try:
+                got = run_js(tmpj, self.cases)
+            finally:
+                tmpm.unlink()
+                tmpj.unlink()
+            ran += 1
+            self.assertTrue(any(not has for has, _ in got), "dropping %s's %s was not noticed" % (to, first))
+        self.assertGreaterEqual(ran, 3)
 
 
 if __name__ == "__main__":

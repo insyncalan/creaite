@@ -636,6 +636,14 @@ def built_page(problems):
         problems.append((rel(DASHBOARD), 0, "BUILT", why))
 
 
+def sent_confusables(problems):
+    """GENERATED: the page's look-alike map for the "I sent it" check is what Python's table gives (#368)."""
+    import gen_linktext_confusables
+    why = gen_linktext_confusables.stale()
+    if why:
+        problems.append((rel(gen_linktext_confusables.OUT), 0, "GENERATED", why))
+
+
 def vendored_tiptap(problems):
     """VENDORED: the committed Tiptap editor is the one dev/tiptap/ and the pinned packages build (BL-301 A)."""
     import tiptap
@@ -683,6 +691,7 @@ def main(argv):
         for kind, vals in metrics(path, src, tree).items():
             cur[kind].update(vals)
     built_page(problems)
+    sent_confusables(problems)
     vendored_tiptap(problems)
     sources = dashboard_sources()
     js = "\n".join(sources.values())

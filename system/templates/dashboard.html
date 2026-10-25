@@ -12116,6 +12116,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
   var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
 
+  // core/sentConfusables.js
+  var SENT_CONFUSABLES = { "-": "‐‑‒–—―−﹘﹣－", "A": "ΑАᎪᴀꓮ", "B": "ʙΒВᏴꓐ", "C": "ϹСᏟᴄꓚ", "D": "Ꭰᴅꓓ", "E": "ΕЕᎬᴇꓰ", "G": "ɢᏀꓖ", "H": "ʜΗНᎻꓧ", "I": "ıǀɩɪΙιІіӀꓲ", "K": "ΚКᏦᴋꓗ", "L": "ʟᏞꓡ", "M": "ΜМᎷᴍꓟ", "S": "ЅᏚꓢꜱ", "Y": "ʏΥҮꓬ", "a": "ɑαа", "c": "ϲс", "d": "ԁ", "e": "е", "g": "ɡց", "h": "һհ", "k": "κк", "s": "ѕ", "y": "у" };
+
   // core/linkText.js
   var LINK = /\[((?:[^[\]\\\n]|\\[[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
   var unwords = (s5) => s5.replace(/\\([[\]\\])/g, "$1");
@@ -12153,10 +12156,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   var SENT_SRC = `(?<!\\d)${SENT_DATE}\\s*:\\s*(?:chased|emailed|asked)\\s+(?:[^${SENT_NL}]*?(?:\\r\\n|[${SENT_NL}])[ \\t]*)?[^${SENT_NL}]*?\\bby\\s+(?:email|message)\\b[^${SENT_NL}]*`;
   var SENT_CUT = "";
   var SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
-  var SENT_LOOK = { "А": "A", "В": "B", "Е": "E", "К": "K", "М": "M", "Н": "H", "О": "O", "С": "C", "Т": "T", "Х": "X", "а": "a", "е": "e", "о": "o", "с": "c", "х": "x", "р": "p", "і": "i", "ѕ": "s", "ԁ": "d", "у": "y", "Α": "A", "Β": "B", "Ε": "E", "Ζ": "Z", "Η": "H", "Κ": "K", "Μ": "M", "Ν": "N", "Ο": "O", "Τ": "T", "Υ": "Y", "Χ": "X", "ο": "o", "ν": "v", "ι": "i" };
+  var SENT_LOOK = Object.fromEntries(Object.entries(SENT_CONFUSABLES).flatMap(([to2, from]) => [...from].map((c5) => [c5, to2])));
   var SENT_UNSEEN = new RegExp("[\\p{Cf}\\u00ad\\u034f\\u115f\\u1160\\u17b4\\u17b5\\u180b-\\u180f\\u3164\\ufe00-\\ufe0f\\uffa0\\ufff0-\\ufff8\\u{e0000}-\\u{e0fff}\\u0000-\\u0008\\u000e-\\u001f\\u007f-\\u0084\\u0086-\\u009f]", "gu");
-  var sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "g");
-  var sentLook = (t47) => t47.replace(/[\u2010-\u2015\u2212\ufe58\ufe63\uff0d]/g, "-").replace(sentLookRe, (c5) => SENT_LOOK[c5]);
+  var sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "gu");
+  var sentLook = (t47) => t47.replace(sentLookRe, (c5) => SENT_LOOK[c5]);
   var SENT_LINEISH = new RegExp("[\\u000b\\u000c\\u001c-\\u001e\\u0085]", "g");
   var sentUnseen = (t47) => t47.replace(SENT_LINEISH, "\n").replace(SENT_UNSEEN, "").replace(/⠀/g, " ");
   var sentUnmark = (t47) => t47.normalize("NFKD").replace(/\p{M}/gu, "");
