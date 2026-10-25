@@ -139,7 +139,7 @@ class RejectsUI(LiveBrowserCase):
         b.key("Escape")
         b.wait("!document.getElementById('rvReason')")
         # the peek's Reject
-        b.click(self.row(PLAIN) + " td.title")
+        b.click(self.row(PLAIN) + " td.title", inset=3)
         b.wait("!!document.getElementById('pkReject') && document.getElementById('pkReject').offsetParent!==null")
         b.click("#pkReject")
         self.menu_open()
