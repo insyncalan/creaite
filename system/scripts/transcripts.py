@@ -533,7 +533,7 @@ class Job:
         self.mode, self.event, self.error, self.transcripts, self.uri_used = mode, None, None, None, None
         self.chat_listing, self.chat_full, self.chat_thread, self.wrong = None, {}, None, False
         self.cancel_note = ""
-        self.calls, self.event_read = [], None     # #365: every tool result the run returned (name, error, length) and how the event read went
+        self.calls, self.event_read = [], None     # #365: each tool result (name, error, length); how the event read went
 
     def observe(self, name, tool_input, text, is_error=False):
         """Take one tool call and its result from the run: the event, the transcript or the meeting chat it read.
@@ -544,13 +544,7 @@ class Job:
             return
         uri = str((tool_input or {}).get("uri") or "")
         if uri.startswith("calendar:///events/"):
-            data = as_json(text) if not is_error else None
-            facts = event_facts(data)
-            self.event_read = "error" if is_error else ("unreadable" if not facts else "ok")
-            if facts.get("id") == self.id or (facts.get("id") and unquote(facts["id"]) == self.id):
-                self.event = facts
-            elif facts:
-                self.wrong = True
+            self.take_event(text, is_error)
         elif uri.startswith("meeting-transcript:///"):
             self.uri_used = uri
             if is_error:
@@ -575,6 +569,15 @@ class Job:
                 self.chat_listing = data
 
     # the facts the sweep also records
+    def take_event(self, text, is_error):
+        """The calendar event a read_resource returned: kept if it is this meeting's, `wrong` if it is another's."""
+        facts = event_facts(as_json(text) if not is_error else None)
+        self.event_read = "error" if is_error else ("unreadable" if not facts else "ok")
+        if facts.get("id") == self.id or (facts.get("id") and unquote(facts["id"]) == self.id):
+            self.event = facts
+        elif facts:
+            self.wrong = True
+
     def diagnosis(self):
         """Counts only, for the debug log (#365): the tool results the run returned (name, error or ok, length) and how the
         event read went (none, error, unreadable, ok). Never any text."""
