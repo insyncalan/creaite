@@ -48,6 +48,8 @@ class V267(unittest.TestCase):
             for w in ("Matched", "Likely", "Not sure", "Process all ready", "never named"):
                 self.assertIn(w, t, f"{p} lacks {w!r}")
             self.assertIn("### Good to know", t)
+            self.assertIn("Waiting to be saved", t)          # the two small fixes (hand checks 10 and 13 of 2.6.4)
+            self.assertIn("we may need 5", t)
             self.assertNotRegex(t, r"(?i)\bL4\b|sign-off")
         r = subprocess.run([sys.executable, str(REPO / "dev/tests/test_no_real_names.py")], cwd=REPO, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, (r.stderr or r.stdout)[-1500:])
