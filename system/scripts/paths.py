@@ -1001,3 +1001,18 @@ def never_index_patterns():
     """Permission patterns (below the projects root) for the folders creaite never reads or writes: 99 Archive, _Archive,
     _Templates, 99 System (zz Archive is guarded by reach.classify but not named here, as before: Alan, 14-10-2026)."""
     return [f"**/{n}/**" for n in never_index() if n != OLD_ARCHIVES[-1]]      # BL-09, #252
+
+
+# ===== #132 (G8 spike): the settings that change how Claude runs are billed or where they go =====
+# A key, a token or a host set in the shell that started the live server would be inherited by every run it starts and would
+# silently move that run from the subscription to a paid key (or to another host). The live server scrubs these names from the
+# environment of every run it starts (run_env), and doctor says when the server itself was started with one.
+CLAUDE_BILLING_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_BASE_URL", "CLAUDE_CODE_OAUTH_TOKEN",
+                      "CLAUDE_CODE_API_KEY_HELPER_TTL_MS", "CLAUDE_CODE_SIMPLE")
+CLAUDE_BILLING_PREFIXES = ("ANTHROPIC_", "CLAUDE_CODE_USE_")
+
+
+def claude_billing_env(environ=None):
+    """The names (never the values) in `environ` that change how Claude is billed or where it connects, sorted."""
+    env = os.environ if environ is None else environ
+    return sorted(k for k in env if k in CLAUDE_BILLING_ENV or k.startswith(CLAUDE_BILLING_PREFIXES))

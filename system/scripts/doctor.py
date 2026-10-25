@@ -733,6 +733,18 @@ def script_policy():
     return True, f"{total} violation{'' if total == 1 else 's'} in 7 days" + (f" ({top})" if top else "")
 # ===== end BL-255 =====
 
+# ===== #132 (G8 spike): a key or host in the server's own environment =====
+def claude_billing_env():
+    """Warn when this process was started with a Claude key, token or host in its environment: such a setting would move
+    every run from the subscription to a paid key (the live server removes the names from the runs it starts, but the
+    shell that started it should not carry them). Names only, never a value."""
+    names = paths.claude_billing_env()
+    if not names:
+        return True, "none set"
+    return None, ("set in the environment creaite was started from: " + ", ".join(names)
+                  + ". creaite does not pass them to its runs; start it from a shell without them.")
+# ===== end #132 =====
+
 # ===== BL-10 and BL-03: archiving (v1.9.5) =====
 def archive_items():
     """The daily archiving of items closed long ago: its last run, as information (never a warning)."""
@@ -804,6 +816,7 @@ def run_checks():
     check("ask creaite's refused commands", refused_commands)     # BL-252 (fix-small-17)
     check("Record changes refused in a plain chat", record_refusals)   # BL-267
     check("Script policy (report-only)", script_policy)           # BL-255
+    check("No Claude key or host in the environment", claude_billing_env)   # #132
     check("First setup", new_vault)
     check("Version", version)
     check("creaite rules imported", rules_imported)
