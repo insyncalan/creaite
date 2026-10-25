@@ -1,0 +1,28 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 1d0867e6..b20b3083 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -540,7 +540,8 @@ CONFIRMED_PROMPT = ("Alan has confirmed this in the dashboard panel: {title}. Do
+ TRANSCRIPT_PROMPT = (
+     "Find the Teams transcript of one meeting, using only these Microsoft 365 reading calls, in this order. The meeting: “{title}”, "
+     "{day}, {start} to {end}, calendar event ID {eid}.\n"
+-    "1. outlook_calendar_search for the title on that day; take the event whose id is {eid}.\n"
++    "1. outlook_calendar_search for that day (its start and end, no words from the title: a title with quotes or symbols can fail a "
++    "search); take the event whose id is {eid}. If the search returns an error, try once more with a day window a little wider.\n"
+     "2. read_resource on that event's uri, exactly as returned. Look at onlineMeeting.joinUrl and meetingTranscriptUrl.\n"
+     "3. If there is a meetingTranscriptUrl, read_resource on it exactly as returned (it already carries this occurrence's start and "
+     "end). If the connection drops, try the call once more.\n"
+@@ -3133,8 +3134,11 @@ class Run:
+     def job_observe(self, part):
+         """A transcript job keeps what a tool returned. C: narrowed; anything else is logged, the reader goes on."""
+         try:
+-            self.job.observe(*self.tooluse[part["tool_use_id"]], vault_transcripts.result_text(part.get("content")),
+-                             bool(part.get("is_error")))
++            text = vault_transcripts.result_text(part.get("content"))
++            if globals().get("debuglog") is not None:          # #365: counts only: the tool, ok or error, the length; never text
++                debuglog.info("run", f"{self.id} {self.kind} result: {str(self.tooluse[part['tool_use_id']][0]).split('__')[-1][:40]} "
++                                     f"{'error' if part.get('is_error') else 'ok'}, {len(text)} characters")
++            self.job.observe(*self.tooluse[part["tool_use_id"]], text, bool(part.get("is_error")))
+         except (LookupError, TypeError, AttributeError, ValueError):  # an odd result: the job keeps what it had
+             pass
+         except Exception as e:  # noqa: BLE001  never let the reader die; logged by name only
