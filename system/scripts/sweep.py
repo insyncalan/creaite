@@ -66,6 +66,7 @@ the laptop's time zone and files each meeting under its local date, BL-107; "HH:
 Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
 """
 import argparse
+import io
 import json
 import os
 import re
@@ -895,7 +896,36 @@ def read_calendar_spec(spec_file):
     return spec
 
 
+def drop_leftover_calendar_drafts(keep=None):
+    """#369: the calendar reply Claude writes (system/staging/drafts/calendar*.json) holds the invite text as Outlook gave it,
+    join links and passcodes included. One left behind by an older run (a refused reply, a crash) is removed before a calendar
+    command starts, so it never reaches a backup. `keep` is the file about to be read. Returns how many were removed."""
+    n = 0
+    try:
+        found = sorted(paths.DRAFTS.glob("calendar*.json"))
+    except OSError:
+        return 0
+    for f in found:
+        if keep is not None and f.resolve() == Path(keep).resolve():
+            continue
+        if paths.consume_draft(f, file=io.StringIO()):
+            n += 1
+    if n:
+        debuglog.info("sweep", f"calendar: {n} leftover draft(s) removed")
+    return n
+
+
 def calendar(spec_file):
+    """The draft the reply was read from is removed whatever happens (saved, refused, unreadable, an error): #369, it holds the
+    raw invite text, so it must not stay in staging or reach a backup."""
+    try:
+        drop_leftover_calendar_drafts(keep=spec_file)
+        return _calendar(spec_file)
+    finally:
+        paths.consume_draft(spec_file)                                  # BL-118: the draft input is finished with
+
+
+def _calendar(spec_file):
     """Keep the day view's, the Inbox's and meeting prep's meetings: event ID, times, title, place, Teams or not, the
     organiser, and the invite's details for prep (BL-98, see invite_details). Ignored events (BL-97: private ones,
     ToDo invites…) are dropped and counted; a private meeting the rules let through becomes "Busy" (ID and Teams
@@ -937,7 +967,6 @@ def calendar(spec_file):
           + (" Calendar from today (past days kept as saved)." if fetch_from >= today_day
              else f" Calendar from {tracker.shown(fetch_from)} (filling a gap; past days kept as saved)."))
     tally_ignored(ignored)
-    paths.consume_draft(spec_file)                                      # BL-118: the calendar is saved
     return 0
 
 
@@ -2664,6 +2693,7 @@ def main(argv):
     if a.cmd == "calendar":
         return calendar(a.spec)
     if a.cmd == "calendar-window":
+        drop_leftover_calendar_drafts()                  # #369: a new fetch starts; a draft still here is from an earlier run
         print(json.dumps({"from": calendar_fetch_from().isoformat(), "to": calendar_window()[1].isoformat(),
                           "keep_from": calendar_window()[0].isoformat()}))
         return 0
