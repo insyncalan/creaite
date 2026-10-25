@@ -51,9 +51,12 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
 # ONE separator class for every label path (a label alone, a bare label, a phrase that stops): any punctuation or symbol (Unicode
 # P* and S*, and the rest of what is neither a letter, a digit nor a space) except a sentence end (. , ; ! ?).
 BARE_SEPARATORS = r"[^\w\s.,;!?]"
-# A separator run: a separator with sentence-end marks round it ("Password.:", "Passcode:!", "PIN?:"), or an ellipsis ("Passcode...").
-# Sentence-end marks alone are NOT a separator run ("Password! hunter" is two sentences; a documented trade-off).
-SEPRUN = rf"(?:[.,;!?]*{BARE_SEPARATORS}[.,;!?]*|\.{{2,}}|(?:\.\s*){{3,}})"
+# A separator, with at most ONE sentence-end mark in front of it ("Password.:", "Passcode?:"). Longer runs of marks are first read as one
+# ellipsis (a separator itself): _views() does that before any pattern is tried (_SE_RUN), so no pattern needs a repeated group
+# round a repeated mark, and none can backtrack catastrophically (2.6.8 review: ". " x 60 froze the old nested form).
+# Sentence-end marks alone are NOT a separator ("Password! hunter" is two sentences; a documented trade-off).
+SEPRUN = rf"[.,;!?]?{BARE_SEPARATORS}"
+_SE_RUN = re.compile(r"[.,;!?](?:\s*[.,;!?])+")                                    # two or more marks, spaces between: one ellipsis
 # a label followed by a value: a separator, "is", a word with a digit, or (v2.6 review) a word that switches from a small
 # letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
 _VAL = rf"(?:\s*(?:{SEPRUN}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
@@ -126,8 +129,8 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"       # "Meeting ID. 123 456"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-_ALONE_ITEM = rf"(?:\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"                                  # a separator run, "is" or "are"
-_ALONE_TAIL = rf"{_ALONE_ITEM}(?:{_ALONE_ITEM}|\s*[.,;!?\u2026]+)*"        # sentence-end marks only count after a separator
+_ALONE_ITEM = rf"(?:\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"                                  # a separator, "is" or "are"
+_ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
 LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?\s*$"
                          rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS})(?![\w-]){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
@@ -170,10 +173,16 @@ def _bad_url(url):
     return bool(HOSTS.search(url) or KEYED.search(url) or JOINPATH.search(url))
 
 
+def _ellipsis(m):
+    """A run of sentence-end marks read as one ellipsis, except a run of commas alone (a dial-in pause: ",,")."""
+    return m.group() if set(m.group().replace(" ", "").replace("\t", "").replace("\n", "")) == {","} else "\u2026"
+
+
 def _views(text):
     """The skeleton, and the same with look-alike letters (a Cyrillic "а" for an "a") read as the Latin ones."""
     s = skeleton(str(text if text is not None else "")[:LINE_MAX + 200])       # every test runs on a bounded text (timing)
     s = _SPACED.sub("PIN", s)
+    s = _SE_RUN.sub(_ellipsis, s)
     t = s.translate(confusables.TABLE)
     return [s, t] if t != s else [s]
 

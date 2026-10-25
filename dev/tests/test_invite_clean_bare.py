@@ -588,10 +588,15 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"p-is", "p-is-colon"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_sentence_end_allowance_removed(self):
-        m = mutant('SEPRUN = rf"(?:[.,;!?]*{BARE_SEPARATORS}[.,;!?]*|\\.{{2,}}|(?:\\.\\s*){{3,}})"', 'SEPRUN = rf"(?:{BARE_SEPARATORS})"')
+        m = mutant('SEPRUN = rf"[.,;!?]?{BARE_SEPARATORS}"', 'SEPRUN = rf"(?:{BARE_SEPARATORS})"')
         bad = self.next_line_bad(m)
-        self.assertTrue({"s-dot-colon-nl", "s-q-colon", "s-dots", "s-ellipsis"} <= set(bad), bad)
+        self.assertTrue({"s-dot-colon-nl", "s-q-colon"} <= set(bad), bad)
         self.assertNotEqual(m.scrub("Password.: hunter", 140), "")
+
+    def test_ellipsis_collapse_removed(self):
+        m = mutant("    s = _SE_RUN.sub(_ellipsis, s)\n", "")
+        bad = self.next_line_bad(m)
+        self.assertTrue({"s-dots"} <= set(bad), bad)
 
     def test_digit_rule_removed(self):
         m = mutant('rf"|(?<![\\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\\w-])\\s*[.,;!?\\u2026]+\\s*\\S*\\d"', 'rf"|(?!)"')
