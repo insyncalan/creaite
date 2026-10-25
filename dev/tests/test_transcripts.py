@@ -410,7 +410,7 @@ class Runs(unittest.TestCase):
     def test_the_run_reads_everything_and_writes_nothing_itself(self):
         self.run_job("load", route_steps(chat=False))
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
-        for tool in ("read_resource", "outlook_calendar_search", "teams_list_chats", "chat_message_search"):
+        for tool in ("read_resource", "outlook_calendar_search"):      # #365 M2: the two the prompt names (more before the tools delta)
             self.assertIn(M365 + tool, seen["allowed"])
         self.assertFalse([t for t in seen["allowed"] if t.startswith(("Write", "Edit"))])        # the server writes the files, not Claude
         self.assertIn(M365 + "outlook_send_mail", seen["disallowed"])
