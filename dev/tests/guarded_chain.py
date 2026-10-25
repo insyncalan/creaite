@@ -50,13 +50,13 @@ CHAIN4_FILE = "dev/proposals/GUARDED-2.6.4.chain"
 CHAIN4_SHA256 = "46c5fd81e62ef6d2b9b915db910277977652f879b84e4575b975fdc4824d84b3"
 BASE4 = "e6389af8bd466dabd768b7f1a4fd170922fda255"
 # The 2.6.7 chain (dev/proposals/GUARDED-2.6.7.chain: #347 words, #339 typed refresh, sweep without the home folder, the followed-people
-# rule; all in live_server.py): its own marker, list and pin. BASE5 is the published 2.6.5 release commit (tag v2.6.5, main's merge
-# 5798101b): the 2.6.6 release is not published yet and changes no guarded file, so a range from 2.6.5 is the same range. The range now
+# rule; all in live_server.py): its own marker, list and pin. BASE5 is the published 2.6.6 release commit (tag v2.6.6, main's merge
+# 8e4e1f07); 2.6.6 changed no guarded file after 2.6.5 (5798101b), so the range is the same range as from 2.6.5. The range
 # starts after the 2.6.4 chain. `python3 dev/tests/guarded_chain.py` prints the pin; change it only with the list, on Alan's say.
 CHAIN5_MARKER = "Guarded 2.6.7 chain:"
 CHAIN5_FILE = "dev/proposals/GUARDED-2.6.7.chain"
 CHAIN5_SHA256 = "eb4403611bf69c3342be377d78726c0679c4bfea061e98b20522c3fc83a617b5"
-BASE5 = "5798101b4388b6e38dc278bcd71be67e02d0a52c"
+BASE5 = "8e4e1f07c3deed9e6d1fded32ace8bba46d51200"
 BASE = BASE5
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
