@@ -77,8 +77,9 @@ function sourceLine(/** @type {any} */ r) {
   const match = r.p ? null : r.why;
   where = fdText(where);
   /* #343: pieces joined by one separator each, so an empty place or match leaves no stray or doubled dot */
-  const bits = [where, match ? String(match) : "", link].filter(x => x);
-  return bits.length ? <span class="icsrc">{bits.map((x, i) => <>{i ? " · " : null}{x}</>)}</span> : null;
+  const bits = [where, match ? String(match) : ""].filter(x => x);
+  /* #341 (Jarvis): the Open source link sits at the right of the cell, never in the middle of the title, so a click there opens the peek */
+  return bits.length || link ? <span class="icsrc"><span class="icsrct">{bits.map((x, i) => <>{i ? " · " : null}{x}</>)}</span>{link}</span> : null;
 }
 
 /** A due date on a weekend: say so, with the two working days beside it (BL-180); a click edits the proposal (core/fields.js). @param {{r: any}} props */

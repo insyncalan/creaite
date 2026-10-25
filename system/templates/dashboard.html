@@ -4261,6 +4261,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-intake-review .icchg{font-size:var(--fs-md);line-height:var(--lh-22);font-weight:600;   /* #341 item 2 (Alan, 24-10-2026): 14 px like the title; emphasis by weight, not size */ color:var(--ink);margin:2px 0}
 #v-intake-review .icchg .ickind{margin-right:4px}#v-intake-review .icchg .indiv{font-weight:600}#v-intake-review .icchg .icroutine{color:var(--muted)}
 #v-intake-review .icchg .icsrc{font-size:var(--fs-sm);font-weight:400;color:var(--muted)}
+#v-intake-review .icsrc{display:flex;align-items:baseline;justify-content:space-between;gap:12px} #v-intake-review .icsrc .srclink{flex:none;margin-left:auto}   /* #341: the link at the right edge, the text keeps the left */
 #v-intake-review .icq{display:block;font-size:var(--fs-md);line-height:var(--lh-22);color:var(--ink);padding-left:10px;margin:4px 0}
 #v-intake-review tr.irprop:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:-2px}
 #v-intake-review tr.irprop .iracts{width:1%;white-space:nowrap}
@@ -78816,11 +78817,14 @@ ${d5.text}`);
     ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
     const match = r4.p ? null : r4.why;
     where2 = fdText(where2);
-    const bits = [where2, match ? String(match) : "", link].filter((x5) => x5);
-    return bits.length ? /* @__PURE__ */ u4("span", { class: "icsrc", children: bits.map((x5, i5) => /* @__PURE__ */ u4(S2, { children: [
-      i5 ? " · " : null,
-      x5
-    ] })) }) : null;
+    const bits = [where2, match ? String(match) : ""].filter((x5) => x5);
+    return bits.length || link ? /* @__PURE__ */ u4("span", { class: "icsrc", children: [
+      /* @__PURE__ */ u4("span", { class: "icsrct", children: bits.map((x5, i5) => /* @__PURE__ */ u4(S2, { children: [
+        i5 ? " · " : null,
+        x5
+      ] })) }),
+      link
+    ] }) : null;
   }
   function WeekendNote({ r: r4 }) {
     const f5 = WKRVF[
