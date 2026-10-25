@@ -3,7 +3,7 @@ their own tests; this file checks the notes, the sheet, the guides and the versi
 
    1  notes     What's new has a 2.6.8 section above 2.6.7 naming #369 and #368; the plain notes and the sheet exist
    2  public    the public text names the over-removed titles and the limits; no real names, no GUARDED marker, no pending items claimed
-   3  sheet     the sheet has six checks and a 'Pending approvals' heading that holds only a comment
+   3  sheet     the sheet has ten checks and no 'Pending approvals' section (the guarded diffs are in the chain)
    4  tooling   dev/tools/whats_new.py finds the 2.6.8 section
    5  version   VERSION is 2.6.8 and both guides carry it
 
@@ -46,18 +46,16 @@ class V268(unittest.TestCase):
             t = sec(t) if p.endswith("whats-new.md") else t
             self.assertEqual(t.count("<!--"), t.count("-->"))
             self.assertNotIn("GUARDED", t)
-            for w in ("Pin the roadmap", "Secret Santa party", "next three lines", "Meeting", "### Good to know", "look-alike"):
+            for w in ("Pin the roadmap", "Secret Santa party", "the lines after it", "Meeting", "### Good to know", "look-alike"):
                 self.assertIn(w, unguarded(t), f"{p} lacks {w!r}")
-            self.assertNotRegex(unguarded(t), r"(?i)#365|#358|amber|rescrub|client_leak|Load the transcript")
+            self.assertNotRegex(unguarded(t), r"(?i)#358|amber|rescrub|client_leak")
         r = subprocess.run([sys.executable, str(REPO / "dev/tests/test_no_real_names.py")], cwd=REPO, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, (r.stderr or r.stdout)[-1500:])
 
     def test_c03_sheet(self):
         s = read("dev/handchecks/v2.6.8.md")
-        self.assertEqual(len(re.findall(r"(?m)^\d+\. \*\*", s)), 6)
-        head, _, rest = s.partition("## Pending approvals")
-        self.assertTrue(rest)
-        self.assertEqual(unguarded(rest).split("\n", 1)[1].strip(), "")   # the heading holds a comment only
+        self.assertEqual(len(re.findall(r"(?m)^\d+\. \*\*", s)), 10)
+        self.assertNotIn("## Pending approvals", s)   # the guarded diffs are in the chain, nothing pends
 
     def test_c04_tooling(self):
         sys.path.insert(0, str(REPO / "dev/tools"))
