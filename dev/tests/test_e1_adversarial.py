@@ -1107,7 +1107,7 @@ class Findings(unittest.TestCase):
         label and its window then removes the next ordinary line. Order of layers: anchors, then scrub."""
         self.assertIn("See you Monday.", kept("Meeting ID\n\n412 889 330\n\nSee you Monday."))
 
-    @unittest.expectedFailure
+    # fixed by v269-b (merged 26-10-2026): no longer an expected failure
     def test_L12_not_idempotent_after_the_cap(self):
         """LOW: a line that would cross the 1,500 cap ends the output and leaves a trailing blank line; a second pass strips it (P2 broken)."""
         t = "Hi.\n\n" + "word " * 400 + "\n\nBye."
@@ -1261,7 +1261,7 @@ class GatewayProps(unittest.TestCase):
             except (ValueError, OSError):
                 pass
 
-    @unittest.expectedFailure
+    # fixed by v269-b (merged 26-10-2026): no longer an expected failure
     def test_G01_extreme_nesting_raises_recursionerror(self):
         """LOW: a 2 MB file of 1,000,000 nested arrays raises RecursionError (neither OSError nor ValueError, which the readers catch).
         Needs a hostile or corrupt calendar.json; the sweep never writes one."""
@@ -1272,7 +1272,7 @@ class GatewayProps(unittest.TestCase):
         except (ValueError, OSError):
             pass
 
-    @unittest.expectedFailure
+    # fixed by v269-b (merged 26-10-2026): no longer an expected failure
     def test_G04_stamped_row_with_non_list_attendees_raises_typeerror(self):
         """MEDIUM: a stamped row whose attendees is a number (or any non-iterable) raises TypeError out of read(); the readers catch
         OSError and ValueError only, so one bad row takes the whole day view down."""
@@ -1282,7 +1282,7 @@ class GatewayProps(unittest.TestCase):
         except (ValueError, OSError):
             pass
 
-    @unittest.expectedFailure
+    # fixed by v269-b (merged 26-10-2026): no longer an expected failure
     def test_G02_stamped_row_field_types_are_not_checked(self):
         """LOW: a stamped row's short fields are served as stored whatever their type (title as a list, start as a number)."""
         write(self.path, self.cal([{"id": "a", "title": ["x"], "start": 5, "end": {"a": 1}, "where": None, "clean": 1}]))
