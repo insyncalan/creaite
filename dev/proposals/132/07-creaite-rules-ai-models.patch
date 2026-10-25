@@ -1,0 +1,12 @@
+diff --git a/system/creaite-rules.md b/system/creaite-rules.md
+index b9f094b1..6d5f9968 100644
+--- a/system/creaite-rules.md
++++ b/system/creaite-rules.md
+@@ -17,6 +17,7 @@ This is Alan's personal portfolio reporting system. It holds fewer than 5 projec
+ - **One writer.** Only `system/scripts/tracker.py apply` writes to the database. Never edit `system/tracker.db` with ad-hoc SQL, and never write to `tracker-view.xlsx` except through `excel_sync.py export`.
+ - **The schema is the rulebook.** If an apply fails validation, fix the proposal; never loosen `schema.sql` to make data fit without Alan's agreement.
+ - **Source on every row.** Each item references its file, email or chat.
++- **AI models (#132).** Settings › Essentials › AI models picks the model for each kind of job. Claude is the default and the only recipient of confidential material: one gate on the one function that builds a provider request refuses anything marked confidential, anything unknown and any other provider, and never falls back from Claude to another provider. Only AI on selected text may use another provider (OpenAI, text-only, a closed host list, `store: false`). A provider's key lives only in this Mac's keychain, never in an environment, argument, log, backup, staging file or chat, and no run can read or print it (`providers.py` is on the never list). A key, token or host for Claude in the shell that started the live server is removed from every run it starts.
+ - **Confidential material.** Exclude anything marked confidential or restricted from client reports unless Alan says otherwise.
+ 
+ ## Folder map
