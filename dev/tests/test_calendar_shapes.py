@@ -91,6 +91,42 @@ class Shapes(unittest.TestCase):
         self.assertEqual(run(v, "import sweep\nprint(sweep.rescrub_calendar())").stdout.strip(), "0")        # then nothing to do
 
 
+class Recurrence(unittest.TestCase):
+    """The recurrence is free text (Cap, 18:57): calendar_row scrubbed nothing, and a passcode in it was written to calendar.json."""
+
+    def row(self, text, mod=None):
+        import sweep
+        return (mod or sweep).calendar_row({"id": "r1", "title": "Weekly sync", "recurrence": text}, "09:00", "10:00", False)
+
+    def test_a_secret_in_the_recurrence_is_gone_on_the_first_save(self):
+        for text in ("RRULE Passcode 9999", "weekly Meeting ID: 987 654 321", "every week, PIN 4417", "https://zoom.example.invalid/j/5550001111?pwd=ab"):
+            row = self.row(text)
+            self.assertNotIn("recurrence", row, text)
+            self.assertNotRegex(json.dumps(row), r"9999|987 654|4417|5550001111")
+
+    def test_an_ordinary_recurrence_is_kept(self):
+        for text in ("weekly", "RRULE:FREQ=WEEKLY;BYDAY=MO", "Every 2 weeks on Monday"):
+            self.assertEqual(self.row(text)["recurrence"], text)
+
+    def test_rescrub_removes_it_from_a_saved_file(self):
+        row = {"id": "a", "start": "09:00", "end": "10:00", "title": "Sync", "sensitivity": "normal", "recurrence": "RRULE Passcode 9999"}
+        v, cal = vault(self, {"fetched": "x", "to": "y", "days": {"2026-10-26": [row]}})
+        run(v, "import sweep\nprint(sweep.rescrub_calendar())")
+        self.assertNotIn("9999", cal.read_text(encoding="utf-8"))
+
+    def test_mutant_without_the_scrub_in_calendar_row(self):
+        import sweep
+        src = (SCRIPTS / "sweep.py").read_text(encoding="utf-8")
+        old = 'rec = invite_clean.scrub(ev.get("recurrence"), 40) if ev.get("recurrence") else ""'
+        self.assertIn(old, src)
+        spec = importlib.util.spec_from_loader("sweep_rec_mutant", loader=None)
+        mod = importlib.util.module_from_spec(spec)
+        mod.__file__ = str(SCRIPTS / "sweep.py")
+        exec(compile(src.replace(old, 'rec = str(ev.get("recurrence") or "")[:40]', 1), "sweep_rec_mutant", "exec"), mod.__dict__)
+        self.assertIn("9999", json.dumps(self.row("RRULE Passcode 9999", mod)))
+        self.assertTrue(sweep)
+
+
 class Readers(unittest.TestCase):
     def test_no_reader_fails_on_an_odd_file(self):
         v, _cal = vault(self)

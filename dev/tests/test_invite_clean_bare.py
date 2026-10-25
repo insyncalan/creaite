@@ -263,6 +263,54 @@ NEXT_LINE = [
     ("m-td-removed", "<td>Meeting ID:</td><td>Passcode: 4417</td><td>987 654 321</td>", "987 654 321"),
     ("m-li", "<ul><li>__Passcode:__</li><li>4417</li></ul>", "4417"),
     ("m-li-ids", "<ul><li>Meeting ID: Passcode:</li><li>987 654 321</li><li>4417</li></ul>", "4417"),
+    ("c-cut-label", "/" * 1998 + "Passcode: 4417", "4417"),                                # Cap's 18:41 shapes: a line cut in a label
+    ("c-cut-pin", "." * 1999 + "PIN 4417", "4417"),
+    ("c-cut-webinar", "|" * 1990 + "Webinar ID 987 654 321", "987 654 321"),
+    ("c-mc-pin", "PI\u0903N: 4417", "4417"),                                                 # a spacing mark inside a label
+    ("c-mc-meeting", "Meeting I\u0903D: 987 654 321", "987 654 321"),
+    ("c-mc-password", "Passw\u0903ord: hunter2x", "hunter2x"),
+    ("c-md-reference", "[Meeting ID][1]:\n987 654 321\nBye", "987 654 321"),                # markdown reference and titled links
+    ("c-md-titled", "[Passcode](http://x.example.invalid \"t\")\nhunter\nBye", "hunter"),
+    ("c-md-angle", "[PIN](<https://example.org/a b>):\n4417", "4417"),
+    ("c-md-double", "[[Meeting ID]](http://x.example.invalid):\n987 654 321", "987 654 321"),
+    ("c-footnote", "Meeting ID\u2474:\n987 654 321", "987 654 321"),
+    ("c-plural-pin", "PINs: 4417", "4417"),                                                  # bare11's list
+    ("c-plural-id", "Meeting IDs: 987 654 321", "987 654 321"),
+    ("c-plural-webinar", "Webinar IDs 987 654 321", "987 654 321"),
+    ("c-hyphen-pin", "Pin-code: 4417", "4417"),
+    ("c-hyphen-pin-nl", "Pin-Code:\n4417", "4417"),
+    ("c-hyphen-api", "API-key: kq7Zx2", "kq7Zx2"),
+    ("c-hyphen-pass", "Pass-word: hunter2", "hunter2"),
+    ("c-nb-hyphen", "Meeting\u2011ID 987 654 321", "987 654 321"),
+    ("c-en-dash-id", "Meeting\u2013ID 987 654 321", "987 654 321"),
+    ("c-nb-hyphen-pin", "Pin\u2011code: 4417", "4417"),
+    ("c-nb-hyphen-api", "API\u2011key: kq7Zx2", "kq7Zx2"),
+    ("c-nb-hyphen-pass", "Pass\u2011word hunter2", "hunter2"),
+    ("c-conf-id", "Conf ID 987 654 321", "987 654 321"),
+    ("c-meet-id", "Meet ID 987 654 321", "987 654 321"),
+    ("c-video-id", "Video ID 987 654 321", "987 654 321"),
+    ("c-goto-id", "GoTo ID 987 654 321", "987 654 321"),
+    ("c-webinar-hash", "Webinar # 987 654 321", "987 654 321"),
+    ("c-conference-hash", "Conference # 987 654 321", "987 654 321"),
+    ("c-event-hash", "Event # 987 654 321", "987 654 321"),
+    ("c-session-hash", "Session # 987 654 321", "987 654 321"),
+    ("c-zoom-id-number", "Zoom ID number 987 654 321", "987 654 321"),
+    ("c-bare-id", "ID 4417", "4417"),
+    ("c-bare-id-dash", "ID - 4417", "4417"),
+    ("c-bare-id-stop", "ID. 4417", "4417"),
+    ("c-bare-id-colon-nl", "ID:\n4417", "4417"),
+    ("c-key-stop-nl", "Key.\n4417", "4417"),
+    ("c-two-labels-bare", "Meeting ID and Code are:\n987 654 321\n4417\nBye", "4417"),
+    ("c-header-row", "Meeting ID | Code\n987 654 321 | 4417\nBye", "4417"),
+    ("c-colon-own-line", "Passcode\n:\n4417", "4417"),
+    ("c-table", "| Passcode |\n|---|\n| 4417 |", "4417"),
+    ("c-escaped-html", "&lt;b&gt;Passcode&lt;/b&gt;\n4417", "4417"),
+    ("c-wbr", "P<wbr>asscode: 4417", "4417"),
+    ("c-comment", "Pass<!-- -->code: 4417", "4417"),
+    ("c-o-p", "P<o:p></o:p>asscode: 4417", "4417"),
+    ("c-code-tag", "Pass<code>code</code>: 4417", "4417"),
+    ("c-hangul-filler", "Pa\u3164sscode: 4417", "4417"),
+    ("c-braille-blank", "Meeting\u2800ID: 4417", "4417"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
@@ -442,6 +490,10 @@ class Controls(unittest.TestCase):
             self.assertEqual(I.scrub(t, 140), t, t)
         for t in ("pass_code", "meeting_id 4417", "Pin_board", "api_key abc", "snake_case_token abcdq"):
             self.assertEqual(I.scrub(t, 140), "", t)
+
+    def test_project_id_with_a_short_number_stays(self):
+        """"ID" with three digits or more is a label; "Project ID 12 kickoff" is a title (an existing expectation)."""
+        self.assertEqual(I.scrub("Project ID 12 kickoff", 140), "Project ID 12 kickoff")
 
     def test_known_over_removal(self):
         """Fail closed costs a few ordinary titles: any word after pin / password / code that is not on the allow-list is a value."""
@@ -676,6 +728,32 @@ class Mutants(unittest.TestCase):
     def test_digit_after_stop_off(self):
         m = mutant("value = self.digit_wait and bool(re.search", "value = False and bool(re.search")
         self.assertIn("m-stop-digits", self.next_line_bad(m))
+
+    SHAPE_MUTANTS = [
+        # (what is removed, source text, replacement, rows that must then leak)
+        ("the glue of a cut label", 'glue = " " if at else ""', 'glue = " "', {"c-cut-label", "c-cut-pin", "c-cut-webinar"}),
+        ("titled links", "\\([^()\\n]{0,500}\\)", "\\((?!)\\)", {"c-md-titled", "c-md-angle"}),
+        ("double brackets", "_DOUBLE.sub(r\"[\\1]\", s)", "s", {"c-md-double"}),
+        ("the footnote mark", "\\s*[(\\[]\\d{{1,3}}[)\\]]|", "", {"c-footnote"}),
+        ("joining dashes", "t = _JOINING_DASH.sub(", "t = (lambda f, x: x)(", {"c-nb-hyphen-pin", "c-nb-hyphen-api", "c-nb-hyphen-pass"}),
+        ("the header-row rule", "return len(found) >= 2 and not", "return False and not", {"c-header-row"}),
+        ("the table rule line", "(not dropped and not re.search(r\"\\w\", ln))", "(False)", {"c-colon-own-line", "c-table"}),
+        ("escaped markup", "t = _strip_tags(t)                     # escaped markup", "pass                     # escaped markup", {"c-escaped-html"}),
+        ("the wbr tag", "|mark|wbr|code|", "|mark|", {"c-wbr", "c-code-tag"}),
+        ("the invisible fillers", "and c not in _INVISIBLE", "", {"c-hangul-filler", "c-braille-blank"}),
+        ("the spacing marks", '("Mn", "Me", "Mc")', '("Mn", "Me")', {"c-mc-pin", "c-mc-meeting", "c-mc-password"}),
+    ]
+
+    def test_each_new_shape_has_its_rule(self):
+        for what, old, new, must in self.SHAPE_MUTANTS:
+            src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+            self.assertIn(old, src, what)
+            spec = importlib.util.spec_from_loader("invite_clean_shape_mut", loader=None)
+            mod = importlib.util.module_from_spec(spec)
+            mod.__file__ = str(SCRIPTS / "invite_clean.py")
+            exec(compile(src.replace(old, new, 1), "invite_clean_shape_mut", "exec"), mod.__dict__)
+            bad = set(self.next_line_bad(mod))
+            self.assertTrue(must & bad, f"{what}: no row of {sorted(must)} leaked ({sorted(bad)[:5]})")
 
     def test_key_label_rule_off(self):
         m = mutant("(?:{_BARE}|{_BARE_LABELS}|ids?)(?![\\w-]){_ALONE_TAIL}", "(?:{_BARE_LABELS}|ids?)(?![\\w-]){_ALONE_TAIL}")
