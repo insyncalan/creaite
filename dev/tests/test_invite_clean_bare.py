@@ -538,7 +538,7 @@ class Controls(unittest.TestCase):
 
     def test_times_dates_and_small_numbers_are_not_ids(self):
         """A label that ends in a stop takes the next number; a time, a date, a room number or "Item 12" is not an ID value."""
-        for ln in ("Lunch at 12:30", "25-10-2026", "2026-10-25", "Room 4", "Item 12", "Room 204", "Starts 10:00", "Version 3.2", "Call me on 12 Oct"):
+        for ln in ("Lunch at 12:30", "Room 4", "Item 12", "Room 204", "Starts 10:00", "Version 3.2"):      # bare22: a DATE after a stop-label now goes
             body = "Bring your staff ID.\n" + ln
             self.assertEqual(I.invite_text(body), body, ln)
             body = "Please bring your ID.\n" + ln + "\nNext"
@@ -757,7 +757,8 @@ class Mutants(unittest.TestCase):
 
     def test_hard_window_off(self):
         m = mutant('self.window = WINDOW if kind == "open" else', 'self.window = 0 if kind == "open" else')
-        self.assertTrue({"nl-function", "nl-hyphen", "h-restart"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+        # bare22: the wide qualifier also catches "Password reset -" style rows, so fewer rows depend on the window alone
+        self.assertTrue({"nl-function", "h-restart"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_window_shortened(self):
         m = mutant("WINDOW = 3 ", "WINDOW = 2 ")
@@ -826,7 +827,8 @@ class Mutants(unittest.TestCase):
 
     def test_is_tail_removed(self):
         m = mutant('\\s*{SEPRUN}|\\s*_|\\s+(?:is|are)', '\\s*{SEPRUN}|\\s*_|\\s+(?:zzz|zzzz)')
-        self.assertTrue({"p-is", "p-is-colon"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+        # bare22: "Passcode is" is also a qualified label now (a one-word phrase), so removing the "is" tail alone leaks nothing
+        self.assertEqual(self.next_line_bad(m), [])
 
     def test_sentence_end_allowance_removed(self):
         m = mutant('SEPRUN = rf"[.,;!?]?{BARE_SEPARATORS}"', 'SEPRUN = rf"(?:{BARE_SEPARATORS})"')
@@ -869,7 +871,7 @@ class Mutants(unittest.TestCase):
         self.assertEqual(m.scrub("ID123456789", 140), "ID123456789")      # bare20: PIN4417 and Pwd4417 are also caught by GLUED_VALUE (its own mutants)
 
     def test_digit_after_stop_off(self):
-        m = mutant("return self.digit_wait and not dropped and not self.pending and id_number(ln)", "return False and id_number(ln)")
+        m = mutant("return self.digit_wait and not dropped and not self.pending and (id_number(ln) or _date_ish(ln))", "return False and id_number(ln)")
         self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     SHAPE_MUTANTS = [
@@ -879,7 +881,7 @@ class Mutants(unittest.TestCase):
         ("double brackets", "_DOUBLE.sub(r\"[\\1]\", s)", "s", {"c-md-double"}),
         ("the footnote mark", "\\s*[(\\[]\\d{{1,3}}[)\\]]|", "", {"c-footnote"}),
         ("joining dashes", "t = _JOINING_DASH.sub(", "t = (lambda f, x: x)(", {"c-nb-hyphen-pin", "c-nb-hyphen-api", "c-nb-hyphen-pass"}),
-        ("the header-row rule", "return len(found) >= 2 and not", "return False and not", {"c-header-row"}),
+        # bare22: "the header-row rule" mutant is redundant now (a label plus a short phrase is a qualified label)
         ("the table rule line", "(not dropped and not re.search(r\"[^\\W_]\", ln))", "(False)", {"c-colon-own-line", "c-table"}),
         ("escaped markup", "t = _strip_tags(t)                     # escaped markup", "pass                     # escaped markup", {"c-escaped-html"}),
         ("the wbr tag", "|mark|wbr|code|", "|mark|", {"c-wbr", "c-code-tag"}),
@@ -983,8 +985,8 @@ class RerunMutants(unittest.TestCase):
                 ("_MDLINK.sub(r\" \\1 \", _MDLINK.sub(r\" \\1 \", _DOUBLE.sub(r\"[\\1]\", s)))", "_MDLINK.sub(r\" \\1 \", _DOUBLE.sub(r\"[\\1]\", s))", "[![Passcode](i.png)](https://e.org)\n4417"),
                 ("(?:\\{[^{}\\n]{0,100}\\})?\")", "\")", "[Passcode](u){.cls}\n4417"),
                 ("or _KEY_ALONE.fullmatch(v.strip(", "or False and _KEY_ALONE.fullmatch(v.strip(", "Key\n4417"),
-                ("self.age < WINDOW - 1 and _weak_phrase(ln)", "False", "Passcode:\nPlease enter\n4417"),
-                ("\\s*#(?:\\s*(?:number|no\\.?))?|\"", "\\s*#|\"", "Meeting # number\n4417")):
+                ("self.age < WEAK_MAX and _weak_phrase(ln)", "False", "Passcode:\nPlease enter\n4417"),
+                ):      # bare22: "Meeting # number" is also a qualified label now, so that mutant is no longer pinned alone
             m = mutant(old, new)
             self.assertIn(expect, self.leaks(m, [r for r in RERUN_GONE if r[0] == expect]), old)
 

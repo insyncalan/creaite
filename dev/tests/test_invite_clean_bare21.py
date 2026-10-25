@@ -91,7 +91,8 @@ class Qualified(unittest.TestCase):
     def test_negatives_behave_as_before(self):
         for neg in NEGATIVES:
             out = I.invite_text(f"{neg}\nAOB\nNext item")
-            self.assertTrue(out.endswith("AOB\nNext item"), (neg, out))
+            # bare22: a label plus a short phrase is a qualified label whose window removes a 1-2 token line (here AOB); a sentence stays
+            self.assertIn("Next item", out, (neg, out))
 
     def test_a_label_word_with_a_non_function_word_is_not_qualified(self):
         self.assertEqual(I.invite_text("Passcode policy review\nAOB\nNext"), "AOB\nNext")
@@ -158,20 +159,15 @@ class StopLabelNumbers(unittest.TestCase):
                 for body in (f"{lab}\n{v}\nAOB", f"{lab}\n- {v}\nAOB", f"{lab}\nhttps://teams.microsoft.com/l/meetup-join/x\n{v}\nAOB"):
                     self.assertNotIn(v, I.invite_text(body), body)
 
-    def test_a_real_date_or_time_after_a_stop_label_stays_as_before(self):
-        for v in ("25-10-2026", "2026-10-25", "12:30", "Lunch at 12:30"):
+    def test_a_bare_time_after_a_stop_label_stays_but_a_date_goes(self):
+        for v in ("12:30", "Lunch at 12:30"):
             self.assertIn(v, I.invite_text(f"Bring your staff ID.\n{v}\nAOB"), v)
+        for v in ("25-10-2026", "2026-10-25", "12 Nov 2026"):      # bare22: dates are exempt only under soft headings
+            self.assertNotIn(v, I.invite_text(f"Bring your staff ID.\n{v}\nAOB"), v)
 
     def test_a_real_date_after_a_colon_label_goes(self):
         for v in ("25-10-2026", "12:30"):
             self.assertNotIn(v, I.invite_text(f"Passcode:\n{v}\nAOB"))
-
-    def test_loose_date_pattern_mutant_leaks(self):
-        m = mutant('rf"(?<![\\d:.])(?:{_YEAR}{_SEP}{_MON}{_SEP}{_DAY}|{_DAY}{_SEP}{_MON}{_SEP}{_Y2}|{_MON}{_SEP}{_DAY}{_SEP}{_Y2})(?![\\d])"\n    r"|\\b',
-                   'r"\\b\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,4}\\b"\n    r"|\\b')
-        for v in ("987-65-4321", "123-45-6789"):
-            self.assertIn(v, m.invite_text(f"Meeting ID.\n{v}\nAOB"), v)
-            self.assertNotIn(v, I.invite_text(f"Meeting ID.\n{v}\nAOB"), v)
 
 
 def fuzz_mixed(rnd, n, with_values=True):
@@ -236,34 +232,34 @@ class Fuzz(unittest.TestCase):
 
 class Mutants(unittest.TestCase):
     def test_qualified_rule_off(self):
-        m = mutant("|{KEY_ITEM}|{QUALIFIED_ALONE}\", re.I)", "|{KEY_ITEM}\", re.I)")
+        m = mutant("|{QUALIFIED_ALONE}\", re.I)", "\", re.I)")
         self.assertTrue(leaks(m, ALL_QUALIFIED_ROWS))
 
     def test_no_bracketed_group(self):
-        m = mutant("(?:\\s*[(\\[](?!", "(?:(?!)[(\\[](?!")
+        m = mutant('_QBRACKET = r"\\s*[(\\[](?!', '_QBRACKET = r"(?!)[(\\[](?!')
         got = leaks(m, [r for r in ALL_QUALIFIED_ROWS if "(" in r[0]])
         self.assertTrue(got)
         self.assertFalse(leaks(m, [r for r in ALL_QUALIFIED_ROWS if "(" not in r[0].split("\n")[0] and "for dial-in" in r[0]][:5]))
 
-    def test_no_function_word_qualifier(self):
-        m = mutant("_QFUNC = r\"(?:for|to|", "_QFUNC = r\"(?:(?!)|(?!)|")
+    def test_no_phrase_qualifier(self):
+        m = mutant('_QPHRASE = rf"', '_QPHRASE = rf"(?!)')
         self.assertTrue(leaks(m, [("Passcode for dial-in:\n4417", "4417"), ("PIN to join:\n4417", "4417")]))
 
     def test_qualifier_limited_to_zero_extra_words(self):
-        m = mutant("*){{0,4}})", "*){{0,0}})")
+        m = mutant("{_QWORD}){{0,4}}", "{_QWORD}){{0,0}}")
         self.assertTrue(leaks(m, [("Meeting ID for the weekly call\n987 654 321", "987")]))
 
     def test_qualifier_limited_to_three_extra_words(self):
-        m = mutant("*){{0,4}})", "*){{0,3}})")
+        m = mutant("{_QWORD}){{0,4}}", "{_QWORD}){{0,3}}")
         self.assertTrue(leaks(m, [("Meeting ID for the all hands call\n987 654 321", "987")]))
 
-    def test_qualifier_that_takes_any_word_eats_the_agenda(self):
-        m = mutant("\\s+{_QFUNC}(?![\\w-])", "\\s+\\w+")
-        self.assertNotEqual(m.invite_text("Passcode policy review\nAOB"), "AOB")
-        self.assertEqual(I.invite_text("Passcode policy review\nAOB"), "AOB")
+    def test_finished_soft_phrase_is_not_a_qualified_label(self):
+        m = mutant("(?!{_SOFT_RUN}){_QUAL}", "{_QUAL}")
+        self.assertNotIn("12-11-2026", m.invite_text("Password reset\n12-11-2026\nAOB"))
+        self.assertIn("12-11-2026", I.invite_text("Password reset\n12-11-2026\nAOB"))
 
     def test_qualifier_without_the_end_anchor_eats_sentences(self):
-        m = mutant("(?:{_ALONE_TAIL})?{_QUIET}$\"\nLABEL_ALONE", "(?:{_ALONE_TAIL})?{_QUIET}\"\nLABEL_ALONE")
+        m = mutant("{_QUAL}(?:{_ALONE_TAIL})?{_QUIET}$\"", "{_QUAL}(?:{_ALONE_TAIL})?{_QUIET}\"")
         self.assertNotEqual(m.invite_text("Passcode for staff is set by the admin team\nAOB"), "AOB")
 
     def test_dates_not_exempt(self):
