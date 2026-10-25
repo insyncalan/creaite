@@ -895,10 +895,12 @@ SEEDS = {name: 7000 + i for i, (name, _) in enumerate(GENERATORS)}
 # and the default seed, re-measured 26-10-2026. They may only go DOWN (fix a finding, lower the number). Isolated data loss likewise.
 # (Measured under option (c) before: leaks localised 283, digit_styles 36, html_split 234, phones 218; loss localised 679, digit_styles 684,
 # agenda_isolated 4660, agenda_list 1015, table_cells 5064, noise 268, phrasing 109. D trades a few more leaked bodies for much less loss.)
-RATCHET_LEAK = {"localised": 315, "digit_styles": 75, "html_split": 257, "phones": 220, "urls": 200, "reply_chain": 1, "agenda_isolated": 0,
-                "agenda_list": 0, "table_cells": 0, "templates": 0, "noise": 428, "phrasing": 119, "innocent": 0}
-RATCHET_LOSS = {"localised": 406, "digit_styles": 533, "html_split": 771, "phones": 0, "urls": 0, "reply_chain": 0, "agenda_isolated": 645,
-                "agenda_list": 129, "table_cells": 428, "templates": 762, "noise": 115, "phrasing": 163, "innocent": 3451}
+RATCHET_LEAK = {"localised": 53, "digit_styles": 30, "html_split": 0, "phones": 2, "urls": 0, "reply_chain": 1, "agenda_isolated": 0,
+                "agenda_list": 0, "table_cells": 0, "templates": 0, "noise": 67, "phrasing": 52, "innocent": 0}
+# re-pinned after merging v269-b, v269-c (26-10-2026, order b then c). digit_styles loss is 539 against 533 before (6 more, the cost of
+# c's stricter number shapes); every other count is lower.
+RATCHET_LOSS = {"localised": 105, "digit_styles": 539, "html_split": 69, "phones": 0, "urls": 0, "reply_chain": 0, "agenda_isolated": 546,
+                "agenda_list": 119, "table_cells": 428, "templates": 0, "noise": 4, "phrasing": 163, "innocent": 3451}
 
 
 # ======================================================================================== the report
@@ -949,8 +951,8 @@ class Generators(unittest.TestCase):
             self.assertEqual(dict(o.errors), {}, name)
 
     # the noise generator's long lines (over 1,500 or 2,000 characters) break P2 and P1 today: findings L12 and L13 below, ratcheted here
-    KNOWN_NONIDEM = {"noise": 115}
-    KNOWN_NONSUBSET = {"noise": 6}  # anchors_first at SUBSET_N=1000 bodies, measured 26-10-2026
+    KNOWN_NONIDEM = {}  # 0 after v269-b/c (was noise 115)
+    KNOWN_NONSUBSET = {}  # anchors_first at SUBSET_N=1000 bodies, measured 0 on 26-10-2026 after b and c (was noise 6)
 
     def test_idempotent(self):
         for name, (c, _) in self.res.items():
@@ -995,30 +997,30 @@ class Findings(unittest.TestCase):
     'unexpected success': remove the marker and lower the ratchet."""
 
     # ---- leaks (digits / ids)
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F01_id_split_over_div_per_group(self):
         """HIGH: a 9-digit Meeting ID rendered one group per div (or per line) is never seen as 7+ digits and has no label."""
         out = kept("<div>412</div><div>889</div><div>330</div>")
         self.assertNotIn("889", out)
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F02_label_then_groups_per_line(self):
         """HIGH: 'Meeting ID:' followed by the groups on separate lines: only the first group goes."""
         out = kept("Meeting ID:\n412\n889\n330")
         self.assertNotIn("889", out)
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F03_label_not_in_list_spanish_clave(self):
         """HIGH: a localised label the scrub does not know keeps a 4-digit PIN (Spanish 'Clave', Polish 'Haslo', Swedish 'Losenord')."""
         for line in ("Clave: 4417", "Hasło: 4417", "Lösenord: 4417"):
             self.assertNotIn("4417", kept(line), line)
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F04_value_first_phrase(self):
         """HIGH: 'Pass 4417' (a bare label word the 2.6.8 list lacks) keeps the PIN."""
         self.assertNotIn("4417", kept("Pass 4417"))
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F05_bare_password_with_punctuation(self):
         """MEDIUM: an unlabelled password alone on a line with punctuation is not an alnum token, so the shape gate lets it through."""
         self.assertNotIn("Summer2026!", kept("Summer2026!"))
@@ -1028,30 +1030,30 @@ class Findings(unittest.TestCase):
         """MEDIUM: a Google Meet code written without its host ('abc-defg-hij') stays."""
         self.assertNotIn("abc-defg-hij", kept("Joining info: abc-defg-hij"))
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F08_prose_phrasings_keep_the_code(self):
         """HIGH: a code in a plain sentence without a label word ('Use 6802 to join'). 'Enter code 4417 when prompted', 'Join code: 4417'
         and 'Meeting code 4417' are caught."""
         for line in ("Hi all, use 6802 to join.", "Use 6802 to join"):
             self.assertNotIn("6802", kept(line), line)
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F09_pin_in_an_email_style_address(self):
         """MEDIUM: a 4 to 6 digit PIN in an address ('meet-8990@x.example.test', 'pin.1234@') survives; 7+ digits go."""
         self.assertNotIn("8990", kept("Join by SIP or mail: meet-8990@x.example.test"))
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F10_mailto_with_digits(self):
         """LOW: 'mailto:join449038@example.test' is not a join-link scheme."""
         self.assertNotIn("449038", kept("Join: mailto:join449038@example.test"))
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F11_ics_folded_description(self):
         """MEDIUM: a pasted ICS description folds an id over lines that start with a space (' 889'): the groups survive."""
         out = kept("BEGIN:VEVENT\nSUMMARY:Budget review\nDESCRIPTION:Meeting ID: 885\n 876\n 249\nEND:VEVENT")
         self.assertNotIn("876", out)
 
-    @unittest.expectedFailure
+    # fixed by v269-c (merged 26-10-2026): no longer an expected failure
     def test_F12_jwt_like_token_alone(self):
         """MEDIUM: a token with '.', '_' or '-' on a line of its own (under 300 characters) is not an alnum token, so it stays."""
         tok = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk"
