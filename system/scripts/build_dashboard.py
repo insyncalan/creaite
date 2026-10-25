@@ -2547,12 +2547,25 @@ def prep_match(title, projects, remembered):
     return (hits.pop(), "matched") if hits else (None, "unsure")
 
 
+def prep_match_ev(title, ev, projects, remembered):
+    """#328: (code, how) for a calendar entry, from the one matcher (meeting_match): how is remembered, portfolio, matched, likely
+    or unsure. Remembered and portfolio answers are prep_match's own; the rest also read the attendees' addresses. A confidential
+    meeting is matched on its title alone."""
+    code, how = prep_match(title, projects, remembered)
+    if how in ("remembered", "portfolio") or not isinstance(ev, dict):
+        return code, how
+    a = meeting_answer(title, ev, projects, remembered, invite_clean.sensitivity(ev) == "confidential")
+    if a["p"] is None and code:        # the matcher read no register row for it: keep prep_match's own answer (a title code)
+        return code, how
+    return a["p"], a["level"]
+
+
 def ev_project(ev, title, projects, remembered):
     """#362: the project code a calendar entry may show: none for a confidential one (fails closed), else the saved guess or the
     brief's match."""
     if invite_clean.sensitivity(ev) == "confidential":
         return None
-    return ev.get("p") or prep_match(title, projects, remembered)[0]
+    return ev.get("p") or prep_match_ev(title, ev, projects, remembered)[0]
 
 
 def ev_shown_p(ev):
@@ -2606,7 +2619,7 @@ def prep_entry(ev, day, ctx):
     #   hub records, next-day list, aside lists, day_close, capture.meeting   p None
     #   dashboard.html / history snapshots   local only, hold what the screen holds
     s = series_of(ev["title"])
-    code, how = prep_match(ev["title"], ctx["projects"], ctx["remembered"])
+    code, how = prep_match_ev(ev["title"], ev, ctx["projects"], ctx["remembered"])
     if invite_clean.sensitivity(ev) == "confidential" and how != "remembered":
         code, how = None, "confidential"
     last = max((d for d, ser in ctx["history"] if ser == s and d < day.isoformat()), default=None)
@@ -2833,6 +2846,56 @@ def restore_meetings(keys=None, day=None, today=None):
     return len(entries) - len(keep)
 
 
+def meeting_answer(title, ev, projects, remembered, confidential):
+    """#328: meeting_match's answer {p, level, reason, cands} for a calendar entry; a confidential meeting is matched on its
+    title alone. Plain code, no AI."""
+    import capture
+    import meeting_match
+    active = {p["code"] for p in projects}
+    rows = [r for r in capture.register()["projects"] if r["code"] in active]
+    own = ((paths.load_settings().get("identity") or {}).get("own_domains")) or []
+    att = [] if confidential else ev.get("attendees")
+    out = meeting_match.match_meeting(title, att, rows, remembered.get(series_of(title)), own, confidential=confidential)
+    return {**out, "offer": meeting_match.offer_signal(att, rows, own, confidential)}
+
+
+def _inbox_match(title, ev, private, conf, projects, remembered):
+    """(code, how, match) of a calendar entry for Intake: private is never matched, the portfolio and a remembered series are
+    prep_match's own answer, anything else is meeting_match's (#328: matched, likely or unsure)."""
+    code, how = (None, "private") if private else prep_match(title, projects, remembered)
+    match = {} if private or how == "portfolio" else meeting_answer(title, ev, projects, remembered, conf)
+    if match and how != "remembered":
+        code, how = match["p"], match["level"]
+    return code, how, match
+
+
+def _inbox_transcript(eid, checked, loaded):
+    """What the sweep found for a meeting's transcript: status (available, not_transcribed, none, no_access; None: not checked
+    yet), when it was checked, and the loaded file."""
+    found = (checked.get(eid) or {}) if eid else {}
+    return {"transcript": found.get("status") if eid else None, "transcript_checked": found.get("checked") if eid else None,
+            "loaded": loaded.get(eid) if eid else None}
+
+
+def _inbox_row(day, ev, projects, remembered, drafts, checked, loaded):
+    """One Calendar import row for a saved calendar entry (see inbox_meetings)."""
+    import minutes                                   # meeting_key and processed_on, read only
+    title = str(ev.get("title") or "Meeting")
+    sens = invite_clean.sensitivity(ev)              # fail closed: an older saved row's "personal" or odd value too
+    private = sens == "private" or ("private" not in ev and title == "Busy" and not ev.get("where"))
+    conf = sens == "confidential"                                           # #232: title and times only
+    code, how, match = _inbox_match(title, ev, private, conf, projects, remembered)
+    eid = str(ev.get("id") or "") or None
+    done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid)) if eid else None
+    return {"day": day, "start": ev.get("start") or "", "end": ev.get("end") or "", "title": title,
+            "teams": bool(ev.get("teams")), "organiser": ev.get("organiser") or False, "private": private,
+            "confidential": conf, "id": eid, "key": meeting_clear_key(day, ev.get("start") or "", title, eid),
+            "p": code, "how": how, "series": series_of(title), "processed": done,
+            **({} if conf or not match else {"level": match["level"], "reason": match["reason"], "cands": match["cands"],
+                                           "offer": match.get("offer")}),
+            "draft": bool(eid) and f"calendar:{eid}" in drafts, **_inbox_transcript(eid, checked, loaded)}
+
+
 def inbox_meetings(settings, projects, today):
     """{"fetched", "from", "rows": [{day, start, end, title, teams, organiser, private, confidential, id, key, p, how, series,
     processed}], "cleared": [...]}, newest day first; all-day entries left out. Cleared meetings (Clear day) are
@@ -2849,7 +2912,6 @@ def inbox_meetings(settings, projects, today):
     snoozed = {e["key"]: e for e in entries if e.get("kind") == "later"}         # #232: Later, until the transcript arrives
     import transcripts                               # BL-42 phase 3: what the sweep found for each meeting, and what is already loaded
     checked, loaded = transcripts.load_state()["checked"], transcripts.inbox_event_ids()
-    import minutes                                   # meeting_key and processed_on, read only
     remembered = _dig(settings, ("prep", "series"), {}) or {}
     drafts = {(d.get("meeting") or {}).get("key") for _, d in review.proposals()                    # waiting in Review
               if (d.get("meeting") or {}).get("key") and not (d.get("meeting") or {}).get("applied")}
@@ -2860,21 +2922,7 @@ def inbox_meetings(settings, projects, today):
         for ev in events:
             if ev.get("all_day"):
                 continue
-            title = str(ev.get("title") or "Meeting")
-            sens = invite_clean.sensitivity(ev)              # fail closed: an older saved row's "personal" or odd value too
-            private = sens == "private" or ("private" not in ev and title == "Busy" and not ev.get("where"))
-            conf = sens == "confidential"                                           # #232: title and times only
-            code, how = (None, "private") if private else prep_match(title, projects, remembered)
-            eid = str(ev.get("id") or "") or None
-            done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid)) if eid else None
-            out.append({"day": day, "start": ev.get("start") or "", "end": ev.get("end") or "", "title": title,
-                        "teams": bool(ev.get("teams")), "organiser": ev.get("organiser") or False, "private": private,
-                        "confidential": conf, "id": eid, "key": meeting_clear_key(day, ev.get("start") or "", title, eid),
-                        "p": code, "how": how, "series": series_of(title), "processed": done,
-                        "draft": bool(eid) and f"calendar:{eid}" in drafts,
-                        "transcript": (checked.get(eid) or {}).get("status") if eid else None,     # available, not_transcribed, none, no_access; None: not checked yet
-                        "transcript_checked": (checked.get(eid) or {}).get("checked") if eid else None,
-                        "loaded": loaded.get(eid) if eid else None})
+            out.append(_inbox_row(day, ev, projects, remembered, drafts, checked, loaded))
     by_day = {}                                       # newest day first, each day in time order
     for m in out:
         by_day.setdefault(m["day"], []).append(m)
@@ -3003,6 +3051,16 @@ def _ir_row(src, ident, rows, base_state, today, stale_after, **f):
            "files": sorted({q.get("file") for q in rows if q.get("file")}), "groups": _ir_split(rows)}
 
 
+def _ir_cal_match(m):
+    """The match fields a calendar row carries (level, reason, cands, offer, series); none for a confidential meeting (#232-A, #362)."""
+    return {} if m.get("confidential") else {k: m[k] for k in ("level", "reason", "cands", "offer", "series") if k in m}
+
+
+def _ir_cal_project(m, rows):
+    """A calendar row's project: none for a confidential meeting, else the meeting's, else its first proposal's."""
+    return None if m.get("confidential") else m.get("p") or (rows[0].get("p") if rows else None)
+
+
 def _ir_calendar(m, by_mkey, today, stale_after):
     """A calendar meeting's row (its proposals joined by "calendar:<event id>")."""
     mkey = f"calendar:{m['id']}" if m.get("id") else None
@@ -3011,9 +3069,9 @@ def _ir_calendar(m, by_mkey, today, stale_after):
     base = "done" if m.get("processed") or m.get("draft") else "ready" if ready else "waiting"
     return _ir_row("calendar", mkey or m.get("key"), rows, base, today, stale_after, key=m.get("key"), mkey=mkey,
                    title=m.get("title") or "Meeting", day=m.get("day") or "", start=m.get("start") or "", end=m.get("end") or "",
-                   p=None if m.get("confidential") else m.get("p") or (rows[0].get("p") if rows else None),
+                   p=_ir_cal_project(m, rows),
                    private=bool(m.get("private")), confidential=bool(m.get("confidential")), teams=bool(m.get("teams")),
-                   tx=m.get("transcript"), later_back=bool(m.get("later_back")))
+                   tx=m.get("transcript"), later_back=bool(m.get("later_back")), **_ir_cal_match(m))
 
 
 def _ir_upload_row(f, by_path, today, stale_after):
@@ -3268,7 +3326,7 @@ def has_ended(iso, end, look):
 
 def meeting_project(e, title, look):
     """Where, Teams and the likely project (by name) of a meeting that isn't confidential."""
-    code, how = prep_match(title, look["projects"], look["remembered"])
+    code, how = prep_match_ev(title, e, look["projects"], look["remembered"])
     return {"where": str(e.get("where") or ""), "teams": bool(e.get("teams")), "p": code, "how": how,
             "project_name": "Portfolio" if code == "_portfolio" else look["names"].get(code) if code else None}
 

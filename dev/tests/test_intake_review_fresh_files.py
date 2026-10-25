@@ -49,7 +49,8 @@ class FreshFile(IntakeBase):
         self.assertEqual(after["ready"], before["ready"] + 1)
         self.assertEqual(after["badge"], before["badge"] + 1)
         self.assertEqual(after["rail"], str(after["badge"]))
-        self.assertIn(str(after["ready"]), after["all"])                                         # the button counts it too
+        skipped = b.eval("irSkipped().length")                                                   # #328: a meeting with only a guessed project waits for a pick
+        self.assertIn(str(after["ready"] - skipped), after["all"])                               # the button counts it too
 
     def test_the_model_is_behind_while_a_file_waits_and_not_once_it_is_drawn(self):
         b = self.b

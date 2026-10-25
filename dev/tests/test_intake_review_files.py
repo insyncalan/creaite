@@ -135,7 +135,11 @@ class FileRows(IntakeBase):
         b = self.b
         self.stage_stub()
         label = lambda: b.eval("document.querySelector('[data-ira=processall]').textContent")  # noqa: E731
-        self.assertEqual(label(), "Process all ready (5)")                          # ABC Steering, Weekly sync 12, the two transcripts and the minutes
+        # #328: Weekly sync 12 names no project (Not sure), so Process all ready skips it and lists it; the rest are ABC Steering, the two
+        # transcripts and the minutes
+        self.assertEqual(label(), "Process all ready (4)")
+        self.assertEqual(b.eval("document.querySelector('[data-irheld]').textContent"),
+                         "Skipped 1 meeting until you pick a project: Weekly sync 12.")
         self.assertEqual(b.eval("document.querySelector('[data-irleft]').textContent"),
                          "1 left out of Process all ready: private, confidential, not sure what it is or name not allowed.")       # Plan.docx
         self.patch("Weekly sync 12", confidential=True, p=None)
