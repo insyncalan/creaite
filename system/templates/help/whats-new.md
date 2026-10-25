@@ -8,8 +8,8 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ### The mail check
 - **It says what it is doing.** While a mail and Teams check runs, a true line replaces the joke: "Looked in so far: Outlook mail, Teams", with the number of searches and items read and no total. Other runs keep their quips. (#358)
-- **It ends with a count.** "Finished. Found 7 new, 4 need a project": the new suggestions this check saved, not everything waiting.
-- **No mail subjects or names in it.** While a check runs, the steps show fixed phrases only. Steps drawn from an old chat keep their earlier text.
+- **It ends with a count.** "Finished. Found 7 new, 4 need a project": the new suggestions this check saved, not everything waiting. A check that saves only updates ends "No new items; 3 updates to existing items."
+- **No mail subjects or names in it.** The steps of a mail check show fixed phrases only, while it runs and when you open the saved chat again; anything else shows as "A creaite step".
 - **Close the day** ticks its rows one by one from each row's own search, not all at once.
 
 ### The right project for a meeting
@@ -20,11 +20,17 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - **Review** shows the "what changes" line at the same size as the title, with emphasis by weight or colour, not size. (#341)
 - **Plain titles:** "Open risks and issues", "Progress over time", "Late milestones". (#341)
 - **Files** keeps two ways to narrow the list, the tree and Filter, with the view chips folded into Filter. (#341)
-- **Quieter screens.** Side-tab accents are replaced by a chip or icon. Projects shows only counts above zero and dates as DD-MM-YYYY. Work loses the glyphs before titles. Intake's three "selected" looks become one and file rows shrink to one line. The Milestones audience switch is quieter. Settings loses the Help card. Activity gets select-all. (#341)
+- **Quieter screens.** Side-tab accents are replaced by a chip or icon. Projects shows only counts above zero and dates as DD-MM-YYYY. Work loses the glyphs before titles. Intake's three "selected" looks become one. A transcript file (VTT or SRT) shows on one line; a file that could be minutes or a transcript keeps its kind line and "It is minutes" / "It is a transcript" switch, and a file creaite is not sure about asks you first. The Milestones audience switch is quieter. Settings loses the Help card. Activity gets select-all. (#341)
 
 - Update from the release zip as usual.
 - Reload any dashboard tab that was open before the update.
 - Walk Review, Projects, Work, Intake, Milestones, Files, Activity and Settings once, looking for anything crowded or oddly worded.
+
+### Good to know
+- Not in this release: one colour (amber) meaning one thing across the screens, which waits for your yes, and the changes that need the guarded files (the three held items), which come in 2.6.7.
+- A meeting whose project you chose before is still filed there when its title has no project code; one with a code in square brackets or at the very start goes to that code's project.
+- For a confidential meeting you choose the project yourself; creaite never fills it in from the title.
+- The mail check's end line counts new suggestions only; updates to existing items are counted apart.
 
 ## creaite 2.6.5
 
@@ -64,7 +70,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - The figure check does not look at the year when the transcript gives a date as a day and month in words.
 - The count in the toast after Approve minutes can say more than was saved when a ticked row is held back in Review.
 - In a rare crash recovery (a stopped run that started its work in the same minute as an earlier suggestion), the earlier minutes can drop out of Review with nothing on the page showing it.
-- Not in this release: the design decisions and one more fix. They come later.
+- Not in this release: the design decisions and one more fix. They are in 2.6.6, which contains all of 2.6.5.
 
 ## creaite 2.6.4
 

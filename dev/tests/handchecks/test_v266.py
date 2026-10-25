@@ -11,6 +11,7 @@ Chrome by the branches' own tests and the gate; this file checks the release is 
    8  #358        the mail check's own tests that need no browser pass
    9  #362        a title code beats a remembered series (test_title_code_wins)
   10  not in      amber (#341 item 17) is not claimed in What's new
+  11  conf header  a confidential meeting's Prep header asks you to choose the project (test_confidential_persisted Header), the sheet has hand check 12 with "Not in 2.6.6" kept, and the notes' Good to know says it
 
 Run (from the repository root):  python3 dev/tests/handchecks/test_v266.py
 """
@@ -26,7 +27,7 @@ SRC = REPO / "system/templates/dashboard/src"
 GUARDED = ["system/creaite-rules.md", "system/scripts/tracker.py", "system/scripts/filechange.py", "system/scripts/reach.py",
            "system/scripts/permissions.py", "system/scripts/backup.py", "system/scripts/update.py", "system/scripts/live_server.py",
            "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "system/scripts/draft_delivery.py", ".claude/settings.json"]
-KIND = {n: "scriptable" for n in range(1, 11)}
+KIND = {n: "scriptable" for n in range(1, 12)}
 LIVE_ONLY = {}
 
 
@@ -95,6 +96,17 @@ class V266(unittest.TestCase):
     def test_c10_not_in_scope(self):
         sec = read("system/templates/help/whats-new.md").split("## creaite 2.6.5\n")[0]
         self.assertNotRegex(sec, r"(?i)\bamber\b[^.]*\(#341\)")
+
+    def test_c11_confidential_header(self):
+        r = run_test("dev/tests/test_confidential_persisted.py", "Header")
+        self.assertEqual(r.returncode, 0, (r.stderr or r.stdout)[-1500:])
+        sheet = read("dev/handchecks/v2.6.6.md")
+        self.assertRegex(sheet, r"(?m)^12\. \*\*A confidential meeting's Prep")
+        for p in ("system/templates/help/whats-new.md", "dev/release-notes/2.6.6-plain.md"):
+            sec = read(p).split("## creaite 2.6.5\n")[0]
+            self.assertIn("### Good to know", sec)
+            self.assertIn("For a confidential meeting you choose the project yourself", sec)
+            self.assertNotIn("keeps its earlier wording", sec)
 
 
 if __name__ == "__main__":
