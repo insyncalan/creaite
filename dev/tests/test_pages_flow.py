@@ -448,7 +448,7 @@ class FlowCardTests(unittest.TestCase):
             const op=fill("rect.fl-op[data-v]"), cl=fill("rect.fl-cl[data-v]"), od=fill("rect.fl-od[data-v]");
             const dh=(a,b)=>{ const x=hue(a), y=hue(b); if(x===null||y===null) return null; const d=Math.abs(x-y); return Math.min(d,360-d); };
             out[pal+"|"+mode]={op:__ratio(op,bg), cl:__ratio(cl,bg), od:__ratio(od,bg), muted:__ratio(fill("rect.fl-pL")||tok("--muted"),bg), pair:__ratio(op,cl), hue:dh(op,cl),
-              text:__ratio(getComputedStyle(c.querySelector("text.fl-t")).fill,bg), small:__ratio(getComputedStyle(c.querySelector("text.fl-m")).fill,bg), hatched:c.querySelectorAll("rect.fl-cl[data-v] ~ rect.fl-hatch, rect.fl-hatch").length>0&&getComputedStyle(c.querySelector("pattern .fl-hp")).fill!=="none", isAccent:op===tok("--accent"), isWarn:cl===tok("--warn"), isBad:od===tok("--bad")}; }
+              text:__ratio(getComputedStyle(c.querySelector("text.fl-t")).fill,bg), small:__ratio(getComputedStyle(c.querySelector("text.fl-m")).fill,bg), hatched:c.querySelectorAll("rect.fl-cl[data-v] ~ rect.fl-hatch, rect.fl-hatch").length>0&&getComputedStyle(c.querySelector("pattern .fl-hp")).fill!=="none", isAccent:op===tok("--accent"), isWarn:cl===tok("--ink")   /* #341 item 17: closed bars are the neutral ink, amber is for At risk */, isBad:od===tok("--bad")}; }
           window.OUT=out;""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertEqual(len(o), theme_count() * 2)                                                     # every theme, light and dark
         for key, r in o.items():

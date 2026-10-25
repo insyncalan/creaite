@@ -1514,7 +1514,7 @@ ol.bl>li.vipl .vipend{display:flex;gap:6px;align-items:flex-start;flex:none}
 .flowcard{margin-top:16px} .flowcard h2{margin-bottom:4px} .flsum{margin:0 0 12px;color:var(--muted)}
 .flgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px 24px} .flc{margin:0} .flc figcaption{font-size:var(--fs-sm);font-weight:500;margin-bottom:2px} .flc svg{width:100%;height:auto;display:block}
 .fl-ax{stroke:var(--line);stroke-width:1} .fl-t{fill:var(--ink);font:var(--fs-xs) var(--font)} .fl-m{fill:var(--muted);font:var(--fs-xs) var(--font)}   /* #337: chart text 12px, was 10px */ .fl-on{fill:var(--accent-ink)}
-.fl-hp{fill:var(--surface);opacity:.7} .fl-op,.fl-a0,.fl-a1,.fl-pM{fill:var(--accent)} .fl-cl,.fl-a2,.fl-pH{fill:var(--muted)} .fl-od,.fl-a3,.fl-pU{fill:var(--bad)} .fl-pL{fill:var(--muted)}
+.fl-hp{fill:var(--surface);opacity:.7} .fl-op,.fl-a0,.fl-a1,.fl-pM{fill:var(--accent)} .fl-cl,.fl-a2,.fl-pH{fill:var(--ink)} .fl-od,.fl-a3,.fl-pU{fill:var(--bad)} .fl-pL{fill:var(--muted)}
 .flfoot{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px;margin-top:12px;font-size:var(--fs-sm)} .flfoot b{font-weight:500}
 /* BL-90: Dependencies */
 .depg+.depg{margin-top:10px} .depgh{font-weight:500;display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px} .deprow{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0 4px 16px} .deprow .dept{flex:1;min-width:14ch} .deprow .depid{min-width:7.5ch}
@@ -2584,7 +2584,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
    words in all nine themes, light and dark (test_milestone_marks). Both print: the border is a border, and the pill keeps its fill
    (print-color-adjust) and a --warn border, so its words never print white on white. */
 .mv-card.client{border:1px solid var(--line);box-shadow:none;border-radius:var(--r-md);padding:14px}
-.mv-card.internal{border:2px solid var(--line-strong);box-shadow:0 0 0 3px var(--sunk);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.mv-card.internal{border:2px solid var(--muted);box-shadow:0 0 0 3px var(--sunk);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .mv-pill.int{background:var(--muted);color:var(--surface);border:1px solid var(--line-strong);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media print{.mv-card.internal{box-shadow:none}}
 /* ===== end BL-244 (CSS) ===== */

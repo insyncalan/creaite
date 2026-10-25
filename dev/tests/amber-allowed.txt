@@ -1,0 +1,19 @@
+# The only places amber (--warn, --warn-soft) may be used. Amber means "at risk" and nothing else (Alan, 25-10-2026; #341 item 17).
+# css: a rule's selector in system/templates/dashboard/style.css that paints with var(--warn) or var(--warn-soft).
+# file: a source file that names --warn outside the stylesheet (the colour definitions in the palettes are not uses).
+# To add a use, Alan decides first; then add the line here.
+css: .h-warn
+css: .spark .s-warn
+css: .spk-dot.s-warn
+css: .depwarn
+css: .msrow.atrisk
+css: .mv-st.atrisk
+css: .mv-tag.warn
+css: .hsg-chip.warn
+css: .ubudget.warn .ubar-fill
+css: .sheet-hflag.warn
+css: .wkdot.a,.wkpop .wkrow i.a
+css: .wr-hmenu [data-tone=a] svg.i
+file: system/templates/dashboard/src/milestones.js
+file: system/templates/dashboard/src/components/peek/PeekProps.jsx
+file: system/scripts/prep_page.py
