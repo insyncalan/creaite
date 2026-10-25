@@ -55,11 +55,11 @@ class Agenda(unittest.TestCase):
             self.assertEqual(seen[1], seen[5], body)
 
     def test_the_leading_phrase_costs_exactly_what_the_notes_say(self):
+        """Unmarked one- or two-word lines within three lines of a leading heading look like a value and go with it; later lines stay."""
         once = I.invite_text(LEADING)
-        self.assertEqual(once, "Agenda\nRisks\nMilestones\nAOB")                         # the phrase and the next three lines
-        self.assertNotIn("Password reset", once)
-        self.assertNotIn("Budget review", once)
-        self.assertIn("Milestones", once)                                                # lines past the window stay
+        self.assertEqual(once, "Agenda\nRisks\nMilestones\nAOB")
+        self.assertEqual(I.invite_text(AGENDA.replace("IT update: password reset", "Password reset")), "Agenda\n"
+                         "2. Budget review\n3. Hiring\n4. Vendors\n5. Risks\n6. Milestones\n7. AOB".replace("2. Budget review\n3. Hiring\n4. Vendors\n", "1. Password reset\n2. Budget review\n3. Hiring\n4. Vendors\n"))
 
     def test_the_value_still_goes_on_the_first_pass(self):
         for body in ("Password reset\nhunter", "Password reset\nthe plan\nhunter", "Code of conduct\nrollout\nupdate\nxk7q"):
@@ -195,14 +195,23 @@ class Mutants(unittest.TestCase):
         exec(compile(src.replace(old, new, 1), "invite_clean_idem_mutant", "exec"), mod.__dict__)
         return mod
 
-    def test_without_the_tombstone_the_agenda_erodes(self):
-        m = self.mutated("            self.kept[self.anchor] = None", "            pass")
-        seen = passes(m.invite_text, LEADING, 3)
-        self.assertNotEqual(seen[1], seen[2])
-        self.assertTrue(any(m.invite_text(m.invite_text(b)) != m.invite_text(b) for b in CORPUS))
+    def test_without_the_heading_tombstone_pass_two_removes_more(self):
+        """A heading whose window removed a line must go with it: kept, the lines past the first window shift into a later pass."""
+        body = "Agenda\nPassword reset\nhunter\nHere is a plan for you\nHere is more text now\nvalue1x"
+        once = I.invite_text(body)
+        self.assertEqual(I.invite_text(once), once)
+        m = self.mutated("                self.kept[window[1]] = None    # a line of the heading's window", "                pass    # a line of the heading's window")
+        self.assertNotEqual(m.invite_text(m.invite_text(body)), m.invite_text(body))
+
+    def test_without_the_hard_window_tombstone_pass_two_removes_more(self):
+        body = "Agenda\nPassword reset for\nsome text here today\nmore text here today\nthird text here today\nfourth text here today"
+        once = I.invite_text(body)
+        self.assertEqual(I.invite_text(once), once)
+        m = self.mutated("                self.kept[at] = None", "                pass")
+        self.assertNotEqual(m.invite_text(m.invite_text(body)), m.invite_text(body))
 
     def test_digit_wait_dropped_by_a_removed_line_leaks_and_is_not_a_fixed_point(self):
-        m = self.mutated("self.digit_wait = _ends_on_key_and_stop(ln) or bool(dropped and self.digit_wait and not value)", "self.digit_wait = _ends_on_key_and_stop(ln)")
+        m = self.mutated("self.digit_wait = _ends_on_key_and_stop(ln) or bool(consumed and self.digit_wait and not value)", "self.digit_wait = _ends_on_key_and_stop(ln)")
         body = "Meeting ID.\nPasscode: abc\n1234"
         once = m.invite_text(body)
         self.assertIn("1234", once)                                       # the value stays after pass 1...
@@ -212,9 +221,20 @@ class Mutants(unittest.TestCase):
         m = self.mutated('not re.search(r"[^\\W_]", ln))', 'not re.search(r"\\w", ln))')
         self.assertIn("ZQ7742", m.invite_text("Passcode:\n_____\nZQ7742"))
 
-    def test_without_the_leading_rule_the_agenda_line_eats_its_neighbours(self):
-        m = self.mutated("or (not dropped and any(_label_leads(v) for v in views))", "or (not dropped and any(_BARE_END.search(v) for v in views))")
-        self.assertNotEqual(m.invite_text(AGENDA), AGENDA)
+    def test_without_the_leading_rule_a_line_ending_in_the_phrase_opens_a_window(self):
+        m = self.mutated("return not _PROSE.search(before) and len(before.split()) <= 3", "return True")
+        body = "Agenda\nIT update: password reset\nBudget review\nHiring\nVendors"
+        self.assertEqual(I.invite_text(body), body)
+        self.assertNotEqual(m.invite_text(body), body)
+
+    def test_the_two_exact_cases_of_cap(self):
+        for body, gone in (("Meeting ID.\nPasscode:\n4417\n987 654 321", ["4417", "987 654 321"]),
+                           ("Meeting ID.\nhttps://teams.microsoft.com/l/meetup-join/x\n1234", ["1234"]),
+                           ("Meeting ID.\nPasscode: abc\n1234", ["1234"]), ("Key,\nPasscode: abc\n1. Intro", ["Intro"])):
+            once = I.invite_text(body)
+            self.assertEqual(I.invite_text(once), once, body)
+            for v in gone:
+                self.assertNotIn(v, once, body)
 
 
 if __name__ == "__main__":

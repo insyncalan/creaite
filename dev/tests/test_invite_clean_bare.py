@@ -316,15 +316,21 @@ NEXT_LINE = [
     ("c-url-mpwd", "Sync https://x.example.invalid/j?mpwd=abc123", "abc123"),
     ("c-hangul-filler", "Pa\u3164sscode: 4417", "4417"),
     ("c-braille-blank", "Meeting\u2800ID: 4417", "4417"),
+    ("h-restart", "Password reset for\nplan\nPassword reset \u2013\nsync\nplan\nhunter", "hunter"),       # a hard window restarted by a label line
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
-    ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
-    ("f-ul", "<ul><li>Password reset</li><li>plan</li><li>hunter</li></ul>", "hunter"),
     ("f-th", "<th>PIN entry</th><td>swordfish</td>", "swordfish"),
 ]
 # The over-removal chosen for the next line (documented in the notes): after a finished label phrase the next line is kept only
 # when every word of it is listed (an allow-listed or function word) and it holds no separator.
-NEXT_LINE_LOST = ["Team standup at 10", "Agenda: budget", "Room 4", "Review and update", "Plan"]
+# Cap's acceptance table (#369, 19:30): an agenda with a heading and four numbered items
+AGENDA_TABLE = "Agenda\n{}\n1. Training dates\n2. Sign-off\n3. Reporting line\n4. AOB"
+CAP_HEADINGS = ["Code review", "Code freeze", "Code of conduct", "Dress code", "Secret Santa", "Password policy", "Password reset", "Code",
+                "Key decisions", "ID badges", "Staff ID cards", "Meeting ID changes"]
+# After a leading heading ("Password reset"): these look like a value and go (the heading with them); these stay
+NEXT_LINE_LOST = ["Room 4", "Plan", "Agenda: budget", "hunter", "the plan", "Vendors", "Budget review"]
+NEXT_LINE_KEPT = ["Team standup at 10", "Review and update", "1. Training dates", "- Sign-off", "a) Reporting line", "Visitors must sign in at reception",
+                  "We agree the plan.", "Sprint planning for the platform team"]
 
 # Ordinary text with no label near it stays whatever it holds.
 CONTROLS = ["Quarterly business review", "Pilot readiness review", "Key milestones workshop", 
@@ -447,14 +453,36 @@ for _rid, _text, _val in NEXT_LINE:
 
 
 class Controls(unittest.TestCase):
-    def test_next_line_over_removal_is_as_documented(self):
-        """After a line that ends a label phrase the next three lines with text are lost, plain words or not; the fourth is kept."""
+    def test_agenda_table(self):
+        """Cap's acceptance table: a heading with four numbered items keeps all of them; only a heading whose window removed a line goes."""
+        for h in CAP_HEADINGS:
+            body = AGENDA_TABLE.format(h)
+            out = I.invite_text(body)
+            self.assertEqual(out, body, h)                                       # nothing removed: the heading stays too
+            self.assertEqual(I.invite_text(out), out, h)
+
+    def test_after_a_leading_heading_value_looking_lines_go_and_the_rest_stays(self):
         for ln in NEXT_LINE_LOST:
-            out = I.invite_text("Welcome\nPassword reset\n" + ln + "\nSecond\nThird\nFourth line stays")
+            out = I.invite_text("Welcome\nPassword reset\n" + ln + "\n1. Training dates\n2. Sign-off")
             self.assertNotIn(ln, out, ln)
-            self.assertNotIn("Second", out)
-            self.assertNotIn("Third", out)
-            self.assertIn("Fourth line stays", out)                  # the line, Second and Third are the three; the fourth stays
+            self.assertNotIn("Password reset", out, ln)                          # the heading whose window removed a line goes with it
+            self.assertIn("1. Training dates", out)
+            self.assertIn("2. Sign-off", out)
+        for ln in NEXT_LINE_KEPT:
+            out = I.invite_text("Welcome\nPassword reset\n" + ln + "\n1. Training dates")
+            self.assertEqual(out, "Welcome\nPassword reset\n" + ln + "\n1. Training dates", ln)      # and a heading that removed nothing stays
+
+    def test_a_bullet_value_after_a_heading_is_a_known_limit(self):
+        """A line with a list marker is never taken for a value (Cap's rule), so a value written as a bullet after a heading stays."""
+        self.assertIn("hunter", I.invite_text("Agenda\n<ul><li>Password reset</li><li>hunter</li></ul>"))
+        self.assertIn("hunter", I.invite_text("Agenda\nPassword reset\n- hunter"))
+
+    def test_a_value_two_lines_below_goes_four_lines_below_stays(self):
+        """The window reaches the three lines after the heading (blank lines do not count). Within it a value-looking line goes even after a
+        plain one; the fourth line after the heading is out of reach: a known limit."""
+        self.assertNotIn("hunter", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\nhunter\n1. Training dates"))
+        self.assertNotIn("hunter", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\n\n\nWe agree.\nhunter"))
+        self.assertIn("hunter", I.invite_text("Agenda\nPassword reset\nSprint planning for the team\nWe agree.\nSee the notes below\nhunter"))
 
     def test_lines_far_from_a_label_are_untouched(self):
         self.assertEqual(I.invite_text("Agenda: budget\nTeam standup at 10\nEnd"), "Agenda: budget\nTeam standup at 10\nEnd")
@@ -639,9 +667,13 @@ class Mutants(unittest.TestCase):
     def next_line_bad(self, m):
         return [rid for rid, text, val in NEXT_LINE if val in m.invite_text("Agenda: budget\n" + text + "\nEnd").lower()]
 
-    def test_window_off(self):
-        m = mutant("WINDOW = 3 ", "WINDOW = 0 ")
-        self.assertTrue({"nl-finished", "nl-function", "w-the-plan"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+    def test_soft_window_off(self):
+        m = mutant("                self.soft.append([WINDOW, len(self.kept) - 1])", "                pass")
+        self.assertTrue({"nl-finished", "nl-finished-pin", "w-the-plan"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
+
+    def test_hard_window_off(self):
+        m = mutant('self.window = WINDOW if kind == "open" else', 'self.window = 0 if kind == "open" else')
+        self.assertTrue({"nl-function", "nl-hyphen", "h-restart"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_window_shortened(self):
         m = mutant("WINDOW = 3 ", "WINDOW = 2 ")
@@ -650,12 +682,35 @@ class Mutants(unittest.TestCase):
         self.assertNotIn("nl-finished", bad)                       # one and two lines are still caught: only the third leaks
 
     def test_blank_lines_consume_the_window(self):
-        m = mutant("            self.kept.append(ln)               # a blank or symbols-only line", "            self.window = max(self.window - 1, 0)\n            self.kept.append(ln)               # a blank or symbols-only line")
+        m = mutant("            self.kept.append(ln)               # a blank or symbols-only line",
+                   "            for w in self.soft:\n                w[0] -= 1\n            self.soft = [w for w in self.soft if w[0] > 0]\n            self.kept.append(ln)               # a blank or symbols-only line")
         self.assertTrue({"w-blanks-5", "w-blanks-between"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
-    def test_label_line_inside_the_window_does_not_restart_it(self):
-        m = mutant("self.window = WINDOW if label else (max(self.window - 1, 0) if consumed else 0)", "self.window = max(self.window - 1, 0) if consumed else 0")
-        self.assertIn("w-restart", self.next_line_bad(m))
+    def test_label_line_inside_the_hard_window_does_not_restart_it(self):
+        m = mutant('self.window = WINDOW if kind == "open" else (max(self.window - 1, 0) if consumed else 0)',
+                   "self.window = max(self.window - 1, 0) if consumed else 0")
+        self.assertIn("h-restart", self.next_line_bad(m))
+
+    def test_value_looking_test_removed(self):
+        """Back to dropping every line of the window (no value-looking test): plain agenda lines go with the value."""
+        m = mutant("    return len(tokens) <= 2", "    return True")
+        body = "Welcome\nCode review\nTeam standup at 10\n1. Training dates"
+        self.assertEqual(I.invite_text(body), body)
+        self.assertNotIn("Team standup at 10", m.invite_text(body))
+
+    def test_list_marker_exemption_removed(self):
+        m = mutant("    if _LIST_MARKER.match(", "    if False and _LIST_MARKER.match(")
+        self.assertNotEqual(m.invite_text(AGENDA_TABLE.format("Dress code")), AGENDA_TABLE.format("Dress code"))
+
+    def test_three_plain_words_exemption_removed(self):
+        m = mutant("    return len(tokens) <= 2", "    return True if tokens else False")
+        self.assertNotIn("Team standup at 10", m.invite_text("Welcome\nPassword reset\nTeam standup at 10"))
+
+    def test_sentence_exemption_removed(self):
+        m = mutant('    if len(tokens) >= 2 and t[-1:] in ".!?":\n        return False\n', "")
+        body = "Welcome\nPassword reset\nWe agree.\n1. Training dates"
+        self.assertIn("We agree.", I.invite_text("Welcome\nCode review\nWe agree.\n1. Training dates"))
+        self.assertNotIn("We agree.", m.invite_text(body))
 
     def test_blank_line_cap_restored(self):
         bad = self.next_line_bad(mutant_with_cap())
@@ -672,24 +727,24 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"b-meeting-id-pair", "b-blanks-between"} <= set(bad), bad)
 
     def test_finished_phrase_rule_off(self):
-        m = mutant("or (not dropped and any(_label_leads(v) for v in views))", "")
+        m = mutant('return "leads" if not dropped and any(_label_leads(v) for v in views) else ""', 'return ""')
         self.assertIn("nl-finished", self.next_line_bad(m))
 
     def test_open_phrase_rule_off(self):
-        m = mutant("return any(_BARE_OPEN.search(v) for v in views) or", "return False or")
+        m = mutant('    if any(_BARE_OPEN.search(v) for v in views):\n        return "open"', '    if False:\n        return "open"')
         self.assertTrue({"nl-hyphen", "nl-function", "nl-slash"} & set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_each_separator_removed(self):
         """The one separator class: with a single character taken out of it, the row that uses that character leaks."""
         need = {"-": "nl-hyphen", ":": "nl-colon", "=": "nl-equals", "(": "nl-paren",
                 "[": "nl-bracket", "/": "nl-slash", "|": "nl-pipe", "\u2192": "p-arrow"}
-        base = 'BARE_SEPARATORS = r"[^\\w\\s.,;!?]"'
+        base = 'BARE_SEPARATORS = r"[^\\w\\s.,;!?*~`]"'
         for ch, rid in need.items():
-            m = mutant(base, f'BARE_SEPARATORS = r"[^\\w\\s.,;!?{re.escape(ch)}]"')
+            m = mutant(base, f'BARE_SEPARATORS = r"[^\\w\\s.,;!?*~`{re.escape(ch)}]"')
             self.assertIn(rid, self.next_line_bad(m), f"removing {ch!r} from the separators changed nothing for {rid}")
 
     def test_separator_class_reduced_to_colon_equals_hash(self):
-        m = mutant('BARE_SEPARATORS = r"[^\\w\\s.,;!?]"', 'BARE_SEPARATORS = r"[:=#]"')
+        m = mutant('BARE_SEPARATORS = r"[^\\w\\s.,;!?*~`]"', 'BARE_SEPARATORS = r"[:=#]"')
         bad = self.next_line_bad(m)
         self.assertTrue({"p-hyphen", "p-en-dash", "p-em-dash", "p-pipe", "p-slash", "p-arrow", "p-paren", "p-colon-hyphen",
                          "p-meeting-id-hyphen"} <= set(bad), bad)
@@ -718,7 +773,7 @@ class Mutants(unittest.TestCase):
             self.assertNotEqual(m.scrub(t, 140), "", f"{t!r}: the digit rule is not what removes it")
 
     def test_underscore_and_wrapper_reading_removed(self):
-        m = mutant('[_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + bases', "bases")
+        m = mutant('[_DECORATION.sub(" ", x) for x in bases if _DECORATION.search(x)] + split + bases', "bases")
         bad = {b.split(":")[0] for b in fails(m)} | set(self.next_line_bad(m))
         self.assertTrue({"u-bold", "u-italic", "u-joined", "u-glued", "u-mid", "u-word-value", "m-underscore-next"} <= bad, bad)
 
@@ -731,7 +786,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue({"m-removed-line", "m-join-url"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_digit_after_stop_off(self):
-        m = mutant("value = self.digit_wait and bool(re.search", "value = False and bool(re.search")
+        m = mutant("value = self.digit_wait and not dropped and not self.pending and bool(re.search", "value = False and bool(re.search")
         self.assertIn("m-stop-digits", self.next_line_bad(m))
 
     SHAPE_MUTANTS = [
@@ -742,7 +797,7 @@ class Mutants(unittest.TestCase):
         ("the footnote mark", "\\s*[(\\[]\\d{{1,3}}[)\\]]|", "", {"c-footnote"}),
         ("joining dashes", "t = _JOINING_DASH.sub(", "t = (lambda f, x: x)(", {"c-nb-hyphen-pin", "c-nb-hyphen-api", "c-nb-hyphen-pass"}),
         ("the header-row rule", "return len(found) >= 2 and not", "return False and not", {"c-header-row"}),
-        ("the table rule line", "(not dropped and not re.search(r\"\\w\", ln))", "(False)", {"c-colon-own-line", "c-table"}),
+        ("the table rule line", "(not dropped and not re.search(r\"[^\\W_]\", ln))", "(False)", {"c-colon-own-line", "c-table"}),
         ("escaped markup", "t = _strip_tags(t)                     # escaped markup", "pass                     # escaped markup", {"c-escaped-html"}),
         ("the wbr tag", "|mark|wbr|code|", "|mark|", {"c-wbr", "c-code-tag"}),
         ("the invisible fillers", "and c not in _INVISIBLE", "", {"c-hangul-filler", "c-braille-blank"}),
@@ -761,7 +816,7 @@ class Mutants(unittest.TestCase):
             self.assertTrue(must & bad, f"{what}: no row of {sorted(must)} leaked ({sorted(bad)[:5]})")
 
     def test_key_label_rule_off(self):
-        m = mutant("(?:{_BARE}|{_BARE_LABELS}|ids?)(?![\\w-]){_ALONE_TAIL}", "(?:{_BARE_LABELS}|ids?)(?![\\w-]){_ALONE_TAIL}")
+        m = mutant("(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\\w){_ALONE_TAIL}", "(?:{_BARE_LABELS}|ids?)(?!\\w){_ALONE_TAIL}")
         self.assertIn("p-key", self.next_line_bad(m))
 
     def test_punctuation_before_value_off(self):
