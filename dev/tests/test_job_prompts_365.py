@@ -1,0 +1,41 @@
+"""#365: a transcript check or load has its own prompt (no CLAUDE.md, no session start), the followed-people rule, and a day-window
+search. Both kinds read Teams and calendar text, so both carry the rule. Run: python3 dev/tests/test_job_prompts_365.py"""
+import sys
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "system" / "scripts"))
+import live_server  # noqa: E402
+
+JOB_KINDS = ("check", "load")          # the run kinds that carry a transcripts.Job
+
+
+class JobPrompts(unittest.TestCase):
+    def test_every_job_kind_has_its_own_prompt(self):
+        for kind in JOB_KINDS:
+            with self.subTest(kind):
+                self.assertIn(kind, live_server.KIND_PROMPTS)
+                self.assertEqual(live_server.run_prompt(kind, None), live_server.KIND_PROMPTS[kind])
+                self.assertNotEqual(live_server.run_prompt(kind, None), live_server.ASK_PROMPT)
+
+    def test_no_claude_md_and_no_session_start(self):
+        for kind in JOB_KINDS:
+            text = live_server.run_prompt(kind, None)
+            self.assertNotIn("CLAUDE.md", text)
+            self.assertNotIn("session.py", text)
+            self.assertNotIn("Follow", text)
+
+    def test_the_followed_people_rule_applies(self):
+        for kind in JOB_KINDS:
+            self.assertIn("never call or label a person a VIP", live_server.run_prompt(kind, None))
+
+    def test_the_search_is_by_day_not_title(self):
+        p = live_server.TRANSCRIPT_PROMPT
+        self.assertIn("no words from the title", p)
+        self.assertIn("try once more", p)
+        self.assertNotIn("for the title on that day", p)
+
+
+if __name__ == "__main__":
+    unittest.main()

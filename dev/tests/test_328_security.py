@@ -149,7 +149,7 @@ class ProcessAllFailsClosed(unittest.TestCase):
         line = [ln for ln in self.acts.splitlines() if ln.startswith("export const irNeedsProject")][0]
         self.assertIn('m.level !== "matched"', line)
         self.assertNotIn('"likely"', line)                                      # the old fail-open test
-        self.assertIn('m.p !== "_portfolio"', line)                             # a portfolio row has no level by design
+        self.assertIn('m.p === "_portfolio" ? m.how !== "remembered"', line)   # a portfolio row has no level: it runs only when Alan chose it
         self.assertIn('m.src === "calendar"', line)
 
     def test_mutant(self):

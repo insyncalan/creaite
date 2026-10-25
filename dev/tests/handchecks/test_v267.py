@@ -29,6 +29,12 @@ def sec(text, v="2.6.7", nxt="2.6.6"):
     return text.split(f"## creaite {v}\n", 1)[1].split(f"## creaite {nxt}\n", 1)[0]
 
 
+def _own(t):
+    """2.6.7's own text: from its heading (or the file's start) to 2.6.6's heading; a later release's section above it is left out."""
+    t = t.split("## creaite 2.6.6\n")[0]
+    return t.split("## creaite 2.6.7\n", 1)[1] if "## creaite 2.6.7\n" in t else t
+
+
 def unguarded(t):
     return re.sub(r"<!--.*?-->", "", t, flags=re.S)
 
@@ -37,14 +43,14 @@ class V267(unittest.TestCase):
     def test_c01_notes(self):
         wn = read("system/templates/help/whats-new.md")
         heads = re.findall(r"^## creaite (\d+\.\d+\.\d+)\s*$", wn, re.M)
-        self.assertEqual(heads[:2], ["2.6.7", "2.6.6"])
+        self.assertEqual(heads[heads.index("2.6.7"):][:2], ["2.6.7", "2.6.6"])   # a later release may sit above
         self.assertIn("(#328)", sec(wn))
         self.assertTrue((REPO / "dev/release-notes/2.6.7-plain.md").exists())
         self.assertTrue((REPO / "dev/handchecks/v2.6.7.md").exists())
 
     def test_c02_public_text(self):
         for p in ("system/templates/help/whats-new.md", "dev/release-notes/2.6.7-plain.md"):
-            t = unguarded(read(p).split("## creaite 2.6.6\n")[0])
+            t = unguarded(_own(read(p)))
             for w in ("Matched", "Likely", "Not sure", "Process all ready", "never named"):
                 self.assertIn(w, t, f"{p} lacks {w!r}")
             self.assertIn("### Good to know", t)
@@ -62,7 +68,7 @@ class V267(unittest.TestCase):
 
     def test_c04_chain_wording_is_plain_text(self):
         for p in ("system/templates/help/whats-new.md", "dev/release-notes/2.6.7-plain.md"):
-            t = read(p).split("## creaite 2.6.6\n")[0]
+            t = _own(read(p))
             self.assertEqual(t.count("<!--"), t.count("-->"), f"{p}: an unclosed comment")
             self.assertNotIn("GUARDED", unguarded(t), f"{p}: a GUARDED marker is visible")
             self.assertNotIn("GUARDED", t, f"{p}: a GUARDED marker is left")
@@ -83,9 +89,9 @@ class V267(unittest.TestCase):
         self.assertTrue(whats_new.has("2.6.7"))
 
     def test_c07_version(self):
-        self.assertEqual(read("VERSION").strip(), "2.6.7")
+        self.assertGreaterEqual(tuple(map(int, read("VERSION").strip().split("."))), (2, 6, 7))   # 2.6.8 contains 2.6.7
         for g in ("guide-first-day.html", "guide-how-to.html"):
-            self.assertIn("creaite 2.6.7 ·", read(f"system/templates/{g}"))
+            self.assertRegex(read(f"system/templates/{g}"), r"creaite 2\.6\.[7-9] ·")   # 2.6.7 or later (test_v268 pins 2.6.8)
 
 
 if __name__ == "__main__":

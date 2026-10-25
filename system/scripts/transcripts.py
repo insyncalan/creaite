@@ -28,6 +28,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import invite_clean  # noqa: E402  (2.6.8: a saved calendar is cleaned again when it is read)
 try:
     import log as debuglog  # BL-102: the debug log (not `log`: some scripts have a function of that name); optional
 except ImportError:
@@ -218,7 +219,7 @@ def classify(*, online, uri, count, error, past):
 def calendar_rows():
     """The timed meetings in system/staging/calendar.json, each with its day."""
     try:
-        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        cal = invite_clean.read_calendar(paths.CALENDAR)
     except (OSError, ValueError):
         return []
     out = []
@@ -533,21 +534,18 @@ class Job:
         self.mode, self.event, self.error, self.transcripts, self.uri_used = mode, None, None, None, None
         self.chat_listing, self.chat_full, self.chat_thread, self.wrong = None, {}, None, False
         self.cancel_note = ""
+        self.calls, self.event_read = [], None     # #365: each tool result (name, error, length); how the event read went
 
     def observe(self, name, tool_input, text, is_error=False):
         """Take one tool call and its result from the run: the event, the transcript or the meeting chat it read.
-        Other tools are ignored.
+        Other tools are only counted (#365: names, errors and lengths, never text), so a load that read nothing says so.
         """
+        self.calls.append((str(name).split("__")[-1][:40], bool(is_error), len(text or "")))
         if not str(name).endswith("__read_resource"):
             return
         uri = str((tool_input or {}).get("uri") or "")
         if uri.startswith("calendar:///events/"):
-            data = as_json(text) if not is_error else None
-            facts = event_facts(data)
-            if facts.get("id") == self.id or (facts.get("id") and unquote(facts["id"]) == self.id):
-                self.event = facts
-            elif facts:
-                self.wrong = True
+            self.take_event(text, is_error)
         elif uri.startswith("meeting-transcript:///"):
             self.uri_used = uri
             if is_error:
@@ -572,6 +570,30 @@ class Job:
                 self.chat_listing = data
 
     # the facts the sweep also records
+    def take_event(self, text, is_error):
+        """The calendar event a read_resource returned: kept if it is this meeting's, `wrong` if it is another's."""
+        facts = event_facts(as_json(text) if not is_error else None)
+        self.event_read = "error" if is_error else ("unreadable" if not facts else "ok")
+        if facts.get("id") == self.id or (facts.get("id") and unquote(facts["id"]) == self.id):
+            self.event, self.wrong = facts, False       # M1: a read of the asked event wins over a neighbour read before it
+        elif facts and self.event is None:              # ... and a neighbour read after it changes nothing
+            self.wrong = True
+
+    def diagnosis(self):
+        """Counts only, for the debug log (#365): the tool results the run returned (name, error or ok, length) and how the
+        event read went (none, error, unreadable, ok). Never any text."""
+        calls = ", ".join(f"{n} {'error' if e else 'ok'} {ln}" for n, e, ln in self.calls[:12]) or "none"
+        return f"{len(self.calls)} tool results ({calls}); event read: {self.event_read or 'none'}"
+
+    def no_event(self):
+        """The plain line when the event was not read, saying which way it failed; the debug log gets the counts (#365)."""
+        debuglog.warn("transcripts", f"{self.mode} {self.id[-8:]}: no calendar event: {self.diagnosis()}")
+        if not self.calls:
+            return "Claude Code made no Microsoft 365 call, so nothing was loaded: try again."
+        if self.event_read is None:
+            return "Claude Code never read the meeting's calendar event, so nothing was loaded: try again."
+        return "The meeting's calendar event couldn't be read, so nothing was loaded."
+
     def facts(self):
         """What the run found for this meeting: online or not, the transcript URL and window, count, error, chat thread."""
         ev = self.event or {}
@@ -586,7 +608,7 @@ class Job:
         if self.wrong:
             return {"status": None, "files": [], "message": "The calendar event that came back wasn't the one asked for, so nothing was loaded."}
         if self.event is None:
-            return {"status": None, "files": [], "message": "The meeting's calendar event couldn't be read, so nothing was loaded."}
+            return {"status": None, "files": [], "message": self.no_event()}
         if self.event.get("cancelled"):
             return {"status": None, "files": [], "message": "That meeting was cancelled."}
         f = self.facts()

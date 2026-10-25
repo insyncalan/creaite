@@ -1,0 +1,38 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index be2dcd0f..b441c8a2 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -8082,6 +8082,21 @@ def usage_context_job():
+         return None
+ 
+ 
++def calendar_rescrub_job():
++    """2.6.8: the saved calendar put through today's cleaning (sweep.rescrub_calendar), at start-up and on each pass of the daily job,
++    so this server's own readers never see an entry an earlier version saved with a value. Logs counts only. Never raises. Not in the
++    development repository."""
++    if (paths.ROOT / ".creaite-dev").exists():
++        return None                                      # the development repository keeps its sample calendar as it is
++    try:
++        import sweep
++        n = sweep.rescrub_calendar()
++        return f"calendar: {n} saved meeting(s) cleaned again" if n else None
++    except Exception as e:  # noqa: BLE001  fail safe: the server and the daily job go on
++        swallowed("calendar-rescrub", e)
++        return None
++
++
+ def backup_daily_job():
+     """One pass of the daily backup steps, then (BL-10) the daily archiving; returns what they said (or why they didn't run)."""
+     if (paths.ROOT / ".creaite-dev").exists():
+@@ -8104,9 +8119,11 @@ def backup_daily_job():
+ 
+ def backup_timer():
+     """The daily backup job (and BL-10's archiving after it) a minute after start-up, then every hour (each step once a day)."""
++    calendar_rescrub_job()                               # at start-up, before the first minute's wait
+     time.sleep(60)
+     while True:
+         try:
++            calendar_rescrub_job()
+             for line in backup_daily_job():
+                 if debuglog is not None:
+                     debuglog.info("backup", line[:200])

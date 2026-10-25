@@ -21,6 +21,7 @@ from contextlib import closing
 from datetime import timedelta
 
 import paths
+import invite_clean  # noqa: E402  (2.6.8: a saved calendar is cleaned again when it is read)
 
 MODES = ("offer", "start", "off")                 # day.catchup_sweep: ask first, start at once (the default), or never
 PLACES = ("review", "first", "leave")             # Loose ends: Review now, First thing tomorrow, Leave
@@ -343,7 +344,7 @@ class Lookup:
         import minutes
         if self._cal is None:
             try:
-                cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+                cal = invite_clean.read_calendar(paths.CALENDAR)
             except (OSError, ValueError):          # no saved calendar: the meeting has no title to show
                 cal = {}
             self._cal = {str(e.get("id")): (day, e) for day, evs in (cal.get("days") or {}).items() if isinstance(evs, list)

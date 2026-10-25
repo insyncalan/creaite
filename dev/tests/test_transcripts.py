@@ -410,7 +410,7 @@ class Runs(unittest.TestCase):
     def test_the_run_reads_everything_and_writes_nothing_itself(self):
         self.run_job("load", route_steps(chat=False))
         seen = json.loads((self.v.root / "fake_seen.json").read_text())
-        for tool in ("read_resource", "outlook_calendar_search", "teams_list_chats", "chat_message_search"):
+        for tool in ("read_resource", "outlook_calendar_search"):      # #365 M2: the two the prompt names (more before the tools delta)
             self.assertIn(M365 + tool, seen["allowed"])
         self.assertFalse([t for t in seen["allowed"] if t.startswith(("Write", "Edit"))])        # the server writes the files, not Claude
         self.assertIn(M365 + "outlook_send_mail", seen["disallowed"])
@@ -424,6 +424,64 @@ class Runs(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(req, timeout=20)
         self.assertEqual(cm.exception.code, 400)
+
+
+class NoEventSaysWhy(unittest.TestCase):
+    """#365: a load that never got the calendar event said the same sentence whatever happened, and logged nothing. It now says
+    which of three things happened (no Microsoft 365 call at all, the event never read, the event read failed) and the debug
+    log gets the counts of the tool results (names, error or ok, lengths), never text."""
+
+    def finish(self, *calls):
+        job = T.Job("ev-1", "ABC Steering", DAY, "08:00", "09:00", "load")
+        for name, uri, text, err in calls:
+            job.observe(M365 + name, {"uri": uri} if uri else {}, text, err)
+        return job, job.finish()["message"]
+
+    def test_no_call_at_all(self):
+        job, msg = self.finish()
+        self.assertIn("made no Microsoft 365 call", msg)
+        self.assertEqual(job.diagnosis(), "0 tool results (none); event read: none")
+
+    def test_search_only_never_read_the_event(self):
+        job, msg = self.finish(("outlook_calendar_search", None, "boom", True))
+        self.assertIn("never read the meeting's calendar event", msg)
+        self.assertIn("outlook_calendar_search error 4", job.diagnosis())
+        self.assertNotIn("boom", job.diagnosis())
+
+    def test_event_read_failing_keeps_the_old_sentence(self):
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-1", "Error: 500", True))
+        self.assertEqual(msg, "The meeting's calendar event couldn't be read, so nothing was loaded.")
+        self.assertTrue(job.diagnosis().endswith("event read: error"))
+
+    def test_an_event_that_is_not_json_is_unreadable(self):
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-1", "plain words", False))
+        self.assertTrue(job.diagnosis().endswith("event read: unreadable"))
+
+    def test_a_neighbour_read_first_does_not_fail_the_asked_event(self):      # M1: the day-window search lists the whole day
+        other = dict(event(), id="ev-2", subject="Another meeting")
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-2", json.dumps(other), False),
+                               ("read_resource", "calendar:///events/ev-1", json.dumps(event()), False))
+        self.assertIsNotNone(job.event)
+        self.assertFalse(job.wrong)
+        self.assertNotIn("wasn't the one asked for", msg)
+
+    def test_a_neighbour_read_after_it_changes_nothing(self):
+        other = dict(event(), id="ev-2", subject="Another meeting")
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-1", json.dumps(event()), False),
+                               ("read_resource", "calendar:///events/ev-2", json.dumps(other), False))
+        self.assertIsNotNone(job.event)
+        self.assertFalse(job.wrong)
+        self.assertNotIn("wasn't the one asked for", msg)
+
+    def test_only_a_neighbour_is_still_wrong(self):
+        other = dict(event(), id="ev-2", subject="Another meeting")
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-2", json.dumps(other), False))
+        self.assertIn("wasn't the one asked for", msg)
+
+    def test_a_good_event_is_unchanged(self):
+        job, msg = self.finish(("read_resource", "calendar:///events/ev-1", json.dumps(event()), False))
+        self.assertIsNotNone(job.event)
+        self.assertNotIn("nothing was loaded: try again", msg)
 
 
 if __name__ == "__main__":

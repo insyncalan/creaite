@@ -18,7 +18,7 @@ src = ACT.read_text()
 
 class Source(unittest.TestCase):
     def test_the_rule_is_in_the_ready_list_not_in_single_process(self):
-        self.assertIn('m.src === "calendar" && !m.private && !m.confidential && m.p !== "_portfolio" && m.level !== "matched"', src)
+        self.assertIn('m.src === "calendar" && !m.private && !m.confidential && (m.p === "_portfolio" ? m.how !== "remembered" : m.level !== "matched")', src)
         self.assertIn("!irNeedsProject(m)", src.split("export const irReady")[1].split("\n")[0])
         self.assertNotIn("irNeedsProject", src.split("export const irCanProcess")[1].split("\n")[0])      # single Process unchanged
         self.assertNotIn("irNeedsProject", src.split("export async function irProcess(m)")[1].split("\n}")[0])

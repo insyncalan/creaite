@@ -1,0 +1,19 @@
+# The guarded chain for 2.6.8 (nothing is pinned yet: dev/tests/guarded_chain.py does not know it; a pin is added only on Alan's say). One diff per line, in landing order.
+# Base: origin/main at the 2.6.8 cut (apply on the release commit).
+# Guarded files only: system/scripts/live_server.py, system/scripts/client_leak.py, system/scripts/backup.py.
+#
+# #365 (frozen, approved bytes): per tool result of a job run one debug-log line (tool, ok or error, length; never text); the load prompt
+# searches the meeting's day (its start and end, no title words) and tries once more with a slightly wider day window if the search errors;
+# check and load get their own KIND_PROMPTS text that tells the model not to follow CLAUDE.md or session start. It does NOT start the run
+# context-less and sets no search limit: those (Cap's MEDIUMs) are in the follow-up pair, which is not in this chain.
+dev/proposals/365/live_server-365.diff
+# #365 tools (frozen, approved bytes): KIND_TOOLS and KIND_ARGS for check and load: the calendar search and read_resource only, ToolSearch the only built-in
+dev/proposals/365/live_server-365-tools.diff
+# #368: the client report check reads the sent line in every form
+dev/proposals/368/client_leak.py.diff
+# #369: the live server cleans the saved calendar again at start-up (v4; v1 to v3 are superseded)
+dev/proposals/369/live_server-rescrub-v4.diff
+# #369b: backup draft
+dev/proposals/369b/backup-draft.diff
+#
+# Not guarded (ordinary commits): dev/proposals/365/tests-pins.diff, dev/proposals/365/tests-tools.diff

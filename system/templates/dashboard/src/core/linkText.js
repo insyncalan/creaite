@@ -16,6 +16,8 @@
    - linkWrite(words, href): one link in the stored form. */
 import { esc } from "./dom.js";
 import { linkUrl } from "./linkUrl.js";
+import { SENT_CONFUSABLES } from "./sentConfusables.js";
+import { SENT_CHARREFS, SENT_DROPPED, SENT_NAMED } from "./sentEntities.js";
 
 /** A link as stored. Group 1 the words (escaped), group 2 the address. */
 const LINK = /\[((?:[^[\]\\\n]|\\[[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
@@ -65,16 +67,106 @@ export function linkWrite(words, href) {
   return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
 }
 
-/* ===== #153 ===== the dated "I sent it" lines (17-10-2026: Chased Sara by email (reminder 1); ...) are internal: they never go into an email body.
-   The same recognition as linktext.sent_strip in Python: a date, a colon, Chased / Emailed / Asked, a name, "by email" or "by message", at the start of
-   a line (after an optional bullet) or after the end of a sentence; ordinary text such as "We chased the supplier" never matches. */
-const SENT_NORM = t => String(t == null ? "" : t).replace(/[​‌‍⁠﻿]/g, "").replace(/ /g, " ").replace(/\r\n?/g, "\n");
+/* ===== #153, #368 ===== the dated "I sent it" lines (17-10-2026: Chased Sara by email (reminder 1); ...) are internal: they never go into an email body.
+   The same rule as linktext.sent_strip in Python (dev/tests/test_sent_parity_368.py feeds both the same fixtures): fail closed. The text is read on its
+   plain form (simple HTML as lines with its entities decoded as Python's html.unescape does, CRLF as LF, then the form edit_ai.normal makes one
+   character at a time: NFKC, invisible characters gone, marks gone, look-alike dashes and letters plain), in any case and spacing, anywhere on a line, a
+   date in either order, the name allowed to break over one line (each scan bounded by SENT_SPAN, so a long text is read in linear time). The date, its
+   colon, the verb and "by email|message" must all be there, so ordinary prose that only says "chased" or "asked" never matches. Only the sent line is cut
+   (from its date to the line's end); the rest keeps its own characters. A line left empty by the cut is dropped. */
+const SENT_NL = "\\n\\r\\v\\f\\u0085\\u2028\\u2029";
+const SENT_SPAN = 400;
+const SENT_DATE = "(?:\\d{2}\\s{0,50}-\\s{0,50}\\d{2}\\s{0,50}-\\s{0,50}\\d{4}|\\d{4}\\s{0,50}-\\s{0,50}\\d{2}\\s{0,50}-\\s{0,50}\\d{2})";
+const SENT_NAME_BREAK = `(?:[^${SENT_NL}]{0,${SENT_SPAN}}?(?:\\r\\n|[${SENT_NL}])[ \\t]{0,50})?`;
+const SENT_SRC = `(?<!\\d)${SENT_DATE}\\s{0,50}:\\s{0,50}(?:chased|emailed|asked)\\s{1,50}${SENT_NAME_BREAK}[^${SENT_NL}]{0,${SENT_SPAN}}?\\bby\\s{1,50}(?:email|message)\\b[^${SENT_NL}]*`;
 const SENT_TAGS = /<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/i;
-const SENT_LINE = /(?:^[ \t]*(?:[-*•–][ \t]*)?|(?<=[.!?;])[ \t]+)(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}):[ \t]+(?:chased|emailed|asked)\b[^\n]*?\bby[ \t]+(?:email|message)\b[^\n]*$/im;
+const SENT_LOOK = Object.fromEntries(Object.entries(SENT_CONFUSABLES).flatMap(([to, from]) => [...from].map(c => [c, to])));   /* generated from Python's table */
+const SENT_UNSEEN = new RegExp("[\\p{Cf}\\u00ad\\u034f\\u115f\\u1160\\u17b4\\u17b5\\u180b-\\u180f\\u3164\\ufe00-\\ufe0f\\uffa0\\ufff0-\\ufff8\\u{e0000}-\\u{e0fff}\\u0000-\\u0008\\u000e-\\u001f\\u007f-\\u0084\\u0086-\\u009f]", "gu");
+const SENT_LINEISH = new RegExp("[\\u000b\\u000c\\u001c-\\u001e\\u0085]", "g");
+const SENT_CUT = "";
+const sentLookRe = new RegExp("[" + Object.keys(SENT_LOOK).join("") + "]", "gu");
+const sentLook = t => t.replace(sentLookRe, c => SENT_LOOK[c]);
+const sentUnseen = t => t.replace(SENT_LINEISH, "\n").replace(SENT_UNSEEN, "").replace(/⠀/g, " ");
+const sentUnmark = t => t.normalize("NFKD").replace(/\p{M}/gu, "");
+const sentNormal = t => {
+  t = sentLook(sentUnmark(sentLook(sentUnseen(t))));
+  t = sentLook(sentUnseen(t.normalize("NFKC")));
+  return t.replace(/\p{Nd}/gu, c => { let x = c.codePointAt(0), d = 0; while (/\p{Nd}/u.test(String.fromCodePoint(x - 1))) { x--; d++; } return String(d % 10); });
+};
+const sentInvalid = n => SENT_DROPPED.some(([a, b]) => n >= a && n <= b);
+/** One character reference as Python's html.unescape reads it. @param {string} s what follows the ampersand */
+function sentRef(s) {
+  if (s[0] === "#") {
+    const hex = s[1] === "x" || s[1] === "X", num = parseInt(s.slice(hex ? 2 : 1).replace(";", ""), hex ? 16 : 10);
+    if (Object.hasOwn(SENT_CHARREFS, num)) return SENT_CHARREFS[num];
+    if ((num >= 0xd800 && num <= 0xdfff) || num > 0x10ffff) return "�";
+    return sentInvalid(num) ? "" : String.fromCodePoint(num);
+  }
+  if (Object.hasOwn(SENT_NAMED, s)) return SENT_NAMED[s];
+  for (let x = s.length - 1; x > 1; x--) if (Object.hasOwn(SENT_NAMED, s.slice(0, x))) return SENT_NAMED[s.slice(0, x)] + s.slice(x);
+  return "&" + s;
+}
+/** Python's html.unescape, with the named references of SENT_NAMED only. @param {string} t */
+export function sentUnescape(t) { return t.replace(/&(#[0-9]+;?|#[xX][0-9a-fA-F]+;?|[^\t\n\f <&#;]{1,32};?)/g, (_, s) => sentRef(s)); }
+const sentPlain = text => {
+  let t = String(text == null ? "" : text).replace(/\r\n?/g, "\n");
+  if (SENT_TAGS.test(t)) t = sentUnescape(t.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, ""));
+  return t.replace(/ /g, " ");
+};
+const SENT_MARKS = "*_~`\\", SENT_FRONT = "*_~`\\| \t";   /* markdown marks the check drops; marks, table bars and spaces before a cut line go with it */
+const SENT_RUN = /[\x20-\x29\x2b-\x5b\x5d-\x5e\x61-\x7b\x7d\t\n]+/y;
+const SENT_ONE = new Map();
+const sentNormOne = c => { let r = SENT_ONE.get(c); if (r === undefined) { if (SENT_ONE.size > 20000) SENT_ONE.clear(); r = sentNormal(c); SENT_ONE.set(c, r); } return r; };
+/** The link markup a [words](address) (any address: fail closed) adds round its words (to leave out), and where each link's words are (to take a cut back to its start). @param {string} plain */
+const sentLinkPieces = plain => {
+  const cuts = [], starts = [];
+  if (plain.includes("](")) for (const m of plain.matchAll(LINK)) {
+    const o = m.index, w1 = o + 1 + m[1].length;
+    cuts.push([o, o + 1], [w1, o + m[0].length]);
+    starts.push([o + 1, w1, o]);
+  }
+  return { cuts, starts };
+};
+/** The plain text on the matching form, a character at a time (link markup, markdown marks and escapes left out, a table bar a space), and where in the plain text each character of it came from. @param {string} plain */
+const sentMap = plain => {
+  const { cuts } = sentLinkPieces(plain), out = [], at = [];
+  let pos = 0, ci = 0;
+  while (pos < plain.length) {
+    if (ci < cuts.length && pos >= cuts[ci][0]) { pos = Math.max(pos, cuts[ci][1]); ci++; continue; }
+    const limit = ci < cuts.length ? cuts[ci][0] : plain.length, seg = cuts.length ? plain.slice(pos, limit) : plain;   // a piece between two cuts, copied once
+    let k = cuts.length ? 0 : pos;
+    const base = pos - k;
+    while (k < seg.length) {
+      SENT_RUN.lastIndex = k;
+      const m = SENT_RUN.exec(seg);
+      if (m) { out.push(m[0]); for (let j = 0; j < m[0].length; j++) at.push(base + k + j); k += m[0].length; continue; }
+      const ch = String.fromCodePoint(seg.codePointAt(k)), n = SENT_MARKS.includes(ch) ? "" : ch === "|" ? " " : sentNormOne(ch);
+      out.push(n);
+      for (let j = 0; j < n.length; j++) at.push(base + k);
+      k += ch.length;
+    }
+    pos = limit;
+  }
+  return { form: out.join(""), at };
+};
+/** Whether a text holds an "I sent it" line. @param {unknown} text */
+export function sentHas(text) { return new RegExp(SENT_SRC, "i").test(sentMap(sentPlain(text)).form); }
 /** @param {unknown} text */
 export function sentStrip(text) {
-  let t = SENT_NORM(text);
-  if (SENT_TAGS.test(t)) t = t.replace(/<\/(?:p|li|div)>|<br\s*\/?>/gi, "\n").replace(/<\/?(?:p|br|li|ul|ol|div|span|b|i|em|strong)\b[^>]*>/gi, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-  if (!SENT_LINE.test(t)) return String(text == null ? "" : text);
-  return t.split("\n").map(l => [l, l.replace(SENT_LINE, "")]).filter(([l, c]) => c === l || c.trim()).map(x => x[1]).join("\n").replace(/^\n+|\n+$/g, "").trim();
+  if (!text) return String(text == null ? "" : text);
+  const plain = sentPlain(text), { form, at } = sentMap(plain), { starts } = sentLinkPieces(plain);
+  const spans = [];
+  for (const m of form.matchAll(new RegExp(SENT_SRC, "gi"))) {
+    let a = at[m.index];
+    const w = starts.find(([w0, w1]) => a >= w0 && a < w1);
+    if (w) a = w[2];                                                         // inside a link's words: take the whole link
+    while (a > 0 && SENT_FRONT.includes(plain[a - 1]) && (!spans.length || a - 1 >= spans[spans.length - 1][1])) a--;
+    const e = m.index + m[0].length;
+    spans.push([a, e < form.length ? at[e] : plain.length]);                 // the match runs to the line's end: take what the form left out
+  }
+  if (!spans.length) return String(text);
+  let t = "", last = 0;
+  for (const [a, b] of spans) { t += plain.slice(last, a) + SENT_CUT; last = b; }
+  t += plain.slice(last);
+  return t.split("\n").filter(l => !(l.includes(SENT_CUT) && !l.replace(/[ \t\-*•–]/g, ""))).map(l => l.replaceAll(SENT_CUT, "")).join("\n").trim();
 }
