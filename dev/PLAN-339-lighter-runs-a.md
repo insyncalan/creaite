@@ -26,10 +26,22 @@ Status: plan only. Review tier Full. Everything that touches the run engine is g
 ## Pinned tests the chain rewrites on purpose (`dev/proposals/339/tests-pins.diff`, applies after the live_server diffs)
 - `test_panel_sweep` test_2 (lines 185-189): "refresh calendar" now runs `--mode calendar` with the fixed prompt, no add-dir, no resume; "sweep mail for ABC" still `--mode sweep`. Why: the route changes the kind.
 - `test_calendar_refresh` test_5 (lines 577-593): the typed refresh is the calendar run (was "BL-309, unchanged"); the ordinary-message and model-supplied kind or mode checks above it are untouched and stay.
-- `test_ai_budget_gate_334` lines 144-145: a typed "refresh calendar" must not be held (not 429) but may stop at the calendar run's own checks (the test vault fails the precheck before a Run starts). The exemption itself and the exact `if panel_sweep(...)` line pin (SKIP_ASK) are unchanged.
+- `test_ai_budget_gate_334` lines 144-145: a typed "refresh calendar" must not be held (not 429); it either starts or stops at the calendar run's own checks (400 or 409; the test vault fails the precheck before a Run starts), so a 500 no longer passes. The exemption itself and the exact `if panel_sweep(...)` line pin (SKIP_ASK) are unchanged.
+- `test_mail_check` `test_refresh_calendar_ends_with_nothing_new` (Chrome, found by the full run on the 2.6.6 base): the typed refresh no longer ends with the mail check's "Finished. Nothing new to review."; it is the calendar run and ends with its plain closure (renamed `test_refresh_calendar_is_the_calendar_run`).
 - Checked and left alone (they stay green with the patches): `test_panel_sweep` line 83 (the recogniser: panel_sweep keeps the words), `test_calendar_refresh` line 284 (mode sweep's guard decisions: the mode still exists), `test_run_badge` line 108 (the page's label for the typed words: unchanged). With all patches and the pin diff applied temporarily, test_panel_sweep, test_calendar_refresh, test_ai_budget_gate_334, test_run_badge and test_run_tools_explicit pass; then reverted.
 
 ## Files
 - Guarded patches, not applied: `calendar-route.diff`, `sweep-no-home.diff`, `sweep-followed-rule.diff` (all `system/scripts/live_server.py`), plus `tests-pins.diff` (three test files).
 - Committed: `system/templates/dashboard/src/ask.js`, `system/templates/dashboard.html`, `system/scripts/usage_report.py`, `dev/tests/test_lighter_runs_339.py`.
 - Tests to add when the chain lands (Cap): the calendar kind via /api/ask and via queue_start with args showing `--mode calendar`, exact tool list and no add-dir; 409 while a sweep runs; the precheck message; mutants for each routing line, the 409 guard, chat=None and the home removal. Today's structure tests read the patched text; the behavioural ones need the chain.
+
+## For Alan (each needs his yes; HOW-WE-WORK.md:38)
+1. Guard mode: a typed "refresh calendar" moves from mode `sweep` to mode `calendar` (narrower: two calendar reads, two input files, five sweep.py commands, no add-dir). `calendar-route.diff`.
+2. Reading: every sweep run (typed, queued, Close the day's) loses the home folder from its readable places; the projects root stays. `sweep-no-home.diff`. Whether Claude Code's bare Read rule already allows reads outside --add-dir is not checked; if it does the saving is nominal.
+3. Visible change: a typed refresh is drawn as a plain run (steps and closure) and kept in "Runs creaite started"; a sweep running reads "A mail check is running; try again when it ends." (409); a calendar that cannot be read shows its own reason (400). In the queue a typed refresh that cannot start falls back to the old typed-sweep run.
+4. Rules wording: `creaite-rules.diff` (one sentence added to the ask creaite section). Wording is Alan's.
+5. Followed-people rule on both sweep prompts: `sweep-followed-rule.diff` (decided; included for completeness).
+Chain: add the chosen diffs to the 2.6.5 or 2.6.6 GUARDED chain file and recompute the pin in dev/tests/guarded_chain.py; land `tests-pins.diff` in the same step. Landing a subset is supported by `test_lighter_runs_339` (it decides per diff whether it has landed).
+
+## Review findings (Cap 02:25 and 03:01)
+Fixed here: H1 (landing decided per diff, pins skip when landed), N1 (globals.json), M3 (behaviour tests through the patched server: sweep --add-dir, prompt text, the 409 guard, chat=None, queue route, fixed prompt; mutants killed), M4 (rules diff), L1 (one plan), L4 (the budget pin no longer passes a 500). Left: L2 (calendar route catches only OSError; the prompt is fixed), L3 (a different sentence in the queue fallback, by decision), L5 (typed and button calendar runs both record as calendar/calendar), the full Chrome look at the page.

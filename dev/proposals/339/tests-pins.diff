@@ -1,5 +1,5 @@
 diff --git a/dev/tests/test_ai_budget_gate_334.py b/dev/tests/test_ai_budget_gate_334.py
-index e2d42743..feaba92a 100644
+index e2d42743..d4799ce9 100644
 --- a/dev/tests/test_ai_budget_gate_334.py
 +++ b/dev/tests/test_ai_budget_gate_334.py
 @@ -152,7 +152,8 @@ class SweepsAreNeverHeld(unittest.TestCase):
@@ -8,7 +8,7 @@ index e2d42743..feaba92a 100644
              for words in SWEEPS:
 -                self.assertTrue(ask({"message": words}, status(500, at_limit=at_limit))[1], (at_limit, words))
 +                sent, reached = ask({"message": words}, status(500, at_limit=at_limit))
-+                self.assertTrue(reached or sent[0] != 429, (at_limit, words))  # #339 A: the calendar run has its own checks
++                self.assertTrue(reached or (sent and sent[0] in (400, 409)), (at_limit, words))  # #339 A
          sent, reached = ask({"message": "tell me about the pilot"}, status(500))
          self.assertFalse(reached)                                    # anything else is still held
          self.assertEqual(sent[0], 429)
@@ -39,6 +39,27 @@ index b4ce3da5..2c84505e 100644
  
  
  class SweepCalendarSave(unittest.TestCase):
+diff --git a/dev/tests/test_mail_check.py b/dev/tests/test_mail_check.py
+index b1a5352c..6b6042b1 100644
+--- a/dev/tests/test_mail_check.py
++++ b/dev/tests/test_mail_check.py
+@@ -486,11 +486,13 @@ class MailCheckBrowser(_Live):
+         self.finish()
+         self.assertEqual(b.eval("document.querySelectorAll('#chLog .msg.runend').length"), 0)
+ 
+-    def test_refresh_calendar_ends_with_nothing_new(self):
++    def test_refresh_calendar_is_the_calendar_run(self):
+         self.begin("refresh calendar")
+         self.finish()
+-        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].pop().textContent")
+-        self.assertEqual(end, "Finished. Nothing new to review.")
++        # #339 A: the calendar run's plain closure, not a mail check's (the stand-in saves nothing)
++        end = self.b.eval("[...document.querySelectorAll('#chLog .msg.runend')].map(e=>e.textContent)")
++        self.assertEqual(len(end), 1, end)
++        self.assertTrue(end[0].startswith("The calendar was not saved"), end)
+ 
+     def test_the_badge_with_the_chat_closed_shows_places_only_and_fits(self):
+         b = self.b
 diff --git a/dev/tests/test_panel_sweep.py b/dev/tests/test_panel_sweep.py
 index 2e5b919f..a0178887 100644
 --- a/dev/tests/test_panel_sweep.py

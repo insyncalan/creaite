@@ -951,6 +951,7 @@
    "tx",
    "txReady",
    "typeWord",
+   "typedCalendar",
    "typedLinkUrl",
    "typing",
    "undatedCard",
