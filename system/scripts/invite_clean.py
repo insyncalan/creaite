@@ -51,9 +51,12 @@ JOINWORD = re.compile(r"\b(?:join|dial|webinar|conference|video\s*call|video\s*m
 # ONE separator class for every label path (a label alone, a bare label, a phrase that stops): any punctuation or symbol (Unicode
 # P* and S*, and the rest of what is neither a letter, a digit nor a space) except a sentence end (. , ; ! ?).
 BARE_SEPARATORS = r"[^\w\s.,;!?]"
+# A separator run: a separator with sentence-end marks round it ("Password.:", "Passcode:!", "PIN?:"), or an ellipsis ("Passcode...").
+# Sentence-end marks alone are NOT a separator run ("Password! hunter" is two sentences; a documented trade-off).
+SEPRUN = rf"(?:[.,;!?]*{BARE_SEPARATORS}[.,;!?]*|\.{{2,}}|(?:\.\s*){{3,}})"
 # a label followed by a value: a separator, "is", a word with a digit, or (v2.6 review) a word that switches from a small
 # letter to a capital ("Password kqZxyw", "Key kqZxyw"; case-sensitive, so "Password reset" and "Key Dates" stay)
-_VAL = rf"(?:\s*(?:{BARE_SEPARATORS}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
+_VAL = rf"(?:\s*(?:{SEPRUN}\s*\S|\b(?:is|are)\b\s*\S)|\s+(?:no\.?\s*)?\S*\d|\s+(?-i:\S*[a-z]\S*[A-Z]))"
 _EVERYWHERE = (r"pass\s*codes?|pass\s*phrases?|pass\s*keys?|pwd|passwd|kenn\s*codes?|zugangs\s*codes?|einwahl\s*codes?|"
                r"teilnehmer\s*codes?|code\s+secret|code\s+d.acc[e\u00e8]s|toegangs\s*codes?|vergader\s*codes?|pin\s*codes?|"
                r"c[o\u00f3]digo\s+(?:de\s+(?:acceso|acesso|reuni[o\u00f3]n)|da\s+reuni[a\u00e3]o)|"
@@ -100,9 +103,9 @@ def _bare_next(lab, ok):
     okx = "|".join(ok)
     words = "|".join((*ok, *BARE_FOLLOW))                                       # what may stand after the first allowed word
     run = rf"(?:\s+(?:{words})(?![\w-]))*"
-    bad = (rf"(?:\s*[:=\-\u2013\u2014(\[]|\s*[,;.!?]+\s*[\w\"'(\[]|\s+(?!(?:{words})(?![\w-]))[\w\"'(\[])")
-    sep = BARE_SEPARATORS                                                        # straight after the label too
-    return (rf"(?:{lab})(?![\w-])(?:\s*(?:[,;.]+|{sep}+)\s*\w"
+    bad = (rf"(?:\s*{SEPRUN}|\s*[,;.!?]+\s*[\w\"'(\[]|\s+(?!(?:{words})(?![\w-]))[\w\"'(\[])")
+    sep = SEPRUN                                                                 # straight after the label too
+    return (rf"(?:{lab})(?![\w-])(?:\s*(?:[,;.]+|(?:{sep})+)\s*\w"
             rf"|\s+[\"'(\[]?(?:(?!(?:{okx})(?![\w-]))\w|(?:{okx})(?![\w-]){run}{bad}))")
 
 
@@ -111,7 +114,7 @@ _BARE_LABELS = "|".join(lab for lab, _ok in BARE_NEXT)
 BARE_LISTED = frozenset(w for _l, ok in BARE_NEXT for w in ok) | frozenset(BARE_FOLLOW)       # every word a label-free phrase may use
 _BARE_RUN = rf"(?<![\w-])(?:{_BARE_LABELS})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*"
 _BARE_OPEN = re.compile(                                  # a label phrase that stops on a function word or a separator: its value is next
-    rf"{_BARE_RUN}(?:\s+(?:{'|'.join(BARE_FUNCTION)})|\s*{BARE_SEPARATORS}+)\s*[.,;]*\s*$", re.I)
+    rf"{_BARE_RUN}(?:\s+(?:{'|'.join(BARE_FUNCTION)})|\s*(?:{SEPRUN})+)\s*[.,;]*\s*$", re.I)
 _BARE_END = re.compile(rf"{_BARE_RUN}\s*[.,;!?]*\s*$", re.I)           # a finished label phrase ("Password reset"): the next line is judged
 
 
@@ -121,10 +124,12 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
+                   rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"       # "Meeting ID. 123 456"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
-_ALONE_ITEM = rf"(?:\s*{BARE_SEPARATORS}|\s*_|\s+(?:is|are)(?![\w-]))"                       # a separator, "is" or "are"
-LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS})){_ALONE_ITEM}*\s*$"
-                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS})(?![\w-]){_ALONE_ITEM}+\s*$", re.I)    # "Key:", "Code is": needs one
+_ALONE_ITEM = rf"(?:\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"                                  # a separator run, "is" or "are"
+_ALONE_TAIL = rf"{_ALONE_ITEM}(?:{_ALONE_ITEM}|\s*[.,;!?\u2026]+)*"        # sentence-end marks only count after a separator
+LABEL_ALONE = re.compile(rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\w-])|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?\s*$"
+                         rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS})(?![\w-]){_ALONE_TAIL}\s*$", re.I)     # "Key:", "Code is": needs one
 _PH = r"\+?\(?\d[\d ()./-]{6,40}\d"
 DIAL = re.compile(r"(?<!\d)\d{3,}\s*#(?!\w)|,,\s*\d|\d\s*,,"
                   r"|(?<![\w-])(?:dial[- ]?in|dial|toll[- ]?free|call[- ]?in|conference\s+call)(?![\w-])"

@@ -12,6 +12,8 @@
 
 **Separators.** After a label, any punctuation or symbol (not just a colon) means a secret follows: "Passcode –", "Passcode →", "Passcode is", "Passcode (", also "Key:" on its own line. The line after goes with it. This also removes titles such as "Access & Security review" or "Key (draft): plan" that have a label word followed by a symbol; a sentence end (full stop, comma, semicolon, ! or ?) does not count. "Key milestones" and "Key dates" are unaffected.
 
+**Sentence ends (a deliberate trade-off).** A separator with full stops, commas, question or exclamation marks round it ("Password.: hunter", "Passcode:!", "PIN?:") and an ellipsis ("Passcode...", "Passcode…") count as a separator. A label followed only by a sentence end and then a plain word is kept on purpose, because in ordinary prose a sentence ends there and a new one starts: "Password! hunter" on one line, and a line "Passcode." followed by a line "hunter" (the label line goes, the next stays). A label followed by a sentence end and then a number ("Meeting ID. 123 456", "Meeting ID, 123", "Access code. 4417") is removed.
+
 **Not covered (so far):**
 - a secret written before its label ("swordfish is the password");
 - the labels Key, Access, Login, Credentials, Pass, Guest wifi key and Dial-in followed by a plain word (too many ordinary titles, such as "Key milestones" or "Access review");

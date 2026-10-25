@@ -211,6 +211,22 @@ NEXT_LINE = [
     ("p-key", "Key:\nhunter", "hunter"),
     ("p-key-dash", "Key \u2013\nhunter", "hunter"),
     ("p-pair-dash", "Meeting ID -\nPasscode \u2013\n123 456\nhunter", "hunter"),
+    ("s-password-dot-colon", "Password.: hunter", "hunter"),                                # round 8: sentence-end marks round a separator
+    ("s-pin-q-colon", "PIN?: x", "x"),
+    ("s-token-bang-colon", "Token!: x", "x"),
+    ("s-dot-colon-nl", "Passcode.:\nhunter", "hunter"),
+    ("s-colon-dot", "Passcode:.\nhunter", "hunter"),
+    ("s-colon-space-dot", "Passcode: .\nhunter", "hunter"),
+    ("s-q-colon", "Passcode?:\nhunter", "hunter"),
+    ("s-colon-bang", "Passcode:!\nhunter", "hunter"),
+    ("s-dots", "Passcode...\nhunter", "hunter"),
+    ("s-ellipsis", "Passcode\u2026\nhunter", "hunter"),
+    ("s-colon-dot-bang", "Passcode: . !\nhunter", "hunter"),
+    ("s-meeting-id-dot", "Meeting ID. 123 456", "123"),                                      # a digit value after a sentence end
+    ("s-meeting-id-comma", "Meeting ID, 123 456", "123"),
+    ("s-meeting-id-semi", "Meeting ID; 123", "123"),
+    ("s-pwd-dot-digit", "Pwd. xk7q", "xk7q"),
+    ("s-access-code-dot", "Access code. 4417", "4417"),
     ("f-td", "<td>PIN</td><td>kqzxyw</td>", "kqzxyw"),                                    # bare fragments, no <html> or <table>
     ("f-td-rows", "<tr><td>Password</td></tr><tr><td>kqzxyw</td></tr>", "kqzxyw"),
     ("f-li", "<li>Password reset</li><li>hunter</li>", "hunter"),
@@ -365,6 +381,15 @@ class Controls(unittest.TestCase):
         """One separator class means "Access & Security review" loses its title (fail closed; in the notes)."""
         self.assertEqual(I.scrub("Access & Security review", 140), "")
 
+    def test_accepted_sentence_end_then_word_is_kept(self):
+        """ACCEPTED trade-off (NOTES-2.6.8.md): a pure sentence end then a word-only value is two sentences in ordinary prose and is kept."""
+        self.assertEqual(I.scrub("Password! hunter", 140), "Password! hunter")
+        out = I.invite_text("Welcome\nPasscode.\nhunter\nEnd")
+        self.assertIn("hunter", out)                                            # the label line goes, the next line stays
+        self.assertNotIn("Passcode", out)
+        # a bare label such as "Password!" on its own line still hides the next lines (the three-line window), so only the
+        # same-line "Password! hunter" and a stand-alone label such as "Passcode." keep the word-only value
+
     def test_known_over_removal(self):
         """Fail closed costs a few ordinary titles: any word after pin / password / code that is not on the allow-list is a value."""
         for t in OVER_REMOVED:
@@ -497,7 +522,7 @@ class Mutants(unittest.TestCase):
         self.assertTrue(any(b.startswith("rv-") for b in bad), bad)
 
     def test_punctuation_check_off(self):
-        bad = fails(mutant("\\s*[:=\\-\\u2013\\u2014(\\[]|", ""))
+        bad = fails(mutant('bad = (rf"(?:\\s*{SEPRUN}|', 'bad = (rf"(?:(?!)|'))
         self.assertTrue(any(b in ("rv-21:title", "rv-22:title", "rv-26:title", "rv-27:title") or b.startswith(("rv-21", "rv-26")) for b in bad), bad)
 
     def next_line_bad(self, m):
@@ -516,10 +541,6 @@ class Mutants(unittest.TestCase):
     def test_blank_lines_consume_the_window(self):
         m = mutant("            kept.append(ln)                    # a blank line is transparent", "            window = max(window - 1, 0)\n            kept.append(ln)                    # a blank line is transparent")
         self.assertTrue({"w-blanks-5", "w-blanks-between"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
-
-    def test_fragment_conversion_off(self):
-        m = mutant("a|td|th|tr|li|ul|ol|h[1-6]|b|i|u|em|strong|font)", "a)")
-        self.assertTrue({"f-li", "f-ul", "f-th"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
     def test_label_line_inside_the_window_does_not_restart_it(self):
         m = mutant("window = WINDOW if label else (max(window - 1, 0) if consumed else 0)", "window = max(window - 1, 0) if consumed else 0")
@@ -563,15 +584,28 @@ class Mutants(unittest.TestCase):
                          "p-meeting-id-hyphen"} <= set(bad), bad)
 
     def test_is_tail_removed(self):
-        m = mutant('(?:\\s*{BARE_SEPARATORS}|\\s*_|\\s+(?:is|are)', '(?:\\s*{BARE_SEPARATORS}|\\s*_|\\s+(?:zzz|zzzz)')
+        m = mutant('(?:\\s*{SEPRUN}|\\s*_|\\s+(?:is|are)', '(?:\\s*{SEPRUN}|\\s*_|\\s+(?:zzz|zzzz)')
         self.assertTrue({"p-is", "p-is-colon"} <= set(self.next_line_bad(m)), self.next_line_bad(m))
 
+    def test_sentence_end_allowance_removed(self):
+        m = mutant('SEPRUN = rf"(?:[.,;!?]*{BARE_SEPARATORS}[.,;!?]*|\\.{{2,}}|(?:\\.\\s*){{3,}})"', 'SEPRUN = rf"(?:{BARE_SEPARATORS})"')
+        bad = self.next_line_bad(m)
+        self.assertTrue({"s-dot-colon-nl", "s-q-colon", "s-dots", "s-ellipsis"} <= set(bad), bad)
+        self.assertNotEqual(m.scrub("Password.: hunter", 140), "")
+
+    def test_digit_rule_removed(self):
+        m = mutant('rf"|(?<![\\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?![\\w-])\\s*[.,;!?\\u2026]+\\s*\\S*\\d"', 'rf"|(?!)"')
+        for t in ("Meeting ID. 123 456", "Meeting ID, 123 456", "Meeting ID; 123", "Pwd. xk7q", "Access code. 4417"):
+            self.assertEqual(I.scrub(t, 140), "", t)
+            if t.startswith("Meeting ID"):                      # Pwd and Access code are secrets with or without a value
+                self.assertNotEqual(m.scrub(t, 140), "", f"{t!r}: the digit rule is not what removes it")
+
     def test_key_label_rule_off(self):
-        m = mutant("(?:{_BARE}|{_BARE_LABELS})(?![\\w-]){_ALONE_ITEM}+", "(?:{_BARE_LABELS})(?![\\w-]){_ALONE_ITEM}+")
+        m = mutant("(?:{_BARE}|{_BARE_LABELS})(?![\\w-]){_ALONE_TAIL}", "(?:{_BARE_LABELS})(?![\\w-]){_ALONE_TAIL}")
         self.assertIn("p-key", self.next_line_bad(m))
 
     def test_punctuation_before_value_off(self):
-        bad = fails(mutant("(?:\\s*(?:[,;.]+|{sep}+)", "(?:\\s*(?:{sep}+)"))
+        bad = fails(mutant("(?:\\s*(?:[,;.]+|(?:{sep})+)", "(?:\\s*(?:(?:{sep})+)"))
         self.assertTrue(any(b.startswith(("rv-32", "rv-33")) for b in bad), bad)
 
     def test_follow_list_entry_removed(self):

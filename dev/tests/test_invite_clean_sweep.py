@@ -74,6 +74,23 @@ def separators():
 
 
 SEPS = separators()
+SENTENCE_ENDS = [".", "!", "?", "\u2026", ",", ";", "..", "?!", "!!!"]
+
+
+def sentence_end_runs():
+    """A separator with 1 to 3 sentence-end marks before, after and between ('.:', ':!', '?:.', ': .', ...'), and the ellipsis forms."""
+    out = ["...", "\u2026", ". . .", "....", ": .", ": . !", "- .", "\u2013 ?"]
+    rnd = random.Random(232)
+    for sep in [":", "-", "\u2013", "=", "|", "/", "(", "#", "\u2192", "~"]:
+        for _ in range(6):
+            pre = "".join(rnd.choice(SENTENCE_ENDS) for _ in range(rnd.randint(0, 2)))[:3]
+            post = "".join(rnd.choice(SENTENCE_ENDS) for _ in range(rnd.randint(0, 2)))[:3]
+            out.append(pre + sep + post)
+        out += ["." + sep, sep + ".", "?" + sep, sep + "!", "." + sep + "!"]
+    return out
+
+
+SEPS = SEPS + sentence_end_runs()
 
 
 def label_sep_survivors(mod):
