@@ -26,7 +26,6 @@ A SKIP-UNTIL check runs the probe the sheet's wording asks for; if the probe fai
 
 Run (from the repository root):  python3 dev/tests/handchecks/test_v268.py
 """
-import contextlib
 import hashlib
 import re
 import shutil
