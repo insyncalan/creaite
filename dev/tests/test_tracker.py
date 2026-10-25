@@ -91,6 +91,7 @@ def make_vault():
               "calendar_refresh.py",                               # #265: Calendar import's Refresh, its own run kind
               "reextract.py",                                      # #283: the Minutes view's Read again, its own run kind
               "invite_clean.py",                                   # #265 review M1, M2: what a saved invite may keep
+              "calendar_gateway.py", "invite_filter.py", "invite_blocks.py",   # #375 E1: the one calendar read path and its filter
               "item_history.py",                                   # #241 D: a work item's complete history (read only)
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
