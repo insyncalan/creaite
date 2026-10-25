@@ -58,8 +58,8 @@ export function irChange(r) {
 /** The quote (the evidence): a probably-done update's, else an update's own reason. @param {any} r */
 export const irQuote = r => noTime((r.dn && r.dn.ev) || (r.kind === "update" && r.rec && r.rec.why) || "");
 
-/** The source line, without times: where it came from, the match, Open source. @param {any} r */
-function SourceLine({ r }) {
+/** The source line, without times: where it came from, the match, Open source (null when it has none). @param {any} r */
+function sourceLine(/** @type {any} */ r) {
   let o = srcParse(r.src);
   if (o && o.type === "Text") {                                    /* a minutes copy is HTML: a file all the same */
     const m = /^((?:projects|system)\/.+?\.html)(?: — (.+))?$/.exec(String(o.text));
@@ -76,7 +76,9 @@ function SourceLine({ r }) {
   else if (o && o.Link && linkUrl(o.Link)) link = <a class="srclink" href={/** @type {string} */ (linkUrl(o.Link))} target="_blank" rel="noopener noreferrer">Open source</a>;
   const match = r.p ? null : r.why;
   where = fdText(where);
-  return <span class="icsrc">{where}{match ? ` · ${match}` : ""}{link ? <> · {link}</> : null}</span>;
+  /* #343: pieces joined by one separator each, so an empty place or match leaves no stray or doubled dot */
+  const bits = [where, match ? String(match) : "", link].filter(x => x);
+  return bits.length ? <span class="icsrc">{bits.map((x, i) => <>{i ? " · " : null}{x}</>)}</span> : null;
 }
 
 /** A due date on a weekend: say so, with the two working days beside it (BL-180); a click edits the proposal (core/fields.js). @param {{r: any}} props */
@@ -188,6 +190,7 @@ export function ProposalLine({ n, child, kids, kid, minHeld }) {
   const r = irRow(n);
   if (!r) return null;
   const parts = irChange(r), quote = irQuote(r), held = r.hold ? (HOLD_WORDS[/** @type {keyof HOLD_WORDS} */ (r.hold)] || "approve individually") : "";
+  const src = sourceLine(r);
   const rej = !!r.kind && r.kind !== "files", conflict = isConflict(r), tip = rvTipText(r) || TIP_FALLBACK[/** @type {keyof TIP_FALLBACK} */ (r.kind)] || "Open it to see the detail";
   return (
     <tr class={`click irprop${child ? " mchild" : ""}${kid ? " irkid" : ""}${kids ? " irparent" : ""}`} data-irn={n} data-irkids={kids ? kids.id : undefined} aria-expanded={kids && kids.count ? !kids.folded : undefined} data-irtick={tick} data-hold={r.hold || ""} data-kind={r.kind} tabindex={0}
@@ -199,10 +202,10 @@ export function ProposalLine({ n, child, kids, kid, minHeld }) {
           <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>{r.drafted === "client" ? "Drafted wording" : "Drafted"}</span></> : null}
         {conflict ? <ConflictBlock rec={r.rec} /> : null}
         <div class="icchg" data-tip={tip || undefined}><span class="ickind">{irPill(r)}</span>
-          {parts.map(p => <> · <span class={p.warn ? "h-warn" : ""}>{p.t}</span></>)}
+          {parts.filter(p => p.t).map(p => <> · <span class={p.warn ? "h-warn" : ""}>{p.t}</span></>)}
           {held ? <> · <span class="indiv">{held}</span></> : <> · <span class="icroutine">Routine</span></>}
           {canDraftResponse(r) ? <> · <button type="button" class="linkbtn" data-drrisk={r.n} onClick={() => draftResponse(r.n)}>Draft a response</button></> : null}
-          {" · "}<SourceLine r={r} /></div>
+          {src ? <> · {src}</> : null}</div>
         {quote ? <div class="icq">{quote}</div> : null}
         {r.ws_suggest && !r.done && (r.flags || []).includes("new-workstream") ? <div class="wsq">New workstream “{r.ws_suggest}” for {r.p || "?"}? <button type="button" class="mini" data-wsq="add" data-n={r.n}>Add workstream</button><button type="button" class="mini" data-wsq="skip" data-n={r.n}>Leave blank</button></div> : null}   {/* BL-58: the old Review row's offer (settings.js handles the buttons); #232 C2 put it back on the Intake page's row */}
         <WeekendNote r={r} />

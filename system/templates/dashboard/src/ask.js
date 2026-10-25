@@ -639,7 +639,7 @@ $("#chQueue").addEventListener("click",async e=>{ const rm=e.target.closest("[da
   if(rm){ const r=await api("/api/ask/queue",{op:"remove",id:rm.dataset.qrm}); if(r.ok) queueDraw(r); return; }
   if(ed){ const it=QUEUE.items.find(x=>x.id===ed.dataset.qedit); const r=await api("/api/ask/queue",{op:"remove",id:ed.dataset.qedit}); if(!r.ok||!it) return; queueDraw(r);
     const inp=$("#chIn"); inp.value=it.text; inp.dispatchEvent(new Event("input",{bubbles:true})); inp.focus(); return; }
-  if(go){ const r=await api("/api/ask/queue",{op:"resume"}); if(r.ok&&r.run) attachRun(r.run); else if(r.message) snack(oneLine(r.message)); } });
+  if(go){ const r=await api("/api/ask/queue",{op:"resume",run_now:true}); if(r.ok&&r.run) attachRun(r.run); else if(r.message) snack(oneLine(r.message)); } });
 }
 /* ===== BL-262 (sprint-ask-flow) ===== what a reattach draws before it follows the run, and the event to follow it from:
    - the run already on screen: nothing (the log is never cleared), from the last event drawn;

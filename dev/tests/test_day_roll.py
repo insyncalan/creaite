@@ -56,6 +56,7 @@ class DayRollTests(LiveBrowserCase):
     def open_intake(self):
         b = self.b
         b.eval("go('intake-review')")
+        b.eval("irFolded.value={waiting:false}; 0")                              # #340 folds the waiting tail: these rows are in it
         b.wait("document.querySelector('#v-intake-review tr[data-irm]')")
 
     def test_the_new_day_makes_yesterdays_meeting_happened_and_moves_today(self):
@@ -115,6 +116,7 @@ class ZoneTests(LiveBrowserCase):
         b.call("Page.addScriptToEvaluateOnNewDocument", source=SHIM.replace("new R(2026,9,8,9,30)", "new R(2026,9,16,23,39)"))
         b.reload("typeof go==='function' && LIVE")
         b.eval("go('intake-review')")
+        b.eval("irFolded.value={waiting:false}; 0")                              # #340 folds the waiting tail: these rows are in it
         b.wait("document.querySelector('#v-intake-review tr[data-irm]')")
         return b.eval("""[...document.querySelectorAll('#v-intake-review tr[data-irm]')].map(t=>({t:t.textContent,
           check:!!t.querySelector('[data-ira=check]')}))""")

@@ -103,7 +103,7 @@ class FilesNavigation(LiveBrowserCase):
         b.eval("(()=>{ const i=document.getElementById('fsFrom'); i.value='01-10-2026'; i.dispatchEvent(new Event('input',{bubbles:true})); })()")
         self.assertEqual(b.eval("document.querySelector('#fmBtn .fcount').textContent"), "2")
         self.assertEqual(b.eval("[...document.querySelectorAll('#fchips .fchip')].map(c=>c.textContent.replace('✕',''))"),
-                         ["Type: docx", "From 01-10-2026"])
+                         ["Type: Word", "From 01-10-2026"])
         # the popup calendar: Today fills To; Clear empties it
         b.click('#fmenu [data-cal="fsTo"]')
         b.wait("document.querySelector('.cal')")

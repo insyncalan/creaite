@@ -432,7 +432,7 @@ document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".c
    "sweep"), Open Intake (ticked once Intake has been opened in this browser). It goes when all five are ticked, or for good with
    Dismiss (kept with the dismissed reminders, so Settings › Reminders › Restore brings it back). Nothing it does is new. */
 export function setupSteps(){ const seen=store.get(SETUPK,{});
-  return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the mail and Teams check has read your mail":`Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it`],
+  return [["m365","Connect Microsoft 365",swept(),"Show me how","help",swept()?"Connected: the mail and Teams check has read your mail":`Connect it in Claude itself; this page can’t. The first mail and Teams check confirms it`],
     ["proj","Add a project",P.length>0,"Add a project","proj",`${P.length} project${P.length===1?"":"s"}`],
     ["people","Add people",shared.REG.length>0,"Add people","people",`${shared.REG.length} in the people register`],
     ["sweep","Run the first check",swept(),"Run the first check","sweep",swept()?`Last checked ${esc(fd(String(D.last_sweep)))}`:"Reads mail, Teams and the calendar since the look-back days"],
@@ -815,7 +815,8 @@ export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) ret
   const groups=weekGroups(), n=groups.reduce((t,g)=>t+g.rows.length,0);
   const above=groups.above||0;   /* #313: the rows left out because they are listed above are counted, not dropped silently */
   $("#weekTo").textContent=W?`${plur(n,"item")} to ${longDay(W.to)}${above?` · ${above} more listed above`:""}`:"";   /* #105: the quiet count and the end date, as Resolved's */
-  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),empty:above?`The rest of what is due until ${W?longDay(W.to):"next Monday"} is listed above.`:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  const nextDay=!above&&dayShown()===TODAY&&S.srcCalendar!==false?dayList().find(d=>days(d.date)===1):null;   /* #356: tomorrow itself, never the next saved day */
+  drawWeekAhead(host,{groups,openFile:p=>{ prepOpen(p); },others:othersOverdue(),tomorrow:nextDay?()=>goDay(nextDay.date):null,empty:above?`The rest of what is due until ${W?longDay(W.to):"next Monday"} is listed above.`:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

@@ -64,7 +64,7 @@ class IntakeBase(LiveBrowserCase):
             "ev-1": {"status": "available", "uri": "meeting-transcript:///a", "count": 1, "checked": f"{DAY} 07:00"},
             "ev-2": {"status": "available", "uri": "meeting-transcript:///b", "count": 1, "checked": f"{DAY} 07:00"}}}))
         pin_page_clock(self.b, NOW)
-        self.b.eval("irSetView('list'); irStage.value='all'; irOpen.value=null; irBusy.value=[]")
+        self.b.eval("irSetView('list'); irStage.value='all'; irOpen.value=null; irBusy.value=[]; irFolded.value={waiting:false}; irMailAll.value=true")   # #340: the waiting tail starts folded; these tests are about its rows, so they start with it shown (test_intake_first_screen_340 covers the fold)
         self.b.eval("reloadData().then(()=>go('intake-review'))")
         self.b.wait("VIEW==='intake-review' && !!document.querySelector('#v-intake-review [data-irm]')")
 

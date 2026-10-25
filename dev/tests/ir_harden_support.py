@@ -67,7 +67,7 @@ class IrHardenCase(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         pin_page_clock(self.b, NOW)
-        self.b.eval("try{ localStorage.removeItem('creaite-ir-view'); }catch(e){} irSetView('list'); go('intake-review')")
+        self.b.eval("try{ localStorage.removeItem('creaite-ir-view'); }catch(e){} irSetView('list'); irFolded.value={waiting:false}; irMailAll.value=true; go('intake-review')")
         self.b.wait("!!document.querySelector('#v-intake-review [data-irm]')")
         self.b.eval(STUBS)
 

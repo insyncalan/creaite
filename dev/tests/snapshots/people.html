@@ -31,6 +31,16 @@
 <div class="ddmenu left fpmenu" id="plFMenu" role="dialog" aria-label="Filter people">
 </div>
 </span>
+<span class="dd ddisp">
+<button class="ib bd" id="plDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="plDispMenu" aria-label="Display: grouping, order and properties" data-tip="Display: grouping, order and properties" data-key="D">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="sliders">
+<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4">
+</path>
+</svg>
+</button>
+<div class="ddmenu dispmenu" id="plDispMenu" role="dialog" aria-label="Display" hidden="">
+</div>
+</span>
 </div>
 <div class="wapplied" id="plApplied">
 <span class="sp">
@@ -41,88 +51,88 @@
 <table class="plt">
 <thead>
 <tr>
-<th scope="col" aria-sort="none" data-psort="name">
+<th scope="col" data-col="name" aria-sort="none" data-psort="name">
 <button type="button" class="thsort">Name</button>
 </th>
-<th scope="col" aria-sort="none" data-psort="email">
+<th scope="col" data-col="email" aria-sort="none" data-psort="email">
 <button type="button" class="thsort">Email</button>
 </th>
-<th scope="col" aria-sort="none" data-psort="org">
+<th scope="col" data-col="org" aria-sort="none" data-psort="org">
 <button type="button" class="thsort">Organisation</button>
 </th>
-<th scope="col" aria-sort="none" data-psort="role">
+<th scope="col" data-col="role" aria-sort="none" data-psort="role">
 <button type="button" class="thsort">Role</button>
 </th>
-<th scope="col">Projects</th>
-<th scope="col" class="num" aria-sort="none" data-psort="oa">
+<th scope="col" data-col="proj">Projects</th>
+<th scope="col" data-col="oa" class="num" aria-sort="none" data-psort="oa">
 <button type="button" class="thsort" title="Open actions">Actions</button>
 </th>
-<th scope="col" class="num" aria-sort="none" data-psort="or">
+<th scope="col" data-col="or" class="num" aria-sort="none" data-psort="or">
 <button type="button" class="thsort" title="Open risks and issues">RAID</button>
 </th>
-<th scope="col" class="num" aria-sort="none" data-psort="dw">
+<th scope="col" data-col="dw" class="num" aria-sort="none" data-psort="dw">
 <button type="button" class="thsort" title="Decisions waiting on them">Decisions</button>
 </th>
-<th scope="col" class="num" aria-sort="descending" data-psort="late">
+<th scope="col" data-col="late" class="num" aria-sort="descending" data-psort="late">
 <button type="button" class="thsort">Overdue ▼</button>
 </th>
-<th scope="col">
+<th scope="col" data-col="act">
 <span class="vh">Actions on the person</span>
 </th>
 </tr>
 </thead>
 <tbody id="plRows">
 <tr data-pn="Alan Carter" data-pp="Alan Carter" class="click">
-<td class="title">
+<td class="title" data-col="name">
 <a href="#" class="plink2" data-person="Alan Carter" title="Open My work">You (Alan Carter)</a>
 </td>
-<td>
+<td data-col="email">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="org">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="role">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="proj">
 <span class="pj">
 <span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
 </span>
 </span>
 </td>
-<td class="num">
+<td data-col="oa" class="num">
 <a href="#" class="cntl" data-nav="actions:open::o=Alan%20Carter" data-n="1" aria-label="1 open action owned by you, open in Work">1</a>
 </td>
-<td class="num">
+<td data-col="or" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="dw" class="num">
 <span>0</span>
 </td>
-<td class="num late">
+<td data-col="late" class="num late">
 <a href="#" class="cntl" data-nav="all:open::st=Open&amp;due=overdue&amp;ty=Action,Risk,Issue,Assumption,Dependency&amp;o=Alan%20Carter" data-n="1" aria-label="1 overdue item owned by you, open in Work">1</a>
 </td>
-<td class="mgract">
+<td class="mgract" data-col="act">
 <span class="x">Change in Settings › Essentials › You</span>
 </td>
 </tr>
 <tr data-pn="Example Person" data-pp="Example Person" class="click nr">
-<td class="title">
+<td class="title" data-col="name">
 <a href="#" class="plink2" data-person="Example Person" title="Open Example Person’s work">Example Person</a>
 <span class="tag warn" data-needs="true" title="Missing: email, organisation, role">needs details</span>
 </td>
-<td>
+<td data-col="email">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="org">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="role">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="proj">
 <span class="pj">
 <span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
@@ -132,19 +142,19 @@
 </span>
 </span>
 </td>
-<td class="num">
+<td data-col="oa" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="or" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="dw" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="late" class="num">
 <span>0</span>
 </td>
-<td class="mgract">
+<td class="mgract" data-col="act">
 <button type="button" class="miniflag" data-pl-details="Example Person" aria-haspopup="dialog" aria-label="No email, no organisation, no role for Example Person: edit details">No email, no organisation, no role</button>
 <button type="button" class="ib sm" aria-label="Edit details: Example Person" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Example Person">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
@@ -163,32 +173,32 @@
 </td>
 </tr>
 <tr data-pn="Jane Doe" data-pp="Jane Doe" class="click">
-<td class="title">
+<td class="title" data-col="name">
 <a href="#" class="plink2" data-person="Jane Doe" title="Open Jane Doe’s work">Jane Doe</a>
 </td>
-<td>jane.doe@client.com</td>
-<td>Example Client Ltd</td>
-<td>Sponsor</td>
-<td>
+<td data-col="email">jane.doe@client.com</td>
+<td data-col="org">Example Client Ltd</td>
+<td data-col="role">Sponsor</td>
+<td data-col="proj">
 <span class="pj">
 <span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
 </span>
 </span>
 </td>
-<td class="num">
+<td data-col="oa" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="or" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="dw" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="late" class="num">
 <span>0</span>
 </td>
-<td class="mgract">
+<td class="mgract" data-col="act">
 <button type="button" class="ib sm" aria-label="Edit details: Jane Doe" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Jane Doe">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">
@@ -206,13 +216,13 @@
 </td>
 </tr>
 <tr data-pn="Omar Ali" data-pp="Omar Ali" class="click">
-<td class="title">
+<td class="title" data-col="name">
 <a href="#" class="plink2" data-person="Omar Ali" title="Open Omar Ali’s work">Omar Ali</a>
 </td>
-<td>omar@def.example</td>
-<td>Enable</td>
-<td>Project manager</td>
-<td>
+<td data-col="email">omar@def.example</td>
+<td data-col="org">Enable</td>
+<td data-col="role">Project manager</td>
+<td data-col="proj">
 <span class="pj">
 <span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
@@ -222,19 +232,19 @@
 </span>
 </span>
 </td>
-<td class="num">
+<td data-col="oa" class="num">
 <a href="#" class="cntl" data-nav="actions:open::o=Omar%20Ali" data-n="1" aria-label="1 open action owned by Omar Ali, open in Work">1</a>
 </td>
-<td class="num">
+<td data-col="or" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="dw" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="late" class="num">
 <span>0</span>
 </td>
-<td class="mgract">
+<td class="mgract" data-col="act">
 <button type="button" class="ib sm" aria-label="Edit details: Omar Ali" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Omar Ali">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">
@@ -252,39 +262,39 @@
 </td>
 </tr>
 <tr data-pn="Sam" data-pp="Sam" class="click nr">
-<td class="title">
+<td class="title" data-col="name">
 <a href="#" class="plink2" data-person="Sam" title="Open Sam’s work">Sam</a>
 <span class="tag warn" data-needs="true" title="Missing: email, organisation, role">needs details</span>
 </td>
-<td>
+<td data-col="email">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="org">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="role">
 <span class="sub">—</span>
 </td>
-<td>
+<td data-col="proj">
 <span class="pj">
 <span>
 <span class="pcode plink" data-proj="DEF" role="link" tabindex="0" title="Open Digital Enablement">Digital Enablement</span>
 </span>
 </span>
 </td>
-<td class="num">
+<td data-col="oa" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="or" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="dw" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="late" class="num">
 <span>0</span>
 </td>
-<td class="mgract">
+<td class="mgract" data-col="act">
 <button type="button" class="miniflag" data-pl-details="Sam" aria-haspopup="dialog" aria-label="No email, no organisation, no role for Sam: edit details">No email, no organisation, no role</button>
 <button type="button" class="ib sm" aria-label="Edit details: Sam" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Sam">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
@@ -303,32 +313,32 @@
 </td>
 </tr>
 <tr data-pn="Sara Example" data-pp="Sara Example" class="click">
-<td class="title">
+<td class="title" data-col="name">
 <a href="#" class="plink2" data-person="Sara Example" title="Open Sara Example’s work">Sara Example</a>
 </td>
-<td>sara.example@client.com</td>
-<td>Example Client Ltd</td>
-<td>Delivery lead</td>
-<td>
+<td data-col="email">sara.example@client.com</td>
+<td data-col="org">Example Client Ltd</td>
+<td data-col="role">Delivery lead</td>
+<td data-col="proj">
 <span class="pj">
 <span>
 <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
 </span>
 </span>
 </td>
-<td class="num">
+<td data-col="oa" class="num">
 <a href="#" class="cntl" data-nav="actions:open::o=Sara%20Example" data-n="1" aria-label="1 open action owned by Sara Example, open in Work">1</a>
 </td>
-<td class="num">
+<td data-col="or" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="dw" class="num">
 <span>0</span>
 </td>
-<td class="num">
+<td data-col="late" class="num">
 <span>0</span>
 </td>
-<td class="mgract">
+<td class="mgract" data-col="act">
 <button type="button" class="ib sm" aria-label="Edit details: Sara Example" data-tip="Edit details" aria-haspopup="dialog" data-pl-edit="Sara Example">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">

@@ -63,7 +63,7 @@ export function irToggleKids(id) { irKidsFold.value = { ...irKidsFold.value, [id
 export const IR_GROUP_KEY = "creaite-ir-group";
 export const irGroup = signal(irGroupNorm((() => { try { return store.get(IR_GROUP_KEY, "none"); } catch (x) { return "none"; } })()));
 /** @param {string} v */
-export function irSetGroup(v) { irGroup.value = irGroupNorm(v); try { store.set(IR_GROUP_KEY, irGroup.value); } catch (x) { /* storage blocked: this page only */ } }
+export function irSetGroup(v) { irGroup.value = irGroupNorm(v); irClearTicks(); try { store.set(IR_GROUP_KEY, irGroup.value); } catch (x) { /* storage blocked: this page only */ } }
 /** Show only meetings in one state (All meetings, Waiting for the transcript, ...): for this visit only (#323). */
 export const irStateFilter = signal("all");
 /** @param {string} v */
@@ -93,6 +93,8 @@ export function irClearTicks() { irTicked.value = []; irTickFrom = null; }
 
 export const irOpen = signal(/** @type {string|null} */ (null));
 export const irStage = signal("all");
+/** #340: mail and Teams shows its first five suggestions until Show all. */
+export const irMailAll = signal(false);
 export const irFolded = signal(/** @type {Record<string, boolean>} */ ({}));
 export const irPeek = signal(/** @type {number|null} */ (null));
 export const irSel = signal(/** @type {string|null} */ (null));   /* Two panes: the meeting on the right */
@@ -104,7 +106,7 @@ export function irClickMeeting(id) { irOpen.value = irToggle(irOpen.value, id, i
 /** @param {string} g */
 export function irClickStage(g) { irStage.value = irStageClick(irStage.value, g); irClearTicks(); }
 /** @param {string} sec */
-export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); }
+export function irClickFold(sec) { irFolded.value = irFoldClick(irFolded.value, sec); irClearTicks(); }      /* #340: a fold changes what is on the page, so nothing stays ticked behind it */
 /** After new data: the open meeting stays open while it is in the list. */
 export function irAfterData() { irOpen.value = irKeepOpen(irOpen.value, irModel());
   const have = new Set((irModel().meetings || []).filter((/** @type {any} */ x) => x.stage === "arrived" && x.src !== "draft" && !irBusy.value.includes(x.id)).map((/** @type {any} */ x) => x.id)), keep = irTicked.value.filter(x => have.has(x));      /* a row that started processing or was drafted is unticked too */

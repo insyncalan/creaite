@@ -94,9 +94,9 @@
 </button>
 <div class="ddmenu dispmenu" id="dispMenu" role="dialog" aria-label="Display" hidden="">
 <div>
-<h3>
+<h2>
 <label for="wgrp">Group by</label>
-</h3>
+</h2>
 <div class="dline">
 <select id="wgrp">
 <option value="none">None</option>
@@ -111,9 +111,9 @@
 </div>
 </div>
 <div hidden="">
-<h3>
+<h2>
 <label for="wsub">Sub-group</label>
-</h3>
+</h2>
 <div class="dline">
 <select id="wsub">
 <option value="none">None</option>
@@ -126,9 +126,9 @@
 </select>
 </div>
 </div>
-<h3>
+<h2>
 <label for="wbsort">Order by</label>
-</h3>
+</h2>
 <div class="dline">
 <select id="wbsort">
 <option value="" selected="">Default order</option>
@@ -143,7 +143,7 @@
 </select>
 <button type="button" class="btn" id="wordRev" aria-pressed="false" aria-label="Reverse the order" title="Reverse the order">⇅</button>
 </div>
-<h3>Properties</h3>
+<h2>Properties</h2>
 <div class="dprops">
 <label>
 <input type="checkbox" data-prop="" id="dprop-t" value="t" checked="" disabled="">Action<span class="colmv">
@@ -186,7 +186,7 @@
 <label>
 <input type="checkbox" data-prop="" id="dprop-upd" value="upd">Last updated</label>
 </div>
-<h3>Show</h3>
+<h2>Show</h2>
 <div class="dline" hidden="">
 <label class="dchk">
 <input type="checkbox" id="wshowempty" checked=""> Empty groups</label>
@@ -296,8 +296,7 @@
 </button>
 <input type="checkbox" class="wgtick" data-gtick="actions|due|overdue" aria-label="Select the rows in Overdue">
 <b class="wgn">Overdue</b>
-<span class="sub">1 action · <span class="late">1 overdue</span>
-</span>
+<span class="sub">1 action</span>
 </td>
 </tr>
 <tr class="click" data-row="ABC-A-001" data-g1="actions|due|overdue" aria-selected="false">
@@ -342,19 +341,6 @@
 <td data-f="pr" class="prio-urgent ce">Urgent<button type="button" class="cebtn" data-ce="pr" tabindex="-1" aria-haspopup="listbox" aria-label="Change the priority of ABC-A-001" title="Change the priority">▾</button>
 </td>
 <td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of ABC-A-001" title="Change the status">▾</button>
-</td>
-</tr>
-<tr class="wgh lv1" data-gk="actions|due|week">
-<td colspan="5">
-<button type="button" class="wgtog" data-gtog="actions|due|week" aria-expanded="true" aria-label="Collapse This week" data-tip="Collapse This week">
-<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
-<path d="m6 9 6 6 6-6">
-</path>
-</svg>
-</button>
-<input type="checkbox" class="wgtick" data-gtick="actions|due|week" aria-label="Select the rows in This week" disabled="">
-<b class="wgn">This week</b>
-<span class="sub">0 actions</span>
 </td>
 </tr>
 <tr class="wgh lv1" data-gk="actions|due|next">
@@ -456,32 +442,6 @@
 <td data-f="pr" class="ce">Medium<button type="button" class="cebtn" data-ce="pr" tabindex="-1" aria-haspopup="listbox" aria-label="Change the priority of DEF-A-001" title="Change the priority">▾</button>
 </td>
 <td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of DEF-A-001" title="Change the status">▾</button>
-</td>
-</tr>
-<tr class="wgh lv1" data-gk="actions|due|later">
-<td colspan="5">
-<button type="button" class="wgtog" data-gtog="actions|due|later" aria-expanded="true" aria-label="Collapse Later" data-tip="Collapse Later">
-<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
-<path d="m6 9 6 6 6-6">
-</path>
-</svg>
-</button>
-<input type="checkbox" class="wgtick" data-gtick="actions|due|later" aria-label="Select the rows in Later" disabled="">
-<b class="wgn">Later</b>
-<span class="sub">0 actions</span>
-</td>
-</tr>
-<tr class="wgh lv1" data-gk="actions|due|none">
-<td colspan="5">
-<button type="button" class="wgtog" data-gtog="actions|due|none" aria-expanded="true" aria-label="Collapse No date" data-tip="Collapse No date">
-<svg class="i chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
-<path d="m6 9 6 6 6-6">
-</path>
-</svg>
-</button>
-<input type="checkbox" class="wgtick" data-gtick="actions|due|none" aria-label="Select the rows in No date" disabled="">
-<b class="wgn">No date</b>
-<span class="sub">0 actions</span>
 </td>
 </tr>
 </tbody>

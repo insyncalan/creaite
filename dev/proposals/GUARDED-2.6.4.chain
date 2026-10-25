@@ -1,5 +1,5 @@
-# CANDIDATE guarded chain for 2.6.4 with the rules slimming (not the real list: GUARDED-2.6.4.chain stays empty until the cut). One diff per line, in order of use.
-# Base: main 799da01c (the 2.6.3 release plus its log entry; engine files identical to e6389af8).
+# The guarded chain for 2.6.4 (the list the check in dev/tests/guarded_chain.py pins). One diff per line, in order of use.
+# Base: the 2.6.3 release commit e6389af8 (the engine files are identical to it).
 # #345: every route that decides an item names the item
 dev/proposals/345/live_server.diff
 # #346: the runs chat carries nothing; a failed run set-up leaves no record and no stuck run

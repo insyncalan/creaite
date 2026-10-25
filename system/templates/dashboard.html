@@ -520,7 +520,7 @@
    they inherited content-box (Today's Week ahead buttons drew 34 px, not 32). Its children take the page's border-box again. */
 details>*{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px var(--font);font-variant-numeric:tabular-nums}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--fs-md)/20px var(--font);font-variant-numeric:tabular-nums;text-wrap:pretty}   /* #343: no one-word last line in a paragraph */
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
@@ -748,7 +748,7 @@ td.ce{position:relative;cursor:pointer} td.ce:hover{background:color-mix(in srgb
 tr:hover .cebtn,tr.hl .cebtn,tr.cur .cebtn,.cebtn:focus-visible,td.ce:hover .cebtn{opacity:1} .cebtn:hover,.cebtn:focus-visible{color:var(--ink);outline:1px solid var(--faint)}
 td.editing .ceedit,td.editing select,td.editing input{font:inherit;max-width:100%;min-width:0} td.editing .ceset{display:inline-flex;gap:4px;flex-wrap:wrap}
 td.editing select.celist{position:fixed;z-index:var(--z-pop);height:auto;padding:4px;box-shadow:var(--shadow-md);overflow-y:auto} td.editing select.celist option{padding:4px 8px;border-radius:var(--r-sm)} /* BL-178 */ td.editing select{height:28px;border:1px solid var(--accent);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 4px} td.editing .dwrap input{width:112px}
-a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underline dotted} a.rowid:hover,a.rowid:focus-visible{color:var(--accent);text-decoration:underline}
+/* #343: a link in small text still has a 24px target */ a.rowid,.ev a.cntl,.srclink{display:inline-block;padding:4px 2px;margin:-4px -2px} a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underline dotted} a.rowid:hover,a.rowid:focus-visible{color:var(--accent);text-decoration:underline}
 .health{display:inline-flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap} .health svg{width:16px;height:16px}
 .h-ok{color:var(--ok)} .h-warn{color:var(--warn)} .h-bad{color:var(--bad)}.h-none{color:var(--muted)}
 #liveAlert.found{background:var(--ok-soft);color:var(--ok)}#liveAlert.found a{color:inherit;font-weight:600}
@@ -821,7 +821,7 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .spark:not(.mini) i:last-child::after,.spk-kdot{content:"";position:absolute;left:50%;bottom:-6px;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:var(--muted)}
 .spark i.cur{outline:1.5px solid var(--ink);outline-offset:1.5px}
 .spark.mini{height:18px;padding:0;margin:0;gap:0}
-.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:6px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"} .legbtn::after{content:"";position:absolute;inset:-3px}   /* #337: 12px glyph, a 24px target */ .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.legbtn{position:relative;z-index:calc(var(--z-sticky,2) + 1);margin-right:8px;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-left:2px;padding:0;border:1px solid var(--line-strong,var(--line));border-radius:50%;background:transparent;color:var(--muted);font:600 var(--fs-xs)/1 var(--font);cursor:pointer;vertical-align:middle} .legbtn::before{content:"?"}   /* #337: 12px glyph; #343: the button itself is 24px */ .legbtn:hover,.legbtn[aria-expanded=true]{color:var(--ink);border-color:var(--ink)} .legbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sparkTip,.spk-key{position:fixed;z-index:var(--z-tip,200);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:10px 12px;font-size:var(--fs-sm,13px);line-height:var(--lh-snug);pointer-events:none}
 #sparkTip{width:260px} #sparkTip[hidden]{display:none} .spk-key{width:250px;pointer-events:auto} .spk-key:focus{outline:none}
 .spk-wk{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em} .spk-h{display:flex;align-items:center;gap:7px;font-weight:700;margin:2px 0} .spk-dot{width:9px;height:9px;border-radius:50%}
@@ -930,6 +930,8 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .tl .today{position:absolute;top:8px;bottom:0;width:1px;background:var(--accent)} .tl .today span{position:absolute;top:-8px;left:4px;font-size:var(--fs-xs);color:var(--accent)}
 .mini-list>div{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)} .mini-list>div:first-child{border-top:0}
 /* BL-300: Top risks and issues: at most five lines under each item, ending in an ellipsis; a cut one says More */
+/* #343: the top risks do not run together: a dot after the priority and the type, the title weighted, the owner apart (and a missing one said) */
+.rk-m::after{content:"\00b7";margin-left:6px;color:var(--muted)} .rk-t{font-weight:500} .rk-o::before{content:"\2014\00a0"}
 .rk-txt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .rk-more{display:block;font-size:var(--fs-xs);color:var(--muted);text-decoration:underline;text-underline-offset:2px;margin-top:1px}
 .rkrow:hover .rk-more,.rkrow:focus-visible .rk-more{color:var(--ink)}
@@ -1086,10 +1088,10 @@ a.plink2{color:inherit;text-decoration:underline dotted;text-underline-offset:3p
 .boardctl{display:inline-flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted)}
 /* ===== BL-128 (sprint-work-views) ===== the Display menu */
 .dispmenu{width:340px;max-height:min(560px,80vh);padding:4px 14px 12px;right:auto;left:0} .dispmenu[hidden]{display:none}
-.dispmenu h3{margin:10px 0 4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)} .dispmenu h3 .sub{text-transform:none;letter-spacing:0;font-weight:400}
+.dispmenu h2{margin:10px 0 4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint)} .dispmenu h2 .sub{text-transform:none;letter-spacing:0;font-weight:400}
 .dispmenu .dline{display:flex;align-items:center;gap:8px;margin:2px 0;font-size:var(--fs-sm)} .dispmenu .dline[hidden]{display:none}
 .dispmenu select{flex:1;min-width:0}
-.dispmenu .dprops label{padding:4px 0} .dispmenu h3 label{display:inline;padding:0;cursor:default} .dispmenu h3 label:hover{background:none} .dispmenu .dchk{padding:0;display:flex;gap:8px;align-items:center;cursor:pointer}
+.dispmenu .dprops label{padding:4px 0} .dispmenu h2 label{display:inline;padding:0;cursor:default} .dispmenu h2 label:hover{background:none} .dispmenu .dchk{padding:0;display:flex;gap:8px;align-items:center;cursor:pointer}
 .dispmenu .dfoot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 #dispBtn.on{border-color:var(--accent)} .bprop{font-size:var(--fs-xs);color:var(--muted);margin-right:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12ch}
 /* ===== BL-129 (sprint-work-views) ===== group headers in the List and swimlanes on the Board */
@@ -1300,7 +1302,7 @@ dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid va
 .hp-wrap b.ui{font-weight:600}
 .hp-eyebrow{font:500 var(--fs-xs)/1 var(--hp-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hp-teal)}
 .hp-lede{color:var(--hp-soft);font-size:var(--fs-xl);max-width:62ch} .hp-howto .hp-lede{font-size:var(--fs-xl);max-width:64ch}
-.hp-say{font-family:var(--hp-mono);font-size:.85em;background:var(--hp-teal-soft);color:var(--hp-ink);padding:2px 8px;border-radius:var(--r-sm);white-space:nowrap} .hp-howto .hp-say{font-size:.85em;white-space:normal}
+.hp-say{font-family:var(--hp-mono);font-size:.9em;background:var(--hp-teal-soft);color:var(--hp-ink);padding:2px 8px;border-radius:var(--r-sm);white-space:nowrap} .hp-howto .hp-say{font-size:.9em;white-space:normal}
 .hp-wrap code{font-family:var(--hp-mono);font-size:.85em;background:var(--hp-ground);color:var(--hp-ink);padding:2px 6px;border-radius:var(--r-sm);word-break:break-word} .hp-howto code{font-size:.85em}
 .hp-wrap kbd{font:500 var(--fs-sm) var(--hp-mono);border:1px solid var(--hp-hair);border-bottom-width:2px;border-radius:var(--r-sm);padding:0 4px;background:var(--hp-paper);color:var(--hp-ink)}
 .hp-hero{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
@@ -1704,11 +1706,8 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
   #projTbl:hover::after{opacity:1}
 }
 :root[data-reduced] #projTbl::after{display:none}
-/* 29. The ask creaite input, only while it has focus: a gradient border turning once every 5s; a plain line otherwise */
-@property --mang{syntax:"<angle>";inherits:false;initial-value:0deg}
-#chIn:focus{border-color:transparent;background:linear-gradient(var(--bg),var(--bg)) padding-box,conic-gradient(from var(--mang),var(--accent),var(--accent-soft),var(--accent)) border-box;animation:mang calc(5s*var(--k)) linear infinite}
-@keyframes mang{to{--mang:360deg}}
-:root[data-reduced] #chIn:focus{animation:none;background:var(--bg);border-color:var(--accent)}
+/* 29. The ask creaite input, while it has focus: a plain accent border, nothing moves */
+#chIn:focus{border-color:var(--accent)}
 /* 30. Empty states: a small icon that floats 6px for two 5s cycles, then rests */
 .rvdone>h2::before,.wempty>h2::before,.empty.minbox::before{content:"";display:block;width:28px;height:28px;margin:0 auto 8px;background:var(--faint);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 13l2.5-7h11L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z'/%3E%3Cpath d='M4 13h4.5l1 2h5l1-2H20'/%3E%3C/svg%3E") center/contain no-repeat;
@@ -1844,7 +1843,7 @@ body.keys-seen #whintList,body.keys-seen #whintBoard,body.keys-seen #rvHint{disp
 /* BL-325: .ib has one size (.ib.sm was 28px); .sm keeps only its 16px icon */ .ib.sm svg.i{width:16px;height:16px}
 .ib.no:hover{color:var(--bad);background:var(--bad-soft)}
 .ib[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
-.ib .fcount{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font:700 var(--fs-2xs)/16px var(--font);text-align:center;padding:0 4px;pointer-events:none}
+.ib .fcount{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font:700 var(--fs-xs)/16px var(--font);text-align:center;padding:0 4px;pointer-events:none}
 .btn svg.i{width:15px;height:15px} .mini svg.i{width:14px;height:14px;vertical-align:-2px}
 .mini:has(svg.i){display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
 #tip{position:fixed;z-index:var(--z-tip);left:0;top:0;background:var(--inverse);color:var(--inverse-ink);font:400 var(--fs-xs)/1.3 var(--font);padding:4px 8px;border-radius:var(--r-md);max-width:280px;display:flex;gap:8px;align-items:center;opacity:0;visibility:hidden;transition:opacity var(--d1) var(--out);box-shadow:var(--shadow-sm)}
@@ -2137,6 +2136,8 @@ body:has(#chat.on) .pkstage{left:calc((100vw - var(--chatw,420px))/2);max-width:
 .pkbtn.go{background:var(--accent);color:var(--accent-ink)} .pkbtn.go:hover{filter:brightness(1.08)} .pkbtn .pkk{opacity:.75;margin-left:4px}
 .pkbtn:disabled{opacity:.5;cursor:default}
 body.pkstaged .snack{bottom:68px}
+/* #357: the calm confirmation of a save, in the ok tint, kept for as long as Undo is there; it has no motion of its own */
+.snack.ok{background:var(--ok-soft);color:var(--ok);border-radius:var(--r-pill);padding-left:16px} .snack.ok button{color:var(--ok);font-weight:600} .snack.ok.mtimer::after{background:var(--ok)}
 .pkdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:1px}
 .pkdot.saving{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)}   /* BL-304: a change still saving */
 /* ===== end BL-176 (CSS, staging) ===== */
@@ -2424,7 +2425,7 @@ svg .flk text{text-decoration:underline dotted}
 /* ===== BL-213 (sprint-ui-audit) ===== words in the milestone strip use --muted (4.5:1 in every theme); --faint stays for marks
    (rules, ticks, the scroll arrows). The same for the small uppercase headings of menus and lists that carried words in --faint. */
 .mv-strip .mon,.mv-lbl,.mv-detog button{color:var(--muted)} .mv-detog button:hover{color:var(--ink)}
-.fsec2,.cgrp,.dispmenu h3,.step.steps ul{color:var(--muted)}
+.fsec2,.cgrp,.dispmenu h2,.step.steps ul{color:var(--muted)}
 /* ===== end BL-213 ===== */
 .mv-sugg{font-size:var(--fs-xs);color:var(--warn);margin-top:4px}
 .mv-compact .mv-prow{grid-template-columns:minmax(0,1.4fr) 112px 150px 130px;gap:8px;padding:10px 4px}
@@ -2613,6 +2614,8 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evfact{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line)}
 .evfact .evpart{font-size:var(--fs-xs);font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .evrow{margin:8px 0 0;font-size:var(--fs-sm);line-height:var(--lh-18)}
+/* #343: the cockpit's health numbers share the row in equal columns, so "Early warnings" is not left alone on a second line at 900 px */
+#v-cockpit .evrow{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px 16px} #v-cockpit .evrow .evbox{min-width:0}
 .evrow .hlink{font-weight:600}
 .evq{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--r-md) var(--r-md) 0;font-size:var(--fs-sm)}
 .evqsrc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;word-break:break-word}
@@ -3181,7 +3184,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 /* Your commitments holds You owe and Waiting on (BL-125 A) */
 #tBrief .tsub[hidden]{display:none}
 /* Resolved, folded to one line: the heading is the summary; the list opens under it */
-.tres>details>summary{list-style:none;cursor:pointer;border-radius:var(--r-sm)}
+.tres>details>summary{list-style:none;cursor:pointer;border-radius:var(--r-sm);min-height:24px}
 .tres>details>summary::-webkit-details-marker{display:none}
 .tres>details>summary .th{margin:0}
 .tres>details>summary .th::before{content:"›";display:inline-block;width:10px;color:var(--day-muted);transition:transform var(--d1)}
@@ -4328,11 +4331,16 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #v-people #peopleTbl td.title,#v-people #peopleTbl .pj a{white-space:normal}
 #v-people #peopleTbl td.title{min-width:140px}
 #v-people #peopleTbl .miniflag{white-space:normal;text-align:left}
-#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:anywhere}
+#v-people #peopleTbl td,#v-people #peopleTbl th{padding-left:8px;padding-right:8px;overflow-wrap:break-word}   /* #360: ordinary words are not broken mid-word; only an address or a long project name may be */
+#v-people #peopleTbl :is(th,td):is([data-col=email],[data-col=proj]){overflow-wrap:anywhere} #v-people #peopleTbl :is(th,td)[data-col=proj]{min-width:90px} #v-people #peopleTbl :is(th,td)[data-col=org]{min-width:112px} #v-people #peopleTbl :is(th,td)[data-col=role]{min-width:92px}   /* org and role keep whole words; only an address or a project name breaks */ #v-people #peopleTbl th{white-space:normal}
 #v-people #peopleTbl th.num,#v-people #peopleTbl td.num{width:1%;white-space:nowrap}
 #v-people #peopleTbl td.mgract{white-space:normal;width:1%;min-width:88px}
 #v-people #peopleTbl td.mgract>*{vertical-align:middle}
-@media (max-width:1100px){ #v-people #peopleTbl :is(th,td):nth-child(2){display:none} }   /* the email is in the person's record; the room goes to the counts */
+@media (max-width:1100px){ #v-people #peopleTbl :is(th,td)[data-col=email]{display:none} }
+@media (max-width:1100px){ #v-people #peopleTbl th.num{white-space:normal} #v-people #peopleTbl td.title{min-width:112px} #v-people #peopleTbl :is(th,td).num,#v-people #peopleTbl td.mgract{padding-left:5px;padding-right:5px} }   /* #343 M1: the count headings wrap by word, so Organisation and Role keep their room at 900px */   /* #360: by the column's key, so hiding or moving columns in Display cannot hide the wrong one */
+/* #360: People's Display menu sits under its button like Work's, and its group rows are Work's */
+#v-people .toolbar>.ddisp .dispmenu{left:auto;right:0;transform-origin:top right}
+#v-people #peopleTbl tr.wgh td{cursor:pointer}   /* the email is in the person's record; the room goes to the counts */
 
 /* #245 (v2.5.2): Intake as one quiet line at the foot of Your commitments (locked mockup dev/mockups/today-intake-line-mockup.html). Tokens only. */
 .tdquiet{display:flex;align-items:center;gap:8px;margin:14px 0 0;padding:8px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
@@ -4370,6 +4378,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
 #pkId .cv{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent);font-size:var(--fs-xs);font-weight:500}
 #pkId .cv svg{width:12px;height:12px}
 /* ===== end NEW (#241) ===== */
+
+/* #356: the one line and button when Intake has nothing to decide */
+.irnext{margin:8px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -4715,6 +4726,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     FOPEN: () => FOPEN,
     FPRANGES: () => FPRANGES,
     FSEEN: () => FSEEN,
+    FTLAB: () => FTLAB,
     FVW: () => FVW,
     FX: () => FX,
     FilterBar: () => FilterBar,
@@ -4762,6 +4774,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IR_KINDS: () => IR_KINDS,
     IR_KIND_KEY: () => IR_KIND_KEY,
     IR_LEFT_WHY: () => IR_LEFT_WHY,
+    IR_MAIL_CAP: () => IR_MAIL_CAP,
     IR_REASONS: () => IR_REASONS,
     IR_SECTIONS: () => IR_SECTIONS,
     IR_STAGES: () => IR_STAGES,
@@ -5930,6 +5943,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     formProject: () => formProject,
     fpName: () => fpName,
     freeBackup: () => freeBackup,
+    ftLabel: () => ftLabel,
     fuApply: () => fuApply,
     fuConfirm: () => fuConfirm,
     fuEdit: () => fuEdit,
@@ -6018,6 +6032,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     helpSearchDraw: () => helpSearchDraw,
     hhmm: () => hhmm,
     hiddenCount: () => hiddenCount,
+    hideSavedSnack: () => hideSavedSnack,
     hideSection: () => hideSection,
     hideSnack: () => hideSnack,
     histClose: () => histClose,
@@ -6096,6 +6111,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irCanProcess: () => irCanProcess,
     irCanSetAside: () => irCanSetAside,
     irCanStop: () => irCanStop,
+    irCapGroups: () => irCapGroups,
     irChange: () => irChange,
     irCheck: () => irCheck,
     irChecking: () => irChecking,
@@ -6135,6 +6151,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irLeftOut: () => irLeftOut,
     irLive: () => irLive,
     irLiveCounts: () => irLiveCounts,
+    irMailAll: () => irMailAll,
     irMatches: () => irMatches,
     irMeetingFields: () => irMeetingFields,
     irMeetingOf: () => irMeetingOf,
@@ -6143,6 +6160,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irModel: () => irModel,
     irModelBehind: () => irModelBehind,
     irNameOk: () => irNameOk,
+    irNextJob: () => irNextJob,
     irNotNeeded: () => irNotNeeded,
     irNote: () => irNote,
     irNotes: () => irNotes,
@@ -6183,6 +6201,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     irSetStateFilter: () => irSetStateFilter,
     irSetTick: () => irSetTick,
     irSetView: () => irSetView,
+    irSplitTail: () => irSplitTail,
     irStage: () => irStage,
     irStageClick: () => irStageClick,
     irStale: () => irStale,
@@ -9620,7 +9639,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   // core/irFold.js
   var IR_STAGES = ["arrived", "drafted", "approved"];
   var IR_SECTIONS = ["meetings", "mail", "other", "later", "not_needed"];
-  var IR_FOLDED = ["later", "not_needed"];
+  var IR_FOLDED = ["later", "not_needed", "waiting"];
   var irOpenable = (m5) => !!m5 && m5.stage === "drafted";
   function irToggle(cur, id2, model) {
     if (cur === id2) return null;
@@ -9662,6 +9681,17 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   var irStageClick = (cur, g5) => g5 === "all" || cur === g5 ? "all" : IR_STAGES.includes(g5) ? g5 : cur;
   var irLeadWithWork = (list) => ["drafted", "approved", "arrived"].flatMap((g5) => list.filter((m5) => m5.stage === g5)).concat(list.filter((m5) => !["drafted", "approved", "arrived"].includes(m5.stage)));
+  function irSplitTail(list) {
+    const tail = list.filter((m5) => m5.stage === "arrived" && m5.state === "waiting");
+    return { work: irLeadWithWork(list.filter((m5) => !tail.includes(m5))), tail };
+  }
+  var IR_MAIL_CAP = 5;
+  function irCapGroups(g5, done, held, cap) {
+    const l6 = irLive(g5, done, held || void 0), total = l6.needs.length + l6.routine.length;
+    if (total <= cap) return { groups: g5, total };
+    const needs = l6.needs.slice(0, cap);
+    return { groups: { needs, routine: l6.routine.slice(0, cap - needs.length) }, total };
+  }
   var irFiltered = (model, stage) => (model.meetings || []).filter((m5) => stage === "all" || m5.stage === stage);
   function irFoldClick(folded, sec) {
     return { ...folded, [sec]: !irIsFolded(folded, sec) };
@@ -9763,6 +9793,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   var irEsc = (st2) => st2.peek != null ? { ...st2, peek: null } : { ...st2, open: null };
   var IR_VIEWS = [["list", "List"], ["board", "Board"], ["two", "Two panes"]];
+  function irNextJob(counts, fetched, today, mailDue, hasTomorrow) {
+    if (!counts || counts.ready || counts.to_approve) return null;
+    const f5 = String(fetched || ""), none = "Nothing is ready to process or approve.";
+    if (!/^\d{4}-\d{2}-\d{2}/.test(f5) || f5.slice(0, 10) < today) return { job: "refresh", text: `${none} Next: refresh the calendar.`, button: "Refresh calendar" };
+    if (mailDue) return { job: "mail", text: `${none} Next: check mail and Teams.`, button: "Check now" };
+    if (hasTomorrow) return { job: "tomorrow", text: `${none} Next: open tomorrow’s meetings.`, button: "Open tomorrow’s meetings" };
+    return { job: "none", text: none };
+  }
   var irViewNorm = (v5) => IR_VIEWS.some((x5) => x5[0] === v5) ? v5 : "list";
   var irQueryWords = (q5) => String(q5 || "").toLowerCase().split(/\s+/).filter(Boolean);
   function irMatches(q5, fields) {
@@ -9844,6 +9882,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   })()));
   function irSetGroup(v5) {
     irGroup.value = irGroupNorm(v5);
+    irClearTicks();
     try {
       store.set(IR_GROUP_KEY, irGroup.value);
     } catch (x5) {
@@ -9886,6 +9925,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     null
   );
   var irStage = y3("all");
+  var irMailAll = y3(false);
   var irFolded = y3(
     /** @type {Record<string, boolean>} */
     {}
@@ -9912,6 +9952,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function irClickFold(sec) {
     irFolded.value = irFoldClick(irFolded.value, sec);
+    irClearTicks();
   }
   function irAfterData() {
     irOpen.value = irKeepOpen(irOpen.value, irModel());
@@ -36137,9 +36178,9 @@ system/scripts/run launch.py agent ${what}`;
     return /* @__PURE__ */ u4("a", { href: "#", class: `cntl${late ? " late" : ""}`, "data-nav": navOf(nav, extra), "data-n": String(n4), "aria-label": `${label}, open in Work`, children: n4 });
   }
   var Star = () => /* @__PURE__ */ u4("svg", { class: "i pstar", viewBox: "0 0 24 24", fill: "currentColor", stroke: "currentColor", "stroke-width": "1.5", "stroke-linejoin": "round", role: "img", "aria-label": "Followed", children: /* @__PURE__ */ u4("path", { d: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.2 9.5l6.1-.9z" }) });
-  function NameCell({ x: x5, code, follow, codes, you }) {
+  function NameCell({ x: x5, code, follow, codes, you, col }) {
     const also = codes ? x5.on.filter((c5) => c5 !== code) : [];
-    return /* @__PURE__ */ u4("td", { class: "title", children: [
+    return /* @__PURE__ */ u4("td", { class: "title", "data-col": col, children: [
       /* @__PURE__ */ u4("a", { href: "#", class: "plink2", "data-person": x5.n, title: x5.me ? "Open My work" : `Open ${x5.n}’s work`, children: you && x5.me ? `You (${x5.n})` : x5.n }),
       follow && x5.followed ? /* @__PURE__ */ u4(S2, { children: [
         " ",
@@ -36160,7 +36201,7 @@ system/scripts/run launch.py agent ${what}`;
     ] });
   }
   var Dash = ({ v: v5 }) => v5 ? /* @__PURE__ */ u4(S2, { children: v5 }) : /* @__PURE__ */ u4("span", { class: "sub", children: "—" });
-  function PeopleTools({ L: L3, F: F5, s: s5, ids, onChange }) {
+  function PeopleTools({ L: L3, F: F5, s: s5, ids, onChange, display }) {
     const host2 = A2(
       /** @type {HTMLSpanElement|null} */
       null
@@ -36193,7 +36234,28 @@ system/scripts/run launch.py agent ${what}`;
           }
         }
       ),
-      /* @__PURE__ */ u4("span", { class: "dd", id: `${ids}Fdd`, ref: host2 })
+      /* @__PURE__ */ u4("span", { class: "dd", id: `${ids}Fdd`, ref: host2 }),
+      display || null
+    ] });
+  }
+  function DisplayButton() {
+    return /* @__PURE__ */ u4("span", { class: "dd ddisp", children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          class: "ib bd",
+          id: "plDispBtn",
+          type: "button",
+          "aria-haspopup": "dialog",
+          "aria-expanded": "false",
+          "aria-controls": "plDispMenu",
+          "aria-label": "Display: grouping, order and properties",
+          "data-tip": "Display: grouping, order and properties",
+          "data-key": "D",
+          children: /* @__PURE__ */ u4(Icon, { name: "sliders" })
+        }
+      ),
+      /* @__PURE__ */ u4("div", { class: "ddmenu dispmenu", id: "plDispMenu", role: "dialog", "aria-label": "Display", hidden: true })
     ] });
   }
   function drawBar(h5, L3, F5, s5, ids, onChange) {
@@ -36407,6 +36469,296 @@ system/scripts/run launch.py agent ${what}`;
     ] }, k5) : null });
   }
 
+  // core/displayMenu.js
+  var dispHead = (label, forId, extra = "") => `<h2>${forId ? `<label for="${forId}">${esc(label)}</label>` : esc(label)}${extra}</h2>`;
+  function dispSelect({ id: id2, label, options, cur, hidden }) {
+    return `<div${hidden ? " hidden" : ""}>${dispHead(label, id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6], i5) => `<option value="${esc(v5)}"${v5 === cur && i5 > 0 ? " selected" : ""}>${esc(l6)}</option>`).join("")}</select></div></div>`;
+  }
+  function dispOrder({ id: id2, revId, options, cur, reversed, extra = "" }) {
+    return `${dispHead("Order by", id2)}<div class="dline"><select id="${id2}">${options.map(([v5, l6]) => `<option value="${esc(v5)}"${v5 === cur ? " selected" : ""}>${esc(l6)}</option>`).join("")}${extra}</select><button type="button" class="btn" id="${revId}" aria-pressed="${reversed}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>`;
+  }
+  function dispPropsMarkup({ shown: shown2, rest, locked, prefix, pinFirst }) {
+    const ord = shown2.map((c5) => c5[0]);
+    return [...shown2, ...rest].map((c5) => {
+      const on2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]), l6 = esc(c5[1]);
+      return `<label><input type="checkbox" data-prop id="${prefix}-${c5[0]}" value="${c5[0]}" ${on2 ? "checked" : ""} ${c5[0] === locked ? "disabled" : ""}>${l6}${on2 && !(pinFirst && i5 === 0) ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${l6} earlier" ${i5 === 0 || pinFirst && i5 === 1 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${l6} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+    }).join("");
+  }
+  var dispFoot = ({ resetId, doneId, resetLabel }) => `<div class="dfoot"><button type="button" class="linkbtn" id="${resetId}">${esc(resetLabel)}</button><span class="sp"></span><button type="button" class="btn primary" id="${doneId}">Done</button></div>`;
+  function dispController({ btn, menu, draw: draw2 }) {
+    const isOpen = () => !!$(menu) && $(menu).classList.contains("on");
+    const hide = (focus) => {
+      const m5 = $(menu), b5 = $(btn);
+      if (!m5 || !b5 || !isOpen() && m5.hidden) return;
+      m5.classList.remove("on");
+      m5.hidden = true;
+      b5.setAttribute("aria-expanded", "false");
+      b5.classList.remove("on");
+      if (focus) b5.focus();
+    };
+    const show = () => {
+      const m5 = $(menu), b5 = $(btn);
+      if (!m5 || !b5) return;
+      if (isOpen()) {
+        hide(true);
+        return;
+      }
+      $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
+      draw2();
+      m5.hidden = false;
+      m5.classList.add("on");
+      b5.setAttribute("aria-expanded", "true");
+      b5.classList.add("on");
+      (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
+    };
+    return { isOpen, open: show, close: hide };
+  }
+
+  // core/peopleDisplay.js
+  var PD_COLS = (
+    /** @type {[string, string, string?][]} */
+    [
+      ["name", "Name"],
+      ["email", "Email"],
+      ["org", "Organisation"],
+      ["role", "Role"],
+      ["proj", "Projects"],
+      ["oa", "Actions", "Open actions"],
+      ["or", "RAID", "Open risks and issues"],
+      ["dw", "Decisions", "Decisions waiting on them"],
+      ["late", "Overdue"]
+    ]
+  );
+  var PD_KEYS = PD_COLS.map((c5) => c5[0]);
+  var PD_LOCKED = "name";
+  var PD_SORTS = (
+    /** @type {Record<string, "asc"|"desc">} */
+    { name: "asc", email: "asc", org: "asc", role: "asc", oa: "desc", or: "desc", dw: "desc", late: "desc" }
+  );
+  var PD_DEFAULT_SORT = { col: "late", dir: "desc" };
+  var PD_GROUPS = (
+    /** @type {[string, string][]} */
+    [["none", "None"], ["org", "Organisation"], ["proj", "Project"], ["role", "Role"], ["late", "Overdue"], ["details", "Details"]]
+  );
+  var GROUP_KEYS = PD_GROUPS.map((g5) => g5[0]);
+  var pdDefault = () => ({ group: "none", sub: "none", cols: [...PD_KEYS], collapsed: {} });
+  function pdNormalise(saved) {
+    const d5 = pdDefault(), s5 = saved && typeof saved === "object" ? saved : {};
+    const group = GROUP_KEYS.includes(s5.group) ? s5.group : d5.group;
+    const sub = GROUP_KEYS.includes(s5.sub) && s5.sub !== group ? s5.sub : "none";
+    let cols = Array.isArray(s5.cols) ? s5.cols.filter((k5, i5, a5) => PD_KEYS.includes(k5) && a5.indexOf(k5) === i5) : [];
+    if (!cols.length) cols = [...d5.cols];
+    if (!cols.includes(PD_LOCKED)) cols.unshift(PD_LOCKED);
+    const collapsed = {};
+    if (s5.collapsed && typeof s5.collapsed === "object") {
+      for (const k5 of Object.keys(s5.collapsed)) if (s5.collapsed[k5] === true && typeof k5 === "string" && k5.length < 200) collapsed[k5] = true;
+    }
+    return { group, sub, cols, collapsed };
+  }
+  function pdSort(s5) {
+    return s5 && PD_SORTS[s5.col] && (s5.dir === "asc" || s5.dir === "desc") ? { col: s5.col, dir: s5.dir } : { ...PD_DEFAULT_SORT, dir: "desc" };
+  }
+  function pdGroupsOf(x5, g5, projectName) {
+    if (g5 === "org") return [[x5.org || "", x5.org || "No organisation"]];
+    if (g5 === "role") return [[x5.role || "", x5.role || "No role"]];
+    if (g5 === "proj") return x5.on.length ? x5.on.map((c5) => (
+      /** @type {[string, string]} */
+      [c5, projectName(c5)]
+    )) : [["", "On no project"]];
+    if (g5 === "late") return x5.late > 0 ? [["has", "Has overdue"]] : [["none", "Nothing overdue"]];
+    if (g5 === "details") return x5.missing.length ? [["needs", "Needs details"]] : [["complete", "Complete"]];
+    return [["", ""]];
+  }
+  var FIXED = (
+    /** @type {Record<string, string[]>} */
+    { late: ["has", "none"], details: ["needs", "complete"] }
+  );
+  function pdGroup(list, g5, projectName) {
+    if (!GROUP_KEYS.includes(g5) || g5 === "none") return [{ key: "", label: "", items: list }];
+    const by2 = /* @__PURE__ */ new Map();
+    for (const x5 of list) for (const [v5, label] of pdGroupsOf(x5, g5, projectName)) {
+      if (!by2.has(v5)) by2.set(v5, { key: v5, label, items: [] });
+      by2.get(v5).items.push(x5);
+    }
+    const fixed = FIXED[g5];
+    return [...by2.values()].sort((a5, b5) => fixed ? fixed.indexOf(a5.key) - fixed.indexOf(b5.key) : (!a5.key ? 1 : 0) - (!b5.key ? 1 : 0) || a5.label.localeCompare(b5.label));
+  }
+  var pdKey = (g5, v5, sub, sv) => `${g5}|${v5}${sub ? `|${sub}|${sv}` : ""}`;
+  var pdColumns = (st2) => st2.cols.filter((k5) => PD_KEYS.includes(k5));
+  var PD_ORDER = (
+    /** @type {[string, string][]} */
+    PD_COLS.map((c5) => [c5[0], c5[0] === PD_DEFAULT_SORT.col ? `${c5[1]} (default)` : c5[1]]).filter((c5) => c5[0] !== "proj")
+  );
+
+  // stores/peopleDisplay.js
+  var PD_KEY = "creaite-peopledisplay", PD_SORT_KEY = "creaite-peoplesort";
+  var PD_ST = null;
+  var sortRead = false;
+  var pdState = () => PD_ST || (PD_ST = pdNormalise(store.get(PD_KEY, null)));
+  var pdSave = () => {
+    store.set(PD_KEY, pdState());
+  };
+  function pdReset() {
+    PD_ST = pdDefault();
+    pdSave();
+    shared.PSORT = { ...PD_DEFAULT_SORT };
+    pdSaveSort();
+  }
+  function pdSyncSort() {
+    if (!sortRead) {
+      sortRead = true;
+      shared.PSORT = pdSort(store.get(PD_SORT_KEY, null));
+      return;
+    }
+    pdSaveSort();
+  }
+  function pdSaveSort() {
+    store.set(PD_SORT_KEY, pdSort(shared.PSORT));
+  }
+  function pdForget() {
+    PD_ST = null;
+    sortRead = false;
+  }
+
+  // components/people/PeopleDisplay.js
+  var sortNow = () => pdSort(shared.PSORT);
+  function drawPeopleDisplayMenu() {
+    const m5 = $("#plDispMenu");
+    if (!m5) return;
+    const st2 = pdState(), so2 = sortNow(), label = (
+      /** @type {Record<string,string>} */
+      Object.fromEntries(PD_COLS.map((c5) => [c5[0], c5[1]]))
+    );
+    const active2 = document.activeElement, focusKey = active2 && m5.contains(active2) ? active2.id || /** @type {HTMLElement} */
+    active2.dataset.mv + "|" + /** @type {HTMLElement} */
+    active2.dataset.d : null;
+    const shown2 = st2.cols.map((k5) => (
+      /** @type {[string, string]} */
+      [k5, label[k5]]
+    )), rest = PD_KEYS.filter((k5) => !st2.cols.includes(k5)).map((k5) => (
+      /** @type {[string, string]} */
+      [k5, label[k5]]
+    ));
+    putHTML(m5, html`${raw(dispSelect({ id: "pdgrp", label: "Group by", options: PD_GROUPS, cur: st2.group }))}
+    ${raw(dispSelect({ id: "pdsub", label: "Sub-group", options: [["none", "None"], ...PD_GROUPS.filter((g5) => g5[0] !== "none" && g5[0] !== st2.group)], cur: st2.sub, hidden: st2.group === "none" }))}
+    ${raw(dispOrder({ id: "pdsort", revId: "pdRev", options: PD_ORDER, cur: so2.col, reversed: so2.dir !== PD_SORTS[so2.col] }))}
+    <h2>Properties</h2><div class="dprops">${raw(dispPropsMarkup({ shown: shown2, rest, locked: PD_LOCKED, prefix: "pdprop", pinFirst: true }))}</div>
+    ${raw(dispFoot({ resetId: "pdReset", doneId: "pdDone", resetLabel: "Reset to the default" }))}`);
+    if (focusKey) {
+      const f5 = m5.querySelector("#" + CSS.escape(focusKey)) || (focusKey.includes("|") ? m5.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`) : null);
+      if (f5 && !/** @type {any} */
+      f5.disabled) f5.focus();
+      else m5.querySelector("button,select,input")?.focus();
+    }
+  }
+  var MENU = dispController({ btn: "#plDispBtn", menu: "#plDispMenu", draw: drawPeopleDisplayMenu });
+  var openPeopleDisplay = () => MENU.open();
+  var closePeopleDisplay = (focus) => MENU.close(focus);
+  var peopleDisplayOpen = () => MENU.isOpen();
+  function pdChanged() {
+    pdSave();
+    drawPeoplePage();
+    drawPeopleDisplayMenu();
+  }
+  var pdBound = false;
+  function bindPeopleDisplay() {
+    if (pdBound) return;
+    pdBound = true;
+    window.addEventListener("hashchange", () => closePeopleDisplay(false));
+    document.addEventListener("click", (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (!t47 || !t47.closest) return;
+      if (t47.closest("#plDispBtn")) {
+        e4.stopPropagation();
+        openPeopleDisplay();
+        return;
+      }
+      const m5 = t47.closest("#plDispMenu");
+      if (!m5) {
+        if (peopleDisplayOpen() && !t47.closest(".ddisp")) closePeopleDisplay(false);
+        return;
+      }
+      e4.stopPropagation();
+      const st2 = pdState(), mv = t47.closest("[data-mv]");
+      if (mv) {
+        e4.preventDefault();
+        const k5 = (
+          /** @type {HTMLElement} */
+          mv.dataset.mv || ""
+        ), i5 = st2.cols.indexOf(k5), j5 = i5 + Number(
+          /** @type {HTMLElement} */
+          mv.dataset.d
+        );
+        if (i5 < 1 || j5 < 1 || j5 >= st2.cols.length) return;
+        [st2.cols[i5], st2.cols[j5]] = [st2.cols[j5], st2.cols[i5]];
+        pdChanged();
+        return;
+      }
+      const id2 = (
+        /** @type {HTMLElement} */
+        t47.id
+      );
+      if (id2 === "pdRev") {
+        const so2 = sortNow();
+        shared.PSORT = { col: so2.col, dir: so2.dir === "asc" ? "desc" : "asc" };
+        pdChanged();
+        return;
+      }
+      if (id2 === "pdReset") {
+        pdReset();
+        pdChanged();
+        snack("Display reset to the default");
+        return;
+      }
+      if (id2 === "pdDone") closePeopleDisplay(true);
+    });
+    document.addEventListener("change", (e4) => {
+      const i5 = (
+        /** @type {HTMLInputElement} */
+        e4.target
+      );
+      if (!i5 || !i5.closest || !i5.closest("#plDispMenu")) return;
+      const st2 = pdState();
+      if (i5.id === "pdgrp") {
+        st2.group = i5.value;
+        if (st2.sub === st2.group) st2.sub = "none";
+        pdChanged();
+        return;
+      }
+      if (i5.id === "pdsub") {
+        st2.sub = i5.value;
+        pdChanged();
+        return;
+      }
+      if (i5.id === "pdsort") {
+        const c5 = i5.value;
+        shared.PSORT = { col: c5, dir: PD_SORTS[c5] || "desc" };
+        pdChanged();
+        return;
+      }
+      if (i5.dataset.prop !== void 0) {
+        const k5 = i5.value;
+        if (k5 === PD_LOCKED || !PD_KEYS.includes(k5)) return;
+        if (i5.checked) {
+          if (!st2.cols.includes(k5)) st2.cols.push(k5);
+        } else st2.cols = st2.cols.filter((x5) => x5 !== k5);
+        pdChanged();
+      }
+    });
+    document.addEventListener("keydown", (e4) => {
+      if (e4.key === "Escape" && peopleDisplayOpen() && /** @type {Element} */
+      e4.target.closest && /** @type {Element} */
+      e4.target.closest("#plDispMenu")) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePeopleDisplay(true);
+      }
+    }, true);
+  }
+
   // components/people/PeoplePage.jsx
   var PTABS = [["all", "Everyone"], ["work", "With work"], ["none", "Nothing assigned"], ["att", "Needs attention"]];
   var ptabOf = (t47) => PTABS.some((x5) => x5[0] === t47) ? String(t47) : "all";
@@ -36428,18 +36780,7 @@ system/scripts/run launch.py agent ${what}`;
     dw: (x5) => x5.dw.length,
     late: (x5) => x5.late
   };
-  var PL_COLS = [
-    ["name", "Name"],
-    ["email", "Email"],
-    ["org", "Organisation"],
-    ["role", "Role"],
-    ["", "Projects"],
-    ["oa", "Actions", "Open actions"],
-    ["or", "RAID", "Open risks and issues"],
-    ["dw", "Decisions", "Decisions waiting on them"],
-    ["late", "Overdue"]
-  ];
-  var ST = { s: newFilter() };
+  var PLST = { s: newFilter() };
   var sortOf = () => shared.PSORT && SORTS[shared.PSORT.col] ? shared.PSORT : { col: "late", dir: "desc" };
   var plOwners = (L3) => [...new Set(L3.map((i5) => i5.o || i5.by).filter(Boolean))];
   var plHandlers = {
@@ -36483,22 +36824,22 @@ system/scripts/run launch.py agent ${what}`;
       /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", "data-pl-remove-no": x5.n, onClick: () => setAsk(false), children: "Keep" })
     ] });
   }
-  function PlRow({ x: x5 }) {
+  function PlRow({ x: x5, cols }) {
     const nm3 = x5.me ? "you" : x5.n, late = x5.lateItems;
     const edit = () => openPersonForm({ x: x5 }, plHandlers);
-    return /* @__PURE__ */ u4("tr", { "data-pn": x5.n, "data-pp": x5.n, class: `click${x5.missing.length ? " nr" : ""}`, children: [
-      /* @__PURE__ */ u4(NameCell, { x: x5, you: true }),
-      /* @__PURE__ */ u4("td", { children: x5.email ? x5.email : /* @__PURE__ */ u4(Dash, {}) }),
-      /* @__PURE__ */ u4("td", { children: /* @__PURE__ */ u4(Dash, { v: x5.org }) }),
-      /* @__PURE__ */ u4("td", { children: /* @__PURE__ */ u4(Dash, { v: x5.role }) }),
-      /* @__PURE__ */ u4("td", { children: /* @__PURE__ */ u4("span", { class: "pj", children: x5.on.length ? x5.on.map((c5, i5) => /* @__PURE__ */ u4("span", { children: [
+    const cell2 = {
+      name: /* @__PURE__ */ u4(NameCell, { x: x5, you: true, col: "name" }, "name"),
+      email: /* @__PURE__ */ u4("td", { "data-col": "email", children: x5.email ? x5.email : /* @__PURE__ */ u4(Dash, {}) }, "email"),
+      org: /* @__PURE__ */ u4("td", { "data-col": "org", children: /* @__PURE__ */ u4(Dash, { v: x5.org }) }, "org"),
+      role: /* @__PURE__ */ u4("td", { "data-col": "role", children: /* @__PURE__ */ u4(Dash, { v: x5.role }) }, "role"),
+      proj: /* @__PURE__ */ u4("td", { "data-col": "proj", children: /* @__PURE__ */ u4("span", { class: "pj", children: x5.on.length ? x5.on.map((c5, i5) => /* @__PURE__ */ u4("span", { children: [
         i5 ? " " : "",
         /* @__PURE__ */ u4("span", { class: "pcode plink", "data-proj": c5, role: "link", tabindex: 0, title: `Open ${pName(c5)}`, children: pName(c5) })
-      ] }, c5)) : /* @__PURE__ */ u4(Dash, {}) }) }),
-      /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.oa.length, label: `${peoplePlural(x5.oa.length, "open action")} owned by ${nm3}`, nav: "actions:open:", extra: { o: plOwners(x5.oa) } }) }),
-      /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.or.length, label: `${peoplePlural(x5.or.length, "open RAID item")} owned by ${nm3}`, nav: "raid:open:", extra: { o: plOwners(x5.or) } }) }),
-      /* @__PURE__ */ u4("td", { class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.dw.length, label: `${peoplePlural(x5.dw.length, "decision")} waiting on ${nm3}`, nav: "decisions:pending:", extra: { o: plOwners(x5.dw) } }) }),
-      /* @__PURE__ */ u4("td", { class: `num${x5.late ? " late" : ""}`, children: /* @__PURE__ */ u4(
+      ] }, c5)) : /* @__PURE__ */ u4(Dash, {}) }) }, "proj"),
+      oa: /* @__PURE__ */ u4("td", { "data-col": "oa", class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.oa.length, label: `${peoplePlural(x5.oa.length, "open action")} owned by ${nm3}`, nav: "actions:open:", extra: { o: plOwners(x5.oa) } }) }, "oa"),
+      or: /* @__PURE__ */ u4("td", { "data-col": "or", class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.or.length, label: `${peoplePlural(x5.or.length, "open RAID item")} owned by ${nm3}`, nav: "raid:open:", extra: { o: plOwners(x5.or) } }) }, "or"),
+      dw: /* @__PURE__ */ u4("td", { "data-col": "dw", class: "num", children: /* @__PURE__ */ u4(Count, { n: x5.dw.length, label: `${peoplePlural(x5.dw.length, "decision")} waiting on ${nm3}`, nav: "decisions:pending:", extra: { o: plOwners(x5.dw) } }) }, "dw"),
+      late: /* @__PURE__ */ u4("td", { "data-col": "late", class: `num${x5.late ? " late" : ""}`, children: /* @__PURE__ */ u4(
         Count,
         {
           n: x5.late,
@@ -36506,25 +36847,86 @@ system/scripts/run launch.py agent ${what}`;
           nav: "all:open:",
           extra: { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: plOwners(late) }
         }
-      ) }),
-      /* @__PURE__ */ u4("td", { class: "mgract", children: x5.me ? /* @__PURE__ */ u4("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u4(S2, { children: [
+      ) }, "late")
+    };
+    return /* @__PURE__ */ u4("tr", { "data-pn": x5.n, "data-pp": x5.n, class: `click${x5.missing.length ? " nr" : ""}`, children: [
+      cols.map((k5) => cell2[k5]),
+      /* @__PURE__ */ u4("td", { class: "mgract", "data-col": "act", children: x5.me ? /* @__PURE__ */ u4("span", { class: "x", children: "Change in Settings › Essentials › You" }) : /* @__PURE__ */ u4(S2, { children: [
         x5.missing.length ? /* @__PURE__ */ u4("button", { type: "button", class: "miniflag", "data-pl-details": x5.n, "aria-haspopup": "dialog", "aria-label": `${missingFlag(x5)} for ${x5.n}: edit details`, onClick: edit, children: missingFlag(x5) }) : null,
         /* @__PURE__ */ u4(IconButton, { icon: "pencil", label: "Edit details", name: `Edit details: ${x5.n}`, haspopup: "dialog", data: { "pl-edit": x5.n }, onClick: edit }),
         /* @__PURE__ */ u4(RemoveButton, { x: x5 })
       ] }) })
     ] });
   }
+  function GroupRow({ label, items: items2, k: k5, lvl, cols, folded }) {
+    const late = items2.reduce((t47, x5) => t47 + x5.late, 0);
+    const toggle = () => {
+      const st2 = pdState();
+      if (st2.collapsed[k5]) delete st2.collapsed[k5];
+      else st2.collapsed[k5] = true;
+      pdSave();
+      drawPeoplePage();
+    };
+    return /* @__PURE__ */ u4("tr", { class: `wgh lv${lvl}${folded ? " coll" : ""}`, "data-gk": k5, onClick: toggle, children: /* @__PURE__ */ u4("td", { colSpan: cols, children: [
+      /* @__PURE__ */ u4(
+        "button",
+        {
+          type: "button",
+          class: "wgtog",
+          "data-gtog": k5,
+          "aria-expanded": !folded,
+          "aria-label": `${folded ? "Expand" : "Collapse"} ${label}`,
+          onClick: (e4) => {
+            e4.stopPropagation();
+            toggle();
+          },
+          children: /* @__PURE__ */ u4(Icon, { name: "chevdown", cls: "chev" })
+        }
+      ),
+      " ",
+      /* @__PURE__ */ u4("b", { class: "wgn", children: label }),
+      " ",
+      /* @__PURE__ */ u4("span", { class: "sub", children: [
+        peoplePlural(items2.length, "person").replace(/persons$/, "people"),
+        late ? ` · ${late} overdue` : "",
+        folded ? " · folded" : ""
+      ] })
+    ] }) });
+  }
   function Head({ col, so: so2 }) {
-    const [k5, label, tip] = col;
-    if (!k5) return /* @__PURE__ */ u4("th", { scope: "col", children: label });
+    const c5 = PD_COLS.find((x5) => x5[0] === col) || [col, col], label = c5[1], tip = c5[2], k5 = PD_SORTS[col] ? col : "";
+    if (!k5) return /* @__PURE__ */ u4("th", { scope: "col", "data-col": col, children: label });
     const on2 = so2.col === k5, num2 = !["name", "email", "org", "role"].includes(k5);
-    return /* @__PURE__ */ u4("th", { scope: "col", class: num2 ? "num" : void 0, "aria-sort": on2 ? so2.dir === "asc" ? "ascending" : "descending" : "none", "data-psort": k5, children: /* @__PURE__ */ u4("button", { type: "button", class: "thsort", title: tip, children: [
+    return /* @__PURE__ */ u4("th", { scope: "col", "data-col": col, class: num2 ? "num" : void 0, "aria-sort": on2 ? so2.dir === "asc" ? "ascending" : "descending" : "none", "data-psort": k5, children: /* @__PURE__ */ u4("button", { type: "button", class: "thsort", title: tip, children: [
       label,
       on2 ? so2.dir === "asc" ? " ▲" : " ▼" : ""
     ] }) });
   }
+  function rowsOf(L3, st2, cols) {
+    if (st2.group === "none") return L3.map((x5) => /* @__PURE__ */ u4(PlRow, { x: x5, cols }, x5.n));
+    const n4 = cols.length + 1, out = (
+      /** @type {any[]} */
+      []
+    );
+    for (const g5 of pdGroup(L3, st2.group, pName)) {
+      const k5 = pdKey(st2.group, g5.key), folded = !!st2.collapsed[k5];
+      out.push(/* @__PURE__ */ u4(GroupRow, { label: g5.label, items: g5.items, k: k5, lvl: 1, cols: n4, folded }, "g" + k5));
+      if (folded) continue;
+      if (st2.sub === "none") {
+        g5.items.forEach((x5) => out.push(/* @__PURE__ */ u4(PlRow, { x: x5, cols }, k5 + "|" + x5.n)));
+        continue;
+      }
+      for (const g22 of pdGroup(g5.items, st2.sub, pName)) {
+        const k22 = pdKey(st2.group, g5.key, st2.sub, g22.key), f22 = !!st2.collapsed[k22];
+        out.push(/* @__PURE__ */ u4(GroupRow, { label: g22.label, items: g22.items, k: k22, lvl: 2, cols: n4, folded: f22 }, "g" + k22));
+        if (!f22) g22.items.forEach((x5) => out.push(/* @__PURE__ */ u4(PlRow, { x: x5, cols }, k22 + "|" + x5.n)));
+      }
+    }
+    return out;
+  }
   function PeoplePage(_props) {
-    const s5 = ST.s, tab = ptabOf(shared.PTAB);
+    pdSyncSort();
+    const s5 = PLST.s, tab = ptabOf(shared.PTAB), st2 = pdState(), cols = pdColumns(st2);
     const all = registerRows(), F5 = useFields(all, s5, {}), hit2 = all.filter((x5) => personPasses(x5, F5, s5));
     const so2 = sortOf(), f5 = SORTS[so2.col], dir = so2.dir === "asc" ? 1 : -1;
     const L3 = hit2.filter(IN_TAB[tab]).sort((a5, b5) => (a5.me ? -1 : b5.me ? 1 : 0) || (() => {
@@ -36553,14 +36955,14 @@ system/scripts/run launch.py agent ${what}`;
           }
         }
       ) }),
-      /* @__PURE__ */ u4(PeopleTools, { L: all, F: F5, s: s5, ids: "pl", onChange: drawPeoplePage }),
+      /* @__PURE__ */ u4(PeopleTools, { L: all, F: F5, s: s5, ids: "pl", onChange: drawPeoplePage, display: /* @__PURE__ */ u4(DisplayButton, {}) }),
       /* @__PURE__ */ u4(PeopleApplied, { F: F5, s: s5, ids: "pl", count, onChange: drawPeoplePage }),
       /* @__PURE__ */ u4("div", { class: "tbl", id: "peopleTbl", role: "tabpanel", children: /* @__PURE__ */ u4("table", { class: "plt", children: [
         /* @__PURE__ */ u4("thead", { children: /* @__PURE__ */ u4("tr", { children: [
-          PL_COLS.map((c5) => /* @__PURE__ */ u4(Head, { col: c5, so: so2 }, c5[0] || c5[1])),
-          /* @__PURE__ */ u4("th", { scope: "col", children: /* @__PURE__ */ u4("span", { class: "vh", children: "Actions on the person" }) })
+          cols.map((k5) => /* @__PURE__ */ u4(Head, { col: k5, so: so2 }, k5)),
+          /* @__PURE__ */ u4("th", { scope: "col", "data-col": "act", children: /* @__PURE__ */ u4("span", { class: "vh", children: "Actions on the person" }) })
         ] }) }),
-        /* @__PURE__ */ u4("tbody", { id: "plRows", children: L3.length ? L3.map((x5) => /* @__PURE__ */ u4(PlRow, { x: x5 }, x5.n)) : /* @__PURE__ */ u4("tr", { children: /* @__PURE__ */ u4("td", { colSpan: 10, class: "sub plnone", children: "No one matches. Try another tab or clear a filter." }) }) })
+        /* @__PURE__ */ u4("tbody", { id: "plRows", children: L3.length ? rowsOf(L3, st2, cols) : /* @__PURE__ */ u4("tr", { children: /* @__PURE__ */ u4("td", { colSpan: cols.length + 1, class: "sub plnone", children: "No one matches. Try another tab or clear a filter." }) }) })
       ] }) })
     ] });
   }
@@ -36573,6 +36975,7 @@ system/scripts/run launch.py agent ${what}`;
       bound = true;
       add.addEventListener("click", () => openPersonForm({ x: null, isNew: true }, plHandlers));
     }
+    bindPeopleDisplay();
     R(/* @__PURE__ */ u4(PeoplePage, { t: ++tick }, "pl"), el2);
   }
 
@@ -38093,7 +38496,10 @@ system/scripts/run launch.py agent ${what}`;
     for (const op2 of reconcileOps(doc, plan)) {
       if (how.only && !how.only(op2.n)) continue;
       const r5 = await change2(op2);
-      if (!r5.ok) return { ok: false, message: r5.message, made, done };
+      if (!r5.ok) {
+        if (how.approve !== false) dismissFiled();
+        return { ok: false, message: r5.message, made, done };
+      }
       made++;
       done.push(op2);
     }
@@ -38110,6 +38516,7 @@ system/scripts/run launch.py agent ${what}`;
     }
     const r4 = await api("/api/minutes/approve", { file: v5.proposal, group: args.group, own, expects, ...meeting && meeting.fp ? { expect: meeting.fp } : {} });
     forgetRenamed(v5.proposal);
+    if (!r4 || !r4.ok) dismissFiled();
     if (r4 && !r4.ok && REVIEW_CHANGED.test(r4.message || "")) {
       await reloadData();
       return { ok: false, message: STALE_ROW_MSG, made };
@@ -40142,10 +40549,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   function dispProps() {
     const ord = orderedCols().map((c5) => c5[0]), rest = COLS[shared.WT].filter((c5) => !ord.includes(c5[0]));
-    return [...orderedCols(), ...rest].map((c5) => {
-      const shown2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]);
-      return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown2 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
-    }).join("");
+    return dispPropsMarkup({ shown: orderedCols().map((c5) => [c5[0], c5[1]]), rest: rest.map((c5) => [c5[0], c5[1]]), locked: "t", prefix: "dprop" });
   }
   shared.RZ = store.obj("creaite-colwidths");
   var rzOf = (k5) => {
@@ -41002,13 +41406,13 @@ system/scripts/run launch.py agent ${what}`;
   function drawDisp() {
     const m5 = $("#dispMenu"), t47 = shared.WT, bd2 = layoutOf(t47) === "board", s5 = SORT[t47], cur = s5 ? s5.col === "_def" ? "" : s5.col : "", opts = SORTOPTS(t47), focusKey = document.activeElement && m5.contains(document.activeElement) ? document.activeElement.id || document.activeElement.dataset.mv + "|" + document.activeElement.dataset.d : null;
     const gopts = bd2 ? groupsOf(t47) : [["none", "None"], ...groupsOf(t47)], gcur = bd2 ? groupOf(t47) : listGroupOf(t47), sub = subOf(t47, bd2 ? "board" : "list");
-    putHTML(m5, html`<div><h3><label for="wgrp">${bd2 ? "Group by (columns)" : "Group by"}</label></h3><div class="dline"><select id="wgrp">${gopts.map((g5) => html`<option value="${g5[0]}" ${g5[0] === gcur ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <div ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><h3><label for="wsub">${bd2 ? "Sub-group (swimlanes)" : "Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => html`<option value="${g5[0]}" ${g5[0] === sub ? "selected" : ""}>${g5[1]}</option>`)}</select></div></div>
-    <h3><label for="wbsort">Order by</label></h3><div class="dline"><select id="wbsort">${opts.map((o5) => html`<option value="${o5[0]}" ${o5[0] === cur ? "selected" : ""}>${o5[1]}</option>`)}${cur && !opts.some((o5) => o5[0] === cur) ? html`<option value="${cur}" selected>Sorted by ${cur}</option>` : ""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s5 && s5.dir === "desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
-    <h3>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h3><div class="dprops">${raw(dispProps())}</div>
-    <h3>Show</h3><div class="dline" ${!bd2 && (gcur === "none" || listGroupDefault(t47)) ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
+    putHTML(m5, html`${raw(dispSelect({ id: "wgrp", label: bd2 ? "Group by (columns)" : "Group by", options: gopts.map((g5) => [g5[0], g5[1]]), cur: gcur }))}
+    ${raw(dispSelect({ id: "wsub", label: bd2 ? "Sub-group (swimlanes)" : "Sub-group", options: [["none", "None"], ...groupsOf(t47).filter((g5) => g5[0] !== gcur).map((g5) => [g5[0], g5[1]])], cur: sub, hidden: !bd2 && (gcur === "none" || listGroupDefault(t47)) }))}
+    ${raw(dispOrder({ id: "wbsort", revId: "wordRev", options: opts.map((o5) => [o5[0], o5[1]]), cur, reversed: !!(s5 && s5.dir === "desc"), extra: cur && !opts.some((o5) => o5[0] === cur) ? `<option value="${esc(cur)}" selected>Sorted by ${esc(cur)}</option>` : "" }))}
+    <h2>Properties${bd2 ? html` <span class="sub">· a card shows the first four</span>` : ""}</h2><div class="dprops">${raw(dispProps())}</div>
+    <h2>Show</h2><div class="dline" ${!bd2 ? "hidden" : ""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t47] ? "" : "checked"}> Empty groups</label></div>${bd2 ? html`
     <div class="dline"><label for="wclosed">${t47 === "decisions" ? "Decided" : "Closed"} column</label><select id="wclosed"><option value="recent" ${BCLALL.has(t47) ? "" : "selected"}>Last ${raw(+S.boardClosedDays || 14)} days</option><option value="all" ${BCLALL.has(t47) ? "selected" : ""}>All</option></select></div>` : html`<div class="dline sub">Closed items: use the Status filter.</div>`}
-    <div class="dfoot"><button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button><span class="sp"></span><button type="button" class="btn primary" id="dispDone">Done</button></div>`);
+    ${raw(dispFoot({ resetId: "dispReset", doneId: "dispDone", resetLabel: "Reset to this tab’s default" }))}`);
     if (focusKey) {
       const f5 = m5.querySelector("#" + CSS.escape(focusKey)) || (focusKey.includes("|") ? m5.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`) : null);
       if (f5 && !f5.disabled) f5.focus();
@@ -41019,7 +41423,7 @@ system/scripts/run launch.py agent ${what}`;
       const m6 = $("#dispMenu"), seg = m6.querySelector('.seg[aria-label="Layout"]');
       if (seg) {
         const line = seg.closest(".dline");
-        if (line.previousElementSibling && line.previousElementSibling.tagName === "H3") line.previousElementSibling.remove();
+        if (line.previousElementSibling && line.previousElementSibling.tagName === "H2") line.previousElementSibling.remove();
         line.remove();
       }
       const s6 = $("#wbsort");
@@ -41032,28 +41436,12 @@ system/scripts/run launch.py agent ${what}`;
       s6.value = cur2;
     }
   }
+  var DISP = dispController({ btn: "#dispBtn", menu: "#dispMenu", draw: () => drawDisp() });
   function openDisp() {
-    const m5 = $("#dispMenu");
-    if (dispOpen()) {
-      closeDisp(true);
-      return;
-    }
-    $$(".ddmenu.on").forEach((x5) => x5.classList.remove("on"));
-    drawDisp();
-    m5.hidden = false;
-    m5.classList.add("on");
-    $("#dispBtn").setAttribute("aria-expanded", "true");
-    $("#dispBtn").classList.add("on");
-    (m5.querySelector('[aria-pressed="true"]') || m5.querySelector("button,select,input"))?.focus();
+    DISP.open();
   }
   function closeDisp(focus) {
-    const m5 = $("#dispMenu");
-    if (!dispOpen() && m5.hidden) return;
-    m5.classList.remove("on");
-    m5.hidden = true;
-    $("#dispBtn").setAttribute("aria-expanded", "false");
-    $("#dispBtn").classList.remove("on");
-    if (focus) $("#dispBtn").focus();
+    DISP.close(focus);
   }
   function dispChanged() {
     renderWork();
@@ -41334,7 +41722,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   function grpHead(t47, gr2, lvl, key2, coll, n4) {
     if (t47 === "all") t47 = "raid";
-    const late = gr2.items.filter((x5) => itemLate(t47, x5)).length;
+    const late = gr2.key === "overdue" ? 0 : gr2.items.filter((x5) => itemLate(t47, x5)).length;
     return `<tr class="wgh lv${lvl}${coll ? " coll" : ""}" data-gk="${esc(key2)}"><td colspan="${n4}"><button type="button" class="wgtog" data-gtog="${esc(key2)}" aria-expanded="${!coll}" aria-label="${coll ? "Expand" : "Collapse"} ${esc(gr2.label)}">${ic("chevdown", "chev")}</button><input type="checkbox" class="wgtick" data-gtick="${esc(key2)}" aria-label="Select the rows in ${esc(gr2.label)}" ${coll || !gr2.items.length ? "disabled" : ""}> <b class="wgn">${esc(gr2.label)}</b> <span class="sub">${grpNoun(t47, gr2.items.length)}${late ? ` · <span class="late">${late} overdue</span>` : ""}${coll ? " · collapsed" : ""}</span></td></tr>`;
   }
   function listBody(t47, C5, L3) {
@@ -41342,7 +41730,7 @@ system/scripts/run launch.py agent ${what}`;
     if (g5 === "none" || !L3.length) return L3.map((x5) => row2(x5, "")).join("");
     const sg2 = subOf(t47, "list");
     let h5 = "";
-    wgGroups(t47, g5, L3, !BHIDE[t47]).forEach((gr2) => {
+    wgGroups(t47, g5, L3, false).forEach((gr2) => {
       const k5 = `${t47}|${g5}|${gr2.key}`, coll = lcollOf(k5);
       h5 += grpHead(t47, gr2, 1, k5, coll, C5.length);
       if (coll) return;
@@ -44150,6 +44538,11 @@ system/scripts/run launch.py agent ${what}`;
       if ((e4.key === "d" || e4.key === "D") && (shared.VIEW === "work" || shared.VIEW === "mine")) {
         e4.preventDefault();
         openDisp();
+        return;
+      }
+      if ((e4.key === "d" || e4.key === "D") && !e4.shiftKey && shared.VIEW === "people" && !popupOpen()) {
+        e4.preventDefault();
+        openPeopleDisplay();
         return;
       }
       if (e4.key === "?") {
@@ -51397,15 +51790,17 @@ system/scripts/run launch.py agent ${what}`;
     if (shared.FSEL.quick === "week") L3 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${ftLabel(f5.type)}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" data-mbkind="${f5.f}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">${EMPTY[shared.FSEL.quick] && ffCount() === 0 ? EMPTY[shared.FSEL.quick] : "No files match. Clear the filters."} ${raw(howLink("files"))}</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     filterChrome();
   }
   var FF = { type: "All", from: "", to: "" };
   var fmOpen = false;
+  var FTLAB = { docx: "Word", doc: "Word", xlsx: "Excel", xls: "Excel", pptx: "PowerPoint", pdf: "PDF", vtt: "Transcript", md: "Note", txt: "Text", html: "Web page", eml: "Email" };
+  var ftLabel = (t47) => FTLAB[String(t47).toLowerCase()] || t47;
   var FTYPES = () => ["All", .../* @__PURE__ */ new Set(["docx", "pdf", "vtt", "xlsx", ...FILES.map((f5) => f5.type).filter(Boolean)])];
   var ffCount = () => (FF.type !== "All" ? 1 : 0) + (FF.from ? 1 : 0) + (FF.to ? 1 : 0);
-  var ffChips = () => [...FF.type !== "All" ? [["type", `Type: ${FF.type}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
+  var ffChips = () => [...FF.type !== "All" ? [["type", `Type: ${ftLabel(FF.type)}`]] : [], ...FF.from ? [["from", `From ${fd(FF.from)}`]] : [], ...FF.to ? [["to", `To ${fd(FF.to)}`]] : []];
   function filterChrome() {
     const n4 = ffCount(), c5 = ffChips(), btn = $("#fmBtn"), tip = n4 ? `Filter: ${n4} on` : "Filter";
     btn.setAttribute("aria-label", tip);
@@ -51418,7 +51813,7 @@ system/scripts/run launch.py agent ${what}`;
     putHTML(h5, html`${c5.map((x5) => html`<span class="fchip">${x5[1]}<button type="button" data-fclr="${x5[0]}" aria-label="Remove ${x5[1]}" data-tip="Remove ${x5[1]}">✕</button></span>`)}`);
   }
   function fmDraw() {
-    putHTML($("#fmenu"), html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map((t47) => html`<label><input type="radio" name="fsType" value="${t47}" ${raw(t47 === FF.type ? "checked" : "")}> ${t47 === "All" ? "All types" : t47}</label>`)}</fieldset>
+    putHTML($("#fmenu"), html`<fieldset class="fmrow"><legend>Type</legend>${FTYPES().map((t47) => html`<label><input type="radio" name="fsType" value="${t47}" ${raw(t47 === FF.type ? "checked" : "")}> ${t47 === "All" ? "All types" : ftLabel(t47)}</label>`)}</fieldset>
     <div class="fmrow"><label class="fmlab" for="fsFrom">From</label><span class="dwrap"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.from ? fd(FF.from) : ""}"><button type="button" class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsFromErr" role="alert"></span></div>
     <div class="fmrow"><label class="fmlab" for="fsTo">To</label><span class="dwrap"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1" value="${FF.to ? fd(FF.to) : ""}"><button type="button" class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><span class="fmerr" id="fsToErr" role="alert"></span></div>
     <div class="fmfoot"><button type="button" class="mini" id="fmClear">Clear</button><button type="button" class="btn primary" id="fmDone">Done</button></div>`);
@@ -52733,7 +53128,7 @@ system/scripts/run launch.py agent ${what}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"}">${r4.pr}</span> <span class="sub">${r4.type}</span> ${esc(r4.t)}<div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"} rk-m">${r4.pr}</span> <span class="sub rk-m">${r4.type}</span> <b class="rk-t">${esc(r4.t)}</b> <span class="sub rk-o">${r4.o && r4.o !== "TBC" ? esc(who(r4.o)) : "No owner"}</span><div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv2 ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv2)} client-visible item${cv2 === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -55071,7 +55466,8 @@ ${pre}**Current state title:** ${title}`);
     })();
     {
       const m5 = prepOf(shared.PREPEV) || {}, code = m5.p, body2 = $("#prepBody");
-      if (body2 && code && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
+      const guessed = !!(m5.invite && m5.invite.confidential) && m5.how !== "remembered" && m5.how !== "chosen";
+      if (body2 && code && !guessed && code !== "_portfolio" && isSteering(shared.PREPEV && shared.PREPEV.title) && !body2.querySelector(".steerlink")) {
         const bar = `<p class="steerlink sub">Steering committee: <button class="mini" data-ask="steerco one-pager ${code}" data-steer="1" aria-label="Draft the one-pager" data-tip="Draft the steering one-pager with ask creaite">${ic("filetext")}One-pager</button> <button class="mini" data-ask="steerco one-pager ${code} client-safe" data-steer="1" aria-label="Draft the client-safe one-pager" data-tip="Draft the client-safe one-pager with ask creaite">${ic("filetext")}Client-safe one-pager</button> <span>(a Word draft for you to review; nothing is sent${viaServer() ? "" : "; needs creaite to be running"})</span></p>`;
         addHTML(body2, "afterbegin", raw(bar));
       }
@@ -56016,14 +56412,20 @@ ${pre}**Current state title:** ${title}`);
     ] });
   }
   function WeekAhead(props) {
-    const { groups, empty, others } = props;
+    const { groups, empty, others, tomorrow } = props;
     return /* @__PURE__ */ u4(S2, { children: [
       others && others.n ? /* @__PURE__ */ u4("p", { class: "wkpoint", children: [
         others.n === 1 ? "1 action owned by others is overdue." : `${others.n} actions owned by others are overdue.`,
         " ",
         /* @__PURE__ */ u4("a", { href: "#", class: "cntl", "data-nav": others.nav, children: "See them in Work" })
       ] }) : null,
-      !groups.length ? /* @__PURE__ */ u4("p", { class: "none", children: empty }) : groups.map((g5) => {
+      !groups.length ? /* @__PURE__ */ u4("p", { class: "none", children: [
+        empty,
+        tomorrow ? /* @__PURE__ */ u4(S2, { children: [
+          " Next: look at tomorrow. ",
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", "data-wknext": "1", onClick: tomorrow, children: "Show tomorrow" })
+        ] }) : null
+      ] }) : groups.map((g5) => {
         const more = g5.rows.length - g5.cap;
         return /* @__PURE__ */ u4("div", { class: "wkday", "data-day": g5.key, children: [
           /* @__PURE__ */ u4("h3", { class: "wkdh", id: `wkd-${g5.key}`, children: [
@@ -56854,7 +57256,7 @@ ${pre}**Current state title:** ${title}`);
   function setupSteps() {
     const seen = store.get(SETUPK, {});
     return [
-      ["m365", "Connect Microsoft 365", swept(), "Show me how", "help", swept() ? "Connected: the mail and Teams check has read your mail" : `Connected in Claude itself, so the page can’t: connect it there, then ask Claude to check it. The first mail and Teams check confirms it`],
+      ["m365", "Connect Microsoft 365", swept(), "Show me how", "help", swept() ? "Connected: the mail and Teams check has read your mail" : `Connect it in Claude itself; this page can’t. The first mail and Teams check confirms it`],
       ["proj", "Add a project", P4.length > 0, "Add a project", "proj", `${P4.length} project${P4.length === 1 ? "" : "s"}`],
       ["people", "Add people", shared.REG.length > 0, "Add people", "people", `${shared.REG.length} in the people register`],
       ["sweep", "Run the first check", swept(), "Run the first check", "sweep", swept() ? `Last checked ${esc(fd(String(D.last_sweep)))}` : "Reads mail, Teams and the calendar since the look-back days"],
@@ -57738,12 +58140,14 @@ ${pre}**Current state title:** ${title}`);
     const groups = weekGroups(), n4 = groups.reduce((t47, g5) => t47 + g5.rows.length, 0);
     const above = groups.above || 0;
     $("#weekTo").textContent = W3 ? `${plur(n4, "item")} to ${longDay(W3.to)}${above ? ` · ${above} more listed above` : ""}` : "";
+    const nextDay = !above && dayShown() === TODAY && S.srcCalendar !== false ? dayList().find((d5) => days(d5.date) === 1) : null;
     drawWeekAhead(host2, {
       groups,
       openFile: (p6) => {
         prepOpen(p6);
       },
       others: othersOverdue(),
+      tomorrow: nextDay ? () => goDay(nextDay.date) : null,
       empty: above ? `The rest of what is due until ${W3 ? longDay(W3.to) : "next Monday"} is listed above.` : `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
       onAct: (r4, a5, btn) => {
         if (a5.data && a5.data.id) workAct(a5.data.k, a5.data.id, a5.id, btn);
@@ -63724,6 +64128,7 @@ ${d5.text}`);
     const st2 = $("#pkStage"), n4 = shared.PKS.length, m5 = new Set(shared.PKS.map((s5) => s5.id)).size;
     st2.hidden = !n4;
     document.body.classList.toggle("pkstaged", !!n4);
+    if (n4) hideSavedSnack();
     if (n4) $("#pkStN").textContent = `${n4} change${n4 === 1 ? "" : "s"} waiting to be saved on ${m5} item${m5 === 1 ? "" : "s"}`;
   }
   function pkLast(x5, k5) {
@@ -63832,7 +64237,7 @@ ${d5.text}`);
       }
       const done = n4 - shared.PKS.length;
       if (shared.CUR && pkOn()) pkDraw();
-      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}. A backup was taken first` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null);
+      snack(done ? `Saved ${done} change${done === 1 ? "" : "s"}${PKNEWIDS.length ? ` (${PKNEWIDS.join(", ")} created)` : ""}${shared.PKS.length ? `; ${shared.PKS.length} still waiting to be saved (changed elsewhere since)` : ""}` : "Nothing saved: " + oneLine(r4.message), done ? () => undoApply(r4.apply_id) : null, void 0, done && !shared.PKS.length ? { tone: "ok", note: "A backup was taken first" } : void 0);
       return done;
     } finally {
       $("#pkApply").disabled = false;
@@ -75640,7 +76045,7 @@ ${d5.text}`);
         return;
       }
       if (go3) {
-        const r4 = await api("/api/ask/queue", { op: "resume" });
+        const r4 = await api("/api/ask/queue", { op: "resume", run_now: true });
         if (r4.ok && r4.run) attachRun(r4.run);
         else if (r4.message) snack(oneLine(r4.message));
       }
@@ -78113,7 +78518,7 @@ ${d5.text}`);
     return [];
   }
   var irQuote = (r4) => noTime(r4.dn && r4.dn.ev || r4.kind === "update" && r4.rec && r4.rec.why || "");
-  function SourceLine({ r: r4 }) {
+  function sourceLine(r4) {
     let o5 = srcParse(r4.src);
     if (o5 && o5.type === "Text") {
       const m5 = /^((?:projects|system)\/.+?\.html)(?: — (.+))?$/.exec(String(o5.text));
@@ -78133,14 +78538,11 @@ ${d5.text}`);
     ), target: "_blank", rel: "noopener noreferrer", children: "Open source" });
     const match = r4.p ? null : r4.why;
     where2 = fdText(where2);
-    return /* @__PURE__ */ u4("span", { class: "icsrc", children: [
-      where2,
-      match ? ` · ${match}` : "",
-      link ? /* @__PURE__ */ u4(S2, { children: [
-        " · ",
-        link
-      ] }) : null
-    ] });
+    const bits = [where2, match ? String(match) : "", link].filter((x5) => x5);
+    return bits.length ? /* @__PURE__ */ u4("span", { class: "icsrc", children: bits.map((x5, i5) => /* @__PURE__ */ u4(S2, { children: [
+      i5 ? " · " : null,
+      x5
+    ] })) }) : null;
   }
   function WeekendNote({ r: r4 }) {
     const f5 = WKRVF[
@@ -78287,6 +78689,7 @@ ${d5.text}`);
       /** @type {keyof HOLD_WORDS} */
       r4.hold
     ] || "approve individually" : "";
+    const src = sourceLine(r4);
     const rej = !!r4.kind && r4.kind !== "files", conflict = isConflict(r4), tip = rvTipText(r4) || TIP_FALLBACK[
       /** @type {keyof TIP_FALLBACK} */
       r4.kind
@@ -78332,7 +78735,7 @@ ${d5.text}`);
             conflict ? /* @__PURE__ */ u4(ConflictBlock, { rec: r4.rec }) : null,
             /* @__PURE__ */ u4("div", { class: "icchg", "data-tip": tip || void 0, children: [
               /* @__PURE__ */ u4("span", { class: "ickind", children: irPill(r4) }),
-              parts.map((p6) => /* @__PURE__ */ u4(S2, { children: [
+              parts.filter((p6) => p6.t).map((p6) => /* @__PURE__ */ u4(S2, { children: [
                 " · ",
                 /* @__PURE__ */ u4("span", { class: p6.warn ? "h-warn" : "", children: p6.t })
               ] })),
@@ -78347,8 +78750,10 @@ ${d5.text}`);
                 " · ",
                 /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-drrisk": r4.n, onClick: () => draftResponse(r4.n), children: "Draft a response" })
               ] }) : null,
-              " · ",
-              /* @__PURE__ */ u4(SourceLine, { r: r4 })
+              src ? /* @__PURE__ */ u4(S2, { children: [
+                " · ",
+                src
+              ] }) : null
             ] }),
             quote ? /* @__PURE__ */ u4("div", { class: "icq", children: quote }) : null,
             r4.ws_suggest && !r4.done && (r4.flags || []).includes("new-workstream") ? /* @__PURE__ */ u4("div", { class: "wsq", children: [
@@ -78519,6 +78924,7 @@ ${d5.text}`);
   bootIrReviewKeys();
 
   // components/intakeReview/views.jsx
+  var IR_BOARD = ["drafted", "approved", "arrived"];
   var IR_STAGE_NAMES = { arrived: "Arrived", drafted: "Drafted", approved: "Approved" };
   var IR_EMPTY = "Nothing here. Meetings appear when they end.";
   var irNone = () => irQuery.value.trim() ? "Nothing matches your search." : IR_EMPTY;
@@ -78532,9 +78938,21 @@ ${d5.text}`);
     " ",
     /* @__PURE__ */ u4("span", { class: "sub", children: g5.items.length })
   ] }) });
+  var irTailHeld = () => irStage.value === "arrived" || irStateFilter.value === "waiting" || !!irQuery.value.trim();
+  var irTailFolded = () => irGroup.value === "none" && irIsFolded(irFolded.value, "waiting") && !irTailHeld();
+  function TailHead({ n: n4 }) {
+    const folded = irTailFolded(), held = irTailHeld();
+    return /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "waiting", children: /* @__PURE__ */ u4("h2", { children: [
+      "Waiting for the transcript ",
+      /* @__PURE__ */ u4("span", { class: "sub rgc", children: n4 }),
+      " ",
+      held ? null : /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-irfold": "waiting", "aria-expanded": !folded, onClick: () => irClickFold("waiting"), children: folded ? "Show" : "Hide" })
+    ] }) });
+  }
   function MailSections({ model }) {
     const mail = irLive(model.mail, irDone, irHeld), other = irLive(model.other, irDone, irHeld);
     const nm3 = mail.needs.length + mail.routine.length, no2 = other.needs.length + other.routine.length;
+    const cap = irCapGroups(model.mail, irDone, irHeld, IR_MAIL_CAP), all = irMailAll.value || cap.total <= IR_MAIL_CAP;
     return /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "mail", children: /* @__PURE__ */ u4("h2", { children: [
         "From mail and Teams ",
@@ -78544,7 +78962,12 @@ ${d5.text}`);
           nm3 === 1 ? "" : "s"
         ] })
       ] }) }),
-      nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: model.mail }) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve." }),
+      nm3 ? /* @__PURE__ */ u4("div", { class: "tbl", children: [
+        /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: all ? model.mail : cap.groups }) }) }),
+        cap.total > IR_MAIL_CAP ? /* @__PURE__ */ u4("p", { class: "sub irmore", children: /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "mailall", onClick: () => {
+          irMailAll.value = !irMailAll.value;
+        }, children: all ? `Show the first ${IR_MAIL_CAP}` : `Show all ${cap.total}` }) }) : null
+      ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: irQuery.value.trim() ? "Nothing from mail or Teams matches your search." : "Nothing from mail or Teams to approve." }),
       no2 ? /* @__PURE__ */ u4(S2, { children: [
         /* @__PURE__ */ u4("div", { class: "rgroup irsec", "data-irsec": "other", children: /* @__PURE__ */ u4("h2", { children: [
           "Other suggestions ",
@@ -78562,29 +78985,66 @@ ${d5.text}`);
     ] });
   }
   function ListView({ model, list }) {
-    const lead = irLeadWithWork(list), grouped = irGroup.value !== "none";
+    const { work, tail } = irSplitTail(list), grouped = irGroup.value !== "none", folded = irTailFolded();
     const table = (rows2, part) => rows2.length ? /* @__PURE__ */ u4("div", { class: "tbl", "data-irpart": part, children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(rows2).map((g5) => /* @__PURE__ */ u4(S2, { children: [
       grouped ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
       g5.items.map((m5) => /* @__PURE__ */ u4(MeetingBlock, { m: m5 }, m5.id))
     ] })) }) }) }) : null;
+    const tailRows = tail.length && !grouped ? /* @__PURE__ */ u4(S2, { children: [
+      /* @__PURE__ */ u4(TailHead, { n: tail.length }),
+      folded ? null : table(tail, "arrived")
+    ] }) : null;
     if (!list.length) return /* @__PURE__ */ u4("div", { "data-irv": "list", children: [
       /* @__PURE__ */ u4("div", { class: "empty", children: irNone() }),
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
     return /* @__PURE__ */ u4("div", { "data-irv": "list", children: grouped ? /* @__PURE__ */ u4(S2, { children: [
       /* @__PURE__ */ u4(MailSections, { model }),
-      table(lead, "all")
+      table([...work, ...tail], "all")
     ] }) : /* @__PURE__ */ u4(S2, { children: [
-      table(lead.filter((m5) => m5.stage !== "arrived"), "work"),
+      table(work, "work"),
       /* @__PURE__ */ u4(MailSections, { model }),
-      table(lead.filter((m5) => m5.stage === "arrived"), "arrived")
+      tailRows
     ] }) });
   }
+  function BoardCard({ m: m5 }) {
+    return /* @__PURE__ */ u4(
+      "div",
+      {
+        class: "card iccard click",
+        "data-irm": m5.id,
+        "data-stage": m5.stage,
+        "data-state": irBusy.value.includes(m5.id) ? "running" : m5.state,
+        tabindex: 0,
+        onClick: (e4) => {
+          if (!/** @type {Element} */
+          e4.target.closest("button,a,input")) irClickMeeting(m5.id);
+        },
+        onContextMenu: (e4) => irRowMenu(e4, m5),
+        onKeyDown: (e4) => irRowKey(e4, m5),
+        children: [
+          /* @__PURE__ */ u4("div", { class: "t", children: [
+            /* @__PURE__ */ u4(IrTick, { m: m5 }),
+            " ",
+            m5.title
+          ] }),
+          m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
+            /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
+          ] }),
+          irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
+          /* @__PURE__ */ u4(IrNote, { m: m5 }),
+          /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: m5 }) })
+        ]
+      }
+    );
+  }
   function BoardView({ model }) {
-    const open2 = model.meetings.find((m5) => m5.id === irOpen.value);
+    const open2 = model.meetings.find((m5) => m5.id === irOpen.value), folded = irTailFolded();
     return /* @__PURE__ */ u4("div", { "data-irv": "board", children: [
-      /* @__PURE__ */ u4("div", { class: "icboard", children: IR_STAGES.map((g5) => {
-        const l6 = model.meetings.filter((m5) => m5.stage === g5);
+      open2 ? /* @__PURE__ */ u4("div", { class: "tbl", "data-irpart": "open", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true, meetId: open2.id }) }) }) }) : null,
+      /* @__PURE__ */ u4("div", { class: "icboard", children: IR_BOARD.map((g5) => {
+        const l6 = model.meetings.filter((m5) => m5.stage === g5), { work, tail } = irSplitTail(l6), shown2 = folded ? work : [...work, ...tail];
         return /* @__PURE__ */ u4("div", { class: "iccol", "data-ircol": g5, children: [
           /* @__PURE__ */ u4("h2", { children: [
             IR_STAGE_NAMES[
@@ -78594,50 +79054,57 @@ ${d5.text}`);
             " ",
             /* @__PURE__ */ u4("span", { class: "sub rgc", children: l6.length })
           ] }),
-          l6.length ? l6.map((m5) => /* @__PURE__ */ u4(
-            "div",
-            {
-              class: "card iccard click",
-              "data-irm": m5.id,
-              "data-stage": m5.stage,
-              "data-state": irBusy.value.includes(m5.id) ? "running" : m5.state,
-              tabindex: 0,
-              onClick: (e4) => {
-                if (!/** @type {Element} */
-                e4.target.closest("button,a,input")) irClickMeeting(m5.id);
-              },
-              onContextMenu: (e4) => irRowMenu(e4, m5),
-              onKeyDown: (e4) => irRowKey(e4, m5),
-              children: [
-                /* @__PURE__ */ u4("div", { class: "t", children: [
-                  /* @__PURE__ */ u4(IrTick, { m: m5 }),
-                  " ",
-                  m5.title
-                ] }),
-                m5.src === "upload" ? /* @__PURE__ */ u4(FileFacts, { m: m5, n: liveN(m5) }) : /* @__PURE__ */ u4(S2, { children: [
-                  /* @__PURE__ */ u4("div", { class: "why", children: m5.p && !m5.private && !m5.confidential ? pName(m5.p) : "" }),
-                  /* @__PURE__ */ u4(IrStateLine, { m: m5, n: liveN(m5) })
-                ] }),
-                irBusy.value.includes(m5.id) ? /* @__PURE__ */ u4(Progress, { words: irRunningWords(m5) }) : null,
-                /* @__PURE__ */ u4(IrNote, { m: m5 }),
-                /* @__PURE__ */ u4("div", { class: "iccardacts", children: /* @__PURE__ */ u4(RowActions, { m: m5 }) })
-              ]
-            },
-            m5.id
-          )) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing here." })
+          l6.length ? /* @__PURE__ */ u4(S2, { children: [
+            (g5 === "arrived" ? shown2 : l6).map((m5) => /* @__PURE__ */ u4(BoardCard, { m: m5 }, m5.id)),
+            g5 === "arrived" && tail.length ? /* @__PURE__ */ u4(TailHead, { n: tail.length }) : null
+          ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing here." })
         ] });
       }) }),
-      open2 ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: /* @__PURE__ */ u4(ProposalGroups, { groups: open2.groups, meet: open2.title, child: true, meetId: open2.id }) }) }) }) : null,
       /* @__PURE__ */ u4(MailSections, { model })
     ] });
   }
   function TwoPanes({ model, list }) {
-    const sel = list.find((m5) => m5.id === irSel.value) || list[0], c5 = irLiveCounts();
+    const { work, tail } = irSplitTail(list), folded = irTailFolded(), ordered = [...work, ...tail];
+    const sel = ordered.filter((m5) => !folded || !tail.includes(m5)).find((m5) => m5.id === irSel.value) || (folded ? work : ordered)[0], c5 = irLiveCounts();
     const hidden = (m5) => m5.private || m5.confidential;
     const right = (m5) => {
       const n4 = liveN(m5);
       return n4 ? `${n4} suggestion${n4 === 1 ? "" : "s"}` : m5.stage === "arrived" && m5.state === "ready" ? "ready" : "";
     };
+    const paneRows = (rs2) => rs2.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(rs2).map((g5) => /* @__PURE__ */ u4(S2, { children: [
+      irGroup.value !== "none" ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
+      g5.items.map((m5) => /* @__PURE__ */ u4(
+        "tr",
+        {
+          class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
+          "data-irm": m5.id,
+          tabindex: 0,
+          onClick: (e4) => {
+            if (!/** @type {Element} */
+            e4.target.closest("input")) irSel.value = m5.id;
+          },
+          onContextMenu: (e4) => irRowMenu(e4, m5),
+          onKeyDown: (e4) => irRowKey(e4, m5),
+          children: [
+            /* @__PURE__ */ u4("td", { class: "title", children: [
+              /* @__PURE__ */ u4(IrTick, { m: m5 }),
+              " ",
+              m5.title,
+              /* @__PURE__ */ u4("div", { class: "why", children: [
+                IR_STAGE_NAMES[
+                  /** @type {keyof IR_STAGE_NAMES} */
+                  m5.stage
+                ],
+                " · ",
+                irWhen(m5)
+              ] })
+            ] }),
+            /* @__PURE__ */ u4("td", { class: "icsub irright", children: right(m5) })
+          ]
+        },
+        m5.id
+      ))
+    ] })) }) }) }) : null;
     return /* @__PURE__ */ u4("div", { "data-irv": "two", children: [
       /* @__PURE__ */ u4("div", { class: "icsplit", children: [
         /* @__PURE__ */ u4("div", { children: [
@@ -78649,40 +79116,11 @@ ${d5.text}`);
             " → Approved ",
             c5.approved
           ] }) }),
-          list.length ? /* @__PURE__ */ u4("div", { class: "tbl", children: /* @__PURE__ */ u4("table", { children: /* @__PURE__ */ u4("tbody", { children: irGroups(list).map((g5) => /* @__PURE__ */ u4(S2, { children: [
-            irGroup.value !== "none" ? /* @__PURE__ */ u4(GroupHead, { g: g5 }) : null,
-            g5.items.map((m5) => /* @__PURE__ */ u4(
-              "tr",
-              {
-                class: `click${sel && sel.id === m5.id ? " sel" : ""}`,
-                "data-irm": m5.id,
-                tabindex: 0,
-                onClick: (e4) => {
-                  if (!/** @type {Element} */
-                  e4.target.closest("input")) irSel.value = m5.id;
-                },
-                onContextMenu: (e4) => irRowMenu(e4, m5),
-                onKeyDown: (e4) => irRowKey(e4, m5),
-                children: [
-                  /* @__PURE__ */ u4("td", { class: "title", children: [
-                    /* @__PURE__ */ u4(IrTick, { m: m5 }),
-                    " ",
-                    m5.title,
-                    /* @__PURE__ */ u4("div", { class: "why", children: [
-                      IR_STAGE_NAMES[
-                        /** @type {keyof IR_STAGE_NAMES} */
-                        m5.stage
-                      ],
-                      " · ",
-                      irWhen(m5)
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ u4("td", { class: "icsub irright", children: right(m5) })
-                ]
-              },
-              m5.id
-            ))
-          ] })) }) }) }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() })
+          list.length ? /* @__PURE__ */ u4(S2, { children: [
+            paneRows(work),
+            tail.length && irGroup.value === "none" ? /* @__PURE__ */ u4(TailHead, { n: tail.length }) : null,
+            folded ? null : paneRows(tail)
+          ] }) : /* @__PURE__ */ u4("div", { class: "empty", children: irNone() })
         ] }),
         /* @__PURE__ */ u4("div", { class: "card icdet", "data-irdet": sel ? sel.id : "", children: sel ? /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h2", { style: { margin: "0 0 4px" }, children: sel.title }),
@@ -78899,7 +79337,7 @@ ${d5.text}`);
     ] });
   }
   function TickBar() {
-    const shown2 = irTickedShown(), ms2 = irTargets(shown2[0] || ""), n4 = shown2.length, hidden = irTicked.value.length - n4;
+    const shown2 = irTickedShown(), n4 = shown2.length, hidden = irTicked.value.length - n4;
     if (!n4 && !hidden) return null;
     return /* @__PURE__ */ u4("div", { class: "irtickbar", role: "group", "aria-label": "Selected meetings", "data-irtickbar": "1", children: [
       /* @__PURE__ */ u4("b", { children: [
@@ -78907,7 +79345,7 @@ ${d5.text}`);
         " selected",
         hidden ? `, ${hidden} hidden` : ""
       ] }),
-      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "laterall", onClick: () => irAsideMany(ms2, "later"), children: "Later" }),
+      /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "laterall", onClick: () => irAsideMany(irTargets(irTickedShown()[0] || ""), "later"), children: "Later" }),
       /* @__PURE__ */ u4("button", { type: "button", class: "mini", "data-ira": "reasonall", "aria-haspopup": "menu", onClick: (e4) => {
         const el2 = (
           /** @type {HTMLElement} */
@@ -78916,11 +79354,39 @@ ${d5.text}`);
         openContextMenuAt(
           el2,
           /** @type {any} */
-          (irMenuItems(ms2).find((x5) => x5.sub) || { label: "", sub: [] }).sub,
+          (irMenuItems(irTargets(irTickedShown()[0] || "")).find((x5) => x5.sub) || { label: "", sub: [] }).sub,
           { label: "Not needed because" }
         );
       }, children: "Not needed because…" }),
       /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "clearticks", onClick: () => irClearTicks(), children: "Clear" })
+    ] });
+  }
+  function NextJob({ c: c5 }) {
+    const tomorrow = (dayList() || []).find((d5) => days(d5.date) === 1);
+    const j5 = irNextJob(c5, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
+    if (!j5) return null;
+    const live = viaServer(), busy2 = irBlocked() || irRefreshing.value || !!shared.RUN || !!shared.BUSY;
+    const why = j5.job === "tomorrow" ? "" : busy2 ? "ask creaite is busy; try again when it’s finished" : !live ? "creaite isn’t running" : "";
+    const act = () => {
+      if (j5.job === "refresh") irRefreshCalendar();
+      else if (j5.job === "mail") {
+        if (shared.BUSY) {
+          snack("ask creaite is busy; try again when it’s finished");
+          return;
+        }
+        openChat();
+        send("sweep");
+      } else if (tomorrow) {
+        go2("today");
+        goDay(tomorrow.date);
+      }
+    };
+    return /* @__PURE__ */ u4("p", { class: "irnext", "data-irnext": j5.job, children: [
+      /* @__PURE__ */ u4("span", { children: j5.text }),
+      j5.button ? /* @__PURE__ */ u4(S2, { children: [
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-ira": "nextjob", disabled: !!why, title: why || void 0, onClick: act, children: j5.button })
+      ] }) : null
     ] });
   }
   function IntakeReviewView() {
@@ -78929,7 +79395,8 @@ ${d5.text}`);
     const found = irFilterModel(irModel(), q5);
     const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };
     const list = irFiltered(model, irStage.value);
-    irSetShown((view === "list" ? list : model.meetings).map((m5) => m5.id));
+    const seen = view === "list" ? list : model.meetings, hiddenTail = irTailFolded() ? irSplitTail(seen).tail : [];
+    irSetShown(seen.filter((m5) => !hiddenTail.includes(m5)).map((m5) => m5.id));
     return /* @__PURE__ */ u4("div", { class: "wrapmax irpage", "data-irtick": tick2, children: [
       /* @__PURE__ */ u4("h1", { id: "irTitle", children: "Intake" }),
       /* @__PURE__ */ u4("p", { class: "sub", id: "irSub", style: { margin: "4px 0 0" }, children: [
@@ -78939,6 +79406,7 @@ ${d5.text}`);
         " to approve · ",
         /* @__PURE__ */ u4(CalendarRead, { text: irCalendarRead(D.meetings && D.meetings.fetched, TODAY) })
       ] }),
+      /* @__PURE__ */ u4(NextJob, { c: c5 }),
       /* @__PURE__ */ u4("div", { class: "toolbar rvtools", children: [
         /* @__PURE__ */ u4(
           "input",
@@ -78959,6 +79427,7 @@ ${d5.text}`);
                 e4.preventDefault();
                 e4.stopPropagation();
                 irQuery.value = "";
+                irClearTicks();
               }
             }
           }
@@ -78993,7 +79462,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4(StagePipe, { c: c5 }),
         /* @__PURE__ */ u4(ListView, { model, list })
       ] }),
-      /* @__PURE__ */ u4(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
+      model.later.length ? /* @__PURE__ */ u4(FoldSection, { sec: "later", title: "Later", n: model.later.length, children: model.later.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.later.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
         x5.title,
         x5.day ? /* @__PURE__ */ u4("span", { class: "sub", children: [
           " · ",
@@ -79002,8 +79471,8 @@ ${d5.text}`);
         ] }) : null,
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
-      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }),
-      /* @__PURE__ */ u4(FoldSection, { sec: "not_needed", title: "Not needed", n: model.not_needed.length, children: model.not_needed.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.not_needed.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
+      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing set aside for later. A meeting comes back here when its transcript arrives." }) }) : null,
+      model.not_needed.length ? /* @__PURE__ */ u4(FoldSection, { sec: "not_needed", title: "Not needed", n: model.not_needed.length, children: model.not_needed.length ? /* @__PURE__ */ u4("ul", { class: "irlist", children: model.not_needed.map((x5) => /* @__PURE__ */ u4("li", { "data-irkey": x5.key, children: [
         x5.title,
         x5.day ? /* @__PURE__ */ u4("span", { class: "sub", children: [
           " · ",
@@ -79020,7 +79489,7 @@ ${d5.text}`);
         ] }) : null,
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", "data-ira": "restore", onClick: () => irRestore([x5.key]), children: "Restore" })
-      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing marked Not needed." }) }),
+      ] })) }) : /* @__PURE__ */ u4("div", { class: "empty", children: "Nothing marked Not needed." }) }) : null,
       /* @__PURE__ */ u4(AsideMenu, {}),
       /* @__PURE__ */ u4(DropOverlay, {})
     ] });
@@ -79140,7 +79609,9 @@ ${d5.text}`);
     actionId = "snackU",
     ms: ms2 = TOAST_MS,
     actionMs = TOAST_ACTION_MS,
-    layers = TOAST_LAYERS
+    layers = TOAST_LAYERS,
+    tone,
+    note
   }) {
     const box = A2(
       /** @type {HTMLDivElement | null} */
@@ -79212,7 +79683,7 @@ ${d5.text}`);
       document.addEventListener("keydown", key2, true);
       return () => document.removeEventListener("keydown", key2, true);
     }, []);
-    const cls = ["snack", open2 ? "on" : "", action ? "mtimer" : "", held && open2 ? "held" : ""].filter(Boolean).join(" ");
+    const cls = ["snack", tone === "ok" ? "ok" : "", open2 ? "on" : "", action ? "mtimer" : "", held && open2 ? "held" : ""].filter(Boolean).join(" ");
     return /* @__PURE__ */ u4(
       "div",
       {
@@ -79221,6 +79692,8 @@ ${d5.text}`);
         role: "status",
         "aria-live": "polite",
         ref: box,
+        title: note || void 0,
+        "aria-description": note || void 0,
         onMouseEnter: () => {
           overRef.current = true;
           setOver(true);
@@ -80322,7 +80795,10 @@ ${d5.text}`);
   shared.HELD = [];
   shared.DATA_AT = D.data_at || "";
   shared.UNDO = null;
-  var TOAST = { open: false, text: "", action: "", run: 0 };
+  var TOAST = { open: false, text: "", action: "", run: 0, tone: (
+    /** @type {"ok"|undefined} */
+    void 0
+  ), note: "" };
   function drawPageToast() {
     const host2 = document.getElementById("toastHost");
     if (!host2) return;
@@ -80330,11 +80806,14 @@ ${d5.text}`);
       if (shared.UNDO) shared.UNDO();
     }, onHide: hideSnack });
   }
-  var snack = function(msg, undo, label) {
+  var snack = function(msg, undo, label, opts) {
     shared.UNDO = undo || null;
-    Object.assign(TOAST, { open: true, text: msg, action: undo ? label || "Undo" : "", run: TOAST.run + 1 });
+    Object.assign(TOAST, { open: true, text: msg, action: undo ? label || "Undo" : "", run: TOAST.run + 1, tone: opts && opts.tone, note: opts && opts.note || "" });
     drawPageToast();
   };
+  function hideSavedSnack() {
+    if (TOAST.open && TOAST.tone === "ok") snack("The earlier save can still be undone in Activity");
+  }
   function hideSnack() {
     if (!TOAST.open) return;
     TOAST.open = false;
@@ -81047,6 +81526,7 @@ Next: `;
         "Health",
         "ICONS",
         "ID_RE",
+        "IR_MAIL_CAP",
         "IR_STATE_CHIP",
         "Icon",
         "IconButton",
@@ -81074,6 +81554,10 @@ Next: `;
         "P",
         "PARTNERS_MAX",
         "PARTNER_NAME_MAX",
+        "PD_COLS",
+        "PD_GROUPS",
+        "PD_KEYS",
+        "PD_ORDER",
         "PEOPLE",
         "PK",
         "PKPROP",
@@ -81303,8 +81787,13 @@ Next: `;
         "designation",
         "diagCardHtml",
         "diagHook",
+        "dismissFiled",
+        "dispFoot",
         "dispOpen",
+        "dispOrder",
+        "dispPropsMarkup",
         "dispReset",
+        "dispSelect",
         "dnBlock",
         "dnHtml",
         "dnList",
@@ -81350,6 +81839,7 @@ Next: `;
         "fitFilterBar",
         "flip",
         "flowCard",
+        "forgetRenamed",
         "fpCanon",
         "fpSha256",
         "fuApply",
@@ -81419,6 +81909,7 @@ Next: `;
         "irAskAbout",
         "irBulk",
         "irBusy",
+        "irCapGroups",
         "irChanged",
         "irChecking",
         "irChooseKind",
@@ -81445,6 +81936,7 @@ Next: `;
         "irLineParts",
         "irLive",
         "irLiveCounts",
+        "irMailAll",
         "irMeetingOf",
         "irMeetingState",
         "irMergeEdits",
@@ -81452,6 +81944,7 @@ Next: `;
         "irModel",
         "irModelBehind",
         "irNameOk",
+        "irNextJob",
         "irNotNeeded",
         "irNote",
         "irNoteText",
@@ -81476,6 +81969,7 @@ Next: `;
         "irSetGroup",
         "irSetStateFilter",
         "irSetView",
+        "irSplitTail",
         "irStage",
         "irStageClick",
         "irStateCounts",
@@ -81529,6 +82023,7 @@ Next: `;
         "mdChat",
         "mdHtml",
         "mdInline",
+        "meNames",
         "meetingOfFile",
         "meetingRoute",
         "memLineEdit",
@@ -81647,6 +82142,13 @@ Next: `;
         "partnerProblem",
         "partners",
         "passes",
+        "pdDefault",
+        "pdGroup",
+        "pdKey",
+        "pdNormalise",
+        "pdReset",
+        "pdSave",
+        "pdSort",
         "peekFrame",
         "peekPropNodes",
         "peeks",
@@ -81715,6 +82217,7 @@ Next: `;
         "putHTML",
         "putHtml",
         "query",
+        "queueResume",
         "quip",
         "quipNow",
         "railIconSize",

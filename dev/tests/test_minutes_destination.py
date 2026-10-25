@@ -107,6 +107,17 @@ class Names(Dest):
             self.assertNotIn(FILED, s)
         self.assertTrue(any(i["values"].get("source", "").startswith(new) for i in d["items"] if i.get("op") == "new"))
 
+    def test_a_rename_also_rewrites_an_update_items_top_level_source(self):
+        """#355 M3, guarded here as well as in test_355_followups: an update item keeps its source at the top, not in values."""
+        out = self.lib(f"print(json.dumps(md.set_name({self.name!r}, 'ABC', '2026-10-14 Steering (pm)')))")
+        self.assertTrue(out["ok"], out)
+        new = f"{ABC}/minutes/2026-10-14 Steering (pm).html"
+        top = [i["source"] for i in self.data()["items"] if i.get("op") == "update" and isinstance(i.get("source"), str)
+               and "minutes" in i["source"]]
+        self.assertTrue(top, "the fixture holds an update item that cites the filed minutes at the top level")
+        self.assertTrue(all(s.startswith(new) for s in top), top)
+        self.assertFalse(any(s.startswith(FILED) for s in top), top)
+
     def test_a_rename_answers_with_the_items_new_fingerprints_so_an_open_review_page_goes_on_deciding(self):
         """#346 item 2 (with #345): a new name changes each item's source, hence its fingerprint; the answer carries the new ones
         (the page puts them on its open Review rows) and they are exactly what the file now holds."""

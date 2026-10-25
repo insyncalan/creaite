@@ -12,17 +12,21 @@
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { $ } from "../../core/dom.js";
-import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irEsc, irFiltered, irIsFolded, irStateCounts } from "../../core/irFold.js";
-import { D, fd, TODAY } from "../../core/page.js";
+import { IR_GROUPS, IR_STATE_FILTERS, IR_VIEWS, irByState, irNextJob, irEsc, irFiltered, irIsFolded, irSplitTail, irStateCounts } from "../../core/irFold.js";
+import { D, days, fd, S, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { irAddProblems, irAfterData, irAside, irBlocked, irClickFold, irClickMeeting, irClearTicks, irClickStage, irSetShown, irTickedShown, irDropOn, irFolded, irGroup, irSetGroup, irSetStateFilter, irStateFilter, irTicked, irDone, irLiveCounts, irModel, irOpen, irPeek, irQuery, irRefreshing, irRefRun, irSel, irSetView, irStage, irTick, irView } from "../../stores/intakeReview.js";
 import { irAddFiles, irAskReason, irCalendarRead, irCanProcess, irFilterModel, irCanSetAside, IR_LEFT_WHY, IR_REASONS, irLater, irLeftOut, irNotNeeded, irPickFiles, irProcess, irProcessAll, irReady, irRefreshCalendar, irRestore, IR_UPLOAD_TYPES } from "./actions.js";
 import { IrIcon } from "./icons.js";
 import { irAsideMany } from "./actions.js";
 import { irMenuItems, irTargets } from "./selection.js";
-import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes } from "./views.jsx";
+import { BoardView, IR_STAGE_NAMES, ListView, TwoPanes, irTailFolded } from "./views.jsx";
 import { pkEscBusy } from "../../panel.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
+import { dayList, goDay, sweepDueShown } from "../../today.js";
+import { go } from "../../core/nav.js";
+import { openChat, send } from "../../ask.js";
+import { viaServer, snack } from "../../core/server.js";
 import { openContextMenuAt } from "../review/ContextMenu.jsx";
 
 export * from "./actions.js";   /* #232-A: the Intake actions are on window for the tests, as the page's other exports are */
@@ -148,15 +152,31 @@ function GroupControls({ view }) {
 
 /** #323: what the ticked rows can do at once, above the list. The same actions as the right-click menu on a ticked row. */
 function TickBar() {
-  const shown = irTickedShown(), ms = irTargets(shown[0] || ""), n = shown.length, hidden = irTicked.value.length - n;
+  const shown = irTickedShown(), n = shown.length, hidden = irTicked.value.length - n;
   if (!n && !hidden) return null;
   return <div class="irtickbar" role="group" aria-label="Selected meetings" data-irtickbar="1">
     <b>{n} selected{hidden ? `, ${hidden} hidden` : ""}</b>
-    <button type="button" class="mini" data-ira="laterall" onClick={() => irAsideMany(ms, "later")}>Later</button>
+    <button type="button" class="mini" data-ira="laterall" onClick={() => irAsideMany(irTargets(irTickedShown()[0] || ""), "later")}>Later</button>
     <button type="button" class="mini" data-ira="reasonall" aria-haspopup="menu" onClick={e => {
-      const el = /** @type {HTMLElement} */ (e.currentTarget); openContextMenuAt(el, /** @type {any} */ (irMenuItems(ms).find(x => x.sub) || { label: "", sub: [] }).sub, { label: "Not needed because" }); }}>Not needed because…</button>
+      const el = /** @type {HTMLElement} */ (e.currentTarget); openContextMenuAt(el, /** @type {any} */ (irMenuItems(irTargets(irTickedShown()[0] || "")).find(x => x.sub) || { label: "", sub: [] }).sub, { label: "Not needed because" }); }}>Not needed because…</button>
     <button type="button" class="linkbtn" data-ira="clearticks" onClick={() => irClearTicks()}>Clear</button>
   </div>;
+}
+
+/** #356: when there is nothing to decide, one plain sentence and the one button that does the next job. A button that cannot act
+    right now is disabled with the reason (offline, or another run busy), as the page's other buttons are. */
+function NextJob({ c }) {
+  const tomorrow = (dayList() || []).find((/** @type {any} */ d) => days(d.date) === 1);   /* tomorrow itself, never the next saved day */
+  const j = irNextJob(c, D.meetings && D.meetings.fetched, TODAY, sweepDueShown(), !!tomorrow && S.srcCalendar !== false);
+  if (!j) return null;
+  const live = viaServer(), busy = irBlocked() || irRefreshing.value || !!shared.RUN || !!shared.BUSY;   /* as mtgBusy() (core/intakeApi.js), which cannot be imported here: a cycle */
+  const why = j.job === "tomorrow" ? "" : busy ? "ask creaite is busy; try again when it’s finished" : !live ? "creaite isn’t running" : "";      /* opening tomorrow only moves to another page, so busy never blocks it */
+  const act = () => {
+    if (j.job === "refresh") irRefreshCalendar();
+    else if (j.job === "mail") { if (shared.BUSY) { snack("ask creaite is busy; try again when it’s finished"); return; } openChat(); send("sweep"); }
+    else if (tomorrow) { go("today"); goDay(tomorrow.date); }
+  };
+  return <p class="irnext" data-irnext={j.job}><span>{j.text}</span>{j.button ? <> <button type="button" class="btn" data-ira="nextjob" disabled={!!why} title={why || undefined} onClick={act}>{j.button}</button></> : null}</p>;
 }
 
 function IntakeReviewView() {
@@ -165,15 +185,17 @@ function IntakeReviewView() {
   const found = irFilterModel(irModel(), q);          /* the search: the meetings, files and mail rows it finds (the counts above stay whole) */
   const model = { ...found, meetings: irByState(found.meetings, irStateFilter.value, irDone) };     /* #323: Show */
   const list = irFiltered(model, irStage.value);
-  irSetShown((view === "list" ? list : model.meetings).map((/** @type {any} */ m) => m.id));       /* #323: ticked rows a filter hides are not acted on */
+  const seen = (view === "list" ? list : model.meetings), hiddenTail = irTailFolded() ? irSplitTail(seen).tail : [];       /* #340: a folded waiting row is not shown, so a tick on it is not acted on */
+  irSetShown(seen.filter((/** @type {any} */ m) => !hiddenTail.includes(m)).map((/** @type {any} */ m) => m.id));       /* #323: ticked rows a filter hides are not acted on */
   return (
     <div class="wrapmax irpage" data-irtick={tick}>
       <h1 id="irTitle">Intake</h1>
       <p class="sub" id="irSub" style={{ margin: "4px 0 0" }}>{c.ready} ready to process · {irPlural(c.to_approve, "suggestion")} to approve · <CalendarRead text={irCalendarRead(D.meetings && D.meetings.fetched, TODAY)} /></p>
+      <NextJob c={c} />
       <div class="toolbar rvtools">
         <input id="irQ" type="search" placeholder="Search" aria-label="Search" autocomplete="off" value={q}
           onInput={e => { irQuery.value = /** @type {HTMLInputElement} */ (e.currentTarget).value; irClearTicks(); }}
-          onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; } }} />
+          onKeyDown={e => { if (e.key === "Escape" && irQuery.value) { e.preventDefault(); e.stopPropagation(); irQuery.value = ""; irClearTicks(); } }} />
         <GroupControls view={view} />
         <span class="sp"></span>
         <ProcessAll n={irReady().length} left={irLeftOut().length} />
@@ -195,12 +217,13 @@ function IntakeReviewView() {
       </div> : null}
       {irLeftOut().length ? <p class="icsub irleft" data-irleft="1">{irLeftOut().length} left out of Process all ready: {IR_LEFT_WHY}.</p> : null}
       {view === "board" ? <BoardView model={model} /> : view === "two" ? <TwoPanes model={model} list={model.meetings} /> : <><StagePipe c={c} /><ListView model={model} list={list} /></>}
-      <FoldSection sec="later" title="Later" n={model.later.length}>
+      {/* #343: a section with nothing in it is not drawn (no "Later 0 Show") */}
+      {model.later.length ? <FoldSection sec="later" title="Later" n={model.later.length}>
         {model.later.length ? <ul class="irlist">{model.later.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing set aside for later. A meeting comes back here when its transcript arrives.</div>}
-      </FoldSection>
-      <FoldSection sec="not_needed" title="Not needed" n={model.not_needed.length}>
+      </FoldSection> : null}
+      {model.not_needed.length ? <FoldSection sec="not_needed" title="Not needed" n={model.not_needed.length}>
         {model.not_needed.length ? <ul class="irlist">{model.not_needed.map(x => <li data-irkey={x.key}>{x.title}{x.day ? <span class="sub"> · {fd(x.day)}{x.start ? ` ${x.start}` : ""}</span> : null}{x.reason ? <span class="sub"> · {x.reason}</span> : null}{x.note ? <span class="sub"> · {x.note}</span> : null} <button type="button" class="linkbtn" data-ira="restore" onClick={() => irRestore([x.key])}>Restore</button></li>)}</ul> : <div class="empty">Nothing marked Not needed.</div>}
-      </FoldSection>
+      </FoldSection> : null}
       <AsideMenu />
       <DropOverlay />
     </div>

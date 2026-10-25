@@ -399,11 +399,13 @@ shared.UNDO=null;
    one with Undo stays 10 seconds, a plain one 5; the pointer over it or focus inside it holds it, and leaving starts the full
    time again; Esc hides it (at once when you are on it, otherwise when Esc has nothing else to close); focus that was in it goes
    back where it came from. snack(msg, undo, label) stays the call (and the seam tests replace); it draws the block, at once. */
-const TOAST={open:false,text:"",action:"",run:0};
+const TOAST={open:false,text:"",action:"",run:0,tone:/** @type {"ok"|undefined} */ (undefined),note:""};
 function drawPageToast(){ const host=document.getElementById("toastHost"); if(!host) return;
   drawToast(host,{...TOAST,onAction:()=>{ if(shared.UNDO) shared.UNDO(); },onHide:hideSnack}); }
-export let snack = function(msg,undo,label){ shared.UNDO=undo||null;
-  Object.assign(TOAST,{open:true,text:msg,action:undo?(label||"Undo"):"",run:TOAST.run+1}); drawPageToast(); };
+export let snack = function(msg,undo,label,opts){ shared.UNDO=undo||null;
+  Object.assign(TOAST,{open:true,text:msg,action:undo?(label||"Undo"):"",run:TOAST.run+1,tone:opts&&opts.tone,note:(opts&&opts.note)||""}); drawPageToast(); };
+/** #357: hide the calm confirmation of a save, when something new is waiting to be saved (the bar comes back at once, with one Undo). */
+export function hideSavedSnack(){ if(TOAST.open&&TOAST.tone==="ok") snack("The earlier save can still be undone in Activity"); }   /* the old Undo goes; say where it is */
 /** Hide the message (its time is up, Esc, its action, ⌘Z). */
 export function hideSnack(){ if(!TOAST.open) return; TOAST.open=false; drawPageToast(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js (pieces 0019 and 0020's place). ⌘Z (Ctrl+Z) in Work

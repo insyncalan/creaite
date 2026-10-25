@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { drawPeoplePage, savedPeopleTab, setPeopleTab } from "./components/people/PeoplePage.jsx";   /* #248 */
+import { dispController, dispFoot, dispOrder, dispPropsMarkup, dispSelect } from "./core/displayMenu.js";   /* #360: the pieces Work and People share */
 import { howLink } from "./helpscreen.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { linkHtml, linkWords } from "./core/linkText.js";
@@ -304,8 +305,8 @@ export function loadTab(t){ clearAllFilters(); shared.WT=t; const st=TABSTATE[t]
   applyFilters(st.fx); st.p.forEach(c=>PROJF.add(c)); shared.WQ=st.q; WINIT[t]=true; syncView(); if(TABSTATE[t]&&TABSTATE[t].base) WB[t]=TABSTATE[t].base; }
    /* BL-159: on Decisions, the menu */
 /* column chooser */
-export function dispProps(){ const ord=orderedCols().map(c=>c[0]), rest=COLS[shared.WT].filter(c=>!ord.includes(c[0]));   /* BL-128: was the Columns menu */
-  return [...orderedCols(),...rest].map(c=>{ const shown=ord.includes(c[0]), i=ord.indexOf(c[0]); return `<label><input type="checkbox" data-prop id="dprop-${c[0]}" value="${c[0]}" ${shown?"checked":""} ${c[0]==="t"?"disabled":""}>${c[1]}${shown?`<span class="colmv"><button type="button" data-mv="${c[0]}" data-d="-1" aria-label="Move ${c[1]} earlier" ${i===0?"disabled":""}>↑</button><button type="button" data-mv="${c[0]}" data-d="1" aria-label="Move ${c[1]} later" ${i===ord.length-1?"disabled":""}>↓</button></span>`:""}</label>`; }).join(""); }
+export function dispProps(){ const ord=orderedCols().map(c=>c[0]), rest=COLS[shared.WT].filter(c=>!ord.includes(c[0]));   /* BL-128: was the Columns menu; #360: the markup is core/displayMenu.js's */
+  return dispPropsMarkup({shown:orderedCols().map(c=>[c[0],c[1]]),rest:rest.map(c=>[c[0],c[1]]),locked:"t",prefix:"dprop"}); }
 /* BL-128 (sprint-work-views): the column chooser is the Display menu's Properties (dispProps); its moves and ticks are handled there */
 /* resize columns (remembered) */
 shared.RZ=store.obj("creaite-colwidths");   /* #256: a width is used only as a number (rzOf) */
@@ -586,22 +587,22 @@ export function workHint(lay){ const off=S.singleKeys===false;   /* #298: with t
   return HINTS.filter(h=>(h[2]==="both"||h[2]===lay)&&!(h[3]&&shared.WT==="all")).map(([k,t])=>{ const ks=k&&off?k.filter(x=>!LETTER.test(x)):k; return k&&!(/** @type {string[]} */ (ks)).length?"":(ks?ks.map(x=>`<span class="kbd">${x}</span>`).join(" ")+" ":"")+t; }).filter(Boolean).join(" · "); }
 export function drawDisp(){ const m=$("#dispMenu"), t=shared.WT, bd=layoutOf(t)==="board", s=SORT[t], cur=s?(s.col==="_def"?"":s.col):"", opts=SORTOPTS(t), focusKey=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.id||document.activeElement.dataset.mv+"|"+document.activeElement.dataset.d):null;
   const gopts=bd?groupsOf(t):[["none","None"],...groupsOf(t)], gcur=bd?groupOf(t):listGroupOf(t), sub=subOf(t,bd?"board":"list");   /* BL-129: the List groups too */
-  putHTML(m,html`<div><h3><label for="wgrp">${bd?"Group by (columns)":"Group by"}</label></h3><div class="dline"><select id="wgrp">${gopts.map(g=>html`<option value="${g[0]}" ${g[0]===gcur?"selected":""}>${g[1]}</option>`)}</select></div></div>
-    <div ${!bd&&(gcur==="none"||listGroupDefault(t))?"hidden":""}><h3><label for="wsub">${bd?"Sub-group (swimlanes)":"Sub-group"}</label></h3><div class="dline"><select id="wsub"><option value="none">None</option>${groupsOf(t).filter(g=>g[0]!==gcur).map(g=>html`<option value="${g[0]}" ${g[0]===sub?"selected":""}>${g[1]}</option>`)}</select></div></div>
-    <h3><label for="wbsort">Order by</label></h3><div class="dline"><select id="wbsort">${opts.map(o=>html`<option value="${o[0]}" ${o[0]===cur?"selected":""}>${o[1]}</option>`)}${cur&&!opts.some(o=>o[0]===cur)?html`<option value="${cur}" selected>Sorted by ${cur}</option>`:""}</select><button type="button" class="btn" id="wordRev" aria-pressed="${raw(!!(s&&s.dir==="desc"))}" aria-label="Reverse the order" title="Reverse the order">⇅</button></div>
-    <h3>Properties${bd?html` <span class="sub">· a card shows the first four</span>`:""}</h3><div class="dprops">${raw(dispProps())}</div>
-    <h3>Show</h3><div class="dline" ${!bd&&(gcur==="none"||listGroupDefault(t))?"hidden":""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t]?"":"checked"}> Empty groups</label></div>${bd?html`
+  putHTML(m,html`${raw(dispSelect({id:"wgrp",label:bd?"Group by (columns)":"Group by",options:gopts.map(g=>[g[0],g[1]]),cur:gcur}))}
+    ${raw(dispSelect({id:"wsub",label:bd?"Sub-group (swimlanes)":"Sub-group",options:[["none","None"],...groupsOf(t).filter(g=>g[0]!==gcur).map(g=>[g[0],g[1]])],cur:sub,hidden:!bd&&(gcur==="none"||listGroupDefault(t))}))}
+    ${raw(dispOrder({id:"wbsort",revId:"wordRev",options:opts.map(o=>[o[0],o[1]]),cur,reversed:!!(s&&s.dir==="desc"),extra:cur&&!opts.some(o=>o[0]===cur)?`<option value="${esc(cur)}" selected>Sorted by ${esc(cur)}</option>`:""}))}
+    <h2>Properties${bd?html` <span class="sub">· a card shows the first four</span>`:""}</h2><div class="dprops">${raw(dispProps())}</div>
+    <h2>Show</h2><div class="dline" ${!bd?"hidden":""}><label class="dchk"><input type="checkbox" id="wshowempty" ${BHIDE[t]?"":"checked"}> Empty groups</label></div>${bd?html`
     <div class="dline"><label for="wclosed">${t==="decisions"?"Decided":"Closed"} column</label><select id="wclosed"><option value="recent" ${BCLALL.has(t)?"":"selected"}>Last ${raw(+S.boardClosedDays||14)} days</option><option value="all" ${BCLALL.has(t)?"selected":""}>All</option></select></div>`:html`<div class="dline sub">Closed items: use the Status filter.</div>`}
-    <div class="dfoot"><button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button><span class="sp"></span><button type="button" class="btn primary" id="dispDone">Done</button></div>`);
+    ${raw(dispFoot({resetId:"dispReset",doneId:"dispDone",resetLabel:"Reset to this tab’s default"}))}`);
   if(focusKey){ const f=m.querySelector("#"+CSS.escape(focusKey))||(focusKey.includes("|")?m.querySelector(`[data-mv="${focusKey.split("|")[0]}"][data-d="${focusKey.split("|")[1]}"]`):null); if(f&&!f.disabled) f.focus(); else m.querySelector("button,select,input")?.focus(); }
   { if(shared.WT!=="all") return; const m=$("#dispMenu"), seg=m.querySelector('.seg[aria-label="Layout"]');
-    if(seg){ const line=seg.closest(".dline"); if(line.previousElementSibling&&line.previousElementSibling.tagName==="H3") line.previousElementSibling.remove(); line.remove(); }
+    if(seg){ const line=seg.closest(".dline"); if(line.previousElementSibling&&line.previousElementSibling.tagName==="H2") line.previousElementSibling.remove(); line.remove(); }
     const s=$("#wbsort"); if(!s) return; const cur=SORT.all&&SORT.all.col!=="_def"?SORT.all.col:"";
     [...s.options].forEach(o=>{ if(/^Sorted by /.test(o.textContent)) o.remove(); });
     addHTML(s,"beforeend",html`<option value="type">Type</option><option value="p">Project</option>`); s.value=cur; } }
-export function openDisp(){ const m=$("#dispMenu"); if(dispOpen()){ closeDisp(true); return; } $$(".ddmenu.on").forEach(x=>x.classList.remove("on")); drawDisp(); m.hidden=false; m.classList.add("on"); $("#dispBtn").setAttribute("aria-expanded","true"); $("#dispBtn").classList.add("on");
-  (m.querySelector('[aria-pressed="true"]')||m.querySelector("button,select,input"))?.focus(); }
-export function closeDisp(focus){ const m=$("#dispMenu"); if(!dispOpen()&&m.hidden) return; m.classList.remove("on"); m.hidden=true; $("#dispBtn").setAttribute("aria-expanded","false"); $("#dispBtn").classList.remove("on"); if(focus) $("#dispBtn").focus(); }
+const DISP=dispController({btn:"#dispBtn",menu:"#dispMenu",draw:()=>drawDisp()});   /* #360: the open and close are core/displayMenu.js's */
+export function openDisp(){ DISP.open(); }
+export function closeDisp(focus){ DISP.close(focus); }
 export function dispChanged(){ renderWork(); navWrite(false); }
 export function dispReset(){ const t=shared.WT; delete WGRP[t]; delete WLGRP[t]; delete WSUB[t+"|list"]; delete WSUB[t+"|board"]; SORT[t]=null; shared.COLVIS[t]=[...DEFCOLS[t]]; delete shared.COLORD[t]; delete BHIDE[t]; BCLALL.delete(t);
   store.set("creaite-workgrp",WGRP); store.set("creaite-listgrp",WLGRP); store.set("creaite-worksub",WSUB); store.set("creaite-cols",shared.COLVIS); store.set("creaite-colorder",shared.COLORD); store.set("creaite-boardhide",BHIDE); store.set("creaite-boardclosedall",[...BCLALL]);
@@ -717,11 +718,11 @@ export function wgGroups(t,g,L,empty){ if(t==="all"&&["type","status","priority"
 /* what moving an item into group gr of grouping g changes, or null with gr.why */
 export function wgPatch(t,g,gr){ if(!gr||!gr.settable) return null; const f={status:"st",owner:t==="decisions"?"by":"o",milestone:"ms",priority:"pr",workstream:"ws",type:"type"}[g]; return f?{[f]:gr.value}:null; }
 /* the List: group header rows (and sub-group rows), then the rows. Rows carry their groups so ticks and collapse can find them. */
-export function grpHead(t,gr,lvl,key,coll,n){ if(t==="all") t="raid"; const late=gr.items.filter(x=>itemLate(t,x)).length;
+export function grpHead(t,gr,lvl,key,coll,n){ if(t==="all") t="raid"; const late=gr.key==='overdue'?0:gr.items.filter(x=>itemLate(t,x)).length;   /* #343: the Overdue group does not say overdue twice */
   return `<tr class="wgh lv${lvl}${coll?" coll":""}" data-gk="${esc(key)}"><td colspan="${n}"><button type="button" class="wgtog" data-gtog="${esc(key)}" aria-expanded="${!coll}" aria-label="${coll?"Expand":"Collapse"} ${esc(gr.label)}">${ic("chevdown","chev")}</button><input type="checkbox" class="wgtick" data-gtick="${esc(key)}" aria-label="Select the rows in ${esc(gr.label)}" ${coll||!gr.items.length?"disabled":""}> <b class="wgn">${esc(gr.label)}</b> <span class="sub">${grpNoun(t,gr.items.length)}${late?` · <span class="late">${late} overdue</span>`:""}${coll?" · collapsed":""}</span></td></tr>`; }
 export function listBody(t,C,L){ const g=listGroupOf(t), row=(x,a)=>rowHtml(t,x,C,{sel:shared.SEL,tr:a}); if(g==="none"||!L.length) return L.map(x=>row(x,"")).join("");
   const sg=subOf(t,"list"); let h="";
-  wgGroups(t,g,L,!BHIDE[t]).forEach(gr=>{ const k=`${t}|${g}|${gr.key}`, coll=lcollOf(k); h+=grpHead(t,gr,1,k,coll,C.length); if(coll) return;
+  wgGroups(t,g,L,false).forEach(gr=>{ const k=`${t}|${g}|${gr.key}`, coll=lcollOf(k); h+=grpHead(t,gr,1,k,coll,C.length); if(coll) return;
     if(sg==="none"){ h+=gr.items.map(x=>row(x,` data-g1="${esc(k)}"`)).join(""); return; }
     wgGroups(t,sg,gr.items,false).forEach(s2=>{ const k2=`${k}|${sg}|${s2.key}`, c2=lcollOf(k2); h+=grpHead(t,s2,2,k2,c2,C.length); if(!c2) h+=s2.items.map(x=>row(x,` data-g1="${esc(k)}" data-g2="${esc(k2)}"`)).join(""); }); });
   return h; }
