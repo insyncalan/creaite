@@ -534,8 +534,8 @@ CSS = """
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font)}
 main{max-width:860px;margin:0 auto;padding:24px 16px 48px} h1,h2,.rep h3{font-family:var(--display)}
 h1{font-size:24px;line-height:1.25;margin:6px 0 4px} h2{font-size:17px;margin:0}
-.internal{display:inline-block;font:700 11px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warnbg);border:1px solid var(--warn);border-radius:4px;padding:4px 7px}
-.meta{color:var(--muted);margin:0} .warn{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 12px;margin:12px 0}
+.internal{display:inline-block;font:700 11px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:var(--bg);border:1px solid var(--muted);border-radius:4px;padding:4px 7px}
+.meta{color:var(--muted);margin:0} .warn{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:12px 0}
 details{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:14px 0;padding:10px 14px} summary{cursor:pointer;list-style:none} summary::-webkit-details-marker{display:none}
 summary h2::before{content:"▾ ";color:var(--muted)} details:not([open]) summary h2::before{content:"▸ "}
 table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px} th,td{text-align:left;vertical-align:top;padding:6px 8px;border-top:1px solid var(--line)} th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}

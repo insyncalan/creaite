@@ -7,7 +7,7 @@ Done when (the brief's list):
   it; icons only 56px: circle and badge only) and the three icon sizes, the avatar stands where More was and opens the same
   menu, which now starts with a header row (initials, name, "creaite · v<VERSION>");
 - nothing wrong: the second line says "Settings and health" and there is no badge; a problem: the amber badge on the circle and
-  the first problem in plain words, in --warn; the button is named "<name>, menu, 1 problem";
+  the first problem in plain words, in --bad; the button is named "<name>, menu, 1 problem";
 - with dashboard.rail.more empty the avatar still shows and opens Health, Help and Customise sidebar;
 - it opens on a click only (no hover-open); the keys and focus return are More's;
 - the name comes from settings (identity.name): with none set, a person icon and "You";
@@ -112,7 +112,7 @@ class RailAvatar(LiveBrowserCase):
         b.wait("document.getElementById('railMoreBadge').textContent==='1'", 5)
         self.assertEqual(self.text("#railMore .avs"), "Set-up isn't finished")
         self.assertEqual(b.eval("document.getElementById('railMore').getAttribute('aria-label')"), "Alan Carter, menu, 1 problem")
-        warn = b.eval("(()=>{ const d=document.createElement('i'); d.style.color='var(--warn)'; document.body.appendChild(d); const c=getComputedStyle(d).color; d.remove(); return c; })()")
+        warn = b.eval("(()=>{ const d=document.createElement('i'); d.style.color='var(--bad)'; document.body.appendChild(d); const c=getComputedStyle(d).color; d.remove(); return c; })()")
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#railMore .avs')).color"), warn)
         badge, av = self.rect("#railMoreBadge"), self.rect("#railMore .av")
         self.assertTrue(badge["l"] < av["r"] and badge["r"] > av["l"] and badge["t"] < av["b"] and badge["b"] > av["t"])   # on the circle

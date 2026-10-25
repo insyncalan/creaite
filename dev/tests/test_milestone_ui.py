@@ -80,11 +80,11 @@ class Looks(Case):
         self.cockpit()
         b.click("#mvSwap")
         b.wait("document.getElementById('mvCard').classList.contains('internal')")
-        c = b.eval("""(()=>{ const c=document.getElementById('mvCard'), s=getComputedStyle(c), pill=c.querySelector('.mv-pill.int'), w=getComputedStyle(document.documentElement).getPropertyValue('--warn').trim();
+        c = b.eval("""(()=>{ const c=document.getElementById('mvCard'), s=getComputedStyle(c), pill=c.querySelector('.mv-pill.int'), w=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
           const probe=document.createElement('i'); probe.style.color=w; document.body.appendChild(probe); const warn=getComputedStyle(probe).color; probe.remove();
           return {bw:s.borderTopWidth, bs:s.borderTopStyle, bc:s.borderTopColor, warn, pill:pill&&pill.innerText.trim().toUpperCase(), icon:!!(pill&&pill.querySelector('svg')), pbg:pill&&getComputedStyle(pill).backgroundColor}; })()""")
         self.assertEqual((c["bw"], c["bs"]), ("2px", "solid"))
-        self.assertEqual(c["bc"], c["warn"])                                # the bright border is the theme's --warn
+        self.assertEqual(c["bc"], c["warn"])                                # the border is the theme's --muted (neutral since #341 item 17: amber is for At risk only)
         self.assertEqual(c["pill"], "INTERNAL VIEW")
         self.assertTrue(c["icon"])                                          # never colour alone
         self.assertEqual(c["pbg"], c["warn"])

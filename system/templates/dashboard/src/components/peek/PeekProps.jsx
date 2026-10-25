@@ -23,7 +23,7 @@ const TICK = "M8 12.5l3 3 5-6", CROSS = "M9 9l6 6M15 9l-6 6";
 const ST_INNER = /** @type {Record<string, any>} */ ({ Open: { d: "M12 4a8 8 0 0 1 0 16z", fill: "currentColor", stroke: "none" },
   Delayed: { d: "M12 8v4l2.5 1.5" }, Closed: { d: TICK }, Cancelled: { d: CROSS }, Made: { d: TICK }, Withdrawn: { d: CROSS } });
 const PR_N = /** @type {Record<string, number>} */ ({ Urgent: 4, High: 3, Medium: 2, Low: 1 });
-const PR_COLOUR = /** @type {Record<string, string>} */ ({ Urgent: "var(--bad)", High: "var(--warn)", Medium: "var(--accent)", Low: "var(--faint)" });
+const PR_COLOUR = /** @type {Record<string, string>} */ ({ Urgent: "var(--bad)", High: "var(--ink)", Medium: "var(--accent)", Low: "var(--faint)" });
 
 /** The status ring. @param {{st: string}} props */
 function StatusRing({ st }) {

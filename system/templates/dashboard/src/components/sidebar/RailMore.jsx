@@ -1,7 +1,7 @@
 // @ts-check
 /* RailMore (BL-319 part 6; #156, #139; #295): the avatar at the foot of the sidebar, where More was, out of the eye line. It is
    an initials circle and the user's name (settings' identity.name, through railName: never a name in code), with a second line:
-   "Settings and health" when nothing is wrong, or the first Health problem in plain words, in --warn, with the amber count on
+   "Settings and health" when nothing is wrong, or the first Health problem in plain words, in --bad, with the red count on
    the circle. Expanded (188px): circle, name, second line; collapsed with labels (76px): circle, first name under it; icons
    only (56px): circle and badge. With no name set: a person icon and "You". Its name for a screen reader is
    "<name>, menu, 1 problem" (creaite has no accounts, so never "account menu").

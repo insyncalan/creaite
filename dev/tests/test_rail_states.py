@@ -294,8 +294,8 @@ class RailStates(LiveBrowserCase):
         b.eval(f"setRailCount('review', {n})")
         b.eval("healthCount.value=1")
         b.wait("document.getElementById('railMoreBadge').textContent==='1'", 5)
-        warn = b.eval("(()=>{ const d=document.createElement('i'); d.style.color='var(--warn-soft)'; document.body.appendChild(d); const c=getComputedStyle(d).color; d.remove(); return c; })()")
-        self.assertEqual(b.eval("getComputedStyle(document.getElementById('railMoreBadge')).backgroundColor"), warn)   # amber
+        warn = b.eval("(()=>{ const d=document.createElement('i'); d.style.color='var(--bad-soft)'; document.body.appendChild(d); const c=getComputedStyle(d).color; d.remove(); return c; })()")
+        self.assertEqual(b.eval("getComputedStyle(document.getElementById('railMoreBadge')).backgroundColor"), warn)   # red (a Health problem), #341 item 17
         self.assertEqual(b.eval("document.getElementById('railMore').getAttribute('aria-label')"), "Alan Carter, menu, 1 problem")   # #295
         b.eval("healthCount.value=2")
         b.wait("document.getElementById('railMore').getAttribute('aria-label')==='Alan Carter, menu, 2 problems'", 5)
