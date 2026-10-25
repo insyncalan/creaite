@@ -59472,7 +59472,7 @@ ${pre}**Current state title:** ${title}`);
   }
   function JobRow({ job, shown: shown2, onPick, moreHint }) {
     const [hid] = d2(() => uid("aij"));
-    return /* @__PURE__ */ u4("div", { class: "aijob", "data-job": job.id, role: "listitem", children: [
+    return /* @__PURE__ */ u4("div", { class: "aijob", "data-job": job.id, "data-keys": `ai.jobs.${job.id}`, role: "listitem", children: [
       /* @__PURE__ */ u4("div", { class: "aijobwhat", children: [
         /* @__PURE__ */ u4("span", { class: "ainm", id: hid, children: job.name }),
         /* @__PURE__ */ u4("small", { children: job.line }),
@@ -59616,7 +59616,7 @@ ${pre}**Current state title:** ${title}`);
       /* @__PURE__ */ u4("p", { class: "sub", children: "Which models creaite uses for each kind of job, and how you sign in." }),
       /* @__PURE__ */ u4("h3", { class: "hsub", id: "aiProvH", children: "Providers" }),
       /* @__PURE__ */ u4("p", { class: "sub", id: "aiProvLine", children: st2.line }),
-      /* @__PURE__ */ u4("div", { class: "aiprov", role: "list", "aria-labelledby": "aiProvH", children: st2.providers.map((p6) => /* @__PURE__ */ u4("div", { role: "listitem", class: "aiprovi", children: /* @__PURE__ */ u4(
+      /* @__PURE__ */ u4("div", { class: "aiprov", role: "list", "aria-labelledby": "aiProvH", "data-keys": "ai.providers", children: st2.providers.map((p6) => /* @__PURE__ */ u4("div", { role: "listitem", class: "aiprovi", children: /* @__PURE__ */ u4(
         ProviderCard,
         {
           p: p6,
@@ -59632,7 +59632,7 @@ ${pre}**Current state title:** ${title}`);
         /* @__PURE__ */ u4("b", { children: "How creaite decides which kind of job something is" }),
         /* @__PURE__ */ u4("ol", { children: st2.how.map((x5) => /* @__PURE__ */ u4("li", { children: x5 })) })
       ] }),
-      /* @__PURE__ */ u4("div", { class: "aijobs", role: "list", "aria-labelledby": "aiJobsH", children: st2.jobs.map((j5) => /* @__PURE__ */ u4(
+      /* @__PURE__ */ u4("div", { class: "aijobs", role: "list", "aria-labelledby": "aiJobsH", "data-keys": "ai.accepted_weaker", children: st2.jobs.map((j5) => /* @__PURE__ */ u4(
         JobRow,
         {
           job: j5,
@@ -59643,7 +59643,7 @@ ${pre}**Current state title:** ${title}`);
         j5.id
       )) }),
       /* @__PURE__ */ u4("ul", { class: "airules", "aria-label": "Always", children: st2.rules.map((x5) => /* @__PURE__ */ u4("li", { children: x5 })) }),
-      /* @__PURE__ */ u4("fieldset", { class: "ailimit", children: [
+      /* @__PURE__ */ u4("fieldset", { class: "ailimit", "data-keys": "ai.on_limit", children: [
         /* @__PURE__ */ u4("legend", { class: "hsub", children: "When a limit is reached" }),
         /* @__PURE__ */ u4("p", { class: "sub", children: "Your Claude limit can run out mid-day. Choose what happens next." }),
         st2.limits.map((l6) => /* @__PURE__ */ u4("label", { class: `ailim${l6.enabled ? "" : " off"}`, "data-limit": l6.id, children: [

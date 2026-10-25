@@ -184,7 +184,7 @@ function WeakerDialog({ pend, onKeep, onAccept }) {
 function JobRow({ job, shown, onPick, moreHint }) {
   const [hid] = useState(() => uid("aij"));
   return (
-    <div class="aijob" data-job={job.id} role="listitem">
+    <div class="aijob" data-job={job.id} data-keys={`ai.jobs.${job.id}`} role="listitem">
       <div class="aijobwhat">
         <span class="ainm" id={hid}>{job.name}</span>
         <small>{job.line}</small>
@@ -281,7 +281,7 @@ export function AiModels() {
 
       <h3 class="hsub" id="aiProvH">Providers</h3>
       <p class="sub" id="aiProvLine">{st.line}</p>
-      <div class="aiprov" role="list" aria-labelledby="aiProvH">
+      <div class="aiprov" role="list" aria-labelledby="aiProvH" data-keys="ai.providers">
         {st.providers.map(p => <div role="listitem" class="aiprovi"><ProviderCard p={p} onConnect={connect} onManage={manage}
           onDisconnect={setLeaving} onSignIn={() => setSignIn(true)} /></div>)}
       </div>
@@ -289,13 +289,13 @@ export function AiModels() {
       <h3 class="hsub" id="aiJobsH">Which model does what</h3>
       <p class="sub">creaite sorts every feature into one of four kinds of job. Pick a model for each kind. Each row says what the job needs, so you can choose sensibly; the recommended model is marked.</p>
       <div class="aihowbox"><b>How creaite decides which kind of job something is</b><ol>{st.how.map(x => <li>{x}</li>)}</ol></div>
-      <div class="aijobs" role="list" aria-labelledby="aiJobsH">
+      <div class="aijobs" role="list" aria-labelledby="aiJobsH" data-keys="ai.accepted_weaker">
         {st.jobs.map(j => <JobRow key={j.id} job={j} moreHint={st.more_hint}
           shown={pend && pend.job.id === j.id ? pend.model : j.value} onPick={pick} />)}
       </div>
       <ul class="airules" aria-label="Always">{st.rules.map(x => <li>{x}</li>)}</ul>
 
-      <fieldset class="ailimit">
+      <fieldset class="ailimit" data-keys="ai.on_limit">
         <legend class="hsub">When a limit is reached</legend>
         <p class="sub">Your Claude limit can run out mid-day. Choose what happens next.</p>
         {st.limits.map(l => (
