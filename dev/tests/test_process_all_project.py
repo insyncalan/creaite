@@ -1,4 +1,4 @@
-"""#328 (Alan, Jarvis, 26-10-2026): Process all ready runs only Matched or remembered meetings; Likely and Not sure ones are skipped
+"""#328 (Alan, Jarvis, 25-10-2026): Process all ready runs only Matched or remembered meetings; Likely and Not sure ones are skipped
 and listed (titles only) until a project is picked. Process on the row itself still works on any row; a private or confidential
 meeting stays left out by count, never named.
 
