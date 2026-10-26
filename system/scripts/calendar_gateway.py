@@ -187,7 +187,8 @@ _FP = []                # the fingerprint, worked out once per process (a one-it
 
 def fingerprint():
     """What a stamp must say besides CLEAN: a hash (sha256 of the bytes, 16 hex digits) of the four files that decide what a saved row may
-    keep: invite_filter.py, invite_clean.py, invite_blocks.py and confusables.py. A row stamped by an earlier version of any of them is filtered again on its next read, and the
+    keep: invite_filter.py, invite_clean.py, invite_blocks.py and confusables.py. A row stamped by an earlier version of any of them is filtered again on its next read,
+    and the
     rescrub writes it back stamped, so a fix to either file reaches saved rows without anyone bumping a number (saved calendars are
     cleaned again at the first start-up after an update). Worked out once per process. None when any file cannot be read: then no row
     is trusted as stored (fails closed)."""
