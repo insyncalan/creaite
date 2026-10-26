@@ -1,0 +1,314 @@
+{
+ "rescrub": {
+  "days": {
+   "2026-10-26": [
+    {
+     "all_day": false,
+     "attachments": [
+      "plan.docx"
+     ],
+     "attendees": [
+      {
+       "email": "sam@harbourco.example",
+       "name": "Sam Lee",
+       "response": "accepted",
+       "type": "required"
+      },
+      {
+       "email": "ada@brightwater.example",
+       "name": "Ada Fox",
+       "response": "none",
+       "type": "optional"
+      }
+     ],
+     "body": "Agenda\nBudget and plan\nKeep this line",
+     "end": "10:00",
+     "id": "h1",
+     "organiser": "Pat Doe",
+     "organiser_email": "pat.doe@brightwater.example",
+     "private": false,
+     "recurrence": "weekly",
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": true,
+     "title": "Held review",
+     "where": "Room 1"
+    },
+    {
+     "all_day": false,
+     "end": "11:30",
+     "id": "h2",
+     "organiser": false,
+     "private": true,
+     "start": "11:00",
+     "teams": true,
+     "title": "Busy",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "15:00",
+     "id": "h3",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "14:00",
+     "teams": false,
+     "title": "Held confidential",
+     "where": ""
+    }
+   ],
+   "2026-10-27": [
+    {
+     "all_day": false,
+     "attachments": [
+      "deck.pptx"
+     ],
+     "attendees": [
+      {
+       "email": "sam@harbourco.example",
+       "name": "Sam Lee",
+       "response": "accepted",
+       "type": "required"
+      }
+     ],
+     "body": "Kept as stored",
+     "end": "11:00",
+     "id": "h4",
+     "organiser": true,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "10:00",
+     "teams": true,
+     "title": "Held all-hands",
+     "where": "Teams"
+    },
+    {
+     "all_day": true,
+     "end": "",
+     "id": "h5",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "",
+     "teams": false,
+     "title": "Held offsite",
+     "where": "Harbour Hotel"
+    }
+   ],
+   "2026-10-28": [
+    {
+     "all_day": false,
+     "body": "Agenda\nBudget and plan\nKeep this line",
+     "end": "08:30",
+     "id": "h6",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "08:00",
+     "teams": false,
+     "title": "Held today",
+     "where": ""
+    }
+   ]
+  },
+  "fetched": "2026-10-27 08:00",
+  "to": "2026-10-30"
+ },
+ "sweep_save": {
+  "days": {
+   "2026-10-26": [
+    {
+     "all_day": false,
+     "attachments": [
+      "plan.docx"
+     ],
+     "attendees": [
+      {
+       "email": "sam@harbourco.example",
+       "name": "Sam Lee",
+       "response": "accepted",
+       "type": "required"
+      },
+      {
+       "email": "ada@brightwater.example",
+       "name": "Ada Fox",
+       "response": "none",
+       "type": "optional"
+      }
+     ],
+     "body": "Agenda\nBudget and plan\nKeep this line",
+     "end": "10:00",
+     "id": "h1",
+     "organiser": "Pat Doe",
+     "organiser_email": "pat.doe@brightwater.example",
+     "private": false,
+     "recurrence": "weekly",
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": true,
+     "title": "Held review",
+     "where": "Room 1"
+    },
+    {
+     "all_day": false,
+     "end": "11:30",
+     "id": "h2",
+     "organiser": false,
+     "private": true,
+     "start": "11:00",
+     "teams": true,
+     "title": "Busy",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "15:00",
+     "id": "h3",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "14:00",
+     "teams": false,
+     "title": "Held confidential",
+     "where": ""
+    }
+   ],
+   "2026-10-27": [
+    {
+     "all_day": false,
+     "attachments": [
+      "deck.pptx"
+     ],
+     "attendees": [
+      {
+       "email": "sam@harbourco.example",
+       "name": "Sam Lee",
+       "response": "accepted",
+       "type": "required"
+      }
+     ],
+     "body": "Kept as stored",
+     "end": "11:00",
+     "id": "h4",
+     "organiser": true,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "10:00",
+     "teams": true,
+     "title": "Held all-hands",
+     "where": "Teams"
+    },
+    {
+     "all_day": true,
+     "end": "",
+     "id": "h5",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "",
+     "teams": false,
+     "title": "Held offsite",
+     "where": "Harbour Hotel"
+    }
+   ],
+   "2026-10-28": [
+    {
+     "all_day": true,
+     "end": "",
+     "id": "a1",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "",
+     "teams": false,
+     "title": "Offsite",
+     "where": "Harbour Hotel"
+    },
+    {
+     "all_day": false,
+     "attachments": [
+      "plan.docx",
+      "notes.txt"
+     ],
+     "attendees": [
+      {
+       "email": "sam@harbourco.example",
+       "name": "Sam Lee",
+       "response": "accepted",
+       "type": "required"
+      },
+      {
+       "email": "ada@brightwater.example",
+       "name": "Ada Fox",
+       "response": "none",
+       "type": "optional"
+      }
+     ],
+     "body": "Agenda\nBudget and plan\nKeep this line",
+     "end": "10:00",
+     "id": "n1",
+     "organiser": "Pat Doe",
+     "organiser_email": "pat.doe@brightwater.example",
+     "private": false,
+     "recurrence": "weekly",
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": true,
+     "title": "Weekly sync",
+     "where": "Room 204"
+    },
+    {
+     "all_day": false,
+     "body": "Plain",
+     "end": "11:30",
+     "id": "n2",
+     "organiser": true,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "11:00",
+     "teams": false,
+     "title": "Mine",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "15:00",
+     "id": "c1",
+     "organiser": false,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "14:00",
+     "teams": false,
+     "title": "Board pay",
+     "where": ""
+    }
+   ],
+   "2026-10-29": [
+    {
+     "all_day": false,
+     "attendees": [
+      {
+       "email": "sam@harbourco.example",
+       "name": "Sam Lee",
+       "response": "accepted",
+       "type": "required"
+      }
+     ],
+     "body": "Notes",
+     "end": "10:00",
+     "id": "n3",
+     "organiser": "Ada Fox",
+     "private": false,
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": true,
+     "title": "Quay design",
+     "where": "Teams"
+    }
+   ]
+  },
+  "fetched": "2026-10-28 10:00",
+  "to": "2026-11-06"
+ }
+}

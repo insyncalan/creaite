@@ -69,3 +69,17 @@ A private or confidential event returns HEAD only in every purpose (no attendee,
 | calendar_refresh.outcome, sweep.calendar_fetch_from / calendar_span / saved_meetings_from | meta | fetched, to, days (counts) | OK |
 
 Guarded by `dev/tests/test_calendar_readers_golden.py`: each reader's output on a fixture calendar equals the 2.6.8 output stored in `dev/tests/fixtures/readers_golden_268.json`, except the differences listed in its ALLOWED table.
+
+## Two silent regressions in the S4 migration, and the guard (26-10-2026)
+
+Two readers silently regressed in the S4 migration: the follow-up email lost the recipient addresses from the invite, and the project match in Intake and Prep lost the attendee email-domain signal of #328, because the gateway kept only name, type and response. The golden test `test_calendar_readers_golden.py` (every migrated reader against stored 2.6.8 output) now guards it. The purpose `intake` and addresses in `agenda` and `prep_panel` fix it. Private and confidential rows never return addresses, and no address reaches the dashboard page.
+
+## Writer field audit (test_calendar_writers_golden.py, 26-10-2026)
+
+`test_calendar_writers_golden.py` runs the three writers on a fixture sweep reply and held rows and compares the file with the one the 2.6.8 release wrote (`fixtures/writers_golden_268.json`). Allowed differences: the `clean` stamps (rows and top level), the filtered body, keys outside ROW_KEYS. Result: the only difference found is the `clean` stamp; nothing was lost.
+
+| Writer | Fields it keeps | Fields it must keep | Result |
+|--------|-----------------|---------------------|--------|
+| `sweep.calendar` / `calendar_row` (a save) | id, times, all_day, title, where, teams, private, organiser, sensitivity, organiser_email, recurrence, attendees (name, email, type, response), attachments, body (filtered), fetched, to | the same; private keeps ID and Teams only, confidential keeps title and times | OK |
+| `keep_held_past_days` (past days already held) | the held row as stored (ROW_KEYS only) when stamped; an unstamped row cleaned, filtered, stamped | all held past days and rows, in order, attendee emails, organiser, attachments | OK |
+| `rescrub_calendar` / `_clean_calendar_file` | every row, every ROW_KEYS field, the filtered body, fetched and to | the same; junk keys, bad days and non-meeting rows are removed by design | OK |

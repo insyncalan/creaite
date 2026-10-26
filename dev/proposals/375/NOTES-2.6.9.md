@@ -46,3 +46,7 @@ Stays, by design or not yet fixed:
 * Hebrew labels are not recognised.
 * A9 (a plain link line is itself dropped).
 * Loss ratchets re-pinned 26-10-2026 for the 2.6.8.1 scrub: phrasing 163 -> 211, innocent 3451 -> 4113.
+
+## S4 migration: two silent regressions, now guarded
+
+Two readers silently regressed in the S4 migration: the follow-up email lost recipient addresses from the invite, and the project match in Intake and Prep lost the attendee email-domain signal of #328, because the gateway kept only name, type and response. The golden test `test_calendar_readers_golden.py` (every migrated reader against stored 2.6.8 output) now guards it, and `test_calendar_writers_golden.py` does the same for the three writers (save, held past days, rescrub). The purpose `intake` and addresses in `agenda` and `prep_panel` fix it. Private and confidential rows never return addresses, and no address reaches the dashboard page.
