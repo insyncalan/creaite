@@ -60,13 +60,13 @@ Composition D ships in 2.6.9 only if all five criteria are met (Jarvis). Measure
 
 | Criterion | Baseline 6ce15ff9 | After A (orphans) | After B (plain links) | After C (line breaks) | After D (looks_like_html) | After E (spaced letters, bare long label) | After Cap review | After Cap re-check 2 |
 |---|---|---|---|---|---|---|---|---|
-| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 | 83 | 83 | 83 | 83 | pending (not run: laptop load above 120) |
-| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 | 150 | 150 | 150 | 150 | pending (not run: laptop load above 120) |
-| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | pending (not run: laptop load above 120) |
-| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | pending (not run: laptop load above 120) |
-| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 (letters-only Meet code link now drops its block: 4 agenda lines per such body) | pending (not run: laptop load above 120) |
-| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | pending (not run: laptop load above 120) |
-| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | pending (not run: laptop load above 120) |
+| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 | 83 | 83 | 83 | 83 | 82 (one line fewer than After Cap review, 83; the 2.6.8 scrub: 86) |
+| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 | 150 | 150 | 150 | 150 | 150 |
+| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) |
+| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 (0 non-idempotent) |
+| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 (letters-only Meet code link now drops its block: 4 agenda lines per such body) | 0 / 0 (1,161 secrets, 4,000 lines) |
+| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 (every generator, 1,000 each) |
+| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 |
 
 Verdicts as of the last commit (A to E):
 
