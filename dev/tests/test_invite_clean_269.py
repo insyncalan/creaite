@@ -364,5 +364,19 @@ def make(name, gen):
 for _n, _g in GENERATORS:
     setattr(Fuzz, "test_" + _n, make(_n, _g))
 
+class DocumentedLimits(unittest.TestCase):
+    """New false removals from H2/H4 (reviewer, 26-10): a title with a provider or numbered label and six or more digits goes, and the
+    title shows as "Meeting". Pinned as the documented cost (NOTES-2.6.9-scrub.md); if the scrub improves, move the row to Rows."""
+    TITLES = ["Zoom licences 100 200", "Zoom licences 1234567", "Teams renewal 123 456", "Zoom spend 100 200 300",
+              "Webex 2552 123 4567 renewal", "Chime 12345678", "Jitsi 1000000 users", "Zoom ticket 482915",
+              "Teams incident 482915", "Teams INC0482915"]
+
+    def test_false_removals_pinned(self):
+        for t in self.TITLES:
+            with self.subTest(t):
+                self.assertEqual(I.scrub(t, 60), "")
+                self.assertEqual(I.scrub(t, 140) or "Meeting", "Meeting")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
