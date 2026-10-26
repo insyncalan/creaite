@@ -7,8 +7,11 @@
                                                           catch OSError and ValueError, so a typo is not swallowed as "no calendar")
     clean_row(row), stamp_row(row), stamp_rows(days), stamp_calendar(cal), lock()   for the writers (sweep), later
 
-THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int). A row with no stamp, or a lower one, is filtered IN MEMORY
-on every read and served filtered; a stamped row is served as stored. read() never writes: only the sweep's save and the start-up
+THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (the body filter's version). A row
+with no stamp, a lower one, another filter version, or a stamp but a wrong shape (_well_formed) is filtered IN MEMORY when the file is
+read (once per file version, the cache) and served filtered; only a trusted row is served as stored. A bare confidential flag is
+turned into "sensitivity" before a trusted row is trimmed (keep_row). Re-filtering every row on every cache fill was measured and
+rejected: the body filter costs about 8 ms a row, so a 3,000-row calendar would take tens of seconds. read() never writes: only the sweep's save and the start-up
 rescrub write, and they stamp (clean_row / stamp_rows). Nothing unfiltered is ever served: when the filter cannot be loaded, the body
 of an unstamped row is dropped (fails closed).
 
@@ -177,10 +180,44 @@ def _sens(ev):
 
 # ---- rows: clean (writer side) and normalise (reader side) --------------------------------------------------------------------
 
+def fingerprint():
+    """What a stamp must say besides CLEAN: the body filter's version (invite_filter.VERSION). A saved row stamped by an older filter
+    is filtered again on its next read, and the rescrub writes it back stamped, so a fix to the filter reaches saved rows without
+    anyone bumping CLEAN. None when the filter cannot be loaded: then no row is trusted as stored (fails closed)."""
+    try:
+        import invite_filter
+        return f"f{int(invite_filter.VERSION)}"
+    except (ImportError, AttributeError, TypeError, ValueError):
+        return None
+
+
 def is_stamped(row):
-    """Whether a row carries the current stamp."""
-    c = row.get("clean") if isinstance(row, dict) else None
-    return isinstance(c, int) and not isinstance(c, bool) and c >= CLEAN
+    """Whether a row carries the current stamp: "clean" >= CLEAN and "clean_v" equal to fingerprint(). A bare "clean": 1 (or any number)
+    is not enough, so a stamp added by hand, an import or an older filter does not skip the filter."""
+    if not isinstance(row, dict):
+        return False
+    c, fp = row.get("clean"), fingerprint()
+    return fp is not None and row.get("clean_v") == fp and isinstance(c, int) and not isinstance(c, bool) and c >= CLEAN
+
+
+def trusted(row):
+    """A stamped row of the shape the sweep writes: the only kind that is served or kept as stored."""
+    return is_stamped(row) and _well_formed(row)
+
+
+def keep_row(row):
+    """A trusted row as it is kept: ROW_KEYS and the stamp only, the body cut to BODY_CAP, and its sensitivity worked out BEFORE the
+    trim (a bare "confidential": true is not a ROW_KEY, so it must be turned into "sensitivity" first). A private or confidential row
+    keeps no body."""
+    sens = _sens(row)
+    out = {k: row[k] for k in ROW_KEYS if k in row}
+    out["clean"], out["clean_v"] = CLEAN, row["clean_v"]
+    if sens != "normal":
+        out["sensitivity"], out["private"] = sens, sens == "private"
+        out.pop("body", None)
+    elif "body" in out:
+        out["body"] = _cap(out["body"], BODY_CAP) if isinstance(out["body"], str) else ""
+    return out
 
 
 def clean_row(row):
@@ -194,12 +231,15 @@ def clean_row(row):
             out["body"] = body
     out = {k: out[k] for k in ROW_KEYS if k in out}
     out["clean"] = CLEAN
+    fp = fingerprint()
+    if fp is not None:
+        out["clean_v"] = fp
     return out
 
 
 def stamp_row(row):
-    """A stamped row is returned as it is (a copy); any other is cleaned and stamped."""
-    return copy.deepcopy(row) if is_stamped(row) else clean_row(row)
+    """A trusted row (current stamp, well formed) is returned as it is kept (keep_row, a copy); any other is cleaned and stamped."""
+    return keep_row(row) if trusted(row) else clean_row(row)
 
 
 def stamp_rows(days):
@@ -214,6 +254,9 @@ def stamp_calendar(cal):
     out = {k: cal[k] for k in ("fetched", "to") if isinstance(cal.get(k), str)}
     out["days"] = stamp_rows(cal.get("days"))
     out["clean"] = CLEAN
+    fp = fingerprint()
+    if fp is not None:
+        out["clean_v"] = fp
     return out
 
 
@@ -277,13 +320,8 @@ def _safe_clean(row):
 
 
 def _normal_row(row):
-    """A saved row as the cache holds it: well-formed stamped rows as stored (ROW_KEYS only), any other filtered in memory."""
-    if not is_stamped(row) or not _well_formed(row):
-        return _safe_clean(row)
-    out = {k: row[k] for k in ROW_KEYS if k in row}
-    if "body" in out:
-        out["body"] = _cap(out["body"], BODY_CAP) if isinstance(out["body"], str) else ""
-    return out
+    """A saved row as the cache holds it: a trusted row (current stamp, well formed) as stored, any other filtered in memory."""
+    return keep_row(row) if trusted(row) else _safe_clean(row)
 
 
 def _normal_calendar(cal):
