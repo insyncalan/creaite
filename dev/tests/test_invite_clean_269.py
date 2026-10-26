@@ -150,7 +150,7 @@ def run(name, gen, n=PER, seed=SEED):
 TRAPS = ["Pin board", "Token budget", "Dress code for visitors", "Cost code changes", "Pin the roadmap", "Password reset rollout",
          "Access code rollout", "Secret Santa party", "Code of conduct refresh", "Key milestones", "Zip code lookup", "Code sprint",
          "Password reset", "Code review", "Token refresh", "Passcode policy review", "Meeting ID badges", "API key rotation",
-         "Zoom licences renewal", "Teams adoption plan", "Webex retirement", "Meet the new starters", "Teams 2026 roadmap",
+         "Password reset \u2013 ABC", "Code review \u2013 ABC", "Token refresh \u2013 ABC", "Password for the HR portal", "Zoom licences renewal", "Teams adoption plan", "Webex retirement", "Meet the new starters", "Teams 2026 roadmap",
          "Zoom 2026 budget", "Meeting number of attendees", "Meeting ID card replacement"]
 ORDINARY = ["Welcome and apologies", "Budget review", "Hiring update", "Vendors", "Risks and issues", "Milestones", "AOB", "Sprint demo",
             "Supplier contract renewal", "Lunch at 12:30", "Room 4", "Item 12", "Q3 forecast", "Go/no-go", "Sign-off", "Reporting line",
