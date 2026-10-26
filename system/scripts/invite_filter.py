@@ -1175,6 +1175,24 @@ def _raw_first(text):
     return "\n".join(_capped(kept))
 
 
+FIXED_POINT_ROUNDS = 4
+
+
+def _fixed_point(text):
+    """E1 D, fix5: the filter's result is a fixed point by construction. HTML keeps a break character that sits inside a label as written
+    (so the scrub sees 'Passcode:' and its value together), which leaves that character in the output, and the second pass over the
+    output (now plain text, the break a line break) judges it differently. So the output is filtered again, as plain text, until it does
+    not change (at most FIXED_POINT_ROUNDS times); every round only drops lines or tidies them, so it never adds anything. A body that
+    has not settled by then is served as "" (never a half-filtered body)."""
+    out = _raw_first(text)
+    for _ in range(FIXED_POINT_ROUNDS):
+        nxt = _raw_first(out)
+        if nxt == out:
+            return out
+        out = nxt
+    return out if _raw_first(out) == out else ""
+
+
 def filter_text_with_scrub(text, html=None, order=None):
     """Option (c), the 2.6.9 body filter: html/blocks conversion, the anchor layer and shape gate (second_layer=False), then the
     2.6.8 scrub (via _scrub_pairs) as the label layer on the surviving lines, then the CAP.
@@ -1185,7 +1203,7 @@ def filter_text_with_scrub(text, html=None, order=None):
     if order is not None and order not in ORDERS:
         raise ValueError("order must be one of %r" % (ORDERS,))
     if (order or DEFAULT_ORDER) == "scrub_raw_first":
-        return _raw_first(text)
+        return _fixed_point(text)
     mod = _blocks_module()
     if html is None or html:
         if mod is None:
