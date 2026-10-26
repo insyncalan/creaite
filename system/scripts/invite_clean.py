@@ -157,6 +157,22 @@ _OTHER_ALPHABETS = ("رمز المرور|كلمة المرور|كلمة السر
                     "رقم التعريف الشخصي|密码|密碼|口令|访问码|パスコード|パスワード|暗証番号|会議\\s*id|会議番号|ミーティング\\s*id|"
                     "비밀번호|회의\\s*암호|회의\\s*id|암호|пароль|код\\s+доступа|код\\s+конференции|"
                     "идентификатор\\s+(?:конференции|встречи)|пин-код")
+
+# 2.6.9 (#369 H2, H4): a number of six or more digits on the SAME line as a join label, however many plain words, brackets or marks stand
+# between them. H2: a numbered label (Meeting ID, Webinar ID, Meeting number ...) + up to eight plain words or marks + the number
+# ("Meeting ID below 345 678 912 345", "Meeting ID (Teams) - 987 654 321", "Meeting number is 482915"). H4: a provider's name + up to
+# three plain words or marks + the number ("Zoom 482 915 7731", "Teams: 123 456 789", "Webex meeting - 2552 123 4567"). The number is
+# six or more digits in one run, or two to five groups of three or more digits split by spaces or hyphens, so a year, a date, "Q3 2026",
+# "Teams 365", "Zoom 2026" and "Room 4" stay; an ISO date is taken out of the running by the look-ahead. Word-only values are not covered.
+_SL_WORD = r"\s+(?:1:1|[^\W\d_](?:[^\W\d_]|['\u2019-])*)(?![^\W\d_'\u2019-]|['\u2019-])"
+_SL_MARK = rf"\s*(?:{BARE_SEPARATORS}|[.,;!?])"
+_SL_NUMBER = (r"\s*\+?\(?(?!(?:19|20)\d\d[-/. ](?:0?[1-9]|1[0-2])[-/. ](?:0?[1-9]|[12]\d|3[01])(?!\d))"
+              r"(?:\d{6,}|\d{3,}[ -]\d{3,}(?:[ -]\d{2,}){0,3})(?!\d)")
+_PROVIDER_WORD = (r"zoom|teams|meet|webex|skype|google\s+meet|goto\s*meeting|gotomeeting|goto\s*webinar|blue\s*jeans|whereby|jitsi|chime|"
+                  r"ring\s*central|join\.me")
+SAME_LINE_NUMBER = re.compile(
+    rf"(?<![\w-])(?:{_WITH_VALUE})(?![^\W\d_])(?:{_SL_WORD}|{_SL_MARK}){{1,8}}{_SL_NUMBER}"
+    rf"|(?<![\w-])(?:{_PROVIDER_WORD})(?![^\W\d_])(?:{_SL_WORD}|{_SL_MARK}){{0,3}}{_SL_NUMBER}", re.I)
 LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_NEXT})|(?<![\w-])(?:{_WITH_VALUE}|{_BARE})(?![\w-]){_VAL}"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?![\w-])\s*[.,;!?\u2026]+\s*\S*\d"   # "Code! 4417"
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})"       # "Passcode-4417", "Passcode- 4417"
@@ -310,7 +326,7 @@ def _views(text):
 
 def _secret_in(s):
     """Whether one view of a text carries a join link, a key or a dial-in number."""
-    return bool(HOSTS.search(s) or SCHEME.search(s) or SIPADDR.search(s) or LABEL.search(s) or DIAL.search(s)
+    return bool(HOSTS.search(s) or SCHEME.search(s) or SIPADDR.search(s) or LABEL.search(s) or SAME_LINE_NUMBER.search(s) or DIAL.search(s)
                 or any(_bad_url(m.group()) for m in URL.finditer(s)))
 
 
