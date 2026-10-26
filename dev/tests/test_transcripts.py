@@ -439,18 +439,21 @@ class NoEventSaysWhy(unittest.TestCase):
 
     def test_no_call_at_all(self):
         job, msg = self.finish()
-        self.assertIn("made no Microsoft 365 call", msg)
+        self.assertIn("did not reach Microsoft 365", msg)
+        self.assertIn("never looked for the meeting's calendar event", msg)
+        self.assertIn("Press Load to try again", msg)
         self.assertEqual(job.diagnosis(), "0 tool results (none); event read: none")
 
     def test_search_only_never_read_the_event(self):
         job, msg = self.finish(("outlook_calendar_search", None, "boom", True))
-        self.assertIn("never read the meeting's calendar event", msg)
+        self.assertIn("never opened the meeting's calendar event", msg)
+        self.assertNotIn("did not reach", msg)       # #371: only the no-call line is the page's cue to look again
         self.assertIn("outlook_calendar_search error 4", job.diagnosis())
         self.assertNotIn("boom", job.diagnosis())
 
-    def test_event_read_failing_keeps_the_old_sentence(self):
+    def test_event_read_failing_says_found_but_not_read(self):
         job, msg = self.finish(("read_resource", "calendar:///events/ev-1", "Error: 500", True))
-        self.assertEqual(msg, "The meeting's calendar event couldn't be read, so nothing was loaded.")
+        self.assertEqual(msg, "The meeting's calendar event was found but could not be read, so nothing was loaded. Press Load to try again.")
         self.assertTrue(job.diagnosis().endswith("event read: error"))
 
     def test_an_event_that_is_not_json_is_unreadable(self):
