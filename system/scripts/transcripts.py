@@ -422,7 +422,8 @@ def record(facts_list, at=None, refused=None):
 
 
 # ===== #250 (#181 C2): fetch transcripts as they appear, a sweep step (Alan, 19-10-2026) =====
-# Off by default (settings sweep.fetch_transcripts). When on, each sweep fetches the transcript of every meeting the user could
+# Off by default (settings sweep.fetch_transcripts). When on, each interactive sweep (a typed sweep, Close the day's catch-up;
+# never the scheduled run or session start; Alan, 27-10-2026) fetches the transcript of every meeting the user could
 # Process (ended, in the Calendar import window, a Teams meeting, not private, not cleared, not processed, not in Review, not
 # already in inbox/ and not fetched before) into inbox/, exactly as Load does (Job.write), so Intake shows it as loaded. Confidential
 # meetings are never fetched. It is a read: no AI works on the text and nothing is written to the tracker. The text comes only from
