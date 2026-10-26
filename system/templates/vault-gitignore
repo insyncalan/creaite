@@ -13,3 +13,12 @@ dashboard.html
 __pycache__/
 *.pyc
 system/guard/
+
+# Staging stays out of git history (BL-323, BL-288). The daily backup zip holds a git bundle of the whole history, so
+# anything committed once is in every later zip and its OneDrive copy. Staging holds ask creaite's chats and their images,
+# vip.json (private to Alan), the raw calendar and unapproved proposals; the zip already holds staging directly, minus
+# the chats, their images, vip.json and the raw calendar, so git need not.
+system/staging/
+system/logs/
+# Brand sources are local only.
+system/branding/
