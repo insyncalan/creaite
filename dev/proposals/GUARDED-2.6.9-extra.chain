@@ -1,8 +1,9 @@
 # The extra guarded diffs for 2.6.9 (#382 and #371). NOT pinned: dev/tests/guarded_chain.py does not know this chain, and it has no marked commit yet. A pin is added only on Alan's say.
 # Base: origin/main (a62fbb0a, after 286b03c1). One diff per line. The two touch different hunks of live_server.py and apply in either order (git apply --check clean both ways, and each alone on main).
-# G1 #382: the #365 follow-up rebased (sha256 d04410c0aa4f3447613ba7d549110ff957797d850722e0a90999f393b63b6ea3)
+# G1 #382: the #365 follow-up rebased (sha256 362b43c7be0ef516e348f135b5bb48f2c70eafa759ab731562656d115ded9f33)
 dev/proposals/382/live_server-382.diff
-# G2 #371: the run's startup MCP status and Microsoft 365 tool count in the debug log, counts only (sha256 6a761e1cfb8f53bd2aaaae4a0eb8e926d207348a322c85b5c63b92fca4ecdd0a)
+# G2 #371: the run's startup MCP status and Microsoft 365 tool count in the debug log, counts only (sha256 3145004945ec7ae613629b42ad54ed50ad488a64ed70d54ba5037e324fbb37e2)
 dev/proposals/371/live_server-371.diff
 #
-# Not guarded (ordinary commits): dev/tests/test_job_followup_365.py, dev/tests/test_job_init_log_371.py
+# Not guarded (ordinary commits): dev/tests/test_job_followup_365.py, dev/tests/test_job_init_log_371.py, system/scripts/transcripts.py (search count), dev/tests/test_transcripts.py, dev/tests/test_run_tools_explicit.py
+# Revision 2 (26-10-2026): after the independent review (model not named, wording, init line probed with the real claude).

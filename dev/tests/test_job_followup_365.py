@@ -23,6 +23,29 @@ class Followup(unittest.TestCase):
             self.assertFalse(str(Path(cwd).resolve()).startswith(root))
             self.assertEqual(live_server.run_dirs(kind, False), [])                   # no --add-dir either
 
+    def test_no_extra_dirs_even_when_a_projects_root_is_outside_the_vault(self):     # M1: extra_dirs() was empty in the tests
+        orig = live_server.extra_dirs
+        live_server.extra_dirs = lambda: ["/somewhere/else"]
+        try:
+            self.assertEqual(live_server.run_dirs("ask", False), ["/somewhere/else"])      # the stand-in works
+            for kind in ("check", "load"):
+                self.assertEqual(live_server.run_dirs(kind, False), [])
+                self.assertEqual(live_server.run_dirs(kind, True), [])
+        finally:
+            live_server.extra_dirs = orig
+
+    def test_the_model_is_not_named_for_these_jobs(self):       # #382: Claude Code's own default, as before; not Sonnet
+        for kind in ("check", "load"):
+            args, _, _ = live_server.launch_context(kind)
+            self.assertNotIn("--model", args)
+            self.assertNotIn("sonnet", args)
+        args, _, _ = live_server.launch_context("edit-ai")           # the tool-less kinds still name it
+        self.assertEqual(args[args.index("--model") + 1], "sonnet")
+
+    def test_the_prompt_does_not_say_the_vault(self):
+        self.assertNotIn("headless in the vault", live_server.KIND_PROMPTS["load"])
+        self.assertIn("outside the vault", live_server.KIND_PROMPTS["check"])
+
     def test_other_kinds_are_unchanged(self):
         args, _, cwd = live_server.launch_context("ask")
         self.assertEqual((args, cwd), ([], live_server.paths.ROOT))

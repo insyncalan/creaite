@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index dcd4b703..d851d272 100644
+index dcd4b703..95f84ad8 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -2895,6 +2895,8 @@ class Run:
@@ -7,19 +7,27 @@ index dcd4b703..d851d272 100644
              kind = ev.get("type")
              self._usage_seen(ev, kind)                  # #197: the model, the start load and skill names, counts only
 +            if kind == "system":
-+                self._init_log(ev)                      # #371: the startup MCP status and the M365 tool count, counts only
++                self._init_log(ev)                      # #371: what the run started with, counts only
              if kind == "assistant":
                  self._on_assistant(ev)
              elif kind == "user":
-@@ -3249,6 +3251,19 @@ class Run:
+@@ -3224,6 +3226,8 @@ class Run:
+                 debuglog.info("run", f"{self.id} {self.kind} result: {str(self.tooluse[part['tool_use_id']][0]).split('__')[-1][:40]} "
+                                      f"{'error' if part.get('is_error') else 'ok'}, {len(text)} characters")
+             self.job.observe(*self.tooluse[part["tool_use_id"]], text, bool(part.get("is_error")))
++            if globals().get("debuglog") is not None and self.tooluse[part["tool_use_id"]][0] == "ToolSearch":
++                debuglog.info("run", f"{self.id} {self.kind} tool search: {m365_names_seen(text)} Microsoft 365 tool names in the result")
+         except (LookupError, TypeError, AttributeError, ValueError):  # an odd result: the job keeps what it had
+             pass
+         except Exception as e:  # noqa: BLE001  never let the reader die; logged by name only
+@@ -3249,6 +3253,18 @@ class Run:
              swallowed("observe", e)
          # ===== end BL-228 =====
  
 +    # ===== #371 (v2.6.9): the run's startup, counts only =====
 +    def _init_log(self, ev):
-+        """The system init event, once per run, to the debug log: how many MCP servers are connected, need sign-in or failed,
-+        whether Microsoft 365 is among the connected ones, and how many Microsoft 365 tools the run can see. Counts and fixed
-+        words only: no title, no text, no other server's name. Never raises."""
++        """The system init event, once per run, to the debug log: the MCP servers it lists by status and the tools it starts
++        with. Counts only. Never raises."""
 +        try:
 +            line = init_summary(ev)
 +            if line and globals().get("debuglog") is not None:
@@ -31,30 +39,32 @@ index dcd4b703..d851d272 100644
      # ===== #197 (v2.1.1): run usage monitor =====
      def _usage_seen(self, ev, kind):
          """The model (system init event), the start load (the first assistant event's input and cache tokens) and, from every
-@@ -8831,6 +8846,28 @@ def swallowed(where, e):
+@@ -8831,6 +8847,30 @@ def swallowed(where, e):
          debuglog.debug("server", f"{where}: {type(e).__name__} ignored")
  # ===== end BL-228 =====
  
 +
 +# ===== #371 (v2.6.9): what a run started with =====
 +def init_summary(ev):
-+    """One line of counts from a stream-json system init event (None for any other event): the servers by status, whether the
-+    Microsoft 365 connector is connected (its name is never logged, nor any other server's) and how many of the run's tools
-+    are Microsoft 365 tools. Pure; no title, text or user data."""
++    """One line of counts from a stream-json system init event (None for any other event): the MCP servers it lists, by status,
++    and how many tools it starts with. Claude Code lists no connector at start (probed, 26-10-2026: `mcp_servers` empty and
++    `tools` ["ToolSearch"] for a check or load start, the connector's tools are deferred), so this says "listed", never "absent";
++    the tools the run really gets show in m365_names_seen, from its first ToolSearch result. Pure; no name, title or text."""
 +    if not isinstance(ev, dict) or ev.get("subtype") != "init":
 +        return None
-+    by_status, m365 = {}, "absent"
++    by_status = {}
 +    for srv in ev.get("mcp_servers") or []:
-+        if not isinstance(srv, dict):
-+            continue
-+        status = str(srv.get("status") or "unknown")[:20]
++        status = str(srv.get("status") or "unknown")[:20] if isinstance(srv, dict) else "unknown"
 +        by_status[status] = by_status.get(status, 0) + 1
-+        if "microsoft" in str(srv.get("name") or "").lower():
-+            m365 = status
 +    tools = [t for t in ev.get("tools") or [] if isinstance(t, str)]
-+    n365 = sum(1 for t in tools if "microsoft" in t.lower() and t.startswith("mcp__"))
 +    servers = ", ".join(f"{k} {v}" for k, v in sorted(by_status.items())) or "none"
-+    return f"mcp servers: {servers}; microsoft365: {m365}; m365 tools: {n365} of {len(tools)} tools"
++    return f"mcp servers listed at start: {servers}; tools at start: {len(tools)} (connector tools load on the first ToolSearch)"
++
++
++def m365_names_seen(text):
++    """How many different Microsoft 365 tool names a ToolSearch result mentions (a count; pure)."""
++    import re
++    return len(set(re.findall(r"mcp__[A-Za-z0-9_]*Microsoft_365__[A-Za-z0-9_]+", str(text or ""))))
 +# ===== end #371 =====
 +
  # ===== BL-301 E (v20-find-updates): Find updates, from a note to the tracker =====
