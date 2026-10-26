@@ -7,7 +7,7 @@
                                                           catch OSError and ValueError, so a typo is not swallowed as "no calendar")
     clean_row(row), stamp_row(row), stamp_rows(days), stamp_calendar(cal), lock()   for the writers (sweep), later
 
-THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (a hash of the filter's two
+THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (a hash of the filter's four
 source files). A row
 with no stamp, a lower one, another filter version, or a stamp but a wrong shape (_well_formed) is filtered IN MEMORY when the file is
 read (once per file version, the cache) and served filtered; only a trusted row is served as stored. A bare confidential flag is
@@ -186,19 +186,21 @@ _FP = []                # the fingerprint, worked out once per process (a one-it
 
 
 def fingerprint():
-    """What a stamp must say besides CLEAN: a hash (sha256 of the bytes, 16 hex digits) of the two files that decide what a saved row may
-    keep, invite_filter.py and invite_clean.py. A row stamped by an earlier version of either is filtered again on its next read, and the
+    """What a stamp must say besides CLEAN: a hash (sha256 of the bytes, 16 hex digits) of the four files that decide what a saved row may
+    keep: invite_filter.py, invite_clean.py, invite_blocks.py and confusables.py. A row stamped by an earlier version of any of them is filtered again on its next read, and the
     rescrub writes it back stamped, so a fix to either file reaches saved rows without anyone bumping a number (saved calendars are
-    cleaned again at the first start-up after an update). Worked out once per process. None when either file cannot be read: then no row
+    cleaned again at the first start-up after an update). Worked out once per process. None when any file cannot be read: then no row
     is trusted as stored (fails closed)."""
     if _FP:
         return _FP[0]
     try:
         import hashlib
+        import confusables
+        import invite_blocks
         import invite_clean
         import invite_filter
         h = hashlib.sha256()
-        for mod in (invite_filter, invite_clean):
+        for mod in (invite_filter, invite_clean, invite_blocks, confusables):
             h.update(Path(mod.__file__).read_bytes())
         fp = h.hexdigest()[:16]
     except (ImportError, AttributeError, TypeError, OSError):

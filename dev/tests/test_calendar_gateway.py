@@ -197,12 +197,75 @@ class Stamp(Base):
         self.assertTrue(G.is_stamped({"clean": G.CLEAN, "clean_v": G.fingerprint()}))
         self.assertTrue(G.is_stamped({"clean": G.CLEAN + 1, "clean_v": G.fingerprint()}))
 
-    def test_the_fingerprint_is_a_hash_of_the_two_filter_files(self):
+    def test_the_fingerprint_is_a_hash_of_the_four_filter_files(self):
         import hashlib
         h = hashlib.sha256()
-        for name in ("invite_filter", "invite_clean"):
+        for name in ("invite_filter", "invite_clean", "invite_blocks", "confusables"):
             h.update((Path(G.__file__).parent / f"{name}.py").read_bytes())
         self.assertEqual(G.fingerprint(), h.hexdigest()[:16])
+
+    def _fingerprint_with_changed(self, name, change=True):
+        """The fingerprint worked out with one filter file's bytes changed (a temp copy stands in for the module's file)."""
+        import importlib
+        mod = importlib.import_module(name)
+        real = mod.__file__
+        with tempfile.TemporaryDirectory() as d:
+            copy = Path(d) / f"{name}.py"
+            copy.write_bytes(Path(real).read_bytes() + (b"\n# a changed byte\n" if change else b""))
+            G._FP.clear()
+            mod.__file__ = str(copy)
+            try:
+                return G.fingerprint()
+            finally:
+                mod.__file__ = real
+                G._FP.clear()
+
+    def test_changing_any_of_the_four_files_changes_the_fingerprint(self):
+        base = G.fingerprint()
+        for name in ("invite_filter", "invite_clean", "invite_blocks", "confusables"):
+            with self.subTest(name):
+                self.assertEqual(self._fingerprint_with_changed(name, change=False), base)   # an identical copy: same
+                self.assertNotEqual(self._fingerprint_with_changed(name), base)               # one changed byte: different
+        self.assertEqual(G.fingerprint(), base)
+
+    def test_a_row_stamped_before_a_change_to_any_file_is_filtered_again(self):
+        stored = f"Agenda: budget\n{LINK}"
+        old = G.fingerprint()
+        for name in ("invite_filter", "invite_clean", "invite_blocks", "confusables"):
+            with self.subTest(name):
+                self.save({"2026-10-26": [ev(body=stored, clean=G.CLEAN, clean_v=old)]})
+                G.clear_cache()
+                self.assertIn("meet.example", G.read("prep_panel", self.path)["days"]["2026-10-26"][0]["body"])   # trusted as stored today
+                import importlib
+                mod = importlib.import_module(name)
+                real = mod.__file__
+                with tempfile.TemporaryDirectory() as d:
+                    copy = Path(d) / f"{name}.py"
+                    copy.write_bytes(Path(real).read_bytes() + b"\n# changed\n")
+                    G._FP.clear()
+                    mod.__file__ = str(copy)
+                    G.clear_cache()
+                    try:
+                        got = G.read("prep_panel", self.path)["days"]["2026-10-26"][0]["body"]
+                    finally:
+                        mod.__file__ = real
+                        G._FP.clear()
+                        G.clear_cache()
+                self.assertNotIn("meet.example", got, f"a row stamped before {name} changed was still trusted")
+
+    def test_a_file_that_cannot_be_read_gives_no_fingerprint(self):
+        import importlib
+        for name in ("invite_blocks", "confusables"):
+            with self.subTest(name):
+                mod = importlib.import_module(name)
+                real = mod.__file__
+                G._FP.clear()
+                mod.__file__ = "/nonexistent/" + name + ".py"
+                try:
+                    self.assertIsNone(G.fingerprint())
+                finally:
+                    mod.__file__ = real
+                    G._FP.clear()
 
     def test_a_forged_or_old_fingerprint_is_filtered_again(self):
         stored = f"Agenda: budget\n{LINK}"
