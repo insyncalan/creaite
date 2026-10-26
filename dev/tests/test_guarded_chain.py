@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import guarded_chain  # noqa: E402
-from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, SPEC4, SPEC5, SPEC6, chain_digest, guarded_touched  # noqa: E402
+from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, SPEC4, SPEC5, SPEC6, SPEC7, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
 LIVE, LEAK, EDIT, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "dev/tests/snapshots/golden.txt"
@@ -95,7 +95,7 @@ class Repo:
     pin = "none"
 
     def touched(self, **kw):
-        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3", SPEC4[0]: "pin4", SPEC5[0]: "pin5", SPEC6[0]: "pin6"}[self.spec[0]]
+        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3", SPEC4[0]: "pin4", SPEC5[0]: "pin5", SPEC6[0]: "pin6", SPEC7[0]: "pin7"}[self.spec[0]]
         if "pin" in kw and key != "pin":
             kw[key] = kw.pop("pin")
         kw.setdefault(key, self.pin)
@@ -269,6 +269,19 @@ class GuardedChain5(GuardedChain):
 class GuardedChain6(GuardedChain):
     """The same cases for the 2.6.8 chain: its own marker, chain file and pin."""
     SPEC = SPEC6
+
+
+class GuardedChain7(GuardedChain):
+    """The same cases for the 2.6.9 chain: its own marker, chain file and pin."""
+    SPEC = SPEC7
+
+
+class ShippedPin7(unittest.TestCase):
+    def test_the_shipped_pin_is_the_listed_chain(self):
+        repo = Path(__file__).resolve().parents[2]
+        listed = chain_digest(repo, "HEAD", SPEC7)
+        self.assertIsNotNone(listed, "the 2.6.9 list is missing or empty")
+        self.assertEqual(listed, guarded_chain.CHAIN7_SHA256)
 
 
 class ShippedPin6(unittest.TestCase):
