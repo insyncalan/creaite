@@ -684,6 +684,26 @@ def default_hold(event, live, created):
     return transcript_hold.hold_for(event, live, created)
 
 
+def window_hits(rows, cands, created):
+    """The candidates (event IDs with a saved row in `rows`) whose window, 15 minutes before the start to the end on that day, holds the
+    transcript's created time; [] when the time can't be read or a candidate's times can't (nothing can then be told)."""
+    made = when(created)
+    if made is None:
+        return []
+    made = made.astimezone()
+    minute, hit = made.hour * 60 + made.minute, []
+    for c in cands:
+        row = rows[c]
+        try:
+            lo = int(row["start"][:2]) * 60 + int(row["start"][3:5]) - 15
+            hi = int(row["end"][:2]) * 60 + int(row["end"][3:5])
+        except (KeyError, ValueError, TypeError):
+            return []
+        if row.get("day") == made.strftime("%Y-%m-%d") and lo <= minute < hi:
+            hit.append(c)
+    return hit
+
+
 class SweepFetch:
     """The live server's copy of a sweep run's Microsoft 365 reads (#250). Interface (the guarded live_server.py calls only these):
 
@@ -709,6 +729,7 @@ class SweepFetch:
         self.live = {}                       # event ID -> the event as this run read it (the hold may only add a hold from it)
         self.reasons = {}                    # event ID -> the hold's fixed-word reason (never a title, ID or time)
         self.uris = {}                       # occurrence_key(URL) -> event ID, from the event reads of this run
+        self.named = {}                      # event ID -> the transcript URL its own read named (to find who else names a meeting)
         self.shared = set()                  # occurrence keys two events named: never tied (Cap N1)
         self.blocked = set()                 # meeting_key of every URL a held event named: no event ties to that meeting (Cap #250)
         self.held = set()                    # events whose own read says they aren't "normal" sensitivity: never fetched
@@ -743,6 +764,7 @@ class SweepFetch:
             self.held.add(eid)
         if uri:
             occ = occurrence_key(uri)
+            self.named[eid] = uri
             if held:
                 self.blocked.add(meeting_key(uri))
             if held or self.uris.get(occ, eid) != eid:
@@ -760,6 +782,34 @@ class SweepFetch:
         if eid is None:
             return None, "left"
         return eid, "held" if eid in self.held else None
+
+    def resolve(self, uri, found):
+        """(#250 Cap's Hidden cases) The one event a transcript of a blocked or shared meeting belongs to, by WHEN it was made, or None.
+        Several events of this run name the meeting (a series, a duplicate, the same id in another case) and tie() could not pick one.
+        It picks one only when every candidate has a saved row with readable times, each transcript was made inside exactly one
+        candidate's window (15 minutes before its start up to its end, the hold's own window), that candidate is the same for every
+        transcript, it is normal in this run's read and in the saved calendar, and no other candidate's window holds that moment.
+        Anything else: None, and the transcript stays held (fail closed)."""
+        mk = meeting_key(uri)
+        cands = [e for e, u in self.named.items() if meeting_key(u) == mk]
+        rows = {str(r["id"]): r for r in calendar_rows()}
+        if not cands or not found or any(c not in rows for c in cands):
+            return None
+        inside = None
+        for t in found:
+            hit = window_hits(rows, cands, (t or {}).get("created"))
+            if len(hit) != 1 or (inside not in (None, hit[0])):
+                return None
+            inside = hit[0]
+        return None if inside in self.held or confidential(rows[inside]) else inside
+
+    def tied(self, uri, text, is_error):
+        """tie(), and when that picks nobody because several events name the meeting, resolve() by the time the transcript was made."""
+        eid, why = self.tie(uri)
+        if eid is None and self.named:
+            eid = self.resolve(uri, transcripts_in(as_json(text)) if not is_error else None)
+            why = None if eid else why
+        return eid, why
 
     def event_of(self, uri):
         """The event ID a transcript URL ties to, or None (not tied, or its meeting is held)."""
@@ -804,7 +854,7 @@ class SweepFetch:
 
     def settle(self, uri, text, is_error):
         """One transcript read: fetch it if its meeting is to be fetched (a retry after a dropped connection too)."""
-        eid, why = self.tie(uri)
+        eid, why = self.tied(uri, text, is_error)
         key = eid or f"uri:{len(self.outcomes)}"
         if why:
             self.outcomes.setdefault(key, why)
@@ -841,6 +891,9 @@ class SweepFetch:
         isn't (held, reason) holds (fails closed). The reason (fixed words) is kept in self.reasons."""
         event = {k: row.get(k) for k in ("id", "day", "start", "end", "title")}
         for t in found or [{}]:
+            if not (t or {}).get("created"):                   # M1: a transcript with no created time can't be tied to a meeting: held
+                self.reasons[eid] = "times unreadable"
+                return True
             try:
                 held, why = self.hold(event, self.live.get(eid), (t or {}).get("created"))
                 held = held is not False

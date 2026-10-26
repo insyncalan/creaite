@@ -3,8 +3,8 @@
 Written against v262-line 88c2a948 (control: v262-250b f1b631e6). Fictional data only; Microsoft 365 is never called.
 
 Usage (from anywhere; nothing is written outside a temporary vault):
-    python3 hostile_250_final.py <path to a creaite checkout>              # all cases
-    python3 hostile_250_final.py <path to a creaite checkout> N1 Three     # some classes only
+    python3 hostile_250_final.py [<path to a creaite checkout>]            # all cases (default: this checkout)
+    python3 hostile_250_final.py [<path to a creaite checkout>] N1 Three   # some classes only
 
 The hostile assumption throughout: Microsoft 365 returns the confidential meeting's transcript (ev-1's) for any spelling of its URL.
 A case FAILS when that confidential text lands in inbox/, or (class Hidden) when a different, normal meeting's own transcript is held
@@ -28,12 +28,19 @@ import os
 import sys
 import unittest
 
-if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
-    sys.exit(__doc__)
-TREE = os.path.abspath(sys.argv.pop(1))
+# In the repository the tree is this checkout (dev/tests/test_hostile_250.py imports this file); a path argument still names another one.
+if __name__ == "__main__" and len(sys.argv) >= 2 and os.path.isdir(sys.argv[1]):
+    TREE = os.path.abspath(sys.argv.pop(1))
+else:
+    TREE = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 sys.path.insert(0, os.path.join(TREE, "dev", "tests"))
 import test_fetch_transcripts as F  # noqa: E402
 from test_fetch_transcripts import add_row, edit_calendar, event, result_at  # noqa: E402
+
+# The cases judge the stack as the live server runs it: SweepFetch with its default calendar rule (transcript_hold), not the stub
+# the other fetch tests pass. (A stub that holds nothing lets Order.test_c leak, which is not what the server does.)
+_stub_obs = F.Fetch.obs
+F.Fetch.obs = lambda self, steps, setup="", answered=True, hold="T.default_hold": _stub_obs(self, steps, setup, answered, hold)
 
 SECRET = "CONFIDENTIAL-HR-TEXT"
 LEGIT = "ORDINARY-SYNC-TEXT"

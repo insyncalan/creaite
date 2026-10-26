@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 NOT_HELD = "normal"
 REASONS = ("confidential", "private", "unknown sensitivity", "no event", "calendar unreadable", "not in saved calendar", "ambiguous",
-           "live event not normal", "overlaps closed meeting", "times unreadable")
+           "live event not normal", "overlaps closed meeting", "times unreadable", "outside its meeting")
 PRIORITY = ("confidential", "private", "unknown sensitivity")           # the order a matched row's reasons are given in
 LEAD = timedelta(minutes=15)                                            # a transcript starts a little before its meeting's start
 _DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -161,6 +161,22 @@ def _touches(r, d, ev_span, made_day, made):
     return None
 
 
+def _own_window(rows, created, tz):
+    """Whether the transcript's created time is inside the matched row's own window [start - 15 min, end) on its day (H1: a closed
+    meeting the saved calendar never kept can't be seen, so a transcript the matched meeting can't claim is not opened). A row with no
+    times (all day) has no window to test."""
+    made_day, made = _clock(created, None, tz)
+    if made is None:
+        return False
+    for d, r in rows:
+        if r.get("all_day") is True:
+            continue
+        s, e = _minutes(r.get("start")), _minutes(r.get("end"))
+        if s is None or e is None or e <= s or d != made_day or not (s - 15 <= _minutes(made) < e):
+            return False
+    return True
+
+
 def _closed_overlap(ev, rows, created, tz, by_times):
     """A closed row on the event's day that the event's times or the transcript's created time touch, as a reason, or None. Hold-only: it
     never opens anything. A closed row with times that can't be read holds (an all-day row has none by design and holds nothing)."""
@@ -170,10 +186,15 @@ def _closed_overlap(ev, rows, created, tz, by_times):
     day = ev["day"] or made_day
     span = (_minutes(ev["start"]), _minutes(ev["end"])) if by_times else (None, None)    # an ID match is exact: its times don't decide
     for d, r in rows:
-        if d == day and _verdict(r) != NOT_HELD and r.get("all_day") is not True:
-            why = _touches(r, d, span, made_day, made)
-            if why:
-                return why
+        if d not in (day, made_day) or _verdict(r) == NOT_HELD:         # H2: the transcript's own day counts too (a series lists every day)
+            continue
+        if r.get("all_day") is True:
+            if _verdict(r) != "private":            # M2: closed all-day holds its day, private nothing
+                return "overlaps closed meeting"
+            continue
+        why = _touches(r, d, span if d == day else (None, None), made_day, made)
+        if why:
+            return why
     return None
 
 
@@ -187,7 +208,8 @@ def _live_hold(live):
 
 
 def _matched(ev, rows):
-    """(verdicts of the distinct matching rows, whether a row's ID only looks like the event's, whether an ID matched exactly)."""
+    """(verdicts of the distinct matching rows, whether a row's ID only looks like the event's, whether an ID matched exactly,
+    the (day, row) pairs matched)."""
     ids = [(d, r) for d, r in rows if ev["id"] and id_text(r.get("id")) == ev["id"]]
     folded = [(d, r) for d, r in rows if ev["id"] and id_text(r.get("id")) != ev["id"] and id_fold(r.get("id")) == id_fold(ev["id"])]
     bare = {**ev, "id": ""}                                  # no ID match: the times and the title decide
@@ -195,7 +217,7 @@ def _matched(ev, rows):
     distinct = {}
     for d, r in found:
         distinct[(d, id_text(r.get("id")), str(r.get("start")), str(r.get("end")), title_key(r.get("title")), _verdict(r))] = _verdict(r)
-    return list(distinct.values()), bool(folded), bool(ids)
+    return list(distinct.values()), bool(folded), bool(ids), found
 
 
 def calendar_hold(event, saved_calendar, live=None, created=None, tz=None):
@@ -206,7 +228,7 @@ def calendar_hold(event, saved_calendar, live=None, created=None, tz=None):
     rows, bad = _rows(saved_calendar, ev["day"])
     if rows is None or bad:
         return True, "calendar unreadable"
-    verdicts, lookalike, by_id = _matched(ev, rows)
+    verdicts, lookalike, by_id, found = _matched(ev, rows)
     closed = [v for v in verdicts if v != NOT_HELD]
     if closed:
         return True, _first(closed)
@@ -214,9 +236,12 @@ def calendar_hold(event, saved_calendar, live=None, created=None, tz=None):
         return True, "ambiguous"
     if not verdicts:
         return True, "not in saved calendar"
-    extra = _closed_overlap(ev, rows, created, tz, not by_id) if (created not in (None, "") or not by_id) else None
+    no_time = created in (None, "")
+    extra = _closed_overlap(ev, rows, created, tz, not by_id or no_time)    # M1: no created time: the event's own times decide
     if extra:
         return True, extra
+    if not no_time and not _own_window(found, created, tz):
+        return True, "outside its meeting"
     live_reason = _live_hold(live)
     return (True, live_reason) if live_reason else (False, NOT_HELD)
 
@@ -225,9 +250,10 @@ def read_saved_calendar(path=None):
     """The saved calendar for calendar_hold, or None when it can't be read (calendar_hold then holds). The one place this module reads a
     file; today it is invite_clean.read_calendar, so a reader that cleans rows is used and the gateway can replace it in one line."""
     try:
-        import invite_clean
+        import json
         import paths
-        return invite_clean.read_calendar(path or paths.CALENDAR)
+        with open(path or paths.CALENDAR, encoding="utf-8") as f:     # raw, not invite_clean: it reads no sensitivity as normal (M3)
+            return json.load(f)
     except Exception:                                                    # missing, unreadable, corrupt: all the same to the caller
         return None
 

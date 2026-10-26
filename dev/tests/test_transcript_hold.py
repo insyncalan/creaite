@@ -108,12 +108,12 @@ class Order(unittest.TestCase):
     def test_a_confidential_read_first(self):
         got = self.judge([("C", self.C), ("N", self.N)], {"C": {"sensitivity": "confidential"}, "N": {"sensitivity": "normal"}})
         self.assertEqual(got["C"], (True, "confidential"))
-        self.assertEqual(got["N"], (False, "normal"))
+        self.assertEqual(got["N"], (True, "overlaps closed meeting"))     # 250 M1: tied to C at the same times, no created time: held
 
     def test_b_confidential_read_second(self):
         got = self.judge([("N", self.N), ("C", self.C)], {"C": {"sensitivity": "confidential"}, "N": {"sensitivity": "normal"}})
         self.assertEqual(got["C"], (True, "confidential"))
-        self.assertEqual(got["N"], (False, "normal"))
+        self.assertEqual(got["N"], (True, "overlaps closed meeting"))     # 250 M1: tied to C at the same times, no created time: held
 
     def test_c_confidential_never_read_in_the_run(self):
         """H1: saved with teams false, never read: the saved calendar alone holds it."""
@@ -133,7 +133,7 @@ class Order(unittest.TestCase):
     def test_stopped_run_reads_nothing(self):
         """A run that stopped before any read: no live event at all; the saved calendar still holds the confidential one."""
         self.assertEqual(H.calendar_hold(self.C, self.CAL, live=None), (True, "confidential"))
-        self.assertEqual(H.calendar_hold(self.N, self.CAL, live=None), (False, "normal"))
+        self.assertEqual(H.calendar_hold(self.N, self.CAL, live=None), (True, "overlaps closed meeting"))
 
     def test_same_meeting_not_by_title_or_time_alone(self):
         a = {"id": "", "day": "d", "start": "09:00", "end": "10:00", "title": "Board"}
@@ -236,6 +236,10 @@ class Reader(unittest.TestCase):
             conf["days"]["2026-10-15"][0]["private"] = True
             p.write_text(json.dumps(conf), encoding="utf-8")
             self.assertEqual(H.calendar_hold("evA", H.read_saved_calendar(p)), (True, "private"))
+            unstamped = json.loads(json.dumps(good))
+            unstamped["days"]["2026-10-15"][0].pop("sensitivity")        # 250 M3: invite_clean would read this row as normal
+            p.write_text(json.dumps(unstamped), encoding="utf-8")
+            self.assertEqual(H.calendar_hold("evA", H.read_saved_calendar(p)), (True, "unknown sensitivity"))
 
 
 class Mutants(unittest.TestCase):
@@ -260,13 +264,20 @@ class Mutants(unittest.TestCase):
         "overlap ignored": ('if lo is not None and hi is not None and lo < e and s < hi:', 'if False:'),
         "bad created opens": ('        return "times unreadable"\n    day = ev["day"]', '        pass\n    day = ev["day"]'),
         "closed bad times open": ('    if s is None or e is None or e <= s:\n        return "times unreadable"', '    if s is None or e is None or e <= s:\n        return None'),
-        "check skipped with an ID": ('(created not in (None, "") or not by_id)', 'False'),
+        "no created time: the event's own times decide (M1)": ('not by_id or no_time)', 'not by_id)'),
+        "transcript's own day ignored (H2)": ('if d not in (day, made_day) or', 'if d != day or'),
+        "closed all-day row holds nothing (M2)": ('if _verdict(r) != "private":', 'if False:'),
+        "private all-day row holds (M2)": ('if _verdict(r) != "private":', 'if True:'),
+        "own window skipped (H1)": ('if not no_time and not _own_window(found, created, tz):', 'if False:'),
+        "own window: any day (H1)": ('or d != made_day or not (s - 15', 'or not (s - 15'),
+        "own window: no lead time": ('not (s - 15 <= _minutes(made) < e)', 'not (s <= _minutes(made) < e)'),
+        "own window: end included": ('not (s - 15 <= _minutes(made) < e)', 'not (s - 15 <= _minutes(made) <= e)'),
         "tz ignored": ('stamp = stamp.astimezone(tz) if tz is not None else stamp.astimezone()', 'stamp = stamp.replace(tzinfo=None)'),
         "ID compare loose": ('ids = [(d, r) for d, r in rows if ev["id"] and id_text(r.get("id")) == ev["id"]]',
                              'ids = [(d, r) for d, r in rows if ev["id"] and id_fold(r.get("id")) == id_fold(ev["id"])]'),
         "duplicates both counted": ('distinct[(d, id_text(r.get("id")), str(r.get("start")), str(r.get("end")), title_key(r.get("title")), _verdict(r))] = _verdict(r)',
                                     'distinct[id(r)] = _verdict(r)'),
-        "id match checks times": ('_closed_overlap(ev, rows, created, tz, not by_id)', '_closed_overlap(ev, rows, created, tz, True)'),
+        "id match checks times": ('not by_id or no_time)', 'True)'),
     }
 
     def test_each_mutant_fails_the_fixture_or_a_rule(self):
@@ -283,6 +294,18 @@ class Mutants(unittest.TestCase):
             if not bad:
                 survivors.append(name)
         self.assertEqual(survivors, [])
+
+    def test_reader_mutant_fails(self):
+        """M3: a reader through invite_clean (which calls a row with no sensitivity normal) is caught by the reader test."""
+        old = "return json.load(f)"
+        self.assertIn(old, SOURCE)
+        m = mutant(old, "import invite_clean; return invite_clean.read_calendar(path or paths.CALENDAR)")
+        row = {"id": "evA", "start": "09:00", "end": "10:00", "all_day": False, "title": "Plan", "teams": True, "private": False, "organiser": False}
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "calendar.json"
+            p.write_text(json.dumps({"days": {"2026-10-15": [row]}}), encoding="utf-8")
+            self.assertEqual(H.calendar_hold("evA", m.read_saved_calendar(p)), (False, "normal"))      # the mutant opens it ...
+            self.assertEqual(H.calendar_hold("evA", H.read_saved_calendar(p)), (True, "unknown sensitivity"))     # ... the real reader holds
 
 
 class Timing(unittest.TestCase):

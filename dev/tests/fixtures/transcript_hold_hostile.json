@@ -3392,7 +3392,7 @@
   "reason": "not in saved calendar"
  },
  {
-  "name": "timed event during an all-day closed row",
+  "name": "timed event during an all-day closed row (M2: a closed all-day meeting holds its day)",
   "event": {
    "id": "evA",
    "day": "2026-10-15",
@@ -3432,7 +3432,8 @@
     ]
    }
   },
-  "held": false
+  "held": true,
+  "reason": "overlaps closed meeting"
  },
  {
   "name": "double booked, no id, closed one overlaps",
@@ -3971,7 +3972,8 @@
     ]
    }
   },
-  "held": false
+  "held": true,
+  "reason": "times unreadable"
  },
  {
   "name": "closed private row overlapping, no id",
@@ -7540,5 +7542,421 @@
   },
   "held": true,
   "reason": "not in saved calendar"
+ },
+ {
+  "name": "250 M1: no created, a tied confidential twin at the same times, N by ID",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evC",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evC",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting"
+ },
+ {
+  "name": "250 H2: created on another day, a confidential occurrence that day",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ],
+    "2026-10-13": [
+     {
+      "id": "evC",
+      "start": "08:00",
+      "end": "09:00",
+      "all_day": false,
+      "title": "T evC",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting",
+  "created": "2026-10-13T08:05:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 M2: an all-day confidential row holds the day",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evD",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "T evD",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting",
+  "created": "2026-10-15T15:05:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 M2: a private all-day row holds nothing",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evD",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "T evD",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "private"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T15:05:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 H1: created inside a closed meeting the calendar never kept, outside N's own window",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "outside its meeting",
+  "created": "2026-10-15T09:05:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 own window: created inside N's window opens",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T15:05:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 own window: 15 minutes before the start opens",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T14:45:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 own window: 16 minutes before the start holds",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "outside its meeting",
+  "created": "2026-10-15T14:44:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 own window: at the end holds",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "outside its meeting",
+  "created": "2026-10-15T15:30:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 own window: the next day holds",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "outside its meeting",
+  "created": "2026-10-16T15:05:00Z",
+  "tz": "UTC"
+ },
+ {
+  "name": "250 M3: a row with no sensitivity (the raw calendar) holds",
+  "event": {
+   "id": "evN",
+   "day": "2026-10-15",
+   "start": "15:00",
+   "end": "15:30",
+   "title": "T evN"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evN",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T evN",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "unknown sensitivity"
  }
 ]
