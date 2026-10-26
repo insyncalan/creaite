@@ -177,7 +177,7 @@ class Writers(unittest.TestCase):
 
     def test_private_and_confidential_rows_keep_nothing_but_their_head(self):
         for name in SCENARIOS:
-            for (d, k), r in rows(self.new[name]).items():
+            for (_d, k), r in rows(self.new[name]).items():
                 if r.get("private") or r.get("sensitivity") == "confidential":
                     for gone in ("attendees", "attachments", "body", "organiser_email", "recurrence"):
                         self.assertNotIn(gone, r, f"{name} {k}")
