@@ -994,7 +994,7 @@ class RerunMutants(unittest.TestCase):
         m = mutant("    if not (_MARK.search(line) or _MDLINK.search(line)):\n        return False\n", "    return False\n")
         self.assertIn("[Key](https://example.org/a)\nabcdefgh", self.leaks(m, [("[Key](https://example.org/a)\nabcdefgh", "abcdefgh")]))
         self.assertNotIn("abcdefgh", I.invite_text("[Key](https://example.org/a)\nabcdefgh"))
-        m = mutant("    if _PLAIN_ADDRESS.fullmatch(a):\n        return not (HOSTS.search(a) or SCHEME.search(a))\n", "")
+        m = mutant("    if _PLAIN_ADDRESS.fullmatch(a):\n        return not (HOSTS.search(a) or SCHEME.search(a) or SIPADDR.search(a))\n", "")
         self.assertEqual(m.clean_row({"id": "1", "organiser_email": "key@example.org", "sensitivity": "normal"}).get("organiser_email"), None)
         m = mutant("(?-i:[A-Z][A-Z0-9]{1,6})", "(?!)")
         self.assertEqual(m.scrub("Code review \u2013 ABC", 140), "")

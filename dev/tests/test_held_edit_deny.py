@@ -24,7 +24,7 @@ from test_tracker import ABC, Vault  # noqa: E402
 
 WRITERS = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
 CHAT_WRITERS = ["Edit", "Write"]     # F2: a known built-in a run's --tools doesn't name (NotebookEdit, MultiEdit) is denied by name
-HELD = ["prep", "generate", "check", "load"]
+HELD = ["prep", "generate"]      # #365 M2: check and load are narrowed to the calendar search and read_resource (no files)
 TARGETS = [f"{ABC}/notes.md", f"{ABC}/minutes/2026-10-01 Steering.docx", "system/config/settings.json",
            "system/staging/proposed-x.json", "system/staging/drafts/x.json", "inbox/forward.txt"]
 
@@ -101,7 +101,7 @@ class HeldRuns(unittest.TestCase):
         return re.search(r"--mode (\S+)", cmd).group(1)
 
     def test_held_kinds_deny_every_file_writer_everywhere(self):
-        for kind in HELD:
+        for kind in HELD + ["check", "load"]:
             self.assertEqual(self.mode(kind), "held", kind)
             deny = self.deny(kind)
             for t in WRITERS:

@@ -1,0 +1,68 @@
+"""#365 review M2 and L: a transcript check or load may use only the calendar search and read_resource (and ToolSearch), and the job's
+tool results are logged as counts. Needs dev/proposals/365/live_server-365.diff and live_server-365-tools.diff applied: skipped until
+they land. Run: python3 dev/tests/test_job_tools_365.py"""
+import sys
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "system" / "scripts"))
+import live_server  # noqa: E402
+
+SOURCE = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
+LANDED = "KIND_PROMPTS['check']" in SOURCE.replace('"', "'") and "KIND_TOOLS['check']" in SOURCE.replace('"', "'")
+M365 = "mcp__claude_ai_Microsoft_365__"
+
+
+@unittest.skipUnless(LANDED, "live_server-365.diff and live_server-365-tools.diff have not landed")
+class JobTools(unittest.TestCase):
+    def test_each_job_kind_has_exactly_the_two_reading_calls(self):
+        for kind in ("check", "load"):
+            with self.subTest(kind):
+                tools, deny, guarded = live_server.run_policy(kind, None)
+                self.assertEqual(sorted(tools), sorted([M365 + "outlook_calendar_search", M365 + "read_resource"]))
+                self.assertFalse(guarded)
+                for gone in ("Bash", "Read", "Skill", M365 + "outlook_email_search"):
+                    self.assertNotIn(gone, tools)
+
+    def test_each_job_kind_has_only_toolsearch_as_a_builtin(self):
+        for kind in ("check", "load"):
+            self.assertEqual(live_server.run_args(kind), ["--tools", "ToolSearch"])
+
+    def test_the_run_is_still_held(self):
+        for kind in ("check", "load"):
+            tools, _, guarded = live_server.run_policy(kind, None)
+            self.assertTrue(live_server.held_run(kind, None, None, False, tools))
+
+
+@unittest.skipUnless(LANDED, "live_server-365.diff has not landed")
+class JobObserveLogs(unittest.TestCase):
+    def test_a_result_is_logged_as_counts_and_still_reaches_the_job(self):
+        seen, lines = [], []
+
+        class Log:
+            @staticmethod
+            def info(area, msg):
+                lines.append((area, msg))
+
+        class Job:
+            def observe(self, *a):
+                seen.append(a)
+
+        class Stub:
+            id, kind, job = "r-1", "load", Job()
+            tooluse = {"t1": (M365 + "read_resource", {"uri": "calendar:///events/x"})}
+
+        old = getattr(live_server, "debuglog", None)
+        live_server.debuglog = Log
+        try:
+            live_server.Run.job_observe(Stub(), {"tool_use_id": "t1", "content": "secret words", "is_error": True})
+        finally:
+            live_server.debuglog = old
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(lines, [("run", "r-1 load result: read_resource error, 12 characters")])
+        self.assertNotIn("secret", lines[0][1])
+
+
+if __name__ == "__main__":
+    unittest.main()

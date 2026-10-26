@@ -35,10 +35,14 @@ RAW_MAX, LINE_MAX = 60000, 2000                  # how much of a body or a line 
 # ---- join links: the providers creaite knows, short-link services, and any URL that carries a key ----
 HOSTS = re.compile(
     r"(?<![\w-])(?:teams\.microsoft\.com|teams\.live\.com|teams\.cloud\.microsoft|zoom\.us|zoom\.com|zoomgov\.com|"
-    r"zoom\.com\.cn|webex\.com|meet\.google\.com|goto\.com|gotomeeting\.com|gotowebinar\.com|gotomeet\.me|bluejeans\.com|"
+    r"zoom\.com\.cn|zoomcrc\.com|plcm\.vc|pexip\.(?:com|me|io|app|net)|"
+    r"webex\.com|meet\.google\.com|goto\.com|gotomeeting\.com|gotowebinar\.com|gotomeet\.me|bluejeans\.com|"
     r"chime\.aws|amazonchime\.com|whereby\.com|join\.me|meet\.jit\.si|8x8\.vc|ringcentral\.com|skype\.com|gather\.town|"
     r"livestorm\.co|aka\.ms|bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|is\.gd|rb\.gy|cutt\.ly|tiny\.cc|lnkd\.in|buff\.ly|"
     r"rebrand\.ly|shorturl\.at|s\.id|v\.gd|t\.ly|bl\.ink)(?![\w-])", re.I)
+# 2.6.8 H3: a SIP / H.323 dial address, "85512345678@zoomcrc.com" or "85512345678..482915@zoomcrc.com": eight or more digits
+# (the meeting ID, then its passcode after "..") before the @, whatever the host, with or without mailto: or angle brackets.
+SIPADDR = re.compile(r"(?<![\w.-])\d{8,}(?:\.\.\d+)?@[\w-]", re.I)
 SCHEME = re.compile(r"(?<![\w-])(?:tel|sip|sips|callto|msteams|zoommtg|zoomus|webex|webexteams|skype|facetime|gotomeeting):", re.I)
 URL = re.compile(r"(?:\b[a-z][a-z0-9+.-]{1,12}://|\bwww\.)\S+|\b(?:[a-z0-9-]{1,63}\.){1,8}[a-z]{2,24}(?::\d+)?/\S*", re.I)
 KEYED = re.compile(r"[?&;#/](?:pwd|passcode|passwd|pass|password|pin|tk|token|key|secret|sig|signature|auth|code|access_token|otp|"
@@ -181,7 +185,10 @@ _QDASH = r"[-\u2013\u2014]"
 _QPHRASE = rf"(?:\s*{_QDASH}\s+|\s*\|\s*|\s+){_QWORD}(?:\s+(?:{_QDASH}\s+)?{_QWORD}){{0,4}}"      # "is - Zoom", "- Teams"
 _QUAL = rf"(?:{_QBRACKET}(?:{_QPHRASE})?(?:{_QBRACKET})?|{_QPHRASE}(?:{_QBRACKET})?)"
 # "Password reset": a finished soft phrase, not a qualifier
-_SOFT_RUN = rf"(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))+[\s.,;!?*_~`]*$"
+# It must START with a listed word that is not a function word (for, of, to ...): "Passcode for the call" is a hard label with
+# a qualifier made of listed words, not a soft phrase (2.6.8 H1).
+_SOFT_FIRST = "|".join(sorted(BARE_LISTED - set(BARE_FUNCTION)))
+_SOFT_RUN = (rf"\s+(?:{_SOFT_FIRST})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*[\s.,;!?*_~`]*$")
 QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_QBARE})(?!\w)(?!{_SOFT_RUN}){_QUAL}(?:{_ALONE_TAIL})?{_QUIET}$"
 _ALONE_PLAIN = (rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
                 rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
@@ -302,7 +309,7 @@ def _views(text):
 
 def _secret_in(s):
     """Whether one view of a text carries a join link, a key or a dial-in number."""
-    return bool(HOSTS.search(s) or SCHEME.search(s) or LABEL.search(s) or DIAL.search(s)
+    return bool(HOSTS.search(s) or SCHEME.search(s) or SIPADDR.search(s) or LABEL.search(s) or DIAL.search(s)
                 or any(_bad_url(m.group()) for m in URL.finditer(s)))
 
 
@@ -775,7 +782,7 @@ def safe_address(addr):
     secret.santa@: a name that looks like a label is not a key) at a domain that is not a join host; else the label tests decide."""
     a = str(addr).strip()
     if _PLAIN_ADDRESS.fullmatch(a):
-        return not (HOSTS.search(a) or SCHEME.search(a))
+        return not (HOSTS.search(a) or SCHEME.search(a) or SIPADDR.search(a))
     return not flagged(a)
 
 
@@ -815,7 +822,8 @@ def clean_row(row):
     read again (fails closed), the title, place and organiser scrubbed, the body cleaned of join links and keys, and names
     that carry them dropped. Only the keys in ROW_KEYS survive (a description, joinUrl, location or anything else a foreign or
     older file holds is dropped, not copied). A cleaned row cleans to itself."""
-    sens = sensitivity({"sensitivity": row.get("sensitivity"), "private": row.get("private")})
+    sens = sensitivity({"sensitivity": row.get("sensitivity"), "private": row.get("private"),
+                       "confidential": row.get("confidential")})      # the flag alone is confidential too (fails closed)
     private = sens == "private"
     out = _row_head(row, sens, private)
     if sens == "confidential":
