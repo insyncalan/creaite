@@ -82,7 +82,7 @@ class SweepTests(unittest.TestCase):
         day = cal["days"]["2026-10-06"]
         self.assertEqual([e["title"] for e in day], ["Office closed", "ABC steering"])        # all-day first; private dropped (BL-97)
         self.assertEqual(set(day[1]), {"start", "end", "title", "where", "all_day", "organiser", "teams", "private",
-                                       "sensitivity", "body", "attendees", "clean"})   # S4 adds the stamp; BL-42 adds teams, private; BL-98 the invite
+                                       "sensitivity", "body", "attendees", "clean", "clean_v"})   # S4 adds the stamp; BL-42 adds teams, private; BL-98 the invite
 
     def test_lock(self):
         self.assertIn("Locked", self.sweep("2026-10-05 08:00", "lock").stdout)
