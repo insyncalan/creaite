@@ -1200,11 +1200,12 @@ class GatewayProps(unittest.TestCase):
             for p in G.purpose_names():
                 fields, limit = G.PURPOSES[p]
                 out = G.read(p, self.path)["days"]["2026-10-12"][0]
-                self.assertLessEqual(set(out), set(fields) | {"body"}, p)
+                self.assertLessEqual(set(out), {"attendees" if f == "attendees_addr" else f for f in fields} | {"body"}, p)
+                addr = "attendees_addr" in fields and G._sens(r) == "normal"          # emailfix: only these purposes carry an address
                 if not limit:
                     self.assertNotIn("body", out, p)
                 for a in out.get("attendees", []):
-                    self.assertLessEqual(set(a), {"name", "type", "response"})
+                    self.assertLessEqual(set(a), {"name", "type", "response"} | ({"email"} if addr else set()))
                 if p == "meta":
                     self.assertLessEqual(set(out), {"id"})
                 if G._sens(r) != "normal":

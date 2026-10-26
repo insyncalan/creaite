@@ -37,3 +37,35 @@ Rows come back with the same keys as before, minus what the purpose does not all
 3. Add the plan's grep test: no file in `system/scripts` other than `calendar_gateway.py`, the sweep writer lines (13, 14, 16) and the `live_server.py` stat lines reads `paths.CALENDAR` content or `calendar.json`.
 4. `test_calendar_readers_purpose.py`: for each reader, `day` and `meta` rows have no `body`; `prep_*` and `agenda` bodies are at most 1,500 characters; `shape` at most 600; the Today and Intake output is unchanged for an unstamped calendar of normal rows with no body.
 5. Not in scope here: `invite_clean.read_calendar` keeps working until S5.
+
+## Purpose table and reader audit (emailfix, 26-10-2026)
+
+Found by `test_drafts_email.py` (first failing commit e633e5fd, drafts migrated): the `day` view dropped attendee addresses, which the 2.6.8 read kept. Three readers used them. Fix: the field `attendees_addr` (output key `attendees`, with `email`) and the purpose `intake`.
+
+| Purpose | Fields returned | Body |
+|---|---|---|
+| meta | id | none |
+| day | HEAD + where, teams, organiser, recurrence, attendees (name, type, response) | none |
+| intake | day, attendees with email | none |
+| prep_rank | day + attachments | 1,500 |
+| prep_panel | day, attendees with email, attachments, organiser_email | 1,500 |
+| prep_page | day + attachments | 1,500 |
+| agenda | day, attendees with email | 1,500 |
+| shape | HEAD | 600 |
+
+A private or confidential event returns HEAD only in every purpose (no attendee, no address).
+
+| Reader (file:function) | Purpose | Fields it reads | Result |
+|---|---|---|---|
+| build_dashboard.calendar | day | title, start, end, id, private, sensitivity, where, teams, organiser, recurrence (body, attendees, attachments, organiser_email are popped) | OK |
+| build_dashboard.saved_calendar_days (prep entries, Week ahead, capture) | prep_panel | body, attachments, organiser, recurrence, attendees name/type/response, attendee email (prep_match_ev, meeting_answer domain match, #328) | was LOST (email), fixed |
+| build_dashboard.inbox_meetings | intake | where/teams/organiser/private/sensitivity/id, attendee email (meeting_answer, offer_signal) | was LOST (email), fixed |
+| build_dashboard.calendar_days (fetched) | meta | fetched | OK |
+| close_day.Lookup.meeting | day | id, private, title | OK |
+| transcripts.calendar_rows | day | id, all_day, end, start, teams, private, title | OK |
+| drafts.calendar_event (followup_facts) | agenda | sensitivity, attendees name and email, id, day, start, title | was LOST (email), fixed |
+| drafts._meeting_attendees | day | sensitivity, title, attendee name | OK |
+| prep_page._event | prep_page | title, start, end, where | OK |
+| calendar_refresh.outcome, sweep.calendar_fetch_from / calendar_span / saved_meetings_from | meta | fetched, to, days (counts) | OK |
+
+Guarded by `dev/tests/test_calendar_readers_golden.py`: each reader's output on a fixture calendar equals the 2.6.8 output stored in `dev/tests/fixtures/readers_golden_268.json`, except the differences listed in its ALLOWED table.
