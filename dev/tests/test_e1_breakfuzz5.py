@@ -46,5 +46,23 @@ class BreakInsideLabel(unittest.TestCase):
             self.assertEqual(D(t), "", t)
 
 
+class ValueBelowLabel(unittest.TestCase):
+    """Cap's reproducer: a 3-digit value two (or more) lines below a label whose lines the scrub removed."""
+
+    def test_reproducers(self):
+        for mid in (["Vendors"], ["Vendors", "Teams"], ["Welcome", "Teams", "Agenda"]):
+            for t in ("<li>Conference ID:<br>%s<br>824</li>" % "<br>".join(mid), "<p>Conference ID:</p>" + "".join("<p>%s</p>" % m for m in mid) + "<p>824</p>",
+                      "<td>Conference ID:<br>%s<br>824</td>" % "<br>".join(mid), "Conference ID:\n%s\n824" % "\n".join(mid)):
+                self.assertNotIn("824", D(t), t)
+                self.assertEqual(D(D(t)), D(t), t)
+
+    def test_innocent_numbers_stay(self):
+        self.assertEqual(D("Agenda\nBudget\n824\nRoom 204"), "Agenda\nBudget\n824\nRoom 204")
+
+    def test_mutant_short_flag(self):
+        self.assertFalse(F._orphan_lines(["824"]))
+        self.assertTrue(F._orphan_lines(["824"], False, True))
+
+
 if __name__ == "__main__":
     unittest.main()

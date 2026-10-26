@@ -503,7 +503,10 @@ def _spaced_value(core):
             and not any(_YEAR.fullmatch(t) for t in core))
 
 
-def _orphan_lines(strs, allow_year=False):
+_SHORT_VALUE = re.compile(r"\d{3}")
+
+
+def _orphan_lines(strs, allow_year=False, short=False):
     """Is this group of 1 to 2 lines VALUE TOKENS ONLY: each token digits or a short letter-digit token, after at most two label words
     (never an ordinary word); with a 4-8 digit number, a letter-digit token or a spaced run (984 522)? A sentence is not one.
     A bare year alone is a value only with allow_year (a label line before it)."""
@@ -515,7 +518,7 @@ def _orphan_lines(strs, allow_year=False):
         return False
     vals = [t for t in core if _orphan_value(t)]
     if not vals:
-        return _spaced_value(core)
+        return _spaced_value(core) or (short and len(core) == 1 and _SHORT_VALUE.fullmatch(core[0]) is not None)
     return allow_year or not all(_YEAR.fullmatch(t) for t in core)
 
 
@@ -537,7 +540,7 @@ class _Chain:
 
     def reset(self):
         """Back to the start."""
-        self.armed, self.taken, self.divs, self.label = False, 0, 0, None
+        self.armed, self.taken, self.divs, self.label, self.short = False, 0, 0, None, False
 
     def divider(self):
         """A divider line: a second one in a row ends the chain."""
@@ -1039,7 +1042,7 @@ def _take_orphans(skels, kinds, at, st, k):
     """At original line k (kept, text), how many lines (0, 1 or 2) form a value-only group that goes."""
     if k + 1 < len(kinds) and kinds[k + 1] == _TEXT and k + 1 in at and _orphan_lines([skels[k], skels[k + 1]], st.label is not None):
         return 2
-    return 1 if _orphan_lines([skels[k]], st.label is not None) else 0
+    return 1 if _orphan_lines([skels[k]], st.label is not None, st.short) else 0
 
 
 def _without_orphans(raw, kept):
@@ -1063,8 +1066,10 @@ def _without_orphans(raw, kept):
         elif kinds[k] == _TEXT:
             st.divs = 0
             if k not in at:                      # a line that did not survive
+                bare = st.short or _label_only(skels[k])     # a removed bare label: a 3-digit value after it (and fill) is its value
                 st.reset()
                 st.armed = True
+                st.short = bare
             elif st.open() and _label_only(skels[k]):
                 st.label = k                     # a bare label: the value after it goes with it, and may be a year
             else:
