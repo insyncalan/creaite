@@ -1,0 +1,91 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -2819,6 +2819,7 @@ class Run:
+         self.resumed = resumed                                  # #327 B: the usage line says which (counts only)
+         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
+         self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
++        self.fetch = self._fetch_for(kind, sweep)               # #250: a sweep run's transcript fetch, only when the setting is on
+         self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
+         self.events, self.cond, self.watchers = [], threading.Condition(), 0
+         self.pending, self.said, self.steps = {}, [], []
+@@ -2922,6 +2923,7 @@ class Run:
+             self._end_answered(final)
+         if self.job and not self.stop:                     # the status and the files are written here, from the tool results
+             self._finish_job()
++        self._fetch_finish(proc, final)                    # #250: settle the fetch, in its own try; _done() always follows
+         self._done()
+ 
+     def _on_assistant(self, ev):
+@@ -2987,6 +2989,7 @@ class Run:
+         return False
+ 
+     def _on_tool_result(self, part):
++        self._fetch_observe(part)                                       # #250: the fetch sees the result (queues, writes nothing)
+         if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
+             self.job_observe(part)   # BL-228 (sprint-debt-safety)
+         # ===== BL-248 (sprint-portability): a creaite script that failed before it started is creaite's fault =====
+@@ -3188,6 +3191,7 @@ class Run:
+         """Emit the closure, keep the run's plain lines in the day's history chat and the run record in the debug log."""
+         c = self._closing(failed)
+         c = {k: v for k, v in c.items() if k in ("ok", "line", "href", "link", "stopped")}
++        c = self._with_fetch_line(c)                       # #250: a sweep's transcript count joins the closure line
+         if not str(c.get("href") or "#").startswith("#"):           # a link is only ever a place in the dashboard
+             c.pop("href", None)
+             c.pop("link", None)
+@@ -3224,6 +3228,55 @@ class Run:
+         EVENTS.poke()                                     # BL-253 (sprint-live-updates): what the run wrote shows at once
+     # ===== end BL-229 (read) =====
+ 
++    # ===== #250 (v2.6.10): transcripts fetched as they appear (sweep.fetch_transcripts, off unless exactly true) =====
++    def _fetch_for(self, kind, sweep):
++        """The run's SweepFetch: only a sweep run (the catch-up and Close the day's sweep, kind "sweep"; a typed sweep) and only while
++        the setting is on; else None. It adds no tool, no folder and no rule: it sees the results of tools the run already has."""
++        if not (sweep or kind == "sweep") or not vault_transcripts.fetch_on():
++            return None
++        try:
++            return vault_transcripts.SweepFetch()
++        except Exception as e:  # noqa: BLE001  the sweep runs without the fetch
++            swallowed("fetch", e)
++            return None
++
++    def _fetch_observe(self, part):
++        """Hand the fetch a read_resource result (its text, as the server received it); nothing else. Logged by name if it raises."""
++        fetch = getattr(self, "fetch", None)
++        if fetch is None:
++            return
++        try:
++            name, given = self.tooluse.get(part.get("tool_use_id"), ("", {}))
++            if name == vault_transcripts.FETCH_TOOLS[1]:
++                fetch.observe(name, given, vault_transcripts.result_text(part.get("content")), bool(part.get("is_error")))
++        except Exception as e:  # noqa: BLE001  never let the reader die
++            swallowed("fetch observe", e)
++
++    def _fetch_finish(self, proc, final):
++        """After proc.wait(), before _done(): settle the fetch. Only a run that ended with its answer (not stopped, not timed out,
++        exit code 0, not failed) writes; any other ending leaves every read for Process. Any fault is logged by name; _done() runs."""
++        fetch = getattr(self, "fetch", None)
++        if fetch is None:
++            return
++        try:
++            ended_well = not (self.stop or getattr(self, "timed_out", False) or getattr(self, "failed", False))
++            answered = ended_well and proc.returncode == 0
++            self.fetch_line = vault_transcripts.fetch_text(fetch.finish(answered))
++            if self.fetch_line and not self.plain:         # a typed sweep has no closure: the count is a line of the chat
++                self.said.append(self.fetch_line)
++                self.emit("text", text=self.fetch_line)
++                self.record()
++        except Exception as e:  # noqa: BLE001
++            swallowed("fetch finish", e)
++
++    def _with_fetch_line(self, c):
++        """The closure with the fetch's count after its own words (counts only: no title, name or reason)."""
++        line = getattr(self, "fetch_line", "")
++        if not line or not c.get("line"):
++            return c
++        return {**c, "line": f"{str(c['line']).rstrip('. ')}. {line}."}
++    # ===== end #250 =====
++
+     # ===== BL-228 (sprint-debt-safety) =====
+     def job_observe(self, part):
+         """A transcript job keeps what a tool returned. C: narrowed; anything else is logged, the reader goes on."""

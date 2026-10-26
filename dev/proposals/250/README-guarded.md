@@ -1,0 +1,47 @@
+# #250 guarded diffs G3 and G4 (2.6.10)
+
+Patch files only; nothing guarded is edited in a commit. Chain: `dev/proposals/GUARDED-2.6.10.chain` (not pinned, no marked commit). Order: G1, G2, G3, G4.
+Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on branch `v269-g12`.
+
+| | File | Patch | sha256 |
+|---|---|---|---|
+| G3 | `system/scripts/live_server.py` | `dev/proposals/250/live_server-250.diff` | see below |
+| G4 | `system/creaite-rules.md` | `dev/proposals/250/creaite-rules-250.diff` | see below |
+
+(Hashes: `shasum -a 256` of the two files; the report that carried this README lists them.)
+
+## G3: what it does (all inside `class Run`, one block `# ===== #250 ... end #250 =====`, plus four one-line hooks)
+
+- `_start`: `self.fetch = self._fetch_for(kind, sweep)`. `_fetch_for` returns `transcripts.SweepFetch()` for a sweep run (`kind == "sweep"`, the catch-up and
+  Close the day, or a typed sweep) when `transcripts.fetch_on()` (setting exactly true); else `None`. A construction fault gives `None` (logged by name).
+- `_on_tool_result`: `self._fetch_observe(part)`. The helper hands `observe(name, input, text, is_error)` only the `read_resource` results (the tool name is
+  `transcripts.FETCH_TOOLS[1]`, exact), the text being the server's own copy; a fault is logged by name and the reader goes on.
+- `read()`: after the closure steps and `_finish_job`, before `_done()`: `self._fetch_finish(proc, final)`. `answered` = not stopped, not timed out, not failed,
+  exit code 0. `finish(answered)` runs in try/except; its counts go through `fetch_text`. A typed sweep (not "plain") shows the line as a chat text; a run
+  creaite started shows it in its closure: `_close` calls `_with_fetch_line` ("<the run's own line>. 2 transcripts fetched, ..."). `_done()` always runs.
+- No new tool, no `--add-dir`, no allow rule, `KIND_TOOLS` unchanged, no `sweep.py done`, no `sweep-fetched.json`; counts only in the line.
+- Complexity: `_on_tool_result` gains no branch; `check.py` clean (the long-line count stays at the limit).
+
+## G4: the rules bullet
+
+One bullet, "Transcripts fetched by a sweep (#250)", before the Assistant bullet: off by default, the server's write into `inbox/`, nothing until the run
+ended with its answer, a confidential meeting is not fetched (both the saved calendar and the live event decide), the known gap (event not in the saved
+calendar), no tracker or staging writes, counts-only closure line, no new tool/folder/rule. 1,100 bytes.
+It needed an ordinary test change: `dev/tests/test_rules_retained_338.py` now knows the 250 bullet (stripped before the 338 state is worked out, put back on
+both sides, and left out of the half-size check, whose margin is a few bytes).
+
+## Apply order (git apply --check and apply, in a throwaway worktree of this branch, clean in every case)
+
+G3 alone on main; G1, G2, G3; G3, G1, G2; G1, G3, G2; G2, G3, G1. G3's hunks do not touch G1's or G2's. G4 applies on main alone.
+G1 on its own makes `test_run_tools_explicit.test_tool_less_kinds_see_no_claude_md_and_no_memory` fail (it pins the old cwd); that is G1's test change
+(`tests-followup`), not G3's.
+
+## How verified
+
+Throwaway worktree with G1+G2+G3+G4 applied: `py_compile`; `dev/tools/check.py` OK; `test_live_fetch_250` (21), `test_transcripts`, `test_fetch_transcripts`
+(+ hostile), `test_fetch_settle`, `test_transcript_hold`, `test_job_prompts_365`, `test_job_tools_365`, `test_fresh_ask_327`, `test_lighter_runs_339`,
+`test_held_edit_deny`, `test_guard_pinned`, `test_run_read_pinned`, `test_live_*`, `test_guarded_chain`, `test_rules_pointers_338`,
+`test_rules_retained_338`, `test_intake_review_rules`, `test_no_real_names`: all pass.
+Mutants (a mutated copy of the patched file, each run against `test_live_fetch_250`; all 16 fail the test): fetch not assigned; non-sweep kinds get a fetch;
+setting ignored; observer not called; observer gets every tool; finish always `True`; timed-out, stop, exit-code, failed flag each not considered; finish
+outside the try; finish not called; finish after `_done()`; closure line not joined; typed sweep shows no line; counts dropped.
