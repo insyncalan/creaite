@@ -1,5 +1,5 @@
 # The guarded chain for 2.6.10. NOT pinned: dev/tests/guarded_chain.py does not know this chain, and it has no marked commit yet. A pin is added only on Alan's say. One diff per line, in landing order.
-# Base: the 2.6.9 candidate (v269-release, bd3322f3), whose live_server.py and backup.py already carry the 2.6.9 chain (G1 #382, G2 #371, bundle). git apply --check is clean for the four #385 diffs on that base, alone and in all 24 orders.
+# Base: the 2.6.9 candidate (v269-release 0b637e926, whose guarded files are those of bd3322f3), whose live_server.py and backup.py already carry the 2.6.9 chain (G1 #382, G2 #371, bundle). git apply --check is clean for the four #385 diffs on that base, alone and in all 24 orders.
 # Approved by Alan on 27-10-2026 ("AM: approve the #385 diffs", recorded on #385). The bytes are frozen: any change needs Alan again.
 # All four use phase 2's paths.py API (project_roots, _mapping, archive_slot, parts_below_base, in_mapped_notes, tool_patterns, project_paths_problem, project_mapping_problem, _loc_project_roots), which the ordinary commits carry.
 #
