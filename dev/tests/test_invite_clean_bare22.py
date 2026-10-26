@@ -172,7 +172,7 @@ class WideNet(unittest.TestCase):
         self.assertNotIn("IT will issue on day one", m.invite_text("Password for new starters\nIT will issue on day one\nAOB"))
 
     def test_mutant_no_wide_phrase(self):
-        m = mutant('_QPHRASE = rf"', '_QPHRASE = rf"(?!)')
+        m = mutant('_QPHRASE = (rf"', '_QPHRASE = (rf"(?!)')
         self.assertIn("4417", m.invite_text("Passcode required:\n4417"))
 
     def test_mutant_soft_phrases_qualified(self):
