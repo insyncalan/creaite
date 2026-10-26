@@ -1,8 +1,8 @@
 # The guarded chain for 2.6.10 (#250, fetch transcripts as they appear). NOT pinned: dev/tests/guarded_chain.py does not know this chain, and it has no marked commit yet. A pin is added only on Alan's say. One diff per line, in landing order.
-# Base: origin/main (a62fbb0a). G1 and G2 are the 2.6.9 extra diffs (revision 2 from branch v269-g12 f827c94a; copied here with their READMEs and tests so the stack is verifiable; also in GUARDED-2.6.9-extra.chain). G3 applies after G1 and G2, and also alone on main, and in any order with them (git apply --check clean).
-# G1 #382: the #365 follow-up rebased (revision 2, v269-g12 f827c94a, sha256 362b43c7be0ef516e348f135b5bb48f2c70eafa759ab731562656d115ded9f33)
+# Base: origin/main (a62fbb0a). G1 and G2 are the 2.6.9 extra diffs (G1 revision 3 and G2 revision 2 from branch v269-g12 14ea96b9; copied here with their READMEs and tests so the stack is verifiable; also in GUARDED-2.6.9-extra.chain). G3 applies after G1 and G2, and also alone on main, and in any order with them (git apply --check clean).
+# G1 #382: the #365 follow-up rebased (revision 3, v269-g12 14ea96b9, sha256 be27770da2b4dfcc95d66e7c1d605820f596525bbf2af78142c45b976273c9e3)
 dev/proposals/382/live_server-382.diff
-# G2 #371: the run's startup MCP status and Microsoft 365 tool count in the debug log, counts only (revision 2, v269-g12 f827c94a, sha256 3145004945ec7ae613629b42ad54ed50ad488a64ed70d54ba5037e324fbb37e2)
+# G2 #371: the run's startup MCP status and Microsoft 365 tool count in the debug log, counts only (revision 2, unchanged in v269-g12 14ea96b9, sha256 3145004945ec7ae613629b42ad54ed50ad488a64ed70d54ba5037e324fbb37e2)
 dev/proposals/371/live_server-371.diff
 # G3 #250 (sha256 fb93369c49477343268e90f87f00847e57ad31aeb5718e61fe2a3e2b004f5310): a sweep run gets a transcript fetch when sweep.fetch_transcripts is on; settled once at the end of an answered run; the count joins the closure line
 dev/proposals/250/live_server-250.diff
