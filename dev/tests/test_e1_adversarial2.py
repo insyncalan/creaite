@@ -584,7 +584,7 @@ GEN_N = 400     # bodies per generator in the unit tests (the --report run uses 
 # name: (max C leaks, max C lost keepers, max non-idempotent).  Old scrub for comparison: leaks 479/28/15/0/8/0/0/0/0/39, lost 0 everywhere
 # except encodings (480, the same).
 RATCHET = {
-    "orphans": (4, 72, 0), "single_anchor": (0, 75, 0), "provider_one_line": (0, 0, 0), "encodings": (0, 480, 0),
+    "orphans": (4, 72, 0), "single_anchor": (0, 75, 0), "provider_one_line": (0, 0, 0), "encodings": (0, 0, 0),
     "label_markup": (3, 0, 0), "safelinks": (0, 0, 0), "repeated": (0, 0, 0), "numbered_long": (0, 615, 0), "tz_and_dial": (0, 0, 0),
     "provider_unknown": (13, 4, 0),
 }
@@ -812,7 +812,6 @@ class MoreOrphanFindings(unittest.TestCase):
 
 
 class PlainEncodingFindings(unittest.TestCase):
-    @unittest.expectedFailure
     def test_E1_unicode_line_separators_in_plain_text_lose_the_neighbours(self):
         """U+2028 / U+2029 / NEL are not line breaks to the plain-text path (the HTML path splits them), so an agenda joined with them is
         one line, and a Passcode in it takes the lot. Safe (nothing leaks), a loss for ordinary text. (LOW.)"""

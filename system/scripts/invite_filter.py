@@ -1036,13 +1036,23 @@ def _take_group(skels, kinds, at, st, k, drop):
     return n
 
 
+def _line_breaks(text):
+    """E1 pass 2, finding 8: CR, VT, FF, NEL, U+2028 and U+2029 are line breaks (invite_blocks.NEWLINES, which the HTML path already
+    uses), so a plain-text body that uses them is split into lines before the scrub. The properties of D (idempotence, every output line a
+    line of the body) are stated against the body as normalised here."""
+    mod = _blocks_module()
+    for nl in (mod.NEWLINES if mod is not None else ("\r\n", "\r", "\x0b", "\x0c", "\x85", "\u2028", "\u2029")):
+        text = text.replace(nl, "\n")
+    return text
+
+
 def _raw_first(text):
     """Composition D: the scrub on the raw body, the block boundaries it removed put back for the anchor layer, the orphan and sentence
     rules, the extended label pass (repeated until nothing changes, so the result is stable), then the CAP."""
     scrub = _scrub_module()
     if scrub is None:
         return ""
-    raw = text[:BODY_MAX * 5]
+    raw = _line_breaks(text[:BODY_MAX * 5])
     aug, flags = _with_boundaries(raw, _fit([x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]))
     kept = _tidy_blanks([aug[i] for i in keep_indices(aug, second_layer=False, extras=True) if not flags[i]])
     kept = _tidy_blanks(_without_orphans(raw, kept))
