@@ -1,0 +1,138 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index dcd4b703..e488d028 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -1679,7 +1679,7 @@ class Handler(BaseHTTPRequestHandler):
+                 self.send(409 if busy else 400, {"ok": False, "message": said, "busy": busy})
+             return run
+         return Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images,
+-                   sweep=panel_sweep(message, images, req.get("confirmed")), fresh=fresh_session(req))
++                   sweep=panel_sweep(message, images, req.get("confirmed")), fresh=fresh_session(req), fetch_as="typed")
+ 
+     def here(self, req):
+         """POST /api/here: the open page's "still here" every 10 seconds; keeps a launcher-started server running (BL-86)."""
+@@ -2412,7 +2412,7 @@ def queued_run(item, images, session, chat):
+             raise CalendarRefused(said)
+         return run
+     return Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
+-               sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
++               sweep=panel_sweep(item["text"], images), fresh=True, fetch_as="typed")           # BL-309: a queued sweep too
+ 
+ 
+ PANEL_SWEEP_PROMPT = (
+@@ -2783,7 +2783,7 @@ class Run:
+             raise
+ 
+     def _start(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
+-               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
++               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False, fetch_as=None):
+         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
+         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
+         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+@@ -2812,6 +2812,7 @@ class Run:
+         self.resumed = resumed                                  # #327 B: the usage line says which (counts only)
+         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
+         self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
++        self.fetch = self._fetch_for(kind, sweep, fetch_as)     # #250: an interactive sweep's transcript fetch, only when the setting is on
+         self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
+         self.events, self.cond, self.watchers = [], threading.Condition(), 0
+         self.pending, self.said, self.steps = {}, [], []
+@@ -2913,6 +2914,7 @@ class Run:
+             self._end_answered(final)
+         if self.job and not self.stop:                     # the status and the files are written here, from the tool results
+             self._finish_job()
++        self._fetch_finish(proc, final)                    # #250: settle the fetch, in its own try; _done() always follows
+         self._done()
+ 
+     def _on_assistant(self, ev):
+@@ -2978,6 +2980,7 @@ class Run:
+         return False
+ 
+     def _on_tool_result(self, part):
++        self._fetch_observe(part)                                       # #250: the fetch sees the result (queues, writes nothing)
+         if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
+             self.job_observe(part)   # BL-228 (sprint-debt-safety)
+         # ===== BL-248 (sprint-portability): a creaite script that failed before it started is creaite's fault =====
+@@ -3179,6 +3182,7 @@ class Run:
+         """Emit the closure, keep the run's plain lines in the day's history chat and the run record in the debug log."""
+         c = self._closing(failed)
+         c = {k: v for k, v in c.items() if k in ("ok", "line", "href", "link", "stopped")}
++        c = self._with_fetch_line(c)                       # #250: a sweep's transcript count joins the closure line
+         if not str(c.get("href") or "#").startswith("#"):           # a link is only ever a place in the dashboard
+             c.pop("href", None)
+             c.pop("link", None)
+@@ -3215,6 +3219,65 @@ class Run:
+         EVENTS.poke()                                     # BL-253 (sprint-live-updates): what the run wrote shows at once
+     # ===== end BL-229 (read) =====
+ 
++    # ===== #250 (v2.6.10): transcripts fetched as they appear (sweep.fetch_transcripts, off unless exactly true) =====
++    FETCH_RUNS = ("typed", "catchup")     # Alan, 27-10-2026 ("fetch B"): the interactive sweeps only; unattended runs never fetch
++    def _fetch_for(self, kind, sweep, fetch_as=None):
++        """The run's SweepFetch, only for an interactive sweep Alan named (27-10-2026) and only while the setting is on; else None: a
++        typed sweep (fetch_as "typed", a plain sweep by BL-309) or Close the day's catch-up ("catchup", kind "sweep"). Any other run,
++        a scheduled or a new kind of sweep among them, never fetches. It adds no tool, no folder and no rule: it sees the results of
++        tools the run already has."""
++        named = fetch_as in self.FETCH_RUNS and (sweep is True if fetch_as == "typed" else kind == "sweep")
++        if not named or not vault_transcripts.fetch_on():
++            return None
++        try:
++            return vault_transcripts.SweepFetch()
++        except Exception as e:  # noqa: BLE001  the sweep runs without the fetch
++            swallowed("fetch", e)
++            return None
++
++    def _fetch_observe(self, part):
++        """Hand the fetch a read_resource result (its text, as the server received it); nothing else. Logged by name if it raises."""
++        fetch = getattr(self, "fetch", None)
++        if fetch is None:
++            return
++        try:
++            name, given = self.tooluse.get(part.get("tool_use_id"), ("", {}))
++            if name == vault_transcripts.FETCH_TOOLS[1]:
++                fetch.observe(name, given, vault_transcripts.result_text(part.get("content")), bool(part.get("is_error")))
++        except Exception as e:  # noqa: BLE001  never let the reader die
++            swallowed("fetch observe", e)
++
++    def _fetch_finish(self, proc, final):
++        """After proc.wait(), before _done(): settle the fetch. Only a run that ended with its answer (not stopped, not timed out,
++        exit 0, a non-error result, a final answer: _answered) writes; any other ending leaves every read for Process. A fault is logged."""
++        fetch = getattr(self, "fetch", None)
++        if fetch is None:
++            return
++        try:
++            answered = self._answered(proc, final)
++            self.fetch_line = vault_transcripts.fetch_text(fetch.finish(answered))
++            if self.fetch_line and not self.plain:         # a typed sweep has no closure: the count is a line of the chat
++                self.said.append(self.fetch_line)
++                self.emit("text", text=self.fetch_line)
++                self.record()
++        except Exception as e:  # noqa: BLE001
++            swallowed("fetch finish", e)
++
++    def _answered(self, proc, final):
++        """True only for a run that ended well (not stopped, timed out or failed), exited 0 and sent a result event that is not an
++        error and carries a final answer: an exit 0 with no answer (no result event, is_error, empty text) settles nothing."""
++        ended_well = not (self.stop or getattr(self, "timed_out", False) or getattr(self, "failed", False))
++        result = getattr(self, "usage_result", None)           # the stream's result event, set only by _on_result
++        return bool(ended_well and proc.returncode == 0 and isinstance(result, dict) and not result.get("is_error") and final)
++
++    def _with_fetch_line(self, c):
++        """The closure with the fetch's count after its own words (counts only: no title, name or reason)."""
++        line = getattr(self, "fetch_line", "")
++        if not line or not c.get("line"):
++            return c
++        return {**c, "line": f"{str(c['line']).rstrip('. ')}. {line}."}
++    # ===== end #250 =====
++
+     # ===== BL-228 (sprint-debt-safety) =====
+     def job_observe(self, part):
+         """A transcript job keeps what a tool returned. C: narrowed; anything else is logged, the reader goes on."""
+@@ -7307,7 +7370,7 @@ def start_catchup(now, force=False):
+     """Start cx-sweep as a guarded "sweep" run (START_LOCK held): {status: start, run} or {status: cant, message}."""
+     before = sorted(p.name for p in paths.STAGING.glob("proposed-*.json"))
+     try:
+-        run = Run(f"s-{secrets.token_hex(6)}", "sweep", None, None, None, kind="sweep",
++        run = Run(f"s-{secrets.token_hex(6)}", "sweep", None, None, None, kind="sweep", fetch_as="catchup",
+                   label="Catch-up sweep: mail and Teams since the last sweep",                                          # BL-326
+                   lines={"done": "The catch-up sweep has finished: anything it found is waiting in Review", "href": "#review",
+                          "link": "Review"})
