@@ -925,12 +925,33 @@ class LooksLikeHtml(unittest.TestCase):
             s = "".join(rng.choice(["<", ">", "b", "div", " ", "/", "!--", "a", "<br", "\n"]) for _ in range(rng.randrange(1, 30)))
             self.assertEqual(linear_looks_like_html(s), B.looks_like_html(s), repr(s))
 
+    def test_agrees_with_the_function_before_the_fix(self):
+        """The 2.6.8 / 6ce15ff9 looks_like_html, copied here, and the linear one answer alike on 6,000 random strings and the hand cases."""
+        def old(text):
+            if not text:
+                return False
+            if len(text) > B.MAX_INPUT:
+                text = text[:B.MAX_INPUT]
+            i = text.find("<")
+            while i != -1:
+                if text.startswith("<!--", i) or text[i + 1:i + 9].lower() == "!doctype":
+                    return True
+                if B._tag_at(text, i) and text.find(">", i) != -1:
+                    return True
+                i = text.find("<", i + 1)
+            return False
+        rng = random.Random(11)
+        for s in ["", "a < b", "<b>x</b>", "<b x", "x <br", "<!-- c", "<!DOCTYPE html>", "<p>a</p> <b", "1 < 2 > 1", "<b <i>", "<div", "< b>"]:
+            self.assertEqual(B.looks_like_html(s), old(s), repr(s))
+        for _ in range(6000):
+            s = "".join(rng.choice(["<", ">", "b", "div", " ", "/", "!--", "a", "<br", "\n", "<p", "p>"]) for _ in range(rng.randrange(1, 40)))
+            self.assertEqual(B.looks_like_html(s), old(s), repr(s))
+
     def test_fix_is_linear(self):
         for name, make in QUAD_INPUTS.items():
             sizes, times = growth(linear_looks_like_html, make, sizes=(100000, 200000, 400000, 800000), reps=2)
             self.assertLess(_fit_exponent(sizes, times), 1.3, (name, times))
 
-    @unittest.expectedFailure
     def test_L1_looks_like_html_is_quadratic_on_unclosed_tags(self):
         """Every '<b ' makes text.find('>', i) scan to the end of the text when no '>' follows: O(n * number of '<'). 1,000,000 characters of
         '<b ' take about 3 s (about 5 ms at the gateway's 20,000 cap, so no production hang, but a 1 MB body or any caller of
@@ -940,6 +961,9 @@ class LooksLikeHtml(unittest.TestCase):
         B.looks_like_html(t)
         d = time.perf_counter() - a
         self.assertLess(d, 0.5, d)
+        for name, make in QUAD_INPUTS.items():
+            sizes, times = growth(B.looks_like_html, make, sizes=(100000, 200000, 400000, 800000), reps=2)
+            self.assertLess(_fit_exponent(sizes, times), 1.3, (name, times))
 
 
 # ================================================================================ gateway invariants over the generated bodies

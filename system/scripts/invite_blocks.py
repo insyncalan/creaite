@@ -67,11 +67,12 @@ def looks_like_html(text):
         return False
     if len(text) > MAX_INPUT:
         text = text[:MAX_INPUT]
+    last_gt = text.rfind(">")      # a tag start after the last '>' cannot be closed: linear, not quadratic (E1 pass 2, finding 10)
     i = text.find("<")
     while i != -1:
         if text.startswith("<!--", i) or text[i + 1:i + 9].lower() == "!doctype":
             return True
-        if _tag_at(text, i) and text.find(">", i) != -1:
+        if i < last_gt and _tag_at(text, i):
             return True
         i = text.find("<", i + 1)
     return False
