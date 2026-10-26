@@ -23,9 +23,8 @@ import permissions  # noqa: E402
 import transcripts as T  # noqa: E402
 
 URI = event()["meetingTranscriptUrl"]
-HELP = ("Off: creaite fetches a transcript when you press Process. On: each mail and Teams check fetches the transcripts of meetings that have "
-        "ended, so they are ready when you open Intake. It only reads: no AI runs and nothing is added to your project records. "
-        "Confidential meetings are never fetched.")                      # the brief's wording (181-c2 brief, The setting)
+HELP = ('Off: creaite fetches a transcript when you press Process. On: a mail and Teams check you ask for, and Close the day, also fetch the transcripts of meetings that have ended, so they are ready when you open Intake. The scheduled morning check and the check at the start of a session do not fetch. It only reads: no extra AI run and nothing is added to your project records. Confidential meetings are never fetched.'
+        )   # the brief's wording (181-c2 brief, The setting)
 
 
 def result_at(hm, day=DAY, subject="ABC Steering", contents=(VTT,)):

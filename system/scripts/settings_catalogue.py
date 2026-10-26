@@ -30,9 +30,10 @@ RETIRE_AFTER_DAYS = 30                    # a setting never changed in a log thi
 LOCK = threading.Lock()                   # one settings save at a time from the server
 
 FETCH_HELP = (                                            # #250: the brief's wording, also the setting's reason
-    "Off: creaite fetches a transcript when you press Process. On: each mail and Teams check fetches the "
+    "Off: creaite fetches a transcript when you press Process. On: a mail and Teams check you ask for, and Close the day, also fetch the "
     "transcripts of meetings that have ended, so they are ready when you open Intake. "
-    "It only reads: no AI runs and nothing is added to your project records. "
+    "The scheduled morning check and the check at the start of a session do not fetch. "
+    "It only reads: no extra AI run and nothing is added to your project records. "
     "Confidential meetings are never fetched.")
 ESSENTIALS, ADVANCED, DEVELOPER = "essentials", "advanced", "developer"
 # The Essentials, as rows (BL-320, from the accepted mockup): (section, label, one line, keys). A row may cover several keys
@@ -136,7 +137,7 @@ CATALOGUE = {
     "sweep.sources.calendar": ("Your day", "Check reads: calendar", "The week's meetings, for Today, Intake and prep.",
                                "Today's day view and meeting prep need it."),
     "sweep.fetch_transcripts": ("Checking mail and Teams", "Fetch transcripts as they appear",       # #250
-                                "It only reads: no AI runs and nothing is added to your project records. "
+                                "It only reads: no extra AI run and nothing is added to your project records. "
                                 "Confidential meetings are never fetched.", FETCH_HELP),
     "sweep.show_possible_matches": ("Checking mail and Teams", "Show possible matches",
                                     "Messages that may belong to a project are shown in Review to place, not dropped.",

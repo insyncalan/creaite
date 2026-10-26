@@ -32,7 +32,7 @@ line   = transcripts.fetch_text(counts)        # "2 transcripts fetched, 1 held 
 
 ## What G3 needs from this
 
-1. `Run.fetch = transcripts.SweepFetch()` for a sweep run when `fetch_on()` (kind `sweep`, panel sweep), `None` otherwise.
+1. `Run.fetch = transcripts.SweepFetch()` for a sweep run when `fetch_on()` (kind `sweep`; from rev 3 only a typed sweep or Close the day's catch-up, never the session-start catch-up or the scheduled run), `None` otherwise.
 2. In `_on_tool_result`: `self.fetch.observe(name, input, text, is_error)` in a helper (keeps the complexity limit).
 3. In `Run.read()` after `proc.wait()`: `counts = self.fetch.finish(answered)`; `answered` = the run ended with its answer (not stopped, not timed out,
    returncode 0). Then emit `transcripts.fetch_text(counts)` as the closure line. Then `_done()`, even if `finish` raised.

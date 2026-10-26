@@ -984,8 +984,7 @@ class People248(V260Case):
 # ══ #250 fetch transcripts ═══════════════════════════════════════════════════════════════════════════════════════════════════════
 
 FT = "v26-fetch-transcripts"
-FTH = ("Off: creaite fetches a transcript when you press Process. On: each sweep fetches the transcripts of meetings that have ended, so they "
-       "are ready when you open Intake. It only reads: no AI runs and nothing is written to the tracker. Confidential meetings are never fetched.")
+FTH = ('Off: creaite fetches a transcript when you press Process. On: a mail and Teams check you ask for, and Close the day, also fetch the transcripts of meetings that have ended, so they are ready when you open Intake. The scheduled morning check and the check at the start of a session do not fetch. It only reads: no extra AI run and nothing is added to your project records. Confidential meetings are never fetched.')
 
 
 class Fetch250(V260Case):
