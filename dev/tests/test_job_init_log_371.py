@@ -103,6 +103,35 @@ class InitLog(unittest.TestCase):
         self.assertEqual(len(logged), 1)
         self.assertTrue(logged[0][1].startswith("r1 start: "))
 
+    def test_a_tool_search_result_logs_its_count_only(self):         # the emission in job_observe
+        logged = []
+
+        class Log:
+            def info(self, area, msg):
+                logged.append((area, msg))
+
+            def debug(self, area, msg):
+                pass
+
+        class Job:
+            def observe(self, *a):
+                pass
+        m = "mcp__claude_ai_Microsoft_365__"
+        old = live_server.debuglog
+        live_server.debuglog = Log()
+        try:
+            run = live_server.Run.__new__(live_server.Run)
+            run.id, run.kind, run.job = "r1", "load", Job()
+            run.tooluse = {"t1": ("ToolSearch", {"query": "secret title"}), "t2": ("Bash", {})}
+            body = f"secret title {m}outlook_calendar_search {m}read_resource"
+            run.job_observe({"tool_use_id": "t1", "content": body})
+            run.job_observe({"tool_use_id": "t2", "content": body})       # another tool: no tool-search line
+        finally:
+            live_server.debuglog = old
+        lines = [m_ for _, m_ in logged if "tool search" in m_]
+        self.assertEqual(lines, ["r1 load tool search: 2 Microsoft 365 tool names in the result"])
+        self.assertFalse(any("secret" in m_ or "outlook_calendar" in m_ for _, m_ in logged))
+
     def test_run_read_calls_it_for_the_init_event_only(self):        # M7: the call inside Run.read
         from test_tracker import Vault
         v = Vault()
