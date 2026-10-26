@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ir_harden_support import IrHardenCase  # noqa: E402
 
-NO_REACH = "Claude Code did not reach Microsoft 365, so it never looked for the meeting's calendar event and nothing was loaded. Press Load to try again."
+NO_REACH = "Claude Code did not reach Microsoft 365, so it never looked for the meeting's calendar event and nothing was loaded. Press Process to try again."
 SCRIPT = r"""
 window.SCRIPT=%s; window.RUNS=[];
 jobLive=async(url,body)=>{ LOADED.push([url,body.id]); const c=SCRIPT.shift()||{ok:false,line:"creaite stopped."}; shared.LASTCLOSE=c;
@@ -39,7 +39,7 @@ class Failures(Base):
                       self.text("Vendor check-in"))
 
     def test_another_failure_is_not_retried(self):
-        n, _ = self.run_load([{"ok": False, "line": "The meeting's calendar event was found but could not be read, so nothing was loaded. Press Load to try again."}])
+        n, _ = self.run_load([{"ok": False, "line": "The meeting's calendar event was found but could not be read, so nothing was loaded. Press Process to try again."}])
         self.assertEqual(n, 1)
         self.assertNotIn("Looking again", self.text("Vendor check-in"))
 
@@ -48,7 +48,7 @@ class Failures(Base):
         self.assertEqual(n, 1)
 
     def test_the_event_never_opened_is_not_retried(self):
-        n, _ = self.run_load([{"ok": False, "line": "Claude Code searched Microsoft 365 but never opened the meeting's calendar event, so nothing was loaded. Press Load to try again."}])
+        n, _ = self.run_load([{"ok": False, "line": "Claude Code searched Microsoft 365 but never opened the meeting's calendar event, so nothing was loaded. Press Process to try again."}])
         self.assertEqual(n, 1)
 
 

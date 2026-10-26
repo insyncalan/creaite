@@ -590,12 +590,12 @@ class Job:
         debuglog.warn("transcripts", f"{self.mode} {self.id[-8:]}: no calendar event: {self.diagnosis()}")
         if not self.calls:
             return ("Claude Code did not reach Microsoft 365, so it never looked for the meeting's calendar event "
-                    "and nothing was loaded. Press Load to try again.")
+                    "and nothing was loaded. Press Process to try again.")
         if self.event_read is None:
             return ("Claude Code searched Microsoft 365 but never opened the meeting's calendar event, "
-                    "so nothing was loaded. Press Load to try again.")
+                    "so nothing was loaded. Press Process to try again.")
         return ("The meeting's calendar event was found but could not be read, so nothing was loaded. "
-                "Press Load to try again.")
+                "Press Process to try again.")
 
     def facts(self):
         """What the run found for this meeting: online or not, the transcript URL and window, count, error, chat thread."""
