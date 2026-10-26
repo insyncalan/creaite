@@ -2913,7 +2913,7 @@ def inbox_meetings(settings, projects, today):
     calendar) has id null and can't be picked until the calendar is refreshed."""
     start = meetings_start(settings, today)
     try:
-        cal = calendar_gateway.read("day")
+        cal = calendar_gateway.read("intake")
     except (OSError, ValueError):
         return {"fetched": None, "from": start.isoformat(), "rows": [], "cleared": [], "later": []}
     entries = cleared_load(settings, today)

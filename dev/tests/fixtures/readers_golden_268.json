@@ -1,0 +1,732 @@
+{
+ "build_dashboard.calendar": {
+  "days": {
+   "2026-10-23": [
+    {
+     "all_day": false,
+     "end": "11:00",
+     "id": "r4",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "10:00",
+     "teams": true,
+     "title": "Quay design",
+     "where": "Teams"
+    }
+   ],
+   "2026-10-26": [
+    {
+     "all_day": false,
+     "end": "10:00",
+     "id": "r1",
+     "organiser": "Pat Doe",
+     "p": null,
+     "private": false,
+     "recurrence": "weekly",
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": true,
+     "title": "Weekly sync",
+     "where": "Room 204"
+    },
+    {
+     "all_day": false,
+     "end": "11:30",
+     "id": "r2",
+     "organiser": true,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "11:00",
+     "teams": false,
+     "title": "Stamped review",
+     "where": ""
+    },
+    {
+     "all_day": true,
+     "end": "",
+     "id": "r3",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "",
+     "teams": false,
+     "title": "Offsite",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "13:00",
+     "id": "rP",
+     "organiser": false,
+     "p": null,
+     "private": true,
+     "start": "12:00",
+     "teams": true,
+     "title": "Busy",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "15:00",
+     "id": "rC",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "14:00",
+     "teams": false,
+     "title": "Board pay",
+     "where": ""
+    }
+   ]
+  },
+  "fetched": "2026-10-26 08:00"
+ },
+ "build_dashboard.fetched": "2026-10-26 08:00",
+ "build_dashboard.inbox_meetings": {
+  "cleared": [],
+  "fetched": "2026-10-26 08:00",
+  "from": "2026-10-26",
+  "later": [],
+  "rows": [
+   {
+    "cands": [
+     "ABC"
+    ],
+    "confidential": false,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "10:00",
+    "how": "likely",
+    "id": "r1",
+    "key": "r1",
+    "level": "likely",
+    "loaded": null,
+    "offer": null,
+    "organiser": "Pat Doe",
+    "p": "ABC",
+    "private": false,
+    "processed": null,
+    "reason": "Fits the project's register entry",
+    "series": "weekly sync",
+    "start": "09:00",
+    "teams": true,
+    "title": "Weekly sync",
+    "transcript": null,
+    "transcript_checked": null
+   },
+   {
+    "cands": [
+     "ABC"
+    ],
+    "confidential": false,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "11:30",
+    "how": "likely",
+    "id": "r2",
+    "key": "r2",
+    "level": "likely",
+    "loaded": null,
+    "offer": null,
+    "organiser": true,
+    "p": "ABC",
+    "private": false,
+    "processed": null,
+    "reason": "Fits the project's register entry",
+    "series": "stamped review",
+    "start": "11:00",
+    "teams": false,
+    "title": "Stamped review",
+    "transcript": null,
+    "transcript_checked": null
+   },
+   {
+    "confidential": false,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "13:00",
+    "how": "private",
+    "id": "rP",
+    "key": "rP",
+    "loaded": null,
+    "organiser": false,
+    "p": null,
+    "private": true,
+    "processed": null,
+    "series": "busy",
+    "start": "12:00",
+    "teams": true,
+    "title": "Busy",
+    "transcript": null,
+    "transcript_checked": null
+   },
+   {
+    "confidential": true,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "15:00",
+    "how": "unsure",
+    "id": "rC",
+    "key": "rC",
+    "loaded": null,
+    "organiser": false,
+    "p": null,
+    "private": false,
+    "processed": null,
+    "series": "board pay",
+    "start": "14:00",
+    "teams": false,
+    "title": "Board pay",
+    "transcript": null,
+    "transcript_checked": null
+   }
+  ]
+ },
+ "build_dashboard.prep_match_ev": {
+  "r1": [
+   "ABC",
+   "likely"
+  ],
+  "r2": [
+   "ABC",
+   "likely"
+  ],
+  "r3": [
+   null,
+   "unsure"
+  ],
+  "r4": [
+   "ABC",
+   "likely"
+  ],
+  "rC": [
+   null,
+   "unsure"
+  ],
+  "rP": [
+   null,
+   "unsure"
+  ]
+ },
+ "build_dashboard.saved_calendar_days": {
+  "2026-10-23": [
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     },
+     {
+      "email": "ada@brightwater.example",
+      "name": "Ada Fox",
+      "registered": true,
+      "response": "none",
+      "type": "optional"
+     }
+    ],
+    "body": "Notes",
+    "end": "11:00",
+    "id": "r4",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "10:00",
+    "teams": true,
+    "title": "Quay design",
+    "where": "Teams"
+   }
+  ],
+  "2026-10-26": [
+   {
+    "all_day": false,
+    "attachments": [
+     "plan.docx"
+    ],
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     },
+     {
+      "email": "ada@brightwater.example",
+      "name": "Ada Fox",
+      "registered": true,
+      "response": "none",
+      "type": "optional"
+     }
+    ],
+    "body": "Agenda\nBudget and plan",
+    "end": "10:00",
+    "id": "r1",
+    "organiser": "Pat Doe",
+    "organiser_email": "pat.doe@brightwater.example",
+    "private": false,
+    "recurrence": "weekly",
+    "sensitivity": "normal",
+    "start": "09:00",
+    "teams": true,
+    "title": "Weekly sync",
+    "where": "Room 204"
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     }
+    ],
+    "body": "Kept as stored",
+    "end": "11:30",
+    "id": "r2",
+    "organiser": true,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "11:00",
+    "teams": false,
+    "title": "Stamped review",
+    "where": ""
+   },
+   {
+    "all_day": true,
+    "end": "",
+    "id": "r3",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "",
+    "teams": false,
+    "title": "Offsite",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "13:00",
+    "id": "rP",
+    "organiser": false,
+    "private": true,
+    "start": "12:00",
+    "teams": true,
+    "title": "Busy",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "15:00",
+    "id": "rC",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "confidential",
+    "start": "14:00",
+    "teams": false,
+    "title": "Board pay",
+    "where": ""
+   }
+  ]
+ },
+ "calendar_refresh.outcome": {
+  "days": 2,
+  "meetings": 6,
+  "saved": true,
+  "transcripts": false
+ },
+ "close_day.Lookup.meeting": {
+  "r1": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Weekly sync",
+   "type": "Transcript ready"
+  },
+  "r2": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Stamped review",
+   "type": "Transcript ready"
+  },
+  "r4": {
+   "day": "2026-10-23",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Quay design",
+   "type": "Transcript ready"
+  },
+  "rC": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Board pay",
+   "type": "Transcript ready"
+  },
+  "rP": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Busy",
+   "type": "Transcript ready"
+  }
+ },
+ "drafts._meeting_attendees": [
+  [
+   "Sam Lee",
+   "Ada Fox"
+  ],
+  [
+   "Sam Lee",
+   "Ada Fox"
+  ],
+  []
+ ],
+ "drafts.calendar_event": {
+  "r1": {
+   "all_day": false,
+   "attachments": [
+    "plan.docx"
+   ],
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Agenda\nBudget and plan",
+   "end": "10:00",
+   "id": "r1",
+   "organiser": "Pat Doe",
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": true,
+   "title": "Weekly sync",
+   "where": "Room 204"
+  },
+  "r2": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Kept as stored",
+   "end": "11:30",
+   "id": "r2",
+   "organiser": true,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Stamped review",
+   "where": ""
+  },
+  "r4": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Notes",
+   "end": "11:00",
+   "id": "r4",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "10:00",
+   "teams": true,
+   "title": "Quay design",
+   "where": "Teams"
+  },
+  "rC": {
+   "all_day": false,
+   "end": "15:00",
+   "id": "rC",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "14:00",
+   "teams": false,
+   "title": "Board pay",
+   "where": ""
+  },
+  "rP": {
+   "all_day": false,
+   "end": "13:00",
+   "id": "rP",
+   "organiser": false,
+   "private": true,
+   "start": "12:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  }
+ },
+ "drafts.followup_facts": {
+  "r1": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   },
+   {
+    "email": "ada@brightwater.example",
+    "name": "Ada Fox"
+   }
+  ],
+  "r2": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   }
+  ],
+  "r4": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   },
+   {
+    "email": "ada@brightwater.example",
+    "name": "Ada Fox"
+   }
+  ],
+  "rC": [],
+  "rP": []
+ },
+ "prep_page._event": {
+  "Board pay": {
+   "all_day": false,
+   "end": "15:00",
+   "id": "rC",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "14:00",
+   "teams": false,
+   "title": "Board pay",
+   "where": ""
+  },
+  "Busy": {
+   "all_day": false,
+   "end": "13:00",
+   "id": "rP",
+   "organiser": false,
+   "private": true,
+   "start": "12:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  },
+  "Stamped review": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Kept as stored",
+   "end": "11:30",
+   "id": "r2",
+   "organiser": true,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Stamped review",
+   "where": ""
+  },
+  "Weekly sync": {
+   "all_day": false,
+   "attachments": [
+    "plan.docx"
+   ],
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Agenda\nBudget and plan",
+   "end": "10:00",
+   "id": "r1",
+   "organiser": "Pat Doe",
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": true,
+   "title": "Weekly sync",
+   "where": "Room 204"
+  }
+ },
+ "sweep.calendar_fetch_from": "2026-10-26",
+ "sweep.calendar_span": "(datetime.date(2026, 10, 26), datetime.date(2026, 10, 30))",
+ "sweep.saved_meetings_from": [
+  6,
+  5
+ ],
+ "transcripts.calendar_rows": [
+  {
+   "all_day": false,
+   "attachments": [
+    "plan.docx"
+   ],
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Agenda\nBudget and plan",
+   "day": "2026-10-26",
+   "end": "10:00",
+   "id": "r1",
+   "organiser": "Pat Doe",
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": true,
+   "title": "Weekly sync",
+   "where": "Room 204"
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Kept as stored",
+   "day": "2026-10-26",
+   "end": "11:30",
+   "id": "r2",
+   "organiser": true,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Stamped review",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-26",
+   "end": "13:00",
+   "id": "rP",
+   "organiser": false,
+   "private": true,
+   "start": "12:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-26",
+   "end": "15:00",
+   "id": "rC",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "14:00",
+   "teams": false,
+   "title": "Board pay",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Notes",
+   "day": "2026-10-23",
+   "end": "11:00",
+   "id": "r4",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "10:00",
+   "teams": true,
+   "title": "Quay design",
+   "where": "Teams"
+  }
+ ]
+}

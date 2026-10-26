@@ -30,13 +30,15 @@ confidential event gets only HEAD (title "Busy" when private) whatever the purpo
     purpose      fields                                                         body
     meta         id only (rows exist so days and meetings can be counted)       none
     day          DAY                                                            none
+    intake       DAY, attendees with email (Intake's project match)             none
     prep_rank    DAY + attachments                                              1,500
-    prep_panel   DAY + attachments + organiser_email                            1,500
+    prep_panel   DAY (attendees with email) + attachments + organiser_email     1,500
     prep_page    DAY + attachments                                              1,500
-    agenda       DAY                                                            1,500 (the draft shows 400 of it)
+    agenda       DAY (attendees with email: the follow-up's To list)           1,500 (the draft shows 400 of it)
     shape        HEAD                                                           600
 
-(attendees are in DAY: plan question Q4's default, so drafts' attendee lookup needs only "day".)
+(attendees are in DAY by name; a reader that needs an address uses intake, prep_panel or agenda. A private or confidential event
+gets HEAD only, so no attendee or address.)
 """
 import contextlib
 import copy
@@ -57,14 +59,18 @@ LOCK = paths.STAGING / "calendar.lock"
 
 HEAD = ("id", "start", "end", "all_day", "title", "private", "sensitivity")
 DAY = HEAD + ("where", "teams", "organiser", "recurrence", "attendees")
+# "attendees_addr" is the attendees field with each person's address too (output key "attendees"). Only the readers that match or
+# write to people need it: Intake's project match (email domains, #328), the Prep entry's match, the follow-up email's recipients.
+DAY_ADDR = tuple("attendees_addr" if f == "attendees" else f for f in DAY)
 # purpose -> (fields, body length or 0)
 PURPOSES = {
     "meta": (("id",), 0),
     "day": (DAY, 0),
     "prep_rank": (DAY + ("attachments",), BODY_CAP),
-    "prep_panel": (DAY + ("attachments", "organiser_email"), BODY_CAP),
+    "intake": (DAY_ADDR, 0),
+    "prep_panel": (DAY_ADDR + ("attachments", "organiser_email"), BODY_CAP),
     "prep_page": (DAY + ("attachments",), BODY_CAP),
-    "agenda": (DAY, BODY_CAP),
+    "agenda": (DAY_ADDR, BODY_CAP),
     "shape": (HEAD, 600),
 }
 # exactly what sweep.calendar_row writes (invite_clean.ROW_KEYS); anything else in a saved row is dropped
@@ -293,10 +299,12 @@ def _normal_calendar(cal):
 
 # ---- views ---------------------------------------------------------------------------------------------------------------------
 
-def _people(att):
+def _people(att, addr=False):
+    """Attendees limited to name, type and response, plus email when `addr` (the 2.6.8 read kept the address)."""
     if not isinstance(att, list):
         return []
-    return [{k: a[k] for k in ("name", "type", "response") if isinstance(a.get(k), str)} for a in att if isinstance(a, dict)]
+    keys = ("name", "type", "response") + (("email",) if addr else ())
+    return [{k: a[k] for k in keys if isinstance(a.get(k), str)} for a in att if isinstance(a, dict)]
 
 
 def _typed(k, v):
@@ -311,8 +319,8 @@ def _typed(k, v):
         return (True, v) if isinstance(v, bool) else (False, None)
     if k == "organiser":
         return (True, v) if isinstance(v, (bool, str)) else (False, None)
-    if k == "attendees":
-        return True, _people(v)
+    if k in ("attendees", "attendees_addr"):
+        return True, _people(v, k == "attendees_addr")
     if k == "attachments":
         return (True, [f for f in v if isinstance(f, str)]) if isinstance(v, list) else (False, None)
     return False, None
@@ -322,10 +330,11 @@ def _limited(ev, fields, sens):
     """The fields of `fields` that `ev` holds, copied; a private or confidential event gets its flags forced."""
     out = {}
     for k in fields:
-        if k in ev:
-            ok, v = _typed(k, ev[k])
+        src = "attendees" if k == "attendees_addr" else k
+        if src in ev:
+            ok, v = _typed(k, ev[src])
             if ok:
-                out[k] = v
+                out[src] = v
     if sens != "normal":
         if "sensitivity" in fields:
             out["sensitivity"] = sens

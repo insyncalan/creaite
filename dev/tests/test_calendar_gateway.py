@@ -67,7 +67,7 @@ class Purposes(Base):
         self.save({"2026-10-26": [ev(clean=1)]})
 
     def test_closed_set(self):
-        self.assertEqual(set(G.purpose_names()), {"meta", "day", "prep_rank", "prep_panel", "prep_page", "agenda", "shape"})
+        self.assertEqual(set(G.purpose_names()), {"meta", "day", "intake", "prep_rank", "prep_panel", "prep_page", "agenda", "shape"})
 
     def test_unknown_purpose_raises_not_oserror_or_valueerror(self):
         for p in ("bogus", "", None, "DAY"):
@@ -109,6 +109,21 @@ class Purposes(Base):
                 self.assertIn(k, row, (purpose, k))
             for k in hasnt:
                 self.assertNotIn(k, row, (purpose, k))
+
+    def test_only_the_readers_that_match_or_write_to_people_get_an_address(self):
+        """The follow-up email's To list (agenda), Intake's and Prep's project match by email domain (intake, prep_panel) need the
+        attendees' addresses, as the 2.6.8 read gave them; every other purpose gives name, type and response only."""
+        who = {"name": "Omar Reyes", "email": "omar@client.example", "type": "required", "response": "accepted"}
+        e = ev(clean=1, attendees=[who])
+        for purpose in G.purpose_names():
+            got = G.view(e, purpose).get("attendees")
+            if purpose in ("agenda", "intake", "prep_panel"):
+                self.assertEqual(got, [who], purpose)
+            elif got is not None:
+                self.assertNotIn("email", got[0], purpose)
+        for sens in ("private", "confidential"):
+            for purpose in G.purpose_names():
+                self.assertNotIn("@", json.dumps(G.view({**e, "sensitivity": sens}, purpose)), (sens, purpose))
 
     def test_view_returns_new_objects(self):
         e = ev(clean=1)
