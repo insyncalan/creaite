@@ -7,11 +7,13 @@
                                                           catch OSError and ValueError, so a typo is not swallowed as "no calendar")
     clean_row(row), stamp_row(row), stamp_rows(days), stamp_calendar(cal), lock()   for the writers (sweep), later
 
-THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (a hash of the filter's two source files). A row
+THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (a hash of the filter's two
+source files). A row
 with no stamp, a lower one, another filter version, or a stamp but a wrong shape (_well_formed) is filtered IN MEMORY when the file is
 read (once per file version, the cache) and served filtered; only a trusted row is served as stored. A bare confidential flag is
 turned into "sensitivity" before a trusted row is trimmed (keep_row). Re-filtering every row on every cache fill was measured and
-rejected: the body filter costs about 8 ms a row, so a 3,000-row calendar would take tens of seconds. read() never writes: only the sweep's save and the start-up
+rejected: the body filter costs about 8 ms a row, so a 3,000-row calendar would take tens of seconds. read() never writes: only the
+sweep's save and the start-up
 rescrub write, and they stamp (clean_row / stamp_rows). Nothing unfiltered is ever served: when the filter cannot be loaded, the body
 of an unstamped row is dropped (fails closed).
 
@@ -44,7 +46,6 @@ confidential event gets only HEAD (title "Busy" when private) whatever the purpo
 gets HEAD only, so no attendee or address.)
 """
 import contextlib
-import copy
 import json
 import os
 import re
@@ -204,6 +205,12 @@ def fingerprint():
         return None             # not remembered: tried again next time
     _FP.append(fp)
     return fp
+
+
+def file_stamp():
+    """The top-level stamp of a saved calendar: {"clean": CLEAN, "clean_v": fingerprint()} (no clean_v when the files cannot be read)."""
+    fp = fingerprint()
+    return {"clean": CLEAN, **({"clean_v": fp} if fp is not None else {})}
 
 
 def is_stamped(row):

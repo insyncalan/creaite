@@ -838,9 +838,7 @@ def _rescrubbed(cal):
     days = cal.get("days") if isinstance(cal, dict) else None
     shape["days"] = {d: [_stamped(r) for r in rows if isinstance(r, dict)] for d, rows in (days if isinstance(days, dict) else {}).items()
                      if isinstance(d, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", d) and isinstance(rows, list)}
-    shape["clean"] = calendar_gateway.CLEAN
-    if calendar_gateway.fingerprint() is not None:
-        shape["clean_v"] = calendar_gateway.fingerprint()
+    shape.update(calendar_gateway.file_stamp())
     return shape
 
 
@@ -1077,8 +1075,7 @@ def _calendar(spec_file):
         days = calendar_gateway.stamp_rows(days)                                       # #375 S4: every row filtered and stamped
         days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
         saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days,
-                            "clean": calendar_gateway.CLEAN,
-                            **({"clean_v": calendar_gateway.fingerprint()} if calendar_gateway.fingerprint() else {})},
+                            **calendar_gateway.file_stamp()},
                            indent=1, ensure_ascii=False)
         if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
             print(CAL_REFUSED)
