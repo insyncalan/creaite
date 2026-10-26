@@ -15,7 +15,7 @@ Planning only. Base: origin/main a62fbb0a (2.6.8 + docs). Compared with the 2.6.
 | 7 | ConnectionReset/BrokenPipe tracebacks; DEBUG 81% | **Code fixed, residue left.** `CLIENT_LEFT` (live_server.py:242, 1243, 1254, 1309, 9115, 9307) covers handlers; 7 tracebacks remain, most likely from socketserver's own `handle_error` (no override found) in a thread outside those `try`s. DEBUG share is the vault's `logging.level` (default `info`, settings.json:257) set to debug, plus GETs and `/api/here` logged at debug (`QUIET_ROUTES` 8978, `log_request` 9163-9167). | D |
 | 8 | Smaller (title in "not approved" log, stale lock, one 2-step check fail) | Partly. review.py:1409-1419 logs file name, item number and a `rule()`d reason, no title; the title in the log is probably from the route that echoes `review.py:1350` (`d["msg"]`). Unverified. | C |
 
-2.6.10 scope: A, B, C, D, plus the 0-step Load retry (E).
+2.6.10 scope: A, B, C, D.
 
 ## 2. Plans
 
@@ -24,7 +24,7 @@ Planning only. Base: origin/main a62fbb0a (2.6.8 + docs). Compared with the 2.6.
 **Change.**
 1. `sweep.py fail` also writes `system/staging/sweep-failed.json` `{at, retry_at|null, day}`; `sweep.py done` clears it. Counts and times only. (ordinary: sweep.py)
 2. `build_dashboard.sweep_due_info` adds `failed: {at, retry}`; today.js shows Alan's approved wording (issue comment 26-10): "Today's mail and Teams check didn't run. [Check now]", not dismissible while failed; `health.py` adds a row "A mail and Teams check didn't run" with the approved detail line and a Check now Fix-it (new id in `health_fixes.py`, which is not guarded). Clears when `last-sweep.txt` passes the day's `due_from`. (ordinary)
-3. Retry. Option R1 (recommended): none in code; the banner plus Check now button (`/api/day/catchup`, existing) is the retry. Option R2: live server starts `start_catchup` once, 5 minutes after a recorded failure, only if the app is open (guarded, live_server.py, ~25 lines in the catch-up waiter near 7339). R2 starts an unattended M365 read, so it needs Alan's yes.
+3. Retry. DECIDED (Jarvis): no automatic retry; R1 only. Option R1: none in code; the banner plus Check now button (`/api/day/catchup`, existing) is the retry. Option R2: live server starts `start_catchup` once, 5 minutes after a recorded failure, only if the app is open (guarded, live_server.py, ~25 lines in the catch-up waiter near 7339). R2 starts an unattended M365 read, so it needs Alan's yes.
 **Cannot test here:** the real connector-missing failure; a scheduled run. Tests simulate `sweep.py fail` and assert the state file, banner flag and Health row.
 
 ### B. Guard refusals (rec 3)
@@ -49,14 +49,11 @@ Planning only. Base: origin/main a62fbb0a (2.6.8 + docs). Compared with the 2.6.
 3. **Tracebacks.** Override `handle_error` on the server class to swallow `CLIENT_LEFT` at info, as `log_fault` does (live_server.py:9113-9117). Guarded, ~10 lines. Test: raise each in a fake request.
 4. **Log volume.** Not a code bug: the vault runs `logging.level: debug`. Ordinary: Health notes "debug logging has been on for more than 7 days" (health.py, a Settings fix to info); optionally log `/api/here` and `/health` only at a level below debug (`QUIET_ROUTES`, guarded, skip unless Alan wants it).
 
-### E. Load auto-retry (finding 1 remainder)
-After #382 start-up the failure may not recur. Wait for 2.6.9's `init_summary` lines on the live vault for a week before building a retry. If 0-step failures persist: `transcripts.py` (ordinary) already owns `no_event`; the retry start belongs in the run starter (live_server.py, guarded): re-run once when the run ended with `calls == []` and under 10 s. Size included below as optional.
-
 ## 3. Guarded and ordinary split
 
 | Guarded (patch files only) | Ordinary |
 |---|---|
-| live_server.py: prompt paragraph (B2), refusal summary line (B1), optional R2 retry (A3), catalogue 503 (D1), `handle_error` (D3), optional Load retry (E), optional quieter routes (D4) | sweep.py, build_dashboard.py, health.py, health_fixes.py, doctor.py, today.js, server.js, settings.js, panel.js, Essentials/health components, dashboard.html (built), `.claude/skills/cx-*`, transcripts.py, tests, creaite-reference.md |
+| live_server.py: prompt paragraph (B2), refusal summary line (B1), catalogue 503 (D1), `handle_error` (D3) | sweep.py, build_dashboard.py, health.py, health_fixes.py, doctor.py, today.js, server.js, settings.js, panel.js, Essentials/health components, dashboard.html (built), `.claude/skills/cx-*`, transcripts.py, tests, creaite-reference.md |
 
 Guarded list in this release: live_server.py only (no reach.py, permissions.py or settings change is needed; the hook and allow lists stay as they are).
 
@@ -64,21 +61,28 @@ Guarded list in this release: live_server.py only (no reach.py, permissions.py o
 
 **Agent 1, sweep notice (A), ordinary only, 1.0 to 1.5 days.** sweep.py, build_dashboard.py, health.py, health_fixes.py, today.js, Health component. Owns: `test_sweep_failed_370` (fail/done state file, banner flag, Health row, wording exact, no names or paths), a plain-words/no-vendor-terms check on the new strings (existing wording tests), golden for `sweep_due`.
 **Agent 2, page errors and first load (C, D2, D4 note), ordinary, 1.0 to 1.5 days.** server.js, settings.js, panel.js, health.py debug-level row. Owns: `test_page_errors_370` (frame sent, no text), `test_stale_events_370`, `test_log_level_health_370`; rebuilds dashboard.html. (Agents 1 and 2 both touch health.py and today.js; agree order: agent 1 first.)
-**Agent 3, guarded patch (B, D1, D3, optional A3/E), 1.5 to 2.5 days.** Produces `GUARDED-2.6.10.patch` against live_server.py only, plus B3 skill notes and doctor row (ordinary). Owns: `test_job_prompts_370` (date and allowed list in each prompt; no tool the kind lacks), `test_handle_error_370`, `test_catalogue_503_370`, a refusals-per-run counter test.
-Total 3.5 to 5.5 agent-days (about 7 with both options R2 and E). Gate: existing `test_job_prompts_365`, `test_job_tools_365`, the 2.6.8 first-load test and the guarded-chain pin test must stay green; the patch must apply on v269-main's live_server.py, not origin/main (it carries the #371/#382 hunks).
+**Agent 3, guarded patch (B, D1, D3), 1.5 to 2.5 days.** Produces `GUARDED-2.6.10.patch` against live_server.py only, plus B3 skill notes and doctor row (ordinary). Owns: `test_job_prompts_370` (date and allowed list in each prompt; no tool the kind lacks), `test_handle_error_370`, `test_catalogue_503_370`, a refusals-per-run counter test.
+Total 3.5 to 5.5 agent-days. Gate: existing `test_job_prompts_365`, `test_job_tools_365`, the 2.6.8 first-load test and the guarded-chain pin test must stay green; the patch must apply on v269-main's live_server.py, not origin/main (it carries the #371/#382 hunks).
 
 ## 5. Risks
 - Live_server.py is touched by 2.6.9's chain: rebase the 2.6.10 patch on the released 2.6.9, never before.
 - Prompt changes can make the model skip a legitimate step; each kind needs one live run (calendar refresh, Process, check, load) after install.
-- R2 makes creaite start an M365 read without Alan pressing anything; same rules as Close the day's catch-up but unattended.
+- (R2, not built) would make creaite start an M365 read without Alan pressing anything; same rules as Close the day's catch-up but unattended.
 - The stale-token reload could loop if the new server issues another token; reload at most once per page.
 - Wording: the notice must be exactly the approved text; any change returns to Alan.
 
 ## 6. Open questions
 1. Alan: should creaite retry a missed check by itself (R2), or is the notice plus Check now enough (R1, recommended)?
-2. Alan or Jarvis: is the Load auto-retry (E) wanted now, or only if 2.6.9's logs still show 0-step failures?
 3. Jarvis: Health row for debug logging left on more than 7 days: yes or no (it is Alan's setting).
-4. Jarvis: does "the Load retry" in 2.6.9 mean something not on v269-main? None found.
 
-## 7. Needs the live vault (cannot test here)
-Real connector-missing sweep failure and its run-log line; the 20-10 09:20:32 catalogue 500 class and frame; refusal counts before and after the prompt change; calendar refresh times; whether `handle_error` is the tracebacks' source (`live-server.log`); which JSON.parse threw (read the new frame after the page-hook change ships).
+## 6a. Decisions recorded (Jarvis)
+- No automatic retry of a missed check: the notice plus Check now is enough (R1; R2 dropped).
+- YES to the Health row for debug logging left on: informs only, changes no setting, ordinary code.
+- Slices 1 and 2 are ordinary and can start after the 2.6.9 verdicts.
+- Slice 3 (live_server.py only) is a GUARDED diff: build it rebased on RELEASED 2.6.9, independent review by Cap (never the builder), then to Alan as its own diff with sha256. Not in a release without his words.
+
+## 7. Needs the live vault (one ask for Alan)
+Alan can answer by pasting log lines (counts and error class only; no mail or Teams text):
+1. The real connector-missing sweep failure: what `system/staging/run-log.txt` and the debug log show for a 07:00 scheduled sweep when the Microsoft 365 connector is missing (the `sweep FAILED` line and the lines around it).
+2. The 20-10 09:20:32 `POST /api/settings/catalogue 500`: the debug-log lines around it and the `live-server.log` fault line (error class and frame).
+3. Which `JSON.parse` threw (`promise:0`): the page console message for it with the failing route or URL, from the browser's developer console, if it recurs.
