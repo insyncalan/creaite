@@ -14,7 +14,9 @@ Claude never re-types a transcript.
 Commands (the daily sweep, cx-sweep, uses them through sweep.py):
   todo                    the meetings in the Calendar import window still to look up, as JSON; meetings that aren't
                           online are recorded as "No transcript" at once
-  record <facts.json>     classify what the sweep read for each meeting and keep the statuses
+  record <facts.json>     classify what the sweep read for each meeting and keep the statuses; with
+                          sweep.fetch_transcripts on (#250, off by default) nothing changes here: no script path writes inbox/;
+                          the live server's own sweep run fetches (SweepFetch), from Microsoft 365's own result, never re-typed text
   show                    the statuses kept so far
 Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
 """
@@ -22,6 +24,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -40,7 +43,11 @@ except ImportError:
 STATUSES = {"available": "Transcript available", "not_transcribed": "Not transcribed", "none": "No transcript",
             "no_access": "No access"}
 M365 = "mcp__claude_ai_Microsoft_365__"
-KEEP = ("status", "uri", "start", "end", "count", "checked", "thread")     # the only fields ever stored
+KEEP = ("status", "uri", "start", "end", "count", "checked", "thread", "fetched", "left", "fetch_error", "fetch_tries")
+# the only fields ever stored. #250: "fetched" is when a sweep fetched the transcript into inbox/, "left" when a sweep left it for
+# Process (no saved result it could tie to the meeting), "fetch_error"/"fetch_tries" when and how often saving it failed: times
+# and a count, never text, so a meeting is fetched once and never re-read every sweep
+STAMPS = ("fetched", "left", "fetch_error", "fetch_tries")
 
 
 def now():
@@ -72,6 +79,9 @@ def keep(entry_id, record):
     if not str(entry_id).strip() or record.get("status") not in STATUSES:
         return False
     state = load_state()
+    before = state["checked"].get(str(entry_id)) or {}
+    record = {**{k: before[k] for k in STAMPS if before.get(k) not in (None, "")},        # #250: a later look-up keeps the
+              **{k: v for k, v in record.items() if v not in (None, "")}}              # fetch stamps
     state["checked"][str(entry_id)] = {k: record[k] for k in KEEP if record.get(k) not in (None, "")}
     state["version"] = 1
     save_state(state)
@@ -91,34 +101,68 @@ def result_text(content):
 SPOOL = re.compile(r"(?:saved|written|stored)\s+(?:in|to|at)?:?\s*(?:file\s*)?:?\s*[\"'`]?((?:/|~)[^\s\"'`<>]+)", re.I)
 
 
+RESULT_FILE_MAX = 25 * 1024 * 1024                                           # a saved tool result larger than this isn't read
+
+
 def spool_roots():
-    """Where Claude Code spools a result that is too big to return inline (tests add their own folder)."""
-    roots = [Path.home() / ".claude"]
-    extra = os.environ.get("CREAITE_TOOL_RESULTS")
-    if extra:
-        roots.append(Path(extra))
-    return roots
+    """Where Claude Code spools a result that is too big to return inline: ~/.claude only (tests point HOME elsewhere)."""
+    return [Path.home() / ".claude"]
+
+
+def tool_result_path(path):
+    """The real path of a tool result Claude Code saved, or None: it must resolve (symlinks followed) to a file inside a
+    tool-results folder under ~/.claude, no larger than RESULT_FILE_MAX."""
+    try:
+        full = Path(str(path)).expanduser().resolve()
+        for root in spool_roots():
+            root = root.resolve()
+            if root in full.parents and "tool-results" in full.relative_to(root).parts[:-1]:
+                return full if full.is_file() and full.stat().st_size <= RESULT_FILE_MAX else None
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return None
+
+
+def read_result_file(path):
+    """The UTF-8 text of a saved tool result (tool_result_path's rules), or None (binary, too big, elsewhere)."""
+    full = tool_result_path(path)
+    try:
+        return full.read_bytes().decode("utf-8") if full else None
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 def read_spooled(text):
-    """If a tool result says it was saved to a file, that file's text (only from Claude Code's own folders); else None."""
+    """If a tool result says it was saved to a file, that file's text (only a tool-results file, as tool_result_path); else None.
+    The file's own text is returned as it is: a path inside it is never followed."""
     m = SPOOL.search(text or "")
     if not m:
         return None
     for cand in (m.group(1), m.group(1).rstrip(".,;:)")):
-        try:
-            full = Path(cand).expanduser().resolve()
-            if full.is_file() and any(root.resolve() in full.parents for root in spool_roots()):
-                raw = full.read_text(encoding="utf-8")
-                if raw.lstrip().startswith("[") and "\"type\"" in raw[:200]:       # a list of text blocks, as the tool returned it
-                    try:
-                        return result_text(json.loads(raw))
-                    except ValueError:  # BL-228: not JSON after all: the file is read as plain text below
-                        pass
-                return raw
-        except (OSError, ValueError):
+        raw = read_result_file(cand)
+        if raw is None:
             continue
+        if raw.lstrip().startswith("[") and "\"type\"" in raw[:200]:       # a list of text blocks, as the tool returned it
+            try:
+                return result_text(json.loads(raw))
+            except ValueError:  # BL-228: not JSON after all: the file is read as plain text below
+                pass
+        return raw
     return None
+
+
+def parse_result(raw):
+    """The JSON object in a tool result's own text (inline, or a list of text blocks holding it); never a file it names."""
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    if isinstance(data, list) and data and all(isinstance(p, dict) and p.get("type") == "text" for p in data):
+        try:
+            return json.loads("".join(p.get("text", "") for p in data))
+        except ValueError:
+            return None
+    return data
 
 
 def as_json(text):
@@ -128,15 +172,10 @@ def as_json(text):
         if not t:
             continue
         try:
-            data = json.loads(t)
+            json.loads(t)
         except ValueError:
             continue
-        if isinstance(data, list) and data and all(isinstance(p, dict) and p.get("type") == "text" for p in data):
-            try:
-                return json.loads("".join(p.get("text", "") for p in data))
-            except ValueError:
-                return None
-        return data
+        return parse_result(t)
     return None
 
 
@@ -247,6 +286,7 @@ def todo(at=None):
     at = at or now()
     start = build_dashboard.meetings_start(paths.load_settings(), at.date()).isoformat()
     state, cleared = load_state()["checked"], {e["key"] for e in build_dashboard.cleared_load(today=at.date())}
+    eligible = set(fetch_ids(at)) if fetch_on() else None              # #250: off by default; when off, nothing below changes
     look, auto = [], []
     for row in calendar_rows():
         eid = str(row["id"])
@@ -259,9 +299,22 @@ def todo(at=None):
                 keep(eid, {"status": "none", "checked": at.strftime("%Y-%m-%d %H:%M")})
                 auto.append(eid)
             continue
-        if (state.get(eid) or {}).get("status") in (None, "not_transcribed"):
-            look.append({"id": eid, "title": row.get("title"), "day": row["day"], "start": row.get("start"), "end": row.get("end")})
-    return {"look_up": look, "recorded_without_lookup": auto}
+        if wanted(state, eid, eligible):
+            look.append(look_entry(row, eid, eligible))
+    return {"look_up": look, "recorded_without_lookup": auto, "fetch_transcripts": eligible is not None}
+
+
+def wanted(state, eid, eligible):
+    """Whether the sweep looks a meeting up: new or still Not transcribed, or (#250) its transcript is to be fetched."""
+    return (state.get(eid) or {}).get("status") in (None, "not_transcribed") or eid in (eligible or ())
+
+
+def look_entry(row, eid, eligible=None):
+    """One meeting to look up; with the fetch on (#250, `eligible` given) whether its transcript is to be fetched."""
+    out = {"id": eid, "title": row.get("title"), "day": row["day"], "start": row.get("start"), "end": row.get("end")}
+    if eligible is not None:
+        out["fetch"] = eid in eligible
+    return out
 
 
 FACT_KEYS = ("id", "online", "uri", "count", "error", "start", "end", "thread")      # the only keys a fact may carry
@@ -366,6 +419,501 @@ def record(facts_list, at=None, refused=None):
         tally[s or "undecided"] = tally.get(s or "undecided", 0) + 1
     debuglog.info("transcripts", f"looked up {len(out)} meeting(s): " + (", ".join(f"{k} {v}" for k, v in sorted(tally.items())) or "none"))
     return out
+
+
+# ===== #250 (#181 C2): fetch transcripts as they appear, a sweep step (Alan, 19-10-2026) =====
+# Off by default (settings sweep.fetch_transcripts). When on, each sweep fetches the transcript of every meeting the user could
+# Process (ended, in the Calendar import window, a Teams meeting, not private, not cleared, not processed, not in Review, not
+# already in inbox/ and not fetched before) into inbox/, exactly as Load does (Job.write), so Intake shows it as loaded. Confidential
+# meetings are never fetched. It is a read: no AI works on the text and nothing is written to the tracker. The text comes only from
+# what Microsoft 365 returned (the live server's own copy of the run's tool results, SweepFetch), never from text Claude typed.
+# Option 2 (Jarvis/Alan, 23-10-2026): the live server's observer is the only path that fetches; `record` and `sweep.py` never
+# write inbox/. transcripts.json gains only "fetched", a time.
+FETCH_TOOLS = (M365 + "outlook_calendar_search", M365 + "read_resource")     # the only tools the fetch uses: the ones Process uses
+FETCH_TRIES = 3                      # a meeting whose transcript couldn't be saved this many times is left for Process
+TALLY_KEYS = ("fetched", "held", "failed", "left", "error")     # the counts finish() returns, in the closure line's order
+QUEUE_MAX = 25 * 1024 * 1024        # transcript text a run may queue (characters); more is left for Process (Cap L4)
+
+
+def fetch_on(settings=None):
+    """Whether the sweep fetches transcripts as they appear (sweep.fetch_transcripts; off unless it is exactly true)."""
+    try:
+        s = settings if settings is not None else paths.load_settings()
+    except (OSError, ValueError):
+        return False
+    return (s.get("sweep") or {}).get("fetch_transcripts") is True
+
+
+def confidential(row):
+    """A meeting marked confidential in the saved calendar (it keeps only its title and times there). Fails closed: only a
+    sensitivity of exactly "normal" is not confidential, so a missing or unknown value is (the sweep writes the key for every
+    row that isn't private, sweep.invite_details)."""
+    return row.get("confidential") is True or str(row.get("sensitivity") or "").strip().lower() != "normal"
+
+
+def snoozed_ids():
+    """Meetings set aside with Later until a transcript arrives (#232). No such record exists yet, so none; when #232 keeps one,
+    its event IDs are returned here and the fetch leaves those meetings alone."""
+    return set()
+
+
+def fetch_context(at):
+    """What every meeting's eligibility is judged against, read once."""
+    import build_dashboard
+    import review
+    drafts = set()
+    try:
+        for _, d in review.proposals():
+            m = d.get("meeting") or {}
+            if m.get("key") and not m.get("applied"):
+                drafts.add(m["key"])
+    except (OSError, ValueError):  # a proposal that can't be read: Review shows it as broken; here it just isn't a draft
+        pass
+    return {"start": build_dashboard.meetings_start(paths.load_settings(), at.date()).isoformat(),
+            "cleared": {e["key"] for e in build_dashboard.cleared_load(today=at.date())}, "drafts": drafts,
+            "state": load_state()["checked"], "inbox": inbox_event_ids(), "snoozed": snoozed_ids()}
+
+
+def meeting_skip(row, at, ctx):
+    """Why a meeting itself is left alone (confidential, private, outside the window, not ended, not online), or None."""
+    if not str(row.get("id") or ""):
+        return "no id"
+    if row.get("private") or row.get("all_day"):
+        return "private"
+    if confidential(row):
+        return "confidential"
+    if not (ctx["start"] <= row.get("day", "") <= at.date().isoformat()):
+        return "outside the window"
+    if not ended(row, at):
+        return "not ended"
+    return None if row.get("teams") else "not online"
+
+
+SKIP_SETS = (("cleared", "cleared"), ("snoozed", "later"), ("inbox", "loaded"))
+
+
+def state_skip(eid, ctx):
+    """Why a meeting's transcript is already dealt with (cleared, Later, processed, in Review, loaded, fetched), or None."""
+    import minutes
+    for key, why in SKIP_SETS:
+        if eid in ctx[key]:
+            return why
+    if minutes.processed_on(f"calendar:{eid}"):
+        return "processed"
+    if f"calendar:{eid}" in ctx["drafts"]:
+        return "in review"
+    entry = ctx["state"].get(eid) or {}
+    if entry.get("fetched"):
+        return "fetched"
+    if entry.get("left"):
+        return "left"
+    try:
+        if int(entry.get("fetch_tries") or 0) >= FETCH_TRIES:
+            return "couldn't be saved"
+    except (TypeError, ValueError):
+        return "couldn't be saved"
+    return entry["status"] if entry.get("status") in ("none", "no_access") else None
+
+
+def fetch_skip(row, at, ctx):
+    """Why a meeting's transcript isn't fetched, in a word or two, or None when it is to be fetched."""
+    return meeting_skip(row, at, ctx) or state_skip(str(row["id"]), ctx)
+
+
+def fetch_ids(at=None):
+    """The event IDs whose transcript a sweep fetches now (none when the setting is off)."""
+    if not fetch_on():
+        return []
+    at = at or now()
+    ctx = fetch_context(at)
+    return [str(r["id"]) for r in calendar_rows() if fetch_skip(r, at, ctx) is None]
+
+
+def same_meeting(found, row):
+    """Whether what a transcript read returned can be this meeting's: each transcript started within a day of the meeting."""
+    try:
+        day = datetime.strptime(row["day"], "%Y-%m-%d").date()
+    except (KeyError, ValueError):
+        return False
+    for t in found:
+        made = when(t.get("created"))
+        if made is not None and abs((made.astimezone().date() - day).days) > 1:
+            return False
+    return True
+
+
+def organiser_name(row):
+    """The organiser's name for the transcript's header: Alan's own name when he organised it."""
+    org = row.get("organiser")
+    if org is True:
+        try:
+            return (paths.load_settings().get("identity") or {}).get("name") or None
+        except (OSError, ValueError):
+            return None
+    return org if isinstance(org, str) and org.strip() else None
+
+
+def unusable(found, row):
+    """Why what a transcript read returned can't be written for this meeting, or None."""
+    if not found or not any(str(t.get("content") or "").strip() for t in found):
+        return "empty"
+    return None if same_meeting(found, row) else "another meeting"
+
+
+def mark_fetched(eid, found, uri, at, ctx, path):
+    """Keep when the meeting was fetched (and its status, URL and window), so it is fetched exactly once."""
+    s, e = uri_window(uri)
+    stamp = at.strftime("%Y-%m-%d %H:%M")
+    entry = ctx["state"].get(str(eid)) or {}
+    keep(eid, {**entry, "status": "available", "uri": uri or entry.get("uri"), "count": len(found), "start": s or entry.get("start"),
+               "end": e or entry.get("end"), "checked": entry.get("checked") or stamp, "fetched": stamp})
+    ctx["inbox"][str(eid)] = path
+
+
+def fetch_one(eid, found, uri, at=None, ctx=None):
+    """Write one meeting's transcript into inbox/ as Load does, if it is to be fetched: "fetched", or why not."""
+    at = at or now()
+    ctx = ctx or fetch_context(at)
+    row = next((r for r in calendar_rows() if str(r["id"]) == str(eid)), None)
+    if row is None:
+        return "not in the calendar"
+    why = fetch_skip(row, at, ctx) or unusable(found, row)
+    if why:
+        return why
+    job = Job(eid, row.get("title") or "Meeting", row["day"], row.get("start") or "", row.get("end") or "", "load")
+    job.event = {"organiser": organiser_name(row), "attendees": names(row.get("attendees"))}
+    job.transcripts = found
+    try:
+        out = job.write(at, STATUSES["available"])
+    except (OSError, ValueError) as e:                  # one meeting that can't be saved never stops the others
+        stamp_failure(eid, uri, at, ctx)
+        debuglog.warn("transcripts", f"fetch: {eid} couldn't be saved ({type(e).__name__}, errno {getattr(e, 'errno', None)})")
+        return "error"
+    if not out.get("files") or out.get("already"):
+        return "loaded"
+    mark_fetched(eid, found, uri, at, ctx, out["files"][0])
+    return "fetched"
+
+
+def stamp_failure(eid, uri, at, ctx):
+    """Keep that saving the transcript failed, and how often, so it is tried FETCH_TRIES times and then left for Process."""
+    entry = ctx["state"].get(str(eid)) or {}
+    try:
+        tries = int(entry.get("fetch_tries") or 0) + 1
+    except (TypeError, ValueError):
+        tries = FETCH_TRIES
+    rec = {**entry, "status": entry.get("status") or "available", "uri": entry.get("uri") or uri,
+           "fetch_error": at.strftime("%Y-%m-%d %H:%M"), "fetch_tries": tries}
+    keep(eid, rec)
+    ctx["state"][str(eid)] = rec
+
+
+def _plural(n, one, many):
+    return one if n == 1 else many
+
+
+def fetch_text(counts):
+    """The closure line the live server shows after a sweep run (#250): "2 transcripts fetched, 1 held back: a confidential meeting
+    at that time, 1 left: Process to load it"; "" when nothing was tried. Counts only: never a title, a name or a reason's detail.
+    `counts` is what SweepFetch.finish() returned."""
+    n, held, failed, left, error = (int(counts.get(k) or 0) for k in TALLY_KEYS)
+    if not (n or held or failed or left or error):
+        return ""
+    load = lambda k: "Process to load " + _plural(k, "it", "them")                # noqa: E731
+    parts = [f"{n} {_plural(n, 'transcript', 'transcripts')} fetched"]
+    for k, text in ((held, "held back: " + _plural(held, "a confidential meeting", "confidential meetings") + " at that time"),
+                    (failed, "couldn't be fetched (Microsoft 365 couldn't be reached): " + load(failed)),
+                    (error, f"couldn't be saved into the inbox (tried up to {FETCH_TRIES} times): " + load(error)),
+                    (left, "left: " + load(left))):
+        if k:
+            parts.append(f"{k} {text}")
+    return ", ".join(parts)
+
+
+def _decoded(text):
+    """`text` percent-decoded until it stops changing (at most four rounds), so %2F, %252F and %25252F are one slash."""
+    for _ in range(4):
+        again = unquote(text)
+        if again == text:
+            break
+        text = again
+    return text
+
+
+def _split(text):
+    """urlsplit that never raises: a URL it can't read (an unbalanced '[', Cap L3) is its text, so the callers still hold it."""
+    try:
+        return urlsplit(text)
+    except ValueError:
+        return urlsplit(re.sub(r"[\[\]]", "", text))
+
+
+def meeting_key(uri):
+    """The meeting a transcript URL names, written one way (Cap #250): scheme in lower case; the host and path decoded (however many
+    times), width-folded, lower case, without white space or control characters, backslashes as slashes, '.' and '..' segments
+    resolved, ';' parameters and empty segments dropped, base64url written as base64 without padding. The query and the
+    fragment (an occurrence's start/end window) are not part of it. A segment with an '@' is dropped only when it is the first
+    (where user info sits); a later path segment that holds one stays (Cap L2: it was dropped, so different paths shared a key).
+    Never raises."""
+    u = _split(re.sub(r"[\s\x00-\x1f]", "", str(uri or "")))
+    text = unicodedata.normalize("NFKC", _decoded(u.netloc + "/" + u.path)).lower().replace("\\", "/")
+    text = re.sub(r"[\s\x00-\x1f]", "", text).replace("-", "+").replace("_", "/")
+    parts = []
+    for seg in text.split("/"):
+        seg = re.sub(r";.*", "", seg).rstrip("=")
+        if seg == "..":
+            parts and parts.pop()
+        elif seg and seg != "." and not (not parts and "@" in seg):   # user info: the first segment only
+            parts.append(seg)
+    return (unicodedata.normalize("NFKC", u.scheme).lower(), "/" + "/".join(parts))
+
+
+def occurrence_key(uri):
+    """meeting_key plus the sorted query parameters (lower case): one occurrence of the meeting. The fragment is dropped."""
+    u = _split(str(uri or "").strip())
+    return meeting_key(uri) + (tuple(sorted((k.lower(), tuple(v)) for k, v in parse_qs(u.query, keep_blank_values=True).items())),)
+
+
+def default_hold(event, live, created):
+    """The calendar rule (slice B, transcript_hold.hold_for): (held, reason). Imported when first used, so this module needs it only
+    for a fetch; if it can't be imported the transcript is held (fails closed)."""
+    try:
+        import transcript_hold
+    except ImportError:
+        return True, "calendar unreadable"
+    return transcript_hold.hold_for(event, live, created)
+
+
+def window_hits(rows, cands, created):
+    """The candidates (event IDs with a saved row in `rows`) whose window, 15 minutes before the start to the end on that day, holds the
+    transcript's created time; [] when the time can't be read or a candidate's times can't (nothing can then be told)."""
+    made = when(created)
+    if made is None:
+        return []
+    made = made.astimezone()
+    minute, hit = made.hour * 60 + made.minute, []
+    for c in cands:
+        row = rows[c]
+        try:
+            lo = int(row["start"][:2]) * 60 + int(row["start"][3:5]) - 15
+            hi = int(row["end"][:2]) * 60 + int(row["end"][3:5])
+        except (KeyError, ValueError, TypeError):
+            return []
+        if row.get("day") == made.strftime("%Y-%m-%d") and lo <= minute < hi:
+            hit.append(c)
+    return hit
+
+
+class SweepFetch:
+    """The live server's copy of a sweep run's Microsoft 365 reads (#250). Interface (the guarded live_server.py calls only these):
+
+      SweepFetch(hold=None)        one per sweep run, made when `fetch_on()`; `hold(event, live_or_None, created_or_None) -> (held, reason)`
+                                   is the calendar rule (slice B, the default transcript_hold.hold_for), called for each transcript
+                                   of each tied event; any held holds it; an exception, or a malformed answer, holds it
+      observe(name, tool_input, result_text, is_error=False)
+                                   every tool result of the run, as it comes; keeps what it needs, writes nothing, never raises on
+                                   a lookalike tool; the server wraps it in try/except and logs the exception's name only
+      finish(answered) -> counts   once, when the run has ended, in every way it can end. answered=True (the run finished and gave
+                                   its answer) settles each queued transcript and writes the fetched ones; answered=False (stopped,
+                                   timed out, failed) drops the queue and counts it as left. Safe to call again (same counts).
+                                   counts: {"fetched", "held", "failed", "left", "error"}, numbers only
+      fetch_text(counts) -> str    module function: the closure line for the run ("2 transcripts fetched, 1 held back: ...")
+
+    The text of a transcript comes only from the tool result handed to observe(), never from what Claude says or a path it names.
+    It is held in memory until finish() (at most QUEUE_MAX characters), because whether its meeting is a held one is known only when
+    every event read of the run is (Cap #250 read order). Nothing is written to the tracker or to staging; transcripts.json gains
+    only times and a count (KEEP)."""
+
+    def __init__(self, hold=None):
+        self.hold = hold or default_hold
+        self.live = {}                       # event ID -> the event as this run read it (the hold may only add a hold from it)
+        self.reasons = {}                    # event ID -> the hold's fixed-word reason (never a title, ID or time)
+        self.uris = {}                       # occurrence_key(URL) -> event ID, from the event reads of this run
+        self.named = {}                      # event ID -> the transcript URL its own read named (to find who else names a meeting)
+        self.shared = set()                  # occurrence keys two events named: never tied (Cap N1)
+        self.blocked = set()                 # meeting_key of every URL a held event named: no event ties to that meeting (Cap #250)
+        self.held = set()                    # events whose own read says they aren't "normal" sensitivity: never fetched
+        self.outcomes = {}                   # event ID (or "uri:<n>" for a read no event of the run named) -> outcome word
+        self.waiting = []                    # transcript reads not yet written: (uri, text, is_error), settled by finish()
+        self.queued = 0                      # characters waiting
+        self.dropped = 0                     # reads whose text wasn't kept because the queue was full: left for Process
+        self.final = None                    # the counts finish() returned (a second call returns them again)
+
+    def observe(self, name, tool_input, text, is_error=False):
+        """Take one tool call and its result. Only read_resource on an event or a meeting transcript is looked at."""
+        if self.final is not None or str(name) != FETCH_TOOLS[1] or not fetch_on():     # the exact tool, not a lookalike name
+            return
+        uri = str((tool_input or {}).get("uri") or "")
+        if uri.startswith("calendar:///events/") and not is_error:
+            data = as_json(text)
+            facts = event_facts(data)
+            self.note_event(data, facts)
+        elif uri.startswith("meeting-transcript:///"):
+            self.transcript(uri, text, is_error)
+
+    def note_event(self, data, facts):
+        """One event read: hold it unless it says "normal", and tie its transcript URL to it. A meeting named by a held event, or an
+        occurrence named by two events (a duplicate invite), ties to nobody, however the URL is written (case, slash, query, fragment)
+        and whatever the order of the reads (Cap N1, #250)."""
+        eid, uri = str(facts.get("id") or ""), facts.get("uri")
+        if not eid:
+            return
+        self.live[eid] = data if isinstance(data, dict) else {}
+        held = str((data or {}).get("sensitivity") or "").strip().lower() != "normal"      # the event read itself: fail closed
+        if held:
+            self.held.add(eid)
+        if uri:
+            occ = occurrence_key(uri)
+            self.named[eid] = uri
+            if held:
+                self.blocked.add(meeting_key(uri))
+            if held or self.uris.get(occ, eid) != eid:
+                self.shared.add(occ)
+            self.uris[occ] = eid
+
+    def tie(self, uri):
+        """(event ID, why) for a meeting-transcript URL: only the event whose own read, in this run, returned that URL. why is "held"
+        when a held event named the meeting, "left" when no event of the run (or two) named it, else None. A URL recorded in
+        transcripts.json (typed by Claude through `record`) is never a tie (Cap's HIGH on #250): fail closed."""
+        occ = occurrence_key(uri)
+        if meeting_key(uri) in self.blocked:
+            return None, "held"
+        eid = None if occ in self.shared else self.uris.get(occ)
+        if eid is None:
+            return None, "left"
+        return eid, "held" if eid in self.held else None
+
+    def resolve(self, uri, found):
+        """(#250 Cap's Hidden cases) The one event a transcript of a blocked or shared meeting belongs to, by WHEN it was made, or None.
+        Several events of this run name the meeting (a series, a duplicate, the same id in another case) and tie() could not pick one.
+        It picks one only when every candidate has a saved row with readable times, each transcript was made inside exactly one
+        candidate's window (15 minutes before its start up to its end, the hold's own window), that candidate is the same for every
+        transcript, it is normal in this run's read and in the saved calendar, and no other candidate's window holds that moment.
+        Anything else: None, and the transcript stays held (fail closed)."""
+        mk = meeting_key(uri)
+        cands = [e for e, u in self.named.items() if meeting_key(u) == mk]
+        rows = {str(r["id"]): r for r in calendar_rows()}
+        if not cands or not found or any(c not in rows for c in cands):
+            return None
+        inside = None
+        for t in found:
+            hit = window_hits(rows, cands, (t or {}).get("created"))
+            if len(hit) != 1 or (inside not in (None, hit[0])):
+                return None
+            inside = hit[0]
+        return None if inside in self.held or confidential(rows[inside]) else inside
+
+    def tied(self, uri, text, is_error):
+        """tie(), and when that picks nobody because several events name the meeting, resolve() by the time the transcript was made."""
+        eid, why = self.tie(uri)
+        if eid is None and self.named:
+            eid = self.resolve(uri, transcripts_in(as_json(text)) if not is_error else None)
+            why = None if eid else why
+        return eid, why
+
+    def event_of(self, uri):
+        """The event ID a transcript URL ties to, or None (not tied, or its meeting is held)."""
+        eid, why = self.tie(uri)
+        return None if why else eid
+
+    def transcript(self, uri, text, is_error):
+        """A transcript read came back: kept, not written, until finish() (at most QUEUE_MAX characters; more is left for Process)."""
+        size = len(text or "")
+        if self.queued + size > QUEUE_MAX:
+            self.dropped += 1
+            self.waiting.append((uri, None, True))               # still counted, never fetched
+            return
+        self.queued += size
+        self.waiting.append((uri, text, is_error))
+
+    def finish(self, answered):
+        """The run has ended. Answered: write what is to be fetched, now that every hold of the run is known. Not answered (stopped,
+        timed out, failed): write nothing; each queued read is counted as left. Returns the counts; a second call returns them again."""
+        if self.final is not None:
+            return dict(self.final)
+        waiting, self.waiting, self.queued = self.waiting, [], 0
+        live = bool(answered) and fetch_on()                   # the switch is read again: turned off during the run = nothing written
+        for n, (uri, text, is_error) in enumerate(waiting):
+            try:
+                if live and text is not None:
+                    self.settle(uri, text, is_error)
+                else:
+                    self.leave(uri, n)
+            except Exception as e:                             # one read that can't be settled never stops the others (Cap L4)
+                debuglog.warn("transcripts", f"fetch: a read couldn't be settled ({type(e).__name__})")
+                self.outcomes[self.tie(uri)[0] or f"uri:{n}"] = "left"
+        self.final = self.counts()
+        if any(self.final.values()):
+            debuglog.info("transcripts", "fetch: " + ", ".join(f"{k} {v}" for k, v in self.final.items()))
+        return dict(self.final)
+
+    def leave(self, uri, n):
+        """A read that isn't settled: left for Process, unless its meeting is a held one (which is shown as held)."""
+        eid, why = self.tie(uri)
+        self.outcomes.setdefault(eid or f"uri:{n}", "held" if why == "held" else "left")
+
+    def settle(self, uri, text, is_error):
+        """One transcript read: fetch it if its meeting is to be fetched (a retry after a dropped connection too)."""
+        eid, why = self.tied(uri, text, is_error)
+        key = eid or f"uri:{len(self.outcomes)}"
+        if why:
+            self.outcomes.setdefault(key, why)
+            return
+        if self.outcomes.get(eid) not in (None, "failed"):
+            return
+        at = now()
+        ctx = fetch_context(at)
+        rows = calendar_rows()
+        row = next((r for r in rows if str(r["id"]) == eid), None)
+        if row is None:
+            return
+        skip = fetch_skip(row, at, ctx)
+        if skip == "confidential":
+            self.outcomes[eid] = "held"
+            return
+        if skip:
+            return
+        if is_error:
+            self.outcomes[eid] = "failed" if error_kind(text) == "other" else "no access"
+            return
+        found = transcripts_in(as_json(text))
+        if found is None:
+            self.outcomes[eid] = "failed"
+            return
+        if self.hold_reason(row, found, eid):
+            self.outcomes[eid] = "held"
+            return
+        self.outcomes[eid] = fetch_one(eid, found, uri, at, ctx)
+
+    def hold_reason(self, row, found, eid):
+        """Whether the calendar rule holds this meeting's transcript: asked once for each transcript read (its created time), with
+        the event as the saved calendar has it and as this run read it (None if not read). Any hold holds; a raise or an answer that
+        isn't (held, reason) holds (fails closed). The reason (fixed words) is kept in self.reasons."""
+        event = {k: row.get(k) for k in ("id", "day", "start", "end", "title")}
+        for t in found or [{}]:
+            if not (t or {}).get("created"):                   # M1: a transcript with no created time can't be tied to a meeting: held
+                self.reasons[eid] = "times unreadable"
+                return True
+            try:
+                held, why = self.hold(event, self.live.get(eid), (t or {}).get("created"))
+                held = held is not False
+                why = why if held is False or isinstance(why, str) else "calendar unreadable"
+            except Exception as e:
+                debuglog.warn("transcripts", f"fetch: the calendar rule failed ({type(e).__name__}); held")
+                held, why = True, "calendar unreadable"
+            if held:
+                self.reasons[eid] = str(why)
+                return True
+        return False
+
+    def counts(self):
+        """Outcomes as numbers: fetched, held, failed, left (another meeting's transcript counts as left), error (couldn't be saved)."""
+        kind = {"another meeting": "left"}
+        words = [kind.get(v, v) for v in self.outcomes.values()]
+        return {k: words.count(k) for k in TALLY_KEYS}
+
+
+# ===== end #250 =====
 
 
 # ── tidying and writing ──
@@ -487,10 +1035,16 @@ def chat_text(listing, full, window, meta):
     return "\n".join(head + (lines or ["(no messages during the meeting)"])) + "\n", len(rows)
 
 
+STEM_BYTES = 150                     # a file name's stem is at most this many bytes (UTF-8): names are limited in bytes, not letters
+
+
 def file_stem(day, title):
-    """The file name stem for a meeting, as minutes.py names it: 'YYYY-MM-DD Title'."""
+    """The file name stem for a meeting, as minutes.py names it: 'YYYY-MM-DD Title', cut to STEM_BYTES bytes, never mid-character."""
     import minutes
-    return minutes.stem(day, title)
+    stem = minutes.stem(day, title)
+    if len(stem.encode("utf-8")) > STEM_BYTES:
+        stem = stem.encode("utf-8")[:STEM_BYTES].decode("utf-8", errors="ignore").rstrip(" .")
+    return stem
 
 
 def unique(folder, stem, suffix):
@@ -649,20 +1203,29 @@ class Job:
                 "attendees": ev.get("attendees"), "id": self.id}
         stem = file_stem(day, meta["title"])
         paths.INBOX.mkdir(parents=True, exist_ok=True)
-        vtt = unique(paths.INBOX, stem, ".vtt")
-        with open(vtt, "w", encoding="utf-8", newline="\n") as fh:    # write_text(newline=) needs Python 3.10; creaite runs on 3.9
-            fh.write(tidy_vtt([t["content"] for t in self.transcripts], meta))
-        files = [paths.rel(vtt)]
-        msg = f"Loaded {vtt.name}."
-        if self.chat_listing is not None:
-            window = (self.facts()["start"], self.facts()["end"])
-            text, n = chat_text(self.chat_listing, self.chat_full, window, meta)
-            if n:
-                chat = paths.INBOX / f"{vtt.stem} - chat.txt"
-                with open(chat, "w", encoding="utf-8", newline="\n") as fh:
-                    fh.write(text)
-                files.append(paths.rel(chat))
-                msg += f" And the meeting chat ({n} message{'s' if n != 1 else ''})."
+        text = tidy_vtt([t["content"] for t in self.transcripts], meta)      # built first: a fault here leaves no file
+        made = []
+        try:
+            vtt = unique(paths.INBOX, stem, ".vtt")
+            with open(vtt, "x", encoding="utf-8", newline="\n") as fh:      # "x": no dangling link, never an overwrite; 3.9
+                made.append(vtt)
+                fh.write(text)
+            files = [paths.rel(vtt)]
+            msg = f"Loaded {vtt.name}."
+            if self.chat_listing is not None:
+                window = (self.facts()["start"], self.facts()["end"])
+                chat_body, n = chat_text(self.chat_listing, self.chat_full, window, meta)
+                if n:
+                    chat = paths.INBOX / f"{vtt.stem} - chat.txt"
+                    with open(chat, "x", encoding="utf-8", newline="\n") as fh:
+                        made.append(chat)
+                        fh.write(chat_body)
+                    files.append(paths.rel(chat))
+                    msg += f" And the meeting chat ({n} message{'s' if n != 1 else ''})."
+        except BaseException:                                                # no partial file is left in the inbox
+            for f in made:
+                f.unlink(missing_ok=True)
+            raise
         return {"status": "available", "files": files, "message": msg}
 
 

@@ -190,12 +190,13 @@ class Pieces(unittest.TestCase):
 
     def test_a_tool_result_spooled_to_a_file_is_read_from_there_and_only_from_claudes_own_folders(self):
         with tempfile.TemporaryDirectory() as d:
-            spool = Path(d) / "tool-results" / "mcp-read_resource-1.txt"
-            spool.parent.mkdir()
+            spool = Path(d) / ".claude" / "projects" / "vault" / "tool-results" / "mcp-read_resource-1.txt"
+            spool.parent.mkdir(parents=True)
             payload = json.dumps(transcript_result())
             spool.write_text(json.dumps([{"type": "text", "text": payload}]), encoding="utf-8")
             note = f"Error: result (180,000 characters) exceeds maximum allowed tokens. Output has been saved to {spool}.\nFormat: JSON array"
-            os.environ["CREAITE_TOOL_RESULTS"] = d
+            home = os.environ.get("HOME")
+            os.environ["HOME"] = d                                                     # Claude Code's folder is ~/.claude
             try:
                 found = T.transcripts_in(T.as_json(note))
                 self.assertEqual(found[0]["content"], VTT)                             # byte for byte, CRLF and all
@@ -203,7 +204,10 @@ class Pieces(unittest.TestCase):
                 other.write_text(payload)
                 self.assertIsNone(T.read_spooled(f"saved to {other}"))                 # not Claude Code's folder: never read
             finally:
-                del os.environ["CREAITE_TOOL_RESULTS"]
+                if home is None:
+                    del os.environ["HOME"]
+                else:
+                    os.environ["HOME"] = home
 
 
 # ── the meetings still to look up ──
@@ -293,7 +297,7 @@ class Runs(unittest.TestCase):
         cls.base = f"http://127.0.0.1:{port}"
         cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")],
                                     env={**os.environ, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake), "CREAITE_NOW": NOW,
-                                         "CREAITE_TOOL_RESULTS": str(cls.spool_dir)},
+                                         "HOME": str(cls.spool_dir)},          # ~/.claude is where a large result is saved
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(50):
             try:
@@ -369,8 +373,8 @@ class Runs(unittest.TestCase):
         inline = self.run_job("load", route_steps(chat=False))
         want = (self.v.root / "inbox" / Path(self.outcome(inline)["files"][0]).name).read_bytes()
         self.setUp()
-        spool = self.spool_dir / "tool-results" / "mcp-read_resource-7.txt"
-        spool.parent.mkdir(exist_ok=True)
+        spool = self.spool_dir / ".claude" / "projects" / "vault" / "tool-results" / "mcp-read_resource-7.txt"
+        spool.parent.mkdir(parents=True, exist_ok=True)
         spool.write_text(json.dumps([{"type": "text", "text": json.dumps(transcript_result())}]), encoding="utf-8")
         big = {**read(event()["meetingTranscriptUrl"], ""), "result": f"Error: result (190,431 characters) exceeds maximum allowed tokens. Output has been saved to {spool}\nFormat: JSON array of content blocks"}
         out = self.outcome(self.run_job("load", route_steps(tr=big, chat=False)))

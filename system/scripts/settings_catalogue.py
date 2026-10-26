@@ -29,6 +29,11 @@ UNORDERED = ("work.weekend_days", "dashboard.week_ahead_priorities", "identity.s
 RETIRE_AFTER_DAYS = 30                    # a setting never changed in a log this old is a candidate to retire (counts only)
 LOCK = threading.Lock()                   # one settings save at a time from the server
 
+FETCH_HELP = (                                            # #250: the brief's wording, also the setting's reason
+    "Off: creaite fetches a transcript when you press Process. On: each mail and Teams check fetches the "
+    "transcripts of meetings that have ended, so they are ready when you open Intake. "
+    "It only reads: no AI runs and nothing is added to your project records. "
+    "Confidential meetings are never fetched.")
 ESSENTIALS, ADVANCED, DEVELOPER = "essentials", "advanced", "developer"
 # The Essentials, as rows (BL-320, from the accepted mockup): (section, label, one line, keys). A row may cover several keys
 # (what the sweep reads is five switches; AI drafts is every kind). A key in a row is an Essential; every other key is Advanced.
@@ -132,6 +137,9 @@ CATALOGUE = {
                                      "Missing a source is worse than one more suggestion; ignore rules handle the noise."),
     "sweep.sources.calendar": ("Your day", "Check reads: calendar", "The week's meetings, for Today, Intake and prep.",
                                "Today's day view and meeting prep need it."),
+    "sweep.fetch_transcripts": ("Checking mail and Teams", "Fetch transcripts as they appear",       # #250
+                                "It only reads: no AI runs and nothing is added to your project records. "
+                                "Confidential meetings are never fetched.", FETCH_HELP),
     "sweep.show_possible_matches": ("Checking mail and Teams", "Show possible matches",
                                     "Messages that may belong to a project are shown in Review to place, not dropped.",
                                     "A weak match you can place is better than a message silently lost."),
