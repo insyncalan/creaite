@@ -749,9 +749,10 @@ class AnchorFindings(unittest.TestCase):
             out = C("Agenda\n1. Welcome\n" + line + "\n3. Close\n")
             self.assertNotIn("example.test", out, line)
 
-    def test_A15_bare_meet_link_under_the_agenda_goes_alone(self):
+    def test_A15_bare_meet_code_link_under_the_agenda_takes_its_block(self):
+        """Cap review: a Google Meet code link (abc-defg-hij) is a join link, so an anchor, not a plain link."""
         out = C("Agenda\n1. Welcome\n2. Close\nhttps://meet.example.test/abc-defg-hij")
-        self.assertEqual(out, "Agenda\n1. Welcome\n2. Close")
+        self.assertEqual(out, "")
 
     def test_A5_one_phone_number_drops_only_its_line(self):
         t = "Agenda\n1. Welcome\n2. Call Pat on +44 20 7946 0958 re budget\n3. Close\n"
@@ -871,6 +872,53 @@ class PlainEncodingFindings(unittest.TestCase):
 
     def test_E3_base64_of_a_passcode_is_dropped_by_the_shape_gate(self):
         self.assertNotIn("UGFzc2NvZGU6", C("UGFzc2NvZGU6IDg4MjU= \n\nagenda"))
+
+
+class CapReview(unittest.TestCase):
+    """Cap's review of v269-fix2: a break inside a label's window, and a Google Meet code link."""
+
+    BREAKS = ("\x85", "\x0b", "\x0c", "\u2028", "\u2029")
+
+    def test_R1_break_inside_the_window_does_not_free_the_value(self):
+        for b in self.BREAKS:
+            t = "Zoom passcode:\nDecisions %slog\nmupiwoc" % b
+            out = C(t)
+            self.assertNotIn("mupiwoc", out, repr(b))
+            self.assertEqual(C(out), out, repr(b))
+
+    def test_R2_union_keeps_the_agenda_and_the_line_that_holds_the_label(self):
+        for b in self.BREAKS:
+            self.assertEqual(C("Agenda budget%sPasscode: 8825%sThanks all" % (b, b)), "Agenda budget\nThanks all", repr(b))
+            self.assertEqual(C("Agenda%sone\nZoom passcode:\nDecisions %slog\nmupiwoc\nBudget review" % (b, b)), "Agenda\none\nBudget review", repr(b))
+
+    def test_R3_meet_code_link_takes_its_block(self):
+        for link in ("https://meet.example.org/abc-defg-hij", "meet.google.com/abc-defg-hij", "https://meet.google.com/abc-defg-hij?authuser=0",
+                     "Join: https://meet.google.com/abc-defg-hij"):
+            self.assertNotIn("abc-defg-hij", C("Agenda\n1. Q\n%s\n2. B" % link), link)
+            self.assertNotIn("abc-defg-hij", C("<p>Agenda</p><p>1. Q</p><p>%s</p><p>2. B</p>" % link), link)
+            self.assertNotIn("abc-defg-hij", C("<p>Agenda</p><p>1. Q<br>%s<br>2. B</p>" % link), link)
+
+    def test_R3b_meet_code_link_the_scrub_leaves_alone_takes_the_block(self):
+        self.assertEqual(C("Agenda\n1. Q\nhttps://meet.example.org/abc-defg-hij\n2. B"), "")
+        self.assertEqual(C("Agenda\n1. Q\nhttps://meet.example.org/abc-defg-hij?authuser=0\n2. B"), "")
+
+    def test_R4_a_non_join_link_still_goes_alone(self):
+        self.assertEqual(C("Agenda\n1. Q\nhttps://meet.example.org/team-notes\n2. B"), "Agenda\n1. Q\n2. B")
+
+    def test_R5_mutants_turn_the_tests_red(self):
+        keep_pieces, keep_meet = F._original_pieces, F._LINK_MEET
+        try:
+            F._original_pieces = lambda text, scrub: None
+            self.assertIn("mupiwoc", C("Zoom passcode:\nDecisions \x85log\nmupiwoc"))
+        finally:
+            F._original_pieces = keep_pieces
+        try:
+            import re as _re
+            F._LINK_MEET = _re.compile(r"(?!)")
+            self.assertIn("1. Q", C("Agenda\n1. Q\nhttps://meet.example.org/abc-defg-hij\n2. B"))
+        finally:
+            F._LINK_MEET = keep_meet
+        self.assertNotIn("mupiwoc", C("Zoom passcode:\nDecisions \x85log\nmupiwoc"))
 
 
 class LabelMarkupFindings(unittest.TestCase):
