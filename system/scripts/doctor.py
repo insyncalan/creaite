@@ -616,7 +616,7 @@ def scripts_use_paths():
     for s in (paths.ROOT / "system" / "scripts").glob("*.py"):
         if s.name == "paths.py" or s.name in PURE_MODULES:
             continue
-        if not re.search(r"^import paths\b", s.read_text(encoding="utf-8"), re.M):
+        if not re.search(r"^\s*import paths\b", s.read_text(encoding="utf-8"), re.M):
             bad.append(s.name)
     return not bad, ("not importing paths: " + ", ".join(bad)) if bad else "every script imports paths"
 
