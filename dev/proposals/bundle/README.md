@@ -3,7 +3,7 @@
 `backup-bundle.diff` is a patch for `system/scripts/backup.py`. It is NOT applied on any branch. Apply it only after review, off `origin/main`
 (`git apply --check dev/proposals/bundle/backup-bundle.diff` passes on a62fbb0a).
 
-sha256 of backup-bundle.diff: `02c8e3bf55b4bcc641fdcb5e406662fa33c09107e2717d1db9b3e8437082db7c`
+Revision 2. sha256 of backup-bundle.diff: `cd7920c76d169dbabc543b8cf64c8c49b4979a70cec3a8b451bc8bea01d99a58`
 
 ## Why
 
@@ -27,20 +27,33 @@ history holds those paths gets the snapshot.
 
 ## What the patch does (`backup.py`)
 
-- `PRIVATE_PATHS`, `SNAPSHOT_NOTE`, `BUNDLE_NOTE`: the excluded paths (the same as vault-gitignore) and the manifest note.
+- `PRIVATE_PATHS`, `PRIVATE_SPECS` (`:(icase)` pathspecs), `EXCLUDE_SPECS` (`:(exclude,icase)`), `SAFE_GIT` (the `-c` flags), `SNAPSHOT_NOTE`, `BUNDLE_NOTE`.
 - `make_bundle(dest)`: same signature and return (None when made, else why not). Fails closed: git missing, a failed git step, a timeout or an
   OS error give a string and no file at `dest`.
-- `bundle_filtered(git, dest)`: the check, then `--all` or the snapshot. The snapshot is `git archive HEAD -- . ':(exclude)<path>'` extracted into a
-  temporary directory, `git init`, same branch name, `add -A`, one commit (fixed identity, no signing), `git bundle create dest HEAD <branch>`.
-- `run_git`, `fail`: small helpers.
-- `make_zip`: the manifest gets `"git_note"` when the bundle is a snapshot. `"git"` stays `"bundle"`, so `backup.py show` is unchanged. When the
-  bundle fails, `"git"` holds the reason and the zip has no `vault.bundle` (as before for a failure).
+- `bundle_filtered(git, dest)`: the check, then `--all` or the snapshot. The check is `git rev-list --all --full-history -n 1 -- <icase paths>`:
+  `--full-history` so a private file reachable only through a merge's second parent (`merge -s ours`, then the side branch deleted) is found, and
+  `icase` so `System/Staging/...` (a commit made on Linux, or a case-insensitive volume) is found.
+- The snapshot: a temporary index (`GIT_INDEX_FILE`, so the vault's own index is never touched) filled by `read-tree HEAD`; `ls-files` with the
+  exclude pathspecs; `checkout-index` of those files into a temporary directory; then `git init`, same branch name, `add -A -f`, one commit,
+  `git bundle create dest HEAD <branch>`. This keeps `export-ignore` files (unlike `git archive`) and tracked files the committed `.gitignore`
+  would hide (`-f`). The temp git runs with `core.hooksPath=/dev/null`, `core.excludesFile=/dev/null`, no signing and a fixed identity, so none of
+  the user's hooks or global settings run on it.
+- `restore_plan(..., snapshot)`, `cmd_show`, `verify`: the snapshot is shown, not hidden. The manifest has `"git_note"`; `backup.py show` prints it;
+  the restore plan says "git history: one snapshot commit, restored from the bundle"; the restore check state gets `"note"`, which Health shows
+  through `doctor.backup_check` (an ordinary file, committed on the branch with its test).
+- `run_git`, `fail`: small helpers. `make_zip`: the manifest gets `"git_note"`; when the bundle fails `"git"` holds the reason and there is no `vault.bundle`.
 
 ## What history is lost (snapshot case only)
 
 All earlier commits: the bundle holds one commit, the latest tree minus the private paths (memory files, scripts, templates, `system/config/`).
 Commits made later in the real repo are not in an earlier zip, as before. Uncommitted work is not in the bundle, as before. The real repo is
 never changed. Size: smaller than `--all`.
+
+## Known limit: a moved private file
+
+The filter works on paths. A private file that was renamed to another path in the latest commit (for example `git mv system/staging/vip.json
+notes-vip.json`) is not recognised and stays in the snapshot. Only the three folders are filtered. Tested as a known limit
+(`test_a_moved_private_file_stays_in_the_snapshot`).
 
 ## Restore and the weekly check
 
@@ -61,7 +74,7 @@ index are read, never written (tested by comparing them before and after).
 `vip.json` is absent from every blob and commit of the cloned bundle; a HEAD that still tracks them is filtered; a clean history keeps all commits;
 HEAD, refs, status and index are unchanged; restore_git and verify_bundle read the snapshot; a failing git gives a zip with no `vault.bundle` and a
 manifest reason; no git gives no bundle. Mutants: removing the `:(exclude)` pathspecs fails the HEAD-tracking test; forcing `--all` fails two tests.
-10 tests pass patched; `test_backups` (21) and `dev/tools/check.py` pass patched.
+16 tests pass patched; `test_backups` (21) and `dev/tools/check.py` pass patched. Mutants (each fails the privacy tests): no `--full-history`, no icase in the check, no icase in the exclude, no `core.hooksPath`, no `-f`. Removing only `core.excludesFile` is not caught, because `-f` already covers it (the flag is a second line of defence).
 
 ## Not changed
 

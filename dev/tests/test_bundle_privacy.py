@@ -114,15 +114,29 @@ class BundlePrivacy(unittest.TestCase):
         self.assertIn("vip.json", text)       # the reason is written down
 
 
+@unittest.skipUnless(GIT, "needs git")
+class HealthNote(unittest.TestCase):
+    def setUp(self):
+        self.v = Vault()
+        self.root = self.v.root
+        self.addCleanup(self.v.cleanup)
+
+    def test_doctor_shows_the_snapshot_note(self):
+        r = vault_py(self.root, "import doctor; backup.save_state('verify', {'day': backup.today().isoformat(), 'ok': True, "
+                                "'problems': [], 'checked': ['z.zip'], 'note': 'git history in the zip: one snapshot commit'}); "
+                                "print(json.dumps(doctor.backup_check()))")
+        self.assertIn("one snapshot commit", r.stdout, r.stdout + r.stderr)
+
+
 def patched():
     """True when system/scripts/backup.py has the filtered bundle (dev/proposals/bundle/backup-bundle.diff applied)."""
     return "PRIVATE_PATHS" in (REPO / "system/scripts/backup.py").read_text(encoding="utf-8")
 
 
-def vault_py(root, code, *args):
+def vault_py(root, code, *args, env=None):
     """Run Python inside the vault's scripts folder; returns the completed process."""
     return subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import backup; " + code,
-                           *args], cwd=root, capture_output=True, text=True, timeout=300, env=ENV)
+                           *args], cwd=root, capture_output=True, text=True, timeout=300, env=env or ENV)
 
 
 @unittest.skipUnless(GIT and patched(), "needs git and the filtered bundle (dev/proposals/bundle/backup-bundle.diff)")
@@ -184,6 +198,87 @@ class ExistingVault(unittest.TestCase):
             self.assertNotIn(mark, text)
         self.assertIn(MEMORY, text)
         self.assertEqual(git(clone, "rev-list", "--count", "--all").strip(), "1")      # a snapshot
+
+    def test_private_file_reachable_only_through_a_merge_is_found(self):
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "base")
+        trunk = git(self.root, "symbolic-ref", "--short", "HEAD").strip()
+        git(self.root, "checkout", "-q", "-b", "side")
+        self.old_history(untrack=False)                                  # the chat and vip.json, on `side` only
+        git(self.root, "checkout", "-q", trunk)
+        git(self.root, "merge", "-q", "--no-ff", "-s", "ours", "side", "-m", "merge, ours")
+        git(self.root, "branch", "-q", "-D", "side")
+        self.assertNotIn("system/staging/vip.json", git(self.root, "ls-tree", "-r", "--name-only", "HEAD"))
+        dest, why = self.bundle()
+        self.assertIsNone(why)
+        text = self.everything(dest)[1]
+        for mark in (CHAT, VIP):
+            self.assertNotIn(mark, text)
+
+    def test_upper_case_private_path_is_found(self):
+        f = self.work / "c.json"
+        f.write_text(f"{CHAT}\n")
+        sha = git(self.root, "hash-object", "-w", str(f)).strip()
+        git(self.root, "update-index", "--add", "--cacheinfo", f"100644,{sha},System/Staging/ask/c.json")
+        keep = self.root / "projects/_portfolio/PORTFOLIO.md"
+        keep.parent.mkdir(parents=True, exist_ok=True)
+        keep.write_text(f"{MEMORY}\n")
+        git(self.root, "add", "projects")
+        git(self.root, "commit", "-q", "-m", "linux commit")
+        git(self.root, "rm", "-q", "--cached", "System/Staging/ask/c.json")
+        git(self.root, "commit", "-q", "-m", "removed")
+        dest, why = self.bundle()
+        self.assertIsNone(why)
+        self.assertNotIn(CHAT, self.everything(dest)[1])
+
+    def test_head_tracking_upper_case_private_path_is_filtered(self):
+        f = self.work / "c.json"
+        f.write_text(f"{CHAT}\n")
+        sha = git(self.root, "hash-object", "-w", str(f)).strip()
+        git(self.root, "update-index", "--add", "--cacheinfo", f"100644,{sha},System/Staging/ask/c.json")
+        (self.root / "keep.txt").write_text(f"{MEMORY}\n")
+        git(self.root, "add", "keep.txt")
+        git(self.root, "commit", "-q", "-m", "x")
+        dest, why = self.bundle()
+        self.assertIsNone(why)
+        clone, text = self.everything(dest)
+        self.assertNotIn(CHAT, text)
+        self.assertIn(MEMORY, text)
+
+    def test_snapshot_keeps_export_ignored_and_tracked_ignored_files_and_runs_no_hook(self):
+        (self.root / ".gitattributes").write_text("notes/export.txt export-ignore\n")
+        (self.root / "notes").mkdir()
+        (self.root / "notes/export.txt").write_text("EXPORTED\n")
+        (self.root / ".gitignore").write_text("kept-but-ignored.txt\n")
+        (self.root / "kept-but-ignored.txt").write_text("IGNORED-BUT-TRACKED\n")
+        self.old_history(untrack=False)
+        git(self.root, "add", "-f", "-A")
+        git(self.root, "commit", "-q", "-m", "more")
+        hooks, marker = self.work / "hooks", self.work / "hook-ran"
+        hooks.mkdir()
+        (hooks / "pre-commit").write_text(f"#!/bin/sh\ntouch {marker}\n")
+        (hooks / "pre-commit").chmod(0o755)
+        cfg = self.work / "gitconfig"
+        cfg.write_text(f"[core]\n\thooksPath = {hooks}\n\texcludesFile = {self.work}/ignore\n")
+        (self.work / "ignore").write_text("*.txt\n")
+        dest = self.work / "vault.bundle"
+        r = vault_py(self.root, "print(json.dumps(backup.make_bundle(sys.argv[1])))", str(dest),
+                     env={**ENV, "GIT_CONFIG_GLOBAL": str(cfg)})
+        self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]), None, r.stderr)
+        self.assertFalse(marker.exists(), "the user's commit hook ran on the snapshot")
+        clone = self.everything(dest)[0]
+        names = git(clone, "ls-files").splitlines()
+        self.assertIn("notes/export.txt", names)
+        self.assertIn("kept-but-ignored.txt", names)
+        self.assertIn(".gitattributes", names)
+
+    def test_a_moved_private_file_stays_in_the_snapshot(self):
+        """Known limit of a path filter (README, NOTES): a private file renamed to another path is not recognised."""
+        self.old_history(untrack=False)
+        git(self.root, "mv", "system/staging/vip.json", "notes-vip.json")
+        git(self.root, "commit", "-q", "-m", "moved")
+        dest, why = self.bundle()
+        self.assertIn(VIP, self.everything(dest)[1])
 
     def test_head_still_tracking_private_files_is_filtered(self):
         self.old_history(untrack=False)
