@@ -59,12 +59,18 @@ def _skeleton(line):
         s = unicodedata.normalize("NFKC", s)
         s = s.translate(_CONFUSABLES)
     s = " ".join(s.lower().split())
+    if "." in s:
+        s = _DOTTED_LETTERS.sub(lambda m: m.group().replace(".", ""), s)
     return _SPACED_LETTERS.sub(_join_letters, s) if " " in s else s
 
 
 # E1 pass 2, finding 9: 'P A S S W O R D : 4330' reads as 'password : 4330' (four or more single letters in a row, one space apart)
 # (a run of more than 24 letters is text, not a label, and stays as it is)
 _SPACED_LETTERS = re.compile(r"(?<![^\W\d_])(?<![^\W\d_] )(?:[^\W\d_] ){3,}[^\W\d_](?![^\W\d_])")
+
+
+# Cap re-check 2, LOW: 'P.A.S.S.C.O.D.E: 4330' reads as 'passcode: 4330' (four or more single letters, each followed by a dot)
+_DOTTED_LETTERS = re.compile(r"(?<![^\W\d_.])(?<![^\W\d_]\.)(?:[^\W\d_]\.){3,}[^\W\d_]\b\.?(?![^\W\d_])")
 
 
 def _join_letters(m):
