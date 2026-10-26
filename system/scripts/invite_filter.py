@@ -1146,8 +1146,14 @@ def _raw_first(text):
     scrub = _scrub_module()
     if scrub is None:
         return ""
+def _is_html(text):
+    mod = _blocks_module()
+    return mod is not None and mod.looks_like_html(text)
+
+
     asked = text[:BODY_MAX * 5]
-    raw = _line_breaks(asked)
+    html = _is_html(asked)
+    raw = asked if html else _line_breaks(asked)      # HTML keeps its breaks as written: the scrub and invite_blocks treat them as white space
     scrubbed = [x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]
     scrubbed = _union_drops(scrubbed, _original_pieces(asked, scrub))
     aug, flags = _with_boundaries(raw, _fit(scrubbed))
