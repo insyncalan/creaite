@@ -24,7 +24,7 @@ What changed for you in each release of creaite, newest first. Written in plain 
 - Update from the release zip as usual.
 - Reload any dashboard tab that was open before the update.
 - Look at Today and Prep once for a few real meetings, to see what the filter keeps.
-- Ask creaite to run setup once, to stop your backups carrying your chats.
+- Use ask creaite to run setup once, to stop your backups carrying your chats.
 
 ### Good to know
 - **Ordinary text the filter can lose.** Lines that share a block with a secret or with a join line go with it, by design. A bare figure of seven or more digits (an order or invoice number, a money amount) drops its block. Three numbers in a row on separate lines are read as one split ID. A line that is only "one-time-use" is read as a meeting code. A link on a line of its own is dropped. A long numbered agenda is cut at 1,500 characters. A line with a `sip:` address or an `id@host` address takes its block with it. A "Google Meet link" label is removed together with its join link. Some titles still show as "Meeting" because of a label word in them, and the clean-up now also turns titles such as "Zoom licences 100 200", "Zoom licences 1234567", "Teams renewal 123 456", "Zoom spend 100 200 300", "Webex 2552 123 4567 renewal", "Chime 12345678", "Jitsi 1000000 users", "Zoom ticket 482915", "Teams incident 482915" and "Teams INC0482915" into "Meeting" (a provider name followed by a long number reads as a meeting ID). "Dress code for visitors" and "Cost code changes" still lose their own line (a number directly below them stays), and a line such as "Password for the HR portal" still takes the next one to three lines.
