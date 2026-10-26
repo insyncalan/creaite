@@ -1,8 +1,8 @@
 diff --git a/system/scripts/backup.py b/system/scripts/backup.py
-index 596afb5b..b7c09d15 100644
+index 596afb5b..fbef2f36 100644
 --- a/system/scripts/backup.py
 +++ b/system/scripts/backup.py
-@@ -249,21 +249,80 @@ def wanted_out(f):
+@@ -249,21 +249,84 @@ def wanted_out(f):
      return f.name == ".DS_Store" or f.name.endswith((".part", ".pyc")) or "__pycache__" in f.parts
  
  
@@ -38,14 +38,18 @@ index 596afb5b..b7c09d15 100644
 +        return f"git bundle failed: {type(e).__name__}"
 +
 +
-+def run_git(git, repo, *args, index=None, **kw):
-+    """Run git in `repo`; the CompletedProcess. Every GIT_* variable of the caller is dropped (a GIT_DIR, GIT_INDEX_FILE or
-+    GIT_WORK_TREE exported by a hook or wrapper would point git at the vault's own repository and change it); only `index`
-+    (a temporary index file) is set."""
++def git_env(index=None):
++    """The caller's environment without any GIT_* variable (a GIT_DIR, GIT_INDEX_FILE or GIT_WORK_TREE exported by a hook or
++    wrapper would point git at the vault's own repository and change it); only `index` (a temporary index file) is set."""
 +    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
 +    if index:
 +        env["GIT_INDEX_FILE"] = str(index)
-+    return subprocess.run([git, "-C", str(repo), *args], capture_output=True, timeout=300, env=env, **kw)
++    return env
++
++
++def run_git(git, repo, *args, index=None, **kw):
++    """Run git in `repo` with git_env(index); the CompletedProcess."""
++    return subprocess.run([git, "-C", str(repo), *args], capture_output=True, timeout=300, env=git_env(index), **kw)
 +
 +
 +def bundle_filtered(git, dest):
@@ -89,7 +93,7 @@ index 596afb5b..b7c09d15 100644
  def version():
      """The installed creaite version, or 0.0.0."""
      return paths.VERSION_FILE.read_text(encoding="utf-8").strip() if paths.VERSION_FILE.exists() else "0.0.0"
-@@ -290,6 +349,8 @@ def make_zip(day, folder=None):
+@@ -290,6 +353,8 @@ def make_zip(day, folder=None):
                  files.append({"path": BUNDLE, "size": len(data), "sha256": sha(data)})
              manifest = {"creaite_backup": 1, "day": str(day), "made": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                          "version": version(), "files": files, "git": "bundle" if why is None else why}
@@ -98,7 +102,20 @@ index 596afb5b..b7c09d15 100644
              z.writestr(MANIFEST, json.dumps(manifest, indent=1) + "\n")
          os.replace(tmp, dest)
      except (OSError, sqlite3.Error, zipfile.BadZipFile, subprocess.SubprocessError, BackupError) as e:
-@@ -598,7 +659,7 @@ def newest_zip():
+@@ -578,10 +643,10 @@ def verify_bundle(bundle, scratch):
+     if not git:
+         return None                    # can't check without git: the zip's checksum still holds
+     try:
+-        subprocess.run([git, "init", "-q", str(scratch)], capture_output=True, check=True, timeout=60)
++        subprocess.run([git, "init", "-q", str(scratch)], capture_output=True, check=True, timeout=60, env=git_env())
+         for step in ("verify", "unbundle"):            # unbundle indexes the pack, so a damaged one fails here
+             r = subprocess.run([git, "-C", str(scratch), "bundle", step, str(bundle)], capture_output=True, text=True,
+-                               timeout=300)
++                               timeout=300, env=git_env())
+             if r.returncode:
+                 return ((r.stderr.strip().splitlines() or [f"git bundle {step} failed"])[-1])[:200]
+     except (OSError, subprocess.SubprocessError) as e:
+@@ -598,7 +663,7 @@ def newest_zip():
  def verify(on=None):
      """The restore check: the newest daily backup and the newest zip. Saves {day, ok, problems, checked} for Health."""
      on = on or today()
@@ -107,7 +124,7 @@ index 596afb5b..b7c09d15 100644
      daily = dated(paths.BACKUPS, DAILY_DB)
      if daily:
          f = daily[max(daily)]
-@@ -609,8 +670,12 @@ def verify(on=None):
+@@ -609,8 +674,12 @@ def verify(on=None):
      z = newest_zip()
      if z:
          checked.append(z.name)
@@ -121,7 +138,7 @@ index 596afb5b..b7c09d15 100644
      save_state("verify", out)
      note("info" if not problems else "warn", f"restore check: {'ok' if not problems else f'{len(problems)} problem(s)'}, "
                                               f"{len(checked)} checked")
-@@ -659,7 +724,7 @@ def after_daily_backup(on=None):
+@@ -659,7 +728,7 @@ def after_daily_backup(on=None):
  
  # ── Restore ───────────────────────────────────────────────────────────────────
  
@@ -130,7 +147,7 @@ index 596afb5b..b7c09d15 100644
      """[(name in the zip, what restore does with it)] for Alan to see before he says yes."""
      out = []
      for n in sorted(names):
-@@ -674,6 +739,7 @@ def restore_plan(names, claude_md=False):
+@@ -674,6 +743,7 @@ def restore_plan(names, claude_md=False):
                      "your CLAUDE.md: only if this vault has none" if (paths.ROOT / "CLAUDE.md").exists() else "your CLAUDE.md")
          elif n == BUNDLE:
              what = ("git history: kept as it is (this vault has its own)" if (paths.ROOT / ".git").exists()
@@ -138,7 +155,32 @@ index 596afb5b..b7c09d15 100644
                      else "git history: restored from the bundle")
          else:
              what = "restored (a file it replaces is kept first)"
-@@ -778,7 +844,7 @@ def restore(name, claude_md=False, dry=False):
+@@ -743,18 +813,20 @@ def restore_git(data):
+     with tempfile.TemporaryDirectory() as work:
+         b = Path(work) / BUNDLE
+         b.write_bytes(data)
+-        heads = subprocess.run([git, "bundle", "list-heads", str(b)], capture_output=True, text=True, timeout=120).stdout
++        heads = subprocess.run([git, "bundle", "list-heads", str(b)], capture_output=True, text=True, timeout=120,
++                               env=git_env()).stdout
+         head = next((ln.split()[0] for ln in heads.splitlines() if ln.endswith(" HEAD")), None)
+         run = [[git, "-C", str(paths.ROOT), "init", "-q"],
+                [git, "-C", str(paths.ROOT), "fetch", "-q", "--update-head-ok", str(b), "+refs/heads/*:refs/heads/*",
+                 "+refs/tags/*:refs/tags/*"]]
+         for cmd in run:
+-            if subprocess.run(cmd, capture_output=True, timeout=300).returncode:
++            if subprocess.run(cmd, capture_output=True, timeout=300, env=git_env()).returncode:
+                 return "git history: not restored (git couldn't read the bundle)"
+         branch = branch_of(git, heads, head)
+         if branch:
+-            subprocess.run([git, "-C", str(paths.ROOT), "symbolic-ref", "HEAD", branch], capture_output=True, timeout=60)
+-            subprocess.run([git, "-C", str(paths.ROOT), "reset", "-q"], capture_output=True, timeout=120)
++            subprocess.run([git, "-C", str(paths.ROOT), "symbolic-ref", "HEAD", branch], capture_output=True, timeout=60,
++                           env=git_env())
++            subprocess.run([git, "-C", str(paths.ROOT), "reset", "-q"], capture_output=True, timeout=120, env=git_env())
+     return "git history restored"
+ 
+ 
+@@ -778,7 +850,7 @@ def restore(name, claude_md=False, dry=False):
      if problems:
          raise BackupError(f"{path.name} can't be restored: " + "; ".join(problems[:5]))
      with zipfile.ZipFile(path) as z:
@@ -147,7 +189,7 @@ index 596afb5b..b7c09d15 100644
          if dry:
              return {"zip": path.name, "day": manifest.get("day"), "version": manifest.get("version"), "plan": steps, "dry": True}
          done = apply_restore(z, steps, claude_md)
-@@ -834,10 +900,12 @@ def cmd_show(name):
+@@ -834,10 +906,12 @@ def cmd_show(name):
      problems, manifest = check_zip(path)
      print(f"{path.name}: the backup of {shown(manifest.get('day', '????-??-??'))}, creaite {manifest.get('version', '?')}, "
            f"{len(manifest.get('files') or [])} files.")

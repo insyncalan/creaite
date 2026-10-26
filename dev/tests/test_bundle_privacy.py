@@ -295,6 +295,53 @@ class ExistingVault(unittest.TestCase):
                 after = (idx, cfg, head, git(self.root, "for-each-ref"), git(self.root, "status", "--porcelain"))
                 self.assertEqual(after, before, f"{name} changed the vault's repository")
 
+    def fresh_vault(self):
+        fresh = Path(tempfile.mkdtemp(prefix="creaite-fresh-")).resolve()
+        self.addCleanup(shutil.rmtree, fresh, ignore_errors=True)
+        (fresh / "system/scripts").mkdir(parents=True)
+        for f in (self.root / "system/scripts").glob("*.py"):
+            shutil.copy(f, fresh / "system/scripts" / f.name)
+        return fresh
+
+    def repo_state(self):
+        gd = self.root / ".git"
+        status = git(self.root, "status", "--porcelain")
+        objs = sorted(str(f.relative_to(gd)) for f in (gd / "objects").rglob("*") if f.is_file())
+        return ((gd / "index").read_bytes(), (gd / "config").read_bytes(), (gd / "HEAD").read_bytes(),
+                git(self.root, "for-each-ref"), status, objs)
+
+    def test_verify_and_restore_ignore_exported_git_variables(self):
+        gd = self.root / ".git"
+        cases = {"GIT_INDEX_FILE": {"GIT_INDEX_FILE": str(gd / "index")}, "GIT_DIR": {"GIT_DIR": str(gd)},
+                 "GIT_DIR+GIT_WORK_TREE": {"GIT_DIR": str(gd), "GIT_WORK_TREE": str(self.root)},
+                 "GIT_OBJECT_DIRECTORY": {"GIT_OBJECT_DIRECTORY": str(gd / "objects")}}
+        shutil.copy(TEMPLATE, self.root / ".gitignore")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "one")
+        (self.root / "projects/_portfolio/PORTFOLIO.md").write_text("# Portfolio\nchanged\n")
+        git(self.root, "commit", "-q", "-am", "two")
+        full, _ = self.bundle()                                          # a clean history: the whole of it (2 commits)
+        full = full.rename(self.work / "full.bundle")
+        (self.root / "system/staging/ask").mkdir(parents=True)
+        (self.root / "system/staging/ask/chat-x.json").write_text(f"{CHAT}\n")
+        git(self.root, "add", "-f", "-A")
+        git(self.root, "commit", "-q", "-m", "chat")
+        snap, _ = self.bundle()                                          # a snapshot (1 commit)
+        self.assertEqual(git(self.everything(snap)[0], "rev-list", "--count", "--all").strip(), "1")
+        for kind, bundle, commits in (("snapshot", snap, "1"), ("full", full, "2")):
+            for name, extra in cases.items():
+                with self.subTest(f"{kind} {name}"):
+                    fresh = self.fresh_vault()
+                    before = self.repo_state()
+                    r = vault_py(fresh, "print(backup.restore_git(open(sys.argv[1], 'rb').read())); "
+                                        "print(backup.verify_bundle(sys.argv[1], sys.argv[2]))", str(bundle),
+                                 str(self.work / f"scratch-{kind}-{name}"), env={**ENV, **extra})
+                    self.assertIn("git history restored", r.stdout, r.stdout + r.stderr)
+                    self.assertEqual(r.stdout.strip().splitlines()[-1], "None")
+                    self.assertEqual(self.repo_state(), before, "the vault's own repository changed")
+                    self.assertTrue((fresh / ".git").is_dir(), "the restored vault has no .git of its own")
+                    self.assertEqual(git(fresh, "rev-list", "--count", "HEAD").strip(), commits)
+
     def test_a_moved_private_file_stays_in_the_snapshot(self):
         """Known limit of a path filter (README, NOTES): a private file renamed to another path is not recognised."""
         self.old_history(untrack=False)
