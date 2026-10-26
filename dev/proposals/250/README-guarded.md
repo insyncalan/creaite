@@ -24,11 +24,15 @@ Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on
 - No new tool, no `--add-dir`, no allow rule, `KIND_TOOLS` unchanged, no `sweep.py done`, no `sweep-fetched.json`; counts only in the line.
 - Complexity: `_on_tool_result` gains no branch; `check.py` clean (the long-line count stays at the limit).
 
-## G4: the rules bullet
+## G4: the rules bullet (revision 2, sha256 `42a90418a4045f3ad2d71cfd93340fc9bfda74c7d338f30c92772f1f873b52f4`; revision 1 was `8552df1bfa8d8166fbc4dcc1998a20b80f18ea680e3c2cb80de4881f8712f7be`)
 
-One bullet, "Transcripts fetched by a sweep (#250)", before the Assistant bullet: off by default, the server's write into `inbox/`, nothing until the run
-ended with its answer, a confidential meeting is not fetched (both the saved calendar and the live event decide), the known gap (event not in the saved
-calendar), no tracker or staging writes, counts-only closure line, no new tool/folder/rule. 1,100 bytes.
+One bullet, "Transcripts fetched by a sweep (#250)", before the Assistant bullet, 625 bytes (revision 1: 1,099). Revision 2 matches the code (Cap's review):
+off by default (exactly true); the live server writes the transcripts a sweep run **read** into `inbox/`, only once the run has answered; held back unless the saved
+calendar and the event as read both say normal and no confidential or private meeting overlaps; the known gap (a closed event missing from the saved calendar:
+private events dropped by default, ignore rules, declines, stale saves; and unread by the run); nothing reaches `system/tracker.db`, staging gets only `transcripts.json`
+(times, counts); closure counts only. Removed: "nothing written to staging", "each finished transcript", "extracted".
+Size: `test_rules_retained_338` leaves this bullet out of both sides of its half-size check, so it uses none of that margin (74 bytes spare on the 2.6.8 file, measured);
+no trim elsewhere is needed for this line. Every sentence tried as a trim (the prep_page clause, the one-off Word sentence, the Prep pages sentence) is pinned by that test.
 It needed an ordinary test change: `dev/tests/test_rules_retained_338.py` now knows the 250 bullet (stripped before the 338 state is worked out, put back on
 both sides, and left out of the half-size check, whose margin is a few bytes).
 

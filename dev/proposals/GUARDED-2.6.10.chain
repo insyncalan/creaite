@@ -6,7 +6,7 @@ dev/proposals/382/live_server-382.diff
 dev/proposals/371/live_server-371.diff
 # G3 #250 revision 2 (sha256 920b91643838b92529ef19f8163c8b4c41095e7c986832fe98ce0ca0d098ed85; revision 1 was fb93369c49477343268e90f87f00847e57ad31aeb5718e61fe2a3e2b004f5310, which let an exit 0 with no answer write): a sweep run gets a transcript fetch when sweep.fetch_transcripts is on; settled once at the end of an answered run (exit 0 AND a non-error result event AND a final answer, Run._answered); the count joins the closure line
 dev/proposals/250/live_server-250.diff
-# G4 #250 (sha256 8552df1bfa8d8166fbc4dcc1998a20b80f18ea680e3c2cb80de4881f8712f7be): the rules paragraph for the fetch (system/creaite-rules.md)
+# G4 #250 revision 2 (sha256 42a90418a4045f3ad2d71cfd93340fc9bfda74c7d338f30c92772f1f873b52f4; revision 1 was 8552df1bfa8d8166fbc4dcc1998a20b80f18ea680e3c2cb80de4881f8712f7be, which overclaimed): the rules paragraph for the fetch, matched to the code (system/creaite-rules.md)
 dev/proposals/250/creaite-rules-250.diff
 #
 # Not guarded (ordinary commits): dev/tests/test_live_fetch_250.py (skips until G3 has landed), and slices A, B, D of #250
