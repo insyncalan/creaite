@@ -49,7 +49,7 @@ class NoBypass(unittest.TestCase):
         writes = [ln.strip() for ln in text.splitlines() if "write_text_atomic(paths.CALENDAR" in ln]
         self.assertEqual(len(writes), 2, writes)
         self.assertIn("calendar_gateway.stamp_rows(days)", text)
-        self.assertIn("shape[\"clean\"] = calendar_gateway.CLEAN", text)
+        self.assertIn("shape.update(calendar_gateway.file_stamp())", text)
 
 
 if __name__ == "__main__":
