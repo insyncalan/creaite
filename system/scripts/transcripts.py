@@ -525,6 +525,7 @@ def file_event_id(path):
 
 
 # ── one lookup, as the live server runs it ──
+SEARCH_BOUND = 3        # #382: the load prompt's "never more than three searches"; a fourth is logged in the diagnosis
 class Job:
     """What one transcript run (a check, or a load) reads. The live server hands it every tool call and result of the run;
     finish() then writes the status and the files. Nothing here comes from what Claude says."""
@@ -583,7 +584,13 @@ class Job:
         """Counts only, for the debug log (#365): the tool results the run returned (name, error or ok, length) and how the
         event read went (none, error, unreadable, ok). Never any text."""
         calls = ", ".join(f"{n} {'error' if e else 'ok'} {ln}" for n, e, ln in self.calls[:12]) or "none"
-        return f"{len(self.calls)} tool results ({calls}); event read: {self.event_read or 'none'}"
+        n = self.searches()
+        over = f" (over the bound of {SEARCH_BOUND})" if n > SEARCH_BOUND else ""
+        return f"{len(self.calls)} tool results ({calls}); calendar searches: {n}{over}; event read: {self.event_read or 'none'}"
+
+    def searches(self):
+        """#382: how many calendar searches the run made (the prompt allows three); the server only counts and logs it."""
+        return sum(1 for n, _, _ in self.calls if n == "outlook_calendar_search")
 
     def no_event(self):
         """The plain line when the event was not read, saying which way it failed; the debug log gets the counts (#365)."""

@@ -615,7 +615,8 @@ def backup_check():
     age = (backup.today() - date.fromisoformat(day)).days
     if age > backup.VERIFY_EVERY_DAYS + 1:
         return None, f"last passed {backup.shown(day)}, {age} days ago: it runs with the daily backup at the first session of the day"
-    return True, f"passed {backup.shown(day)} ({', '.join(v.get('checked') or []) or 'nothing to check yet'})"
+    note = f"; {v['note']}" if v.get("note") else ""         # e.g. the zip's git history is one snapshot commit
+    return True, f"passed {backup.shown(day)} ({', '.join(v.get('checked') or []) or 'nothing to check yet'}){note}"
 
 
 def tidy_up():

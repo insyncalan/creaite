@@ -249,19 +249,82 @@ def wanted_out(f):
     return f.name == ".DS_Store" or f.name.endswith((".part", ".pyc")) or "__pycache__" in f.parts
 
 
+PRIVATE_PATHS = ("system/staging", "system/logs", "system/branding")   # never in the zip's git history (BL-288, BL-323)
+PRIVATE_SPECS = tuple(f":(icase){p}" for p in PRIVATE_PATHS)                # a volume that ignores case may hold System/Staging
+EXCLUDE_SPECS = tuple(f":(exclude,icase){p}" for p in PRIVATE_PATHS)
+SAFE_GIT = ("-c", "core.hooksPath=/dev/null", "-c", "core.excludesFile=/dev/null", "-c", "commit.gpgsign=false",
+            "-c", "user.name=creaite", "-c", "user.email=creaite@localhost")   # nothing of the user's git setup runs on the snapshot
+BUNDLE_NOTE = []                       # ["snapshot"] when the last bundle was the filtered snapshot (for the manifest)
+SNAPSHOT_NOTE = "git history: a snapshot of the latest commit (earlier history held private files)"
+
+
 def make_bundle(dest):
-    """The vault's git history as one closed file at `dest`; None when made, else why not (no history is not a failure)."""
+    """The vault's git history as one closed file at `dest`; None when made, else why not (no history is not a failure).
+    Fails closed: any doubt gives no bundle, never an unfiltered one. Never changes the vault's repository (read only).
+    If no commit ever held a private path the bundle is the whole history; otherwise it is one commit, a snapshot of HEAD
+    without the private paths, built in a temporary repository, so old commits that hold chats or vip.json are not copied."""
     if not (paths.ROOT / ".git").exists():
         return "this vault has no git history"
     git = shutil.which("git")
     if not git:
         return "git isn't installed"
-    r = subprocess.run([git, "-C", str(paths.ROOT), "bundle", "create", str(dest), "--all"], capture_output=True, text=True,
-                       timeout=300)
-    if r.returncode or not Path(dest).is_file():
-        last = (r.stderr.strip().splitlines() or ["no output"])[-1]
-        return f"git bundle failed: {last[:200]}"
+    try:
+        return bundle_filtered(git, Path(dest))
+    except (OSError, subprocess.SubprocessError) as e:
+        Path(dest).unlink(missing_ok=True)
+        return f"git bundle failed: {type(e).__name__}"
+
+
+def git_env(index=None):
+    """The caller's environment without any GIT_* variable (a GIT_DIR, GIT_INDEX_FILE or GIT_WORK_TREE exported by a hook or
+    wrapper would point git at the vault's own repository and change it); only `index` (a temporary index file) is set."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    if index:
+        env["GIT_INDEX_FILE"] = str(index)
+    return env
+
+
+def run_git(git, repo, *args, index=None, **kw):
+    """Run git in `repo` with git_env(index); the CompletedProcess."""
+    return subprocess.run([git, "-C", str(repo), *args], capture_output=True, timeout=300, env=git_env(index), **kw)
+
+
+def bundle_filtered(git, dest):
+    """The bundle at `dest` (whole history if clean, else a filtered snapshot); None when made, else why not."""
+    root = paths.ROOT
+    BUNDLE_NOTE.clear()
+    seen = run_git(git, root, "rev-list", "--all", "--full-history", "-n", "1", "--", *PRIVATE_SPECS,
+                   text=True)
+    if seen.returncode:
+        return "git bundle failed: couldn't check the history for private files"
+    if not seen.stdout.strip():                                    # clean history: the whole of it, as before
+        r = run_git(git, root, "bundle", "create", str(dest), "--all", text=True)
+        return None if not r.returncode and dest.is_file() else fail(dest, r)
+    branch = run_git(git, root, "symbolic-ref", "-q", "--short", "HEAD", text=True).stdout.strip()
+    if not branch or run_git(git, root, "rev-parse", "-q", "--verify", "HEAD").returncode:
+        return "git bundle failed: the history holds private files and has no branch to snapshot"
+    with tempfile.TemporaryDirectory() as work:
+        snap, idx = Path(work) / "snap", Path(work) / "index"
+        snap.mkdir()
+        read = run_git(git, root, "read-tree", "HEAD", index=idx)       # a temporary index: the vault's own is never touched
+        listed = run_git(git, root, "ls-files", "-z", "--", ".", *EXCLUDE_SPECS, index=idx)
+        if read.returncode or listed.returncode:
+            return "git bundle failed: couldn't read the latest commit"
+        out = run_git(git, root, "checkout-index", "-z", "--stdin", f"--prefix={snap}/", index=idx, input=listed.stdout)
+        steps = [["init", "-q"], ["checkout", "-q", "-b", branch], [*SAFE_GIT, "add", "-A", "-f"],
+                 [*SAFE_GIT, "commit", "-q", "-m", SNAPSHOT_NOTE], ["bundle", "create", str(dest), "HEAD", branch]]
+        if out.returncode or any(run_git(git, snap, *st).returncode for st in steps) or not dest.is_file():
+            dest.unlink(missing_ok=True)
+            return "git bundle failed: couldn't build the filtered snapshot"
+    BUNDLE_NOTE.append("snapshot")
     return None
+
+
+def fail(dest, r):
+    """Remove a half-made bundle; the reason from git's last line."""
+    dest.unlink(missing_ok=True)
+    last = (r.stderr.strip().splitlines() or ["no output"])[-1]
+    return f"git bundle failed: {last[:200]}"
 
 
 def version():
@@ -290,6 +353,8 @@ def make_zip(day, folder=None):
                 files.append({"path": BUNDLE, "size": len(data), "sha256": sha(data)})
             manifest = {"creaite_backup": 1, "day": str(day), "made": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "version": version(), "files": files, "git": "bundle" if why is None else why}
+            if why is None and BUNDLE_NOTE:
+                manifest["git_note"] = SNAPSHOT_NOTE
             z.writestr(MANIFEST, json.dumps(manifest, indent=1) + "\n")
         os.replace(tmp, dest)
     except (OSError, sqlite3.Error, zipfile.BadZipFile, subprocess.SubprocessError, BackupError) as e:
@@ -578,10 +643,10 @@ def verify_bundle(bundle, scratch):
     if not git:
         return None                    # can't check without git: the zip's checksum still holds
     try:
-        subprocess.run([git, "init", "-q", str(scratch)], capture_output=True, check=True, timeout=60)
+        subprocess.run([git, "init", "-q", str(scratch)], capture_output=True, check=True, timeout=60, env=git_env())
         for step in ("verify", "unbundle"):            # unbundle indexes the pack, so a damaged one fails here
             r = subprocess.run([git, "-C", str(scratch), "bundle", step, str(bundle)], capture_output=True, text=True,
-                               timeout=300)
+                               timeout=300, env=git_env())
             if r.returncode:
                 return ((r.stderr.strip().splitlines() or [f"git bundle {step} failed"])[-1])[:200]
     except (OSError, subprocess.SubprocessError) as e:
@@ -598,7 +663,7 @@ def newest_zip():
 def verify(on=None):
     """The restore check: the newest daily backup and the newest zip. Saves {day, ok, problems, checked} for Health."""
     on = on or today()
-    problems, checked = [], []
+    problems, checked, snapshot = [], [], False
     daily = dated(paths.BACKUPS, DAILY_DB)
     if daily:
         f = daily[max(daily)]
@@ -609,8 +674,12 @@ def verify(on=None):
     z = newest_zip()
     if z:
         checked.append(z.name)
-        problems += [f"{z.name}: {p}" for p in check_zip(z)[0]]
+        bad, manifest = check_zip(z)
+        problems += [f"{z.name}: {p}" for p in bad]
+        snapshot = bool(manifest.get("git_note"))
     out = {"day": on.isoformat(), "ok": not problems, "problems": problems[:10], "checked": checked}
+    if z and snapshot:
+        out["note"] = "git history in the zip: one snapshot commit"        # Health shows it (doctor.backup_check)
     save_state("verify", out)
     note("info" if not problems else "warn", f"restore check: {'ok' if not problems else f'{len(problems)} problem(s)'}, "
                                              f"{len(checked)} checked")
@@ -659,7 +728,7 @@ def after_daily_backup(on=None):
 
 # ── Restore ───────────────────────────────────────────────────────────────────
 
-def restore_plan(names, claude_md=False):
+def restore_plan(names, claude_md=False, snapshot=False):
     """[(name in the zip, what restore does with it)] for Alan to see before he says yes."""
     out = []
     for n in sorted(names):
@@ -674,6 +743,7 @@ def restore_plan(names, claude_md=False):
                     "your CLAUDE.md: only if this vault has none" if (paths.ROOT / "CLAUDE.md").exists() else "your CLAUDE.md")
         elif n == BUNDLE:
             what = ("git history: kept as it is (this vault has its own)" if (paths.ROOT / ".git").exists()
+                    else "git history: one snapshot commit, restored from the bundle" if snapshot
                     else "git history: restored from the bundle")
         else:
             what = "restored (a file it replaces is kept first)"
@@ -743,18 +813,20 @@ def restore_git(data):
     with tempfile.TemporaryDirectory() as work:
         b = Path(work) / BUNDLE
         b.write_bytes(data)
-        heads = subprocess.run([git, "bundle", "list-heads", str(b)], capture_output=True, text=True, timeout=120).stdout
+        heads = subprocess.run([git, "bundle", "list-heads", str(b)], capture_output=True, text=True, timeout=120,
+                               env=git_env()).stdout
         head = next((ln.split()[0] for ln in heads.splitlines() if ln.endswith(" HEAD")), None)
         run = [[git, "-C", str(paths.ROOT), "init", "-q"],
                [git, "-C", str(paths.ROOT), "fetch", "-q", "--update-head-ok", str(b), "+refs/heads/*:refs/heads/*",
                 "+refs/tags/*:refs/tags/*"]]
         for cmd in run:
-            if subprocess.run(cmd, capture_output=True, timeout=300).returncode:
+            if subprocess.run(cmd, capture_output=True, timeout=300, env=git_env()).returncode:
                 return "git history: not restored (git couldn't read the bundle)"
         branch = branch_of(git, heads, head)
         if branch:
-            subprocess.run([git, "-C", str(paths.ROOT), "symbolic-ref", "HEAD", branch], capture_output=True, timeout=60)
-            subprocess.run([git, "-C", str(paths.ROOT), "reset", "-q"], capture_output=True, timeout=120)
+            subprocess.run([git, "-C", str(paths.ROOT), "symbolic-ref", "HEAD", branch], capture_output=True, timeout=60,
+                           env=git_env())
+            subprocess.run([git, "-C", str(paths.ROOT), "reset", "-q"], capture_output=True, timeout=120, env=git_env())
     return "git history restored"
 
 
@@ -778,7 +850,7 @@ def restore(name, claude_md=False, dry=False):
     if problems:
         raise BackupError(f"{path.name} can't be restored: " + "; ".join(problems[:5]))
     with zipfile.ZipFile(path) as z:
-        steps = restore_plan(z.namelist(), claude_md)
+        steps = restore_plan(z.namelist(), claude_md, bool(manifest.get("git_note")))
         if dry:
             return {"zip": path.name, "day": manifest.get("day"), "version": manifest.get("version"), "plan": steps, "dry": True}
         done = apply_restore(z, steps, claude_md)
@@ -834,10 +906,12 @@ def cmd_show(name):
     problems, manifest = check_zip(path)
     print(f"{path.name}: the backup of {shown(manifest.get('day', '????-??-??'))}, creaite {manifest.get('version', '?')}, "
           f"{len(manifest.get('files') or [])} files.")
-    for n, what in restore_plan([f["path"] for f in manifest.get("files") or []]):
+    for n, what in restore_plan([f["path"] for f in manifest.get("files") or []], snapshot=bool(manifest.get("git_note"))):
         print(f"  {n} — {what}")
     if manifest.get("git") not in (None, "bundle"):
         print(f"  (no git history: {manifest['git']})")
+    if manifest.get("git_note"):
+        print(f"  ({manifest['git_note']})")
     print("Checks out: complete against its manifest, database and git history readable." if not problems
           else "Problems: " + "; ".join(problems))
     return 0 if not problems else 1
