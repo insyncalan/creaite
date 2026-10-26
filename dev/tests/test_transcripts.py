@@ -444,13 +444,20 @@ class NoEventSaysWhy(unittest.TestCase):
     def test_no_call_at_all(self):
         job, msg = self.finish()
         self.assertIn("made no Microsoft 365 call", msg)
-        self.assertEqual(job.diagnosis(), "0 tool results (none); event read: none")
+        self.assertEqual(job.diagnosis(), "0 tool results (none); calendar searches: 0; event read: none")
 
     def test_search_only_never_read_the_event(self):
         job, msg = self.finish(("outlook_calendar_search", None, "boom", True))
         self.assertIn("never read the meeting's calendar event", msg)
         self.assertIn("outlook_calendar_search error 4", job.diagnosis())
         self.assertNotIn("boom", job.diagnosis())
+
+    def test_a_fourth_calendar_search_is_counted_and_logged(self):      # #382: the server-side side of the prompt's bound
+        job, _ = self.finish(*[("outlook_calendar_search", None, "x", False)] * 4)
+        self.assertEqual(job.searches(), 4)
+        self.assertIn("calendar searches: 4 (over the bound of 3)", job.diagnosis())
+        job, _ = self.finish(*[("outlook_calendar_search", None, "x", False)] * 3)
+        self.assertNotIn("over the bound", job.diagnosis())
 
     def test_event_read_failing_keeps_the_old_sentence(self):
         job, msg = self.finish(("read_resource", "calendar:///events/ev-1", "Error: 500", True))

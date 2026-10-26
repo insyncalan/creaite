@@ -205,6 +205,15 @@ class Table(unittest.TestCase):
                 self.assertEqual(c["files"], [], kind)                     # an empty folder of its own
                 self.assertEqual(c["claude_md"], [], kind)                 # no CLAUDE.md in it or above it
                 self.assertNotIn("--add-dir", before, kind)
+            elif kind in getattr(self.L, "CONTEXTLESS_JOBS", ()):          # #382: tools, but no vault context (the diff has landed)
+                self.assertEqual(flag(a, "--setting-sources"), "", kind)
+                self.assertEqual(before.count("--no-session-persistence"), 1, kind)
+                self.assertEqual(c["no_memory"], "1", kind)
+                self.assertNotEqual(c["cwd"], self.vault, kind)
+                self.assertFalse(c["cwd"].startswith(self.vault + os.sep), kind)
+                self.assertEqual(c["claude_md"], [], kind)
+                self.assertNotIn("--add-dir", before, kind)
+                self.assertNotIn("--strict-mcp-config", before, kind)         # the Microsoft 365 connector is what they use
             else:                                                          # the kinds with tools read the vault on purpose
                 self.assertEqual(c["cwd"], self.vault, kind)
                 self.assertNotIn("--setting-sources", before, kind)
