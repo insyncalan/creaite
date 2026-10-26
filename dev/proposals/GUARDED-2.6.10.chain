@@ -1,0 +1,12 @@
+# The guarded chain for 2.6.10 (#250, fetch transcripts as they appear). NOT pinned: dev/tests/guarded_chain.py does not know this chain, and it has no marked commit yet. A pin is added only on Alan's say. One diff per line, in landing order.
+# Base: origin/main (a62fbb0a). G1 and G2 are the 2.6.9 extra diffs (they live on branch v269-g12 and in GUARDED-2.6.9-extra.chain; the paths below are theirs). G3 applies after G1 and G2, and also alone on main, and in any order with them (git apply --check clean).
+# G1 #382: the #365 follow-up rebased (sha256 d04410c0aa4f3447613ba7d549110ff957797d850722e0a90999f393b63b6ea3)
+dev/proposals/382/live_server-382.diff
+# G2 #371: the run's startup MCP status and Microsoft 365 tool count in the debug log, counts only (sha256 6a761e1cfb8f53bd2aaaae4a0eb8e926d207348a322c85b5c63b92fca4ecdd0a)
+dev/proposals/371/live_server-371.diff
+# G3 #250: a sweep run gets a transcript fetch when sweep.fetch_transcripts is on; settled once at the end of an answered run; the count joins the closure line
+dev/proposals/250/live_server-250.diff
+# G4 #250: the rules paragraph for the fetch (system/creaite-rules.md)
+dev/proposals/250/creaite-rules-250.diff
+#
+# Not guarded (ordinary commits): dev/tests/test_live_fetch_250.py (skips until G3 has landed), and slices A, B, D of #250
