@@ -6,7 +6,7 @@ Planning only. Base: origin/main a62fbb0a (2.6.8 + docs). Compared with the 2.6.
 
 | # | Finding | State | Where |
 |---|---------|-------|-------|
-| 1 | Load fails 6 of 10, 0 steps | **Mostly fixed.** 2.6.8: #365 narrow prompt, #371 start logging. 2.6.9 candidate: #382 (check/load start context-less, bounded three-search day window, `init_summary`, ToolSearch count). **Still open:** no automatic retry on a 0-step failure (grep of eb32046b finds none); `transcripts.py:595-604` (`no_event`) only says "Press Process to try again". Wording is already honest (three cases), so the old "couldn't be read" is gone. | live_server.py, transcripts.py |
+| 1 | Load fails 6 of 10, 0 steps | **FIXED in 2.6.9.** 2.6.8: #365 narrow prompt, #371 start logging. 2.6.9 candidate: #382 (check/load start context-less, bounded three-search window, `init_summary`) and the automatic retry: v269-371 merged as a370edeb into v269-main eb32046b (`irLoadRun` and the 'Looking again, once' notes in intakeReview/actions.js, `Job.no_event` 'Press Process to try again' wording, tests `test_load_retry_371`; verified with `git grep irLoadRun` on wt-v269-main). My first draft said no retry existed; that was wrong. | live_server.py, transcripts.py, actions.js |
 | 2 | Missed scheduled sweep (21-10, 15-10) | **Open.** | see A |
 | 3 | Guard refusals (~90 of 124 WARNs) | **Open.** By design the guard is correct; the prompts are what is wrong. | see B |
 | 4 | `review: "…" is not valid JSON (promise:0)` | **Open**, and mis-described: it is a page-side error, not review.py. | see C |
