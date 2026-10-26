@@ -9,7 +9,6 @@ Run: python3 dev/tests/test_sweep_failed_370.py     (quick tier: no Chrome)
 """
 import json
 import os
-import re
 import subprocess
 import sys
 import unittest
