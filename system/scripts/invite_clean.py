@@ -149,7 +149,8 @@ BARE_LISTED = frozenset(w for _l, ok in BARE_NEXT for w in ok) | frozenset(BARE_
 _BARE_RUN = rf"(?<![\w-])(?:{_BARE_LABELS})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*"
 _BARE_OPEN = re.compile(                                  # a label phrase that stops on a function word or a separator: its value is next
     rf"{_BARE_RUN}(?:\s+(?:{'|'.join(BARE_FUNCTION)})|\s*(?:{SEPRUN})+)\s*[.,;]*\s*$", re.I)
-_BARE_END = re.compile(rf"{_BARE_RUN}(?:\s*[-\u2013\u2014|]\s*(?-i:[A-Z][A-Z0-9]{{1,6}}))?\s*[.,;!?]*\s*$", re.I)           # a finished label phrase ("Password reset"): the next line is judged
+# a finished label phrase ("Password reset", also "Password reset - ABC", a project code): the next line is judged
+_BARE_END = re.compile(rf"{_BARE_RUN}(?:\s*[-\u2013\u2014|]\s*(?-i:[A-Z][A-Z0-9]{{1,6}}))?\s*[.,;!?]*\s*$", re.I)
 
 
 _SPACED = re.compile(r"(?<![\w])p[ .\-]{1,2}i[ .\-]{1,2}n\.?(?![\w])", re.I)       # "P I N", "P.I.N.", "P-I-N" read as PIN
@@ -198,7 +199,9 @@ _QBARE = r"secrets?|tokens?|otp|api[\s-]*keys?"
 _QWORD = r"(?:1:1|[^\W\d_](?:[^\W\d_]|['\u2019-])*)"            # 2.6.9: "1:1" is a plain word here
 _QBRACKET = r"\s*[(\[](?!\d{1,3}[)\]])[^()\[\]\n]{0,60}[)\]]"      # a word with a digit is a value, not a qualifier
 _QDASH = r"[-\u2013\u2014]"
-_QPHRASE = rf"(?:\s*{_QDASH}\s+|\s*\|\s*|(?:\s*[,/;]){{1,2}}\s*(?:{_QDASH}\s+)?|\s+){_QWORD}(?:\s+(?:{_QDASH}\s+)?{_QWORD}){{0,4}}"      # "is - Zoom", "- Teams"
+# "is - Zoom", "- Teams", ", - Zoom", "/ dial-in"
+_QPHRASE = (rf"(?:\s*{_QDASH}\s+|\s*\|\s*|(?:\s*[,/;]){{1,2}}\s*(?:{_QDASH}\s+)?|\s+){_QWORD}"
+            rf"(?:\s+(?:{_QDASH}\s+)?{_QWORD}){{0,4}}")
 _QCOMMA = r"(?:\s*[,/;]){1,2}"                                  # 2.6.9: "Meeting ID, (Teams)", "PIN / dial-in"
 _QUAL = rf"(?:(?:{_QCOMMA})?{_QBRACKET}(?:{_QPHRASE})?(?:{_QBRACKET})?|{_QPHRASE}(?:{_QBRACKET})?)"
 # "Password reset": a finished soft phrase, not a qualifier
@@ -207,11 +210,11 @@ _QUAL = rf"(?:(?:{_QCOMMA})?{_QBRACKET}(?:{_QPHRASE})?(?:{_QBRACKET})?|{_QPHRASE
 _SOFT_FIRST = "|".join(sorted(BARE_LISTED - set(BARE_FUNCTION)))
 _SOFT_RUN = (rf"\s+(?:{_SOFT_FIRST})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*"
              r"(?:\s*[-\u2013\u2014|]\s*(?-i:[A-Z][A-Z0-9]{1,6}))?[\s.,;!?*_~`]*$")      # 2.6.9: "Password reset - ABC" (a project code)
-# 2.6.9: a LINE THAT STARTS with a label word that is also an ordinary word (PIN, token, secret, OTP, API key) followed by a plain word that
-# is not an instruction word is an agenda line ("Pin board", "Token budget", "Pin the roadmap"), not a qualified label whose value is next
-# (_alone, _soft_qualified): it stands alone only with an instruction word ("PIN below", "Token for the build", "OTP to follow", "PIN number"), a bracket, a dash or a mark. Such a line is
-# removed as before (SOFT_QUALIFIED) but opens a soft window (the next three lines lose only what looks like a value), so a number below
-# it still goes and the agenda below it stays.
+# 2.6.9: a LINE THAT STARTS with a label word that is also an ordinary word (PIN, token, secret, OTP, API key) followed by a plain word
+# that is not an instruction word is an agenda line ("Pin board", "Token budget", "Pin the roadmap"), not a qualified label whose value
+# is next (_alone, _soft_qualified). It stands alone only with an instruction word ("PIN below", "Token for the build", "OTP to follow",
+# "PIN number"), a bracket, a dash or a mark. Such a line is removed as before but opens a soft window (the next three lines lose only
+# what looks like a value), so a number below it still goes and the agenda below it stays.
 _AMBIG = r"(?:pins?|tokens?|secrets?|otp|api[\s-]*keys?)"
 _INSTR = ("for|to|of|is|are|was|were|if|when|via|by|from|with|in|on|at|as|per|and|or|below|above|required|needed|here|follows?|following|"
           "only|optional|will|please|see|sent|issued|provided|given|attached|shared|same|separate|separately|tbc|tbd|numbers?|no|codes?|id|"
@@ -219,7 +222,8 @@ _INSTR = ("for|to|of|is|are|was|were|if|when|via|by|from|with|in|on|at|as|per|an
           "pending|next|later|available|supplied|coming|generated|expires?|expiring|valid|unique|temporary|one|time|"
           "your|my|our|the\\s+(?:same|following|one|number|code|pin)|a\\s+(?:number|code|pin)")
 _AMBIG_PLAIN = rf"{_AMBIG}\s+(?!(?:{_INSTR})(?![\w-]))[^\W\d_]"
-QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_QBARE})(?!\w)(?!{_SOFT_RUN}){_QUAL}(?:\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}$"
+QUALIFIED_ALONE = (rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_QBARE})(?!\w)(?!{_SOFT_RUN}){_QUAL}"
+                   rf"(?:\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}$")
 _ALONE_PLAIN = (rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
                 rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
                 rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$")
@@ -491,7 +495,8 @@ _ONE_TO_ONE = re.compile(r"(?<![\w:])1:1(?!\w|:\d)")      # "PIN for the weekly 
 def _label_alone(view):
     """A label with no value after it. A qualified label ("Passcode required") on a line that holds a digit already carries its value
     ("Meeting ID 12 - Passcode abcdefg"): the line goes, but no value is still to come."""
-    return bool(_LABEL_ALONE_PLAIN.search(view) or (LABEL_ALONE.search(view) and not re.search(r"\d", _ONE_TO_ONE.sub("", _LIST_STRIP.sub("", view)))))
+    digits = re.search(r"\d", _ONE_TO_ONE.sub("", _LIST_STRIP.sub("", view)))
+    return bool(_LABEL_ALONE_PLAIN.search(view) or (LABEL_ALONE.search(view) and not digits))
 
 
 _FILLER = re.compile(r"(?:[\W_]|\b(?:and|und|et|is|are|or)\b)+")
@@ -533,8 +538,13 @@ _HARD_QUALIFIED = re.compile(rf"^[\s\-*\u2022\u2013\u2014>|(\[\d.)]*{_AMBIG}\s+(
 def _soft_qualified(ln):
     """Whether a removed line starts with PIN, token, secret, OTP or API key and a plain word that is not an instruction word ("Pin
     board", "Token budget"): it is removed as before, but what follows it is judged like the lines under a soft heading."""
-    views = _views(_DECORATION.sub(" ", _MARK.sub(" ", ln)))           # a look-alike letter ("bеlow") must not make an instruction a plain word
+    views = _views(_DECORATION.sub(" ", _MARK.sub(" ", ln)))      # a look-alike letter must not make an instruction a plain word
     return any(_SOFT_QUALIFIED.search(v) for v in views) and not any(_HARD_QUALIFIED.search(v) for v in views)
+
+
+def _soft_heading(ln, dropped, kind):
+    """Whether this removed line, which is no other kind of label, opens the soft window of _soft_qualified."""
+    return bool(dropped and not kind and _soft_qualified(ln))
 
 
 def _label_kind(ln, dropped):
@@ -701,7 +711,7 @@ class _Reader:
         reach = (self.window > 0 and valueish) or value            # a hard window or a value rule reaches this line
         self._tombstone(reach)
         kind = _label_kind(ln, dropped)
-        self.soft_qualified = dropped and not kind and _soft_qualified(ln)
+        self.soft_qualified = _soft_heading(ln, dropped, kind)
         heading = kind == "leads"                  # a heading is not the value of a label standing alone: it opens its own window
         soft = self._soft_step(ln, dropped, reach)
         consumed = (self.pending > 0 and not heading and valueish) or reach or dropped or soft
