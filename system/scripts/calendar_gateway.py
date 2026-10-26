@@ -239,8 +239,9 @@ def lock(wait=20.0):
             os.close(fd)
 
 
-_STR_KEYS = ("id", "start", "end", "title", "where", "organiser", "sensitivity", "organiser_email", "recurrence")
+_STR_KEYS = ("id", "start", "end", "title", "where", "sensitivity", "organiser_email", "recurrence")
 _BOOL_KEYS = ("all_day", "teams", "private")
+# "organiser" is True (you organised it), False, or the organiser's name (sweep.organiser_of): a bool or a string
 
 
 def _well_formed(row):
@@ -248,7 +249,8 @@ def _well_formed(row):
     things? A row that is not is re-filtered like an unstamped one (a hand edit or an import can add the stamp, finding 12)."""
     checks = [(_STR_KEYS + ("body",), lambda v: isinstance(v, str)), (_BOOL_KEYS, lambda v: isinstance(v, bool)),
               (("attendees",), lambda v: isinstance(v, list) and all(isinstance(a, dict) for a in v)),
-              (("attachments",), lambda v: isinstance(v, list) and all(isinstance(f, str) for f in v))]
+              (("attachments",), lambda v: isinstance(v, list) and all(isinstance(f, str) for f in v)),
+              (("organiser",), lambda v: isinstance(v, (bool, str)))]
     return all(ok(row[k]) for keys, ok in checks for k in keys if k in row)
 
 
@@ -301,6 +303,8 @@ def _typed(k, v):
         return (True, v) if isinstance(v, str) else (False, None)
     if k in _BOOL_KEYS:
         return (True, v) if isinstance(v, bool) else (False, None)
+    if k == "organiser":
+        return (True, v) if isinstance(v, (bool, str)) else (False, None)
     if k == "attendees":
         return True, _people(v)
     if k == "attachments":

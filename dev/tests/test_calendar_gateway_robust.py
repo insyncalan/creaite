@@ -73,6 +73,8 @@ class Robust(unittest.TestCase):
                             self.assertTrue(all(isinstance(f, str) for f in v), (b, p))
                     elif k in ("all_day", "teams", "private"):
                         self.assertIsInstance(v, bool, (b, p, k))
+                    elif k == "organiser":                      # True, False or the organiser's name (sweep.organiser_of)
+                        self.assertIsInstance(v, (bool, str), (b, p, k))
                     else:
                         self.assertIsInstance(v, str, (b, p, k))
 

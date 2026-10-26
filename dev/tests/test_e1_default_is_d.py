@@ -54,5 +54,18 @@ class DefaultIsD(unittest.TestCase):
         self.assertEqual(bad, [])
 
 
+class SweepRowsAreWellFormed(unittest.TestCase):
+    def test_organiser_flag_is_kept_and_a_sweep_row_is_well_formed(self):
+        """The sweep writes organiser as a flag (True or False); the gateway must treat that row as well formed and keep the flag."""
+        row = {"id": "a", "start": "09:00", "end": "10:00", "all_day": False, "title": "Review", "where": "", "teams": False,
+               "private": False, "organiser": True, "sensitivity": "normal", "body": "Hello", "clean": G.CLEAN}
+        self.assertTrue(G._well_formed(row))
+        self.assertIs(G.view(row, "day")["organiser"], True)
+        for org in (False, "Mia Hale"):                    # the other two forms the sweep writes
+            self.assertTrue(G._well_formed({**row, "organiser": org}))
+            self.assertEqual(G.view({**row, "organiser": org}, "day")["organiser"], org)
+        self.assertFalse(G._well_formed({**row, "organiser": 3}))
+
+
 if __name__ == "__main__":
     unittest.main()
