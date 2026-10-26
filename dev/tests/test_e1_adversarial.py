@@ -1161,7 +1161,7 @@ class GatewayProps(unittest.TestCase):
 
     def cal(self, rows, stamped=False):
         if stamped:
-            rows = [dict(r, clean=G.CLEAN) for r in rows]
+            rows = [dict(r, clean=G.CLEAN, clean_v=G.fingerprint()) for r in rows]
         return {"fetched": "2026-10-12T08:00", "to": "2026-10-19", "days": {"2026-10-12": rows}}
 
     def test_read_never_writes(self):
@@ -1294,12 +1294,12 @@ class GatewayProps(unittest.TestCase):
         for k in ("title", "start", "end"):
             self.assertIsInstance(out.get(k, ""), str, k)
 
-    @unittest.expectedFailure
-    def test_G03_stamped_row_trusts_old_stamp_with_weaker_filter(self):
-        """LOW (design note): any row with clean >= CLEAN is served raw, so a hand edit or an import that adds "clean": 1 bypasses the filter."""
-        write(self.path, self.cal([row("a", body="Meeting ID: 412 889 330")], stamped=True))
-        out = G.read("agenda", self.path)["days"]["2026-10-12"][0]
-        self.assertNotIn("889", out.get("body", ""))
+    def test_G03_a_bare_stamp_does_not_skip_the_filter(self):
+        """Fixed in 2.6.9 (clean_v, a hash of the filter's files): a row with only "clean": 1, or a forged or old clean_v, is filtered."""
+        for extra in ({}, {"clean_v": "f1"}, {"clean_v": "0123456789abcdef"}):
+            write(self.path, self.cal([dict(row("a", body="Meeting ID: 412 889 330"), clean=G.CLEAN, **extra)]))
+            out = G.read("agenda", self.path)["days"]["2026-10-12"][0]
+            self.assertNotIn("889", out.get("body", ""), extra)
 
     def _hammer(self, atomic, strict=True):
         """A writer rewrites calendar.json 400 times while a reader loops; returns (reads, valueerrors, other, torn)."""
