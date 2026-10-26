@@ -108,3 +108,7 @@ Not fixed: finding 11 (the cap, by design); a third orphan (the chain of two is 
 * MEDIUM: a 3-4-3 letter segment is a Meet code only on a `meet.` host or a provider host; `/meet/` and `/my/` join a path with the other join paths.
 * LOW fixed: dotted letters (`P.A.S.S.C.O.D.E: 4330`). Not fixed: `Passcode: 44` followed by `17` on the next line (the scrub itself keeps the tail), a third orphan group after the chain of two (by design).
 * Tests: `dev/tests/test_e1_recheck2.py` (17, with mutants).
+
+## Known limit: word-only value after agenda lines (fix5)
+
+Example: `Passcode:` then `Budget review for Q4`, `Vendors`, `rukuponurif`. Same output as the 2.6.8 scrub (D never leaks more); the same with a bare `PIN` cell and with `PIN:`. Digit and mixed values are held in every form. Documented, not widened (see NOTES-2.6.9.md).
