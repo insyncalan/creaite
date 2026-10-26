@@ -1,0 +1,7544 @@
+[
+ {
+  "name": "normal by id",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal by id string only",
+  "event": "evA",
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal by id with calendar prefix",
+  "event": "calendar:evA",
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal by id, other times (moved)",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "11:00",
+   "end": "12:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal by id, other title",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Renamed"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal, no id, same times and title",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal, no id in row, event has id",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal with tags and case in title",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "[ABC] DESIGN review!"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "back to back, closed meeting after",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "10:00",
+      "end": "11:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "back to back, closed meeting before",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "10:00",
+   "end": "11:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     },
+     {
+      "id": "evA",
+      "start": "10:00",
+      "end": "11:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "normal by id with created inside own meeting",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T09:01:00"
+ },
+ {
+  "name": "two normal meetings same time different ids",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Other",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "duplicated identical normal entries",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "live normal does not hold",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "live": {
+   "sensitivity": "normal"
+  }
+ },
+ {
+  "name": "all-day closed row holds nothing",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evH",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "Holiday",
+      "where": "",
+      "teams": true,
+      "private": true,
+      "organiser": false,
+      "sensitivity": "private"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "other day closed row holds nothing",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ],
+    "2026-10-16": [
+     {
+      "id": "evZ",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "sensitivity with capitals and spaces is normal",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": " Normal "
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "created before closed window by more than 15 minutes",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "08:00",
+   "end": "08:30",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T08:00:00"
+ },
+ {
+  "name": "tz: Z stamp in London summer time",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-15T08:00:00Z",
+   "end": "2026-10-15T09:00:00Z",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "tz": "Europe/London"
+ },
+ {
+  "name": "closed row by id, sensitivity 'confidential'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "closed row by id, sensitivity 'Confidential'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "Confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "closed row by id, sensitivity ' CONFIDENTIAL '",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": " CONFIDENTIAL "
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "closed row by id, sensitivity 'restricted'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "restricted"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "closed row by id, sensitivity 'secret'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "secret"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "closed row by id, sensitivity 'strictly confidential'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "strictly confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "closed row by id, sensitivity 'private'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "private"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "closed row by id, sensitivity 'Private '",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "Private "
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "closed row by id, sensitivity 'personal'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "personal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "closed row by id, sensitivity ''",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": ""
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "unknown sensitivity"
+ },
+ {
+  "name": "confidential, teams false, by id",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": false,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "confidential, teams false, only an id string",
+  "event": "evA",
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": false,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "confidential, teams false, other title",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Weekly sync"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": false,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "private flag true, sensitivity normal",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": true,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "private flag 'yes' text",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": "yes",
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "private flag 1",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": 1,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "confidential flag true, sensitivity normal",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal",
+      "confidential": true
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "sensitivity missing",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "unknown sensitivity"
+ },
+ {
+  "name": "sensitivity null",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": null
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "unknown sensitivity"
+ },
+ {
+  "name": "sensitivity a number",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": 0
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "unknown sensitivity"
+ },
+ {
+  "name": "sensitivity a list",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": [
+       "normal"
+      ]
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "unknown sensitivity"
+ },
+ {
+  "name": "sensitivity 'none'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "none"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "sensitivity 'normal.'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal."
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "sensitivity 'not normal'",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "not normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "sensitivity full-width letters normal is normal after NFKC",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "ｎｏｒｍａｌ"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "no-id match to a confidential row by times and title",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "event has id, row has none, confidential row matches by times and title",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "private row 'Busy' with same times, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Busy"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Busy",
+      "where": "",
+      "teams": true,
+      "private": true,
+      "organiser": false,
+      "sensitivity": "private"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "id not saved, nothing else",
+  "event": {
+   "id": "evX",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "empty calendar days",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {}
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "calendar without days key",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "x"
+  },
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "calendar is a list",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": [],
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "calendar is a string",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": "corrupt",
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "calendar is null",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": null,
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "calendar is a number",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": 7,
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "days is a list",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": [
+    {
+     "id": "evA",
+     "start": "09:00",
+     "end": "10:00",
+     "all_day": false,
+     "title": "Design review",
+     "where": "",
+     "teams": true,
+     "private": false,
+     "organiser": false,
+     "sensitivity": "normal"
+    }
+   ]
+  },
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "days is a string",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": "x"
+  },
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "the event's day holds a string row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     "junk"
+    ]
+   }
+  },
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "the event's day is not a list",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": "junk",
+    "2026-10-16": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "another day holds a string row, event matches by id",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ],
+    "2026-10-16": [
+     "junk"
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "row is a number only",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     5
+    ]
+   }
+  },
+  "held": true,
+  "reason": "calendar unreadable"
+ },
+ {
+  "name": "no event (None)",
+  "event": null,
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "no event"
+ },
+ {
+  "name": "no event (empty dict)",
+  "event": {},
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "no event"
+ },
+ {
+  "name": "no event (empty string)",
+  "event": "",
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "no event"
+ },
+ {
+  "name": "no event (spaces)",
+  "event": "   ",
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "no event"
+ },
+ {
+  "name": "no event (list)",
+  "event": [
+   "evA"
+  ],
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "no event"
+ },
+ {
+  "name": "no event (bool)",
+  "event": true,
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "no event"
+ },
+ {
+  "name": "id is a number in the event",
+  "event": {
+   "id": 12,
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "x"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": 12,
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "event id is a dict",
+  "event": {
+   "id": {
+    "a": 1
+   },
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "event id None, title alone matches nothing without times",
+  "event": {
+   "id": null,
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "title alone is never a match",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "",
+   "end": "",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "times alone are never a match",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Different"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "same times and title, different day",
+  "event": {
+   "id": "",
+   "day": "2026-10-16",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "same title, different day, same id",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-16",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "same title different day, row confidential, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-16",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "start differs by a minute, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:01",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "end differs by a minute, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:01",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "missing end, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "missing day and id",
+  "event": {
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "title only no id no times",
+  "event": {
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "two different rows match by times and title",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "e1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e2",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "design  REVIEW",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "two rows same id different times",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evA",
+      "start": "13:00",
+      "end": "14:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "same id on two days",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ],
+    "2026-10-16": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "same id twice, one confidential",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "same id twice, one private",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": true,
+      "organiser": false,
+      "sensitivity": "private"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "private"
+ },
+ {
+  "name": "id differs by case only",
+  "event": {
+   "id": "EVA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "id differs by case, row confidential",
+  "event": {
+   "id": "EVA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "id differs by case, row confidential, other title",
+  "event": {
+   "id": "EVA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "id differs by percent encoding",
+  "event": {
+   "id": "ev%41",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "id differs by padding",
+  "event": {
+   "id": "evA==",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "id differs by surrounding spaces is the same id",
+  "event": {
+   "id": " evA ",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "id differs by full-width letters",
+  "event": {
+   "id": "ｅvA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "exact id plus a look-alike confidential row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "EVA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "exact id plus a look-alike normal row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "EVA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "id prefix is not a match",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evAB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "id suffix is not a match",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "xevA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "id substring url form",
+  "event": {
+   "id": "https://x.example/evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "very long id equal",
+  "event": {
+   "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "id with unicode equal",
+  "event": {
+   "id": "évé-1",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "évé-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "series: master id asked, instance saved confidential, same times and title",
+  "event": {
+   "id": "master",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "inst-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "series: master id asked, instance confidential, other title",
+  "event": {
+   "id": "master",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "inst-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "series: master id asked, a normal instance saved at the same times and title",
+  "event": {
+   "id": "master",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "inst-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "series: same series other day instance confidential",
+  "event": {
+   "id": "inst-2",
+   "day": "2026-10-22",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "inst-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ],
+    "2026-10-22": [
+     {
+      "id": "inst-2",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "series: same id both days is ambiguous",
+  "event": {
+   "id": "inst-1",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "inst-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ],
+    "2026-10-22": [
+     {
+      "id": "inst-1",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous"
+ },
+ {
+  "name": "series: master confidential asked by master id",
+  "event": {
+   "id": "master",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "master",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "all-day event by id normal",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "",
+   "end": "",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "all-day event by id confidential",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "",
+   "end": "",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "all-day no id, no times",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "",
+   "end": "",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "timed event during an all-day closed row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evH",
+      "start": "",
+      "end": "",
+      "all_day": true,
+      "title": "Away",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "double booked, no id, closed one overlaps",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:30",
+      "end": "10:30",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting"
+ },
+ {
+  "name": "double booked, same times, closed one different title, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting"
+ },
+ {
+  "name": "double booked, id matches, created inside closed window",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:30",
+      "end": "10:30",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting",
+  "created": "2026-10-15T09:40:00"
+ },
+ {
+  "name": "double booked, id matches, created before the closed window",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:30",
+      "end": "10:30",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T09:00:00"
+ },
+ {
+  "name": "created 15 minutes before a closed meeting holds",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "08:00",
+   "end": "08:45",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "08:00",
+      "end": "08:45",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting",
+  "created": "2026-10-15T08:45:00"
+ },
+ {
+  "name": "created exactly at closed end is open",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "10:00",
+   "end": "11:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "10:00",
+      "end": "11:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": "2026-10-15T10:00:00"
+ },
+ {
+  "name": "created unreadable holds",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "times unreadable",
+  "created": "not a time"
+ },
+ {
+  "name": "created a number holds",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "times unreadable",
+  "created": 12345
+ },
+ {
+  "name": "created empty text is not given",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "created": ""
+ },
+ {
+  "name": "closed row with unreadable times holds a no-id match",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "??",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "times unreadable"
+ },
+ {
+  "name": "closed row with end before start holds",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "11:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "times unreadable"
+ },
+ {
+  "name": "closed row with missing times, not all-day, holds",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "",
+      "end": "",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "times unreadable"
+ },
+ {
+  "name": "closed row elsewhere with bad times, id matches, no created",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "??",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "closed private row overlapping, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evP",
+      "start": "09:15",
+      "end": "09:45",
+      "all_day": false,
+      "title": "Busy",
+      "where": "",
+      "teams": true,
+      "private": true,
+      "organiser": false,
+      "sensitivity": "private"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting"
+ },
+ {
+  "name": "unknown-sensitivity row overlapping, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evU",
+      "start": "09:15",
+      "end": "09:45",
+      "all_day": false,
+      "title": "X",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": null
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting"
+ },
+ {
+  "name": "live confidential holds an open row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "live event not normal",
+  "live": {
+   "sensitivity": "confidential"
+  }
+ },
+ {
+  "name": "live private holds an open row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "live event not normal",
+  "live": {
+   "sensitivity": "private"
+  }
+ },
+ {
+  "name": "live without a sensitivity holds",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "live event not normal",
+  "live": {}
+ },
+ {
+  "name": "live text not an object holds",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "live event not normal",
+  "live": "normal"
+ },
+ {
+  "name": "live normal never opens a confidential row",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential",
+  "live": {
+   "sensitivity": "normal"
+  }
+ },
+ {
+  "name": "live normal never opens a missing row",
+  "event": {
+   "id": "evX",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Zzz"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar",
+  "live": {
+   "sensitivity": "normal"
+  }
+ },
+ {
+  "name": "live normal never opens a corrupt calendar",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": "corrupt",
+  "held": true,
+  "reason": "calendar unreadable",
+  "live": {
+   "sensitivity": "normal"
+  }
+ },
+ {
+  "name": "live normal never opens an ambiguous match",
+  "event": {
+   "id": "EVA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "ambiguous",
+  "live": {
+   "sensitivity": "normal"
+  }
+ },
+ {
+  "name": "live flag private holds",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "live event not normal",
+  "live": {
+   "sensitivity": "normal",
+   "private": true
+  }
+ },
+ {
+  "name": "live confidential and saved confidential: saved reason",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential",
+  "live": {
+   "sensitivity": "confidential"
+  }
+ },
+ {
+  "name": "tz: UTC stamp, London summer, matches 09:00 local",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-15T08:00:00+00:00",
+   "end": "2026-10-15T09:00:00+00:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "tz": "Europe/London"
+ },
+ {
+  "name": "tz: same stamp read in UTC does not match",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-15T08:00:00+00:00",
+   "end": "2026-10-15T09:00:00+00:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar",
+  "tz": "UTC"
+ },
+ {
+  "name": "tz: last Sunday of October, after the clocks go back (London)",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-25T09:00:00Z",
+   "end": "2026-10-25T10:00:00Z",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-25": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "tz": "Europe/London"
+ },
+ {
+  "name": "tz: the repeated hour when the clocks go back (London): end reads 01:00, so no match, held",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-25T00:30:00Z",
+   "end": "2026-10-25T01:00:00Z",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-25": [
+     {
+      "id": "",
+      "start": "01:30",
+      "end": "02:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar",
+  "tz": "Europe/London"
+ },
+ {
+  "name": "tz: late evening UTC is next day in Sydney",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-14T22:00:00Z",
+   "end": "2026-10-14T23:00:00Z",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "tz": "Australia/Sydney"
+ },
+ {
+  "name": "tz: naive stamp is local, kept as given",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-10-15T09:00:00",
+   "end": "2026-10-15T10:00:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "tz": "Asia/Tokyo"
+ },
+ {
+  "name": "tz: closed meeting window in local time, created in UTC",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "overlaps closed meeting",
+  "created": "2026-10-15T08:30:00Z",
+  "tz": "Europe/London"
+ },
+ {
+  "name": "tz: spring forward day (London) match",
+  "event": {
+   "id": "",
+   "day": null,
+   "start": "2026-03-29T00:30:00Z",
+   "end": "2026-03-29T01:30:00Z",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-03-29": [
+     {
+      "id": "",
+      "start": "00:30",
+      "end": "02:30",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false,
+  "tz": "Europe/London"
+ },
+ {
+  "name": "start stamp garbage, no id",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "soon",
+   "end": "later",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "start stamp garbage, id matches",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "soon",
+   "end": "later",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "row with id as number matches string id",
+  "event": {
+   "id": "12",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": 12,
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "row id None, event id given, no times",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": null,
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Other",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "a day key that is not a date is still read",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ],
+    "bad-day": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "extra top-level keys ignored",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   },
+   "note": "x",
+   "closed": [
+    {
+     "id": "evA"
+    }
+   ]
+  },
+  "held": false
+ },
+ {
+  "name": "row has extra keys",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal",
+      "joinUrl": "https://x.example/abc",
+      "body": "Passcode 123"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "row title missing, matches by id",
+  "event": {
+   "id": "evA",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "evA",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "row title number, no id match",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": 123,
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "row start numeric, closed, overlap check",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "Design review",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "evB",
+      "start": 900,
+      "end": 1000,
+      "all_day": false,
+      "title": "Board",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "times unreadable"
+ },
+ {
+  "name": "many rows, one match",
+  "event": {
+   "id": "e50",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "e0",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T0",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e1",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T1",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e2",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T2",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e3",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T3",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e4",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T4",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e5",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T5",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e6",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T6",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e7",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T7",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e8",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T8",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e9",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T9",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e10",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T10",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e11",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T11",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e12",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T12",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e13",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T13",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e14",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T14",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e15",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T15",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e16",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T16",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e17",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T17",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e18",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T18",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e19",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T19",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e20",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T20",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e21",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T21",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e22",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T22",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e23",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T23",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e24",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T24",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e25",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T25",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e26",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T26",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e27",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T27",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e28",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T28",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e29",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T29",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e30",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T30",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e31",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T31",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e32",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T32",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e33",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T33",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e34",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T34",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e35",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T35",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e36",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T36",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e37",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T37",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e38",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T38",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e39",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T39",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e40",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T40",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e41",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T41",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e42",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T42",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e43",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T43",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e44",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T44",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e45",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T45",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e46",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T46",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e47",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T47",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e48",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T48",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e49",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T49",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e50",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T50",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e51",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T51",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e52",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T52",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e53",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T53",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e54",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T54",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e55",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T55",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e56",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T56",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e57",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T57",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e58",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T58",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e59",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T59",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e60",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T60",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e61",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T61",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e62",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T62",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e63",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T63",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e64",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T64",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e65",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T65",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e66",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T66",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e67",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T67",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e68",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T68",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e69",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T69",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e70",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T70",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e71",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T71",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e72",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T72",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e73",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T73",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e74",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T74",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e75",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T75",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e76",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T76",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e77",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T77",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e78",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T78",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e79",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T79",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e80",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T80",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e81",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T81",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e82",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T82",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e83",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T83",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e84",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T84",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e85",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T85",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e86",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T86",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e87",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T87",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e88",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T88",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e89",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T89",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e90",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T90",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e91",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T91",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e92",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T92",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e93",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T93",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e94",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T94",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e95",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T95",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e96",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T96",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e97",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T97",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e98",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T98",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e99",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T99",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "many rows, a confidential one matched",
+  "event": {
+   "id": "e50",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Design review"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "e0",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T0",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e1",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T1",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e2",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T2",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e3",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T3",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e4",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T4",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e5",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T5",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e6",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T6",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e7",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T7",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e8",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T8",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e9",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T9",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e10",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T10",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e11",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T11",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e12",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T12",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e13",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T13",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e14",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T14",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e15",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T15",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e16",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T16",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e17",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T17",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e18",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T18",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e19",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T19",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e20",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T20",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e21",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T21",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e22",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T22",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e23",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T23",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e24",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T24",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e25",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T25",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e26",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T26",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e27",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T27",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e28",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T28",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e29",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T29",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e30",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T30",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e31",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T31",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e32",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T32",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e33",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T33",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e34",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T34",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e35",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T35",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e36",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T36",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e37",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T37",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e38",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T38",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e39",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T39",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e40",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T40",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e41",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T41",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e42",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T42",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e43",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T43",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e44",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T44",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e45",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T45",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e46",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T46",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e47",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T47",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e48",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T48",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e49",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T49",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e50",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T50",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "confidential"
+     },
+     {
+      "id": "e51",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T51",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e52",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T52",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e53",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T53",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e54",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T54",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e55",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T55",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e56",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T56",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e57",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T57",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e58",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T58",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e59",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T59",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e60",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T60",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e61",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T61",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e62",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T62",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e63",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T63",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e64",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T64",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e65",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T65",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e66",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T66",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e67",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T67",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e68",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T68",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e69",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T69",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e70",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T70",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e71",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T71",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e72",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T72",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e73",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T73",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e74",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T74",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e75",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T75",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e76",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T76",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e77",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T77",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e78",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T78",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e79",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T79",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e80",
+      "start": "00:00",
+      "end": "00:30",
+      "all_day": false,
+      "title": "T80",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e81",
+      "start": "01:00",
+      "end": "01:30",
+      "all_day": false,
+      "title": "T81",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e82",
+      "start": "02:00",
+      "end": "02:30",
+      "all_day": false,
+      "title": "T82",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e83",
+      "start": "03:00",
+      "end": "03:30",
+      "all_day": false,
+      "title": "T83",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e84",
+      "start": "04:00",
+      "end": "04:30",
+      "all_day": false,
+      "title": "T84",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e85",
+      "start": "05:00",
+      "end": "05:30",
+      "all_day": false,
+      "title": "T85",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e86",
+      "start": "06:00",
+      "end": "06:30",
+      "all_day": false,
+      "title": "T86",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e87",
+      "start": "07:00",
+      "end": "07:30",
+      "all_day": false,
+      "title": "T87",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e88",
+      "start": "08:00",
+      "end": "08:30",
+      "all_day": false,
+      "title": "T88",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e89",
+      "start": "09:00",
+      "end": "09:30",
+      "all_day": false,
+      "title": "T89",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e90",
+      "start": "10:00",
+      "end": "10:30",
+      "all_day": false,
+      "title": "T90",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e91",
+      "start": "11:00",
+      "end": "11:30",
+      "all_day": false,
+      "title": "T91",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e92",
+      "start": "12:00",
+      "end": "12:30",
+      "all_day": false,
+      "title": "T92",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e93",
+      "start": "13:00",
+      "end": "13:30",
+      "all_day": false,
+      "title": "T93",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e94",
+      "start": "14:00",
+      "end": "14:30",
+      "all_day": false,
+      "title": "T94",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e95",
+      "start": "15:00",
+      "end": "15:30",
+      "all_day": false,
+      "title": "T95",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e96",
+      "start": "16:00",
+      "end": "16:30",
+      "all_day": false,
+      "title": "T96",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e97",
+      "start": "17:00",
+      "end": "17:30",
+      "all_day": false,
+      "title": "T97",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e98",
+      "start": "18:00",
+      "end": "18:30",
+      "all_day": false,
+      "title": "T98",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     },
+     {
+      "id": "e99",
+      "start": "19:00",
+      "end": "19:30",
+      "all_day": false,
+      "title": "T99",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "confidential"
+ },
+ {
+  "name": "unicode title match with accents (NFKC)",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "Réunion Équipe"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "réunion équipe",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": false
+ },
+ {
+  "name": "title with only punctuation never matches",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": "***"
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "---",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ },
+ {
+  "name": "empty titles never match",
+  "event": {
+   "id": "",
+   "day": "2026-10-15",
+   "start": "09:00",
+   "end": "10:00",
+   "title": ""
+  },
+  "calendar": {
+   "fetched": "2026-10-15 07:00",
+   "to": "2026-10-22",
+   "days": {
+    "2026-10-15": [
+     {
+      "id": "",
+      "start": "09:00",
+      "end": "10:00",
+      "all_day": false,
+      "title": "",
+      "where": "",
+      "teams": true,
+      "private": false,
+      "organiser": false,
+      "sensitivity": "normal"
+     }
+    ]
+   }
+  },
+  "held": true,
+  "reason": "not in saved calendar"
+ }
+]
