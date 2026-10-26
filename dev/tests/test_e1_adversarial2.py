@@ -567,7 +567,7 @@ def print_report(res):
               % (c.nonidem, dict(c.errors), c.secrets, c.leak_total, dict(Counter({k[1]: v for k, v in c.leaks.items()})), c.keepers,
                  c.lost_total, sum(c.whole_lost.values()), c.seconds, c.worst))
         print("  old : secrets %d  leaks %d  keepers %d  lost %d  %.2fs" % (o.secrets, o.leak_total, o.keepers, o.lost_total, o.seconds))
-        for label, st in (("C", c),):
+        for st in (c,):
             top = sorted(st.leaks.items(), key=lambda kv: -kv[1])[:6]
             for (tag, kind), cnt in top:
                 print("    leak %-40s %-5s %4d  e.g. %r" % (tag, kind, cnt, st.leak_example[(tag, kind)][:110]))
@@ -584,9 +584,9 @@ GEN_N = 400     # bodies per generator in the unit tests (the --report run uses 
 # name: (max C leaks, max C lost keepers, max non-idempotent).  Old scrub for comparison: leaks 479/28/15/0/8/0/0/0/0/39, lost 0 everywhere
 # except encodings (480, the same).
 RATCHET = {
-    "orphans": (147, 110, 0), "single_anchor": (0, 428, 0), "provider_one_line": (0, 16, 0), "encodings": (0, 480, 0),
+    "orphans": (4, 72, 0), "single_anchor": (0, 428, 0), "provider_one_line": (0, 16, 0), "encodings": (0, 480, 0),
     "label_markup": (3, 0, 0), "safelinks": (0, 0, 0), "repeated": (0, 0, 0), "numbered_long": (0, 615, 0), "tz_and_dial": (0, 0, 0),
-    "provider_unknown": (14, 4, 0),
+    "provider_unknown": (13, 4, 0),
 }
 
 
@@ -602,7 +602,7 @@ class Generators(unittest.TestCase):
 
     def test_ratchets(self):
         bad = []
-        for name, (c, o, _b) in self.res.items():
+        for name, (c, _o, _b) in self.res.items():
             if name not in RATCHET:
                 continue
             ml, mk, mi = RATCHET[name]
@@ -615,7 +615,7 @@ class Generators(unittest.TestCase):
         self.assertEqual(bad, [])
 
     def test_never_slow(self):
-        for name, (c, o, _b) in self.res.items():
+        for name, (c, _o, _b) in self.res.items():
             self.assertLess(c.worst, 1.0, name)
 
 
@@ -632,13 +632,11 @@ def has(text, needle):
 class OrphanFindings(unittest.TestCase):
     """Class A: orphan values after a label block that was dropped whole."""
 
-    @unittest.expectedFailure
     def test_O1_value_after_divider_leaks(self):
         """The orphan rule stops at a divider ('________'), so a PIN set under a rule line survives. (MED: uncommon layout.)"""
         t = "Hi\n\nMeeting ID: 412 889 330\n________\n8825\n\nQ3 budget review\n"
         self.assertNotIn("8825", C(t))
 
-    @unittest.expectedFailure
     def test_O2_second_orphan_after_unlisted_label_leaks(self):
         """A PIN behind a label the scrub does not list (es 'Clave'), then a second short value: the label line itself survives and the
         second value leaks (the label block and the first value go, the chain counts the label)."""
@@ -647,14 +645,12 @@ class OrphanFindings(unittest.TestCase):
         self.assertNotIn("8825", out)
         self.assertNotIn("7731", out)
 
-    @unittest.expectedFailure
     def test_O3_orphan_rule_takes_an_ordinary_agenda_line(self):
         """Over-take: a short ordinary line holding one letter-digit token ('Ticket INC1234 follow-up') after a dropped block is
         taken as an orphan, and the line after it is lost as the second orphan. (MED: data loss.)"""
         t = "Dial-in: +44 20 7946 0000\n\nINC1234\n\nTicket INC1234 follow-up\n"
         self.assertIn("follow-up", C(t))
 
-    @unittest.expectedFailure
     def test_O4_room_number_after_join_block_is_lost(self):
         """'Room 1204' (4 digits, 9 characters) after a dropped join block is taken for a PIN. (MED.)"""
         t = "Meeting ID: 412 889 330\n\nRoom 1204\n\nBudget 2026\n"
@@ -753,38 +749,32 @@ class MoreOrphanFindings(unittest.TestCase):
     """The orphan rule never sees a value that sits directly under the line the scrub removed (D: the scrub runs first, so the anchor layer has
     no dropped block to attach the orphan to) and judges one token at a time."""
 
-    @unittest.expectedFailure
     def test_O8_four_digit_value_directly_under_the_id_line_leaks_in_html(self):
         """HIGH-candidate: <p>Meeting ID: ...</p><p>8825</p> (also <div> and <br>, and plain text with no blank line). 4-digit values only:
         6 or more digits go by the bare-PIN rule, a blank line by _without_orphans. Old scrub leaks it too."""
         t = "<p>Meeting ID: 412 889 330</p><p>8825</p><p>Agenda: budget</p>"
         self.assertNotIn("8825", C(t))
 
-    @unittest.expectedFailure
     def test_O9_four_digit_value_directly_under_the_id_line_leaks_in_plain_text(self):
         t = "Subject: x\n\nMeeting ID: 412 889 330\n8825\n\nAgenda: budget"
         self.assertNotIn("8825", C(t))
 
-    @unittest.expectedFailure
     def test_O10_spaced_three_plus_three_value_leaks_even_after_a_blank_line(self):
         """'984 522' (a spaced 6-digit PIN): _orphan_value judges one token, and 984 and 522 are 3 digits each. Leaks in every layout."""
         t = "Meeting ID: 412 889 330\n\n984 522\n\nAgenda: x"
         self.assertNotIn("984 522", C(t))
 
-    @unittest.expectedFailure
     def test_O11_list_marker_hides_the_orphan(self):
         """'- 4076' under the ID line: every shape leaks in list layout (55 percent of the generated orphans)."""
         t = "Meeting ID: 526 903 470\n- 4076\n\nAgenda: x"
         self.assertNotIn("4076", C(t))
 
-    @unittest.expectedFailure
     def test_O12_ext_line_is_taken_for_an_orphan(self):
         """'Ext 4417 for help' (17 characters, 4 tokens, one 4-digit token) after a dropped join block is always taken. 'Room 1204' about
         60 percent of the time, 'Ticket INC1234 follow-up' about 40 percent (random 4-digit rooms)."""
         t = "Subject: x\n\nMeeting ID: 412 889 330\n\nExt 4417 for help\n\nThanks"
         self.assertIn("Ext 4417 for help", C(t))
 
-    @unittest.expectedFailure
     def test_O13_value_after_a_stacked_unlisted_label_in_english_leaks(self):
         """'Room key' is not a listed label: <p>Room key</p><p>7118</p> leaks the value (7 percent of the 'Room key' provider-unknown bodies)."""
         t = "<p>Agenda</p><p>Link: https://bridge.example.test/r/q4mkeu4n</p><p>Room key</p><p>7118</p><p>Thanks</p>"
@@ -952,7 +942,7 @@ class GatewayRoundTrip(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.bodies = []
-        for name, (gen, seed) in GENERATORS.items():
+        for gen, seed in GENERATORS.values():
             cls.bodies += run_gen(gen, 60, seed + 1000)
 
     def test_stamp_row_is_idempotent(self):

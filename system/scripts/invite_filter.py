@@ -407,11 +407,19 @@ def _region_drops(kinds, strong, drop, skip=None):
 
 
 # 2.6.9 HIGH 1: a short value-only block right after a dropped anchor block belongs to that block (a PIN behind a label we do not list)
+# E1 pass 2 (findings 1, 2, 4, 5, 6): the candidate is judged as a WHOLE block of value tokens only (a spaced 984 522 counts, a list
+# marker is ignored, a sentence or 'Room 1204' does not), and it may follow ANY line the scrub or the anchor layer removed.
 _ORPHAN_MAX_CHARS = 24
 _ORPHAN_MAX_TOKENS = 4
 _ORPHAN_NUM = re.compile(r"\d{4,8}")
 _ORPHAN_MIXED = re.compile(r"(?=[a-z0-9]*\d)(?=[a-z0-9]*[^\W\d_])[a-z0-9]{5,12}")
 _ORPHAN_STRIP = ".,;:!?()[]{}\"'|<>=*#"
+_ORPHAN_MARKER = re.compile(r"^(?:[-*+\u2022\u00b7\u25e6\u25aa\u2023\u2013\u2014>]|\d{1,2}[.)])\s+")
+_ORPHAN_ORDINARY = frozenset(("room", "rm", "floor", "level", "suite", "desk", "table", "team", "sprint", "phase", "week", "wave", "build",
+                              "release", "ver", "version", "rev", "ticket", "inc", "req", "chg", "task", "story", "epic", "case", "ext",
+                              "extension", "budget", "fy", "item", "step", "page", "slide", "row", "line", "plan", "agenda", "year",
+                              "date", "time", "total", "cost", "price", "order", "po", "pr", "invoice", "tel", "phone", "fax", "mob"))
+_ORPHAN_SMALL = re.compile(r"\d{2,4}")
 _USE_ORPHANS = True         # test hook
 
 
@@ -424,48 +432,118 @@ def _orphan_value(tok):
     return _ORPHAN_MIXED.fullmatch(t) is not None and not _is_datetime_token(t)
 
 
-def _orphan_block(kinds, skels, i, j):
-    """Is the block i..j-1 a short value-only block: 1 to 2 lines of at most 24 characters and 4 tokens in all, one token a 4-8 digit
-    number or a short letter-digit token (a year alone, with no label word in the block, is not one)?"""
+def _label_only(s):
+    """A bare label line: one to three words, no digit, at most 24 characters ('Clave', 'Room key:')."""
+    t = s.strip().rstrip(":").strip()
+    return bool(t) and len(t) <= _ORPHAN_MAX_CHARS and not any(c.isdecimal() for c in t) and len(t.split()) <= 3 \
+        and all(w.strip(_ORPHAN_STRIP).replace("-", "").replace("'", "").isalpha() for w in t.split())
+
+
+def _orphan_tokens(strs):
+    """The tokens of 1 to 2 lines (skeletons) with list markers removed and edge punctuation stripped; None when a line is longer than
+    24 characters or the group has more than 4 tokens."""
+    toks = []
+    for x in strs:
+        x = _ORPHAN_MARKER.sub("", x.strip())
+        if not x or len(x) > _ORPHAN_MAX_CHARS:
+            return None
+        toks.extend(x.split())
+    if not toks or len(toks) > _ORPHAN_MAX_TOKENS:
+        return None
+    return [t.strip(_ORPHAN_STRIP) for t in toks]
+
+
+def _without_lead_words(core):
+    """The tokens after one or two label words in front ('gecis kodu wExCzXM7'); an ordinary word (room, ticket, ext ...) is no label."""
+    lead = 0
+    while lead < 2 and lead < len(core) - 1 and core[lead].isalpha() and 2 <= len(core[lead]) <= 12 \
+            and core[lead] not in _ORPHAN_ORDINARY:
+        lead += 1
+    return core[lead:]
+
+
+def _spaced_value(core):
+    """Two to four short digit groups that make a 4 to 8 digit value together ('984 522'); no group a year."""
+    return (len(core) >= 2 and all(_ORPHAN_SMALL.fullmatch(t) for t in core) and 4 <= sum(map(len, core)) <= 8
+            and not any(_YEAR.fullmatch(t) for t in core))
+
+
+def _orphan_lines(strs, allow_year=False):
+    """Is this group of 1 to 2 lines VALUE TOKENS ONLY: each token digits or a short letter-digit token, after at most two label words
+    (never an ordinary word); with a 4-8 digit number, a letter-digit token or a spaced run (984 522)? A sentence is not one.
+    A bare year alone is a value only with allow_year (a label line before it)."""
+    core = _orphan_tokens(strs)
+    if core is None:
+        return False
+    core = _without_lead_words(core)
+    if not core or not all(t.isdecimal() or _ORPHAN_MIXED.fullmatch(t) for t in core):
+        return False
+    vals = [t for t in core if _orphan_value(t)]
+    if not vals:
+        return _spaced_value(core)
+    return allow_year or not all(_YEAR.fullmatch(t) for t in core)
+
+
+def _orphan_block(kinds, skels, i, j, allow_year=False):
+    """Is the block i..j-1 a short value-only block (see _orphan_lines)? A label line first and a value line second also counts: the
+    year rule then lifts ('Clave\n2026')."""
     if j - i > 2:
         return False
-    toks = []
-    for k in range(i, j):
-        if len(skels[k]) > _ORPHAN_MAX_CHARS:
-            return False
-        toks.extend(skels[k].split())
-    if not toks or len(toks) > _ORPHAN_MAX_TOKENS:
-        return False
-    vals = [x for x in toks if _orphan_value(x)]
-    if not vals:
-        return False
-    if all(_YEAR.fullmatch(v.strip(_ORPHAN_STRIP)) for v in vals):
-        # a bare year: only with a label line (no digits) beside it, e.g. 'Clave\n2026'
-        return len(toks) >= 2 and any(not any(c.isdecimal() for c in x) for x in toks) and j - i == 2
-    return True
+    if j - i == 2 and _label_only(skels[i]):
+        return _orphan_lines([skels[i + 1]], True)
+    return _orphan_lines([skels[k] for k in range(i, j)], allow_year)
+
+
+class _Chain:
+    """Where the orphan walk stands: armed after a removed line, up to two groups taken, at most one divider between, a bare label seen."""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        """Back to the start."""
+        self.armed, self.taken, self.divs, self.label = False, 0, 0, None
+
+    def divider(self):
+        """A divider line: a second one in a row ends the chain."""
+        self.divs += 1
+        if self.divs > 1:
+            self.reset()
+
+    def open(self):
+        """May another group be taken?"""
+        return self.armed and self.taken < 2
 
 
 def _orphan_drops(kinds, skels, drop, whole):
-    """After a block dropped whole for its anchor (blank lines between allowed, no divider), up to two following short
-    value-only blocks go too."""
-    n, i = len(kinds), 0
-    prev_dropped, chain = False, 0
+    """After a block dropped whole for its anchor (blank lines between allowed, one divider allowed), up to two following short
+    value-only blocks go too. A bare label line between is passed over, not counted, and goes with the value that follows it."""
+    n, i, st = len(kinds), 0, _Chain()
     while i < n:
         if kinds[i] == _BLANK:
             i += 1
             continue
         if kinds[i] == _DIVIDER:
-            prev_dropped, chain = False, 0
+            st.divider()
             i += 1
             continue
         j = _block_end(kinds, i)
+        st.divs = 0
         if i in whole:
-            prev_dropped, chain = True, 0
-        elif prev_dropped and chain < 2 and not any(drop[i:j]) and _orphan_block(kinds, skels, i, j):
+            st.reset()
+            st.armed = True
+        elif not st.open() or any(drop[i:j]):
+            st.reset()
+        elif j - i == 1 and _label_only(skels[i]):
+            st.label = (i, j)
+        elif _orphan_block(kinds, skels, i, j, st.label is not None):
             _mark(drop, kinds, i, j)
-            chain += 1
+            if st.label is not None:
+                _mark(drop, kinds, st.label[0], st.label[1])
+            st.taken += 1
+            st.label = None
         else:
-            prev_dropped, chain = False, 0
+            st.reset()
         i = j
 
 
@@ -849,29 +927,71 @@ def _with_boundaries(raw, out_lines):
     return res, fl
 
 
+def _kept_origins(mod, orig, kept):
+    """For each kept line, in order, the index of the original line it came from (None when none matches)."""
+    where = {}
+    for k, x in enumerate(orig):
+        where.setdefault(_scrub_key(mod, x), []).append(k)
+    pos, j = [], 0
+    for x in kept:
+        cand = where.get(_scrub_key(mod, x), ()) if x.strip() else ()
+        p = bisect.bisect_left(cand, j)
+        pos.append(cand[p] if p < len(cand) else None)
+        if p < len(cand):
+            j = cand[p] + 1
+    return pos
+
+
+def _take_orphans(skels, kinds, at, st, k):
+    """At original line k (kept, text), how many lines (0, 1 or 2) form a value-only group that goes."""
+    if k + 1 < len(kinds) and kinds[k + 1] == _TEXT and k + 1 in at and _orphan_lines([skels[k], skels[k + 1]], st.label is not None):
+        return 2
+    return 1 if _orphan_lines([skels[k]], st.label is not None) else 0
+
+
 def _without_orphans(raw, kept):
     """2.6.9 HIGH 1 for the raw-first order: the scrub has already removed the join block, so the anchor layer on its output cannot see
-    that a block was dropped. Find the short value-only blocks that follow a dropped anchor block in the ORIGINAL lines (the orphan rule),
-    and drop the kept lines with the same skeleton that still stand as a short value-only block."""
+    that a block was dropped. Each kept line is matched, in order, to the ORIGINAL line it came from; an original line that did not
+    survive is a removed line (the scrub's or the anchor layer's). A value-only group (see _orphan_lines: 1 to 2 consecutive lines, value
+    tokens only) that stands next to a removed line (blank lines and one divider between allowed, a bare label line passed over, which
+    goes with its value) goes too, up to two groups in a row."""
+    mod = _scrub_module()
     orig = _original_lines(raw)
-    idx = set()
-    _anchor_layer(orig, idx, True)
-    if not idx:
+    if mod is None or not orig:
         return kept
-    bad = {_skeleton(orig[i]) for i in idx}
-    skels = [_skeleton(x) for x in kept]
+    at = {o: i for i, o in enumerate(_kept_origins(mod, orig, kept)) if o is not None}
+    skels = [_skeleton(x) for x in orig]
     kinds = [_BLANK if not s else (_DIVIDER if _is_divider(s) else _TEXT) for s in skels]
-    drop = set()
-    i = 0
-    while i < len(kinds):
-        if kinds[i] != _TEXT:
-            i += 1
-            continue
-        j = _block_end(kinds, i)
-        if all(skels[k] in bad for k in range(i, j)) and _orphan_block(kinds, skels, i, j):
-            drop.update(range(i, j))
-        i = j
-    return [x for k, x in enumerate(kept) if k not in drop]
+    drop, st, k = set(), _Chain(), 0
+    while k < len(orig):
+        step = 1
+        if kinds[k] == _DIVIDER:
+            st.divider()
+        elif kinds[k] == _TEXT:
+            st.divs = 0
+            if k not in at:                      # a line that did not survive
+                st.reset()
+                st.armed = True
+            elif st.open() and _label_only(skels[k]):
+                st.label = k                     # a bare label: the value after it goes with it, and may be a year
+            else:
+                step = _take_group(skels, kinds, at, st, k, drop)
+        k += step
+    return [x for i, x in enumerate(kept) if i not in drop]
+
+
+def _take_group(skels, kinds, at, st, k, drop):
+    """A kept text line k: take the value-only group starting here when the chain is open. Returns how many original lines were consumed."""
+    n = _take_orphans(skels, kinds, at, st, k) if st.open() else 0
+    if not n:
+        st.reset()
+        return 1
+    drop.update(at[k + t] for t in range(n))
+    if st.label is not None:
+        drop.add(at[st.label])
+    st.taken += 1
+    st.label = None
+    return n
 
 
 def _raw_first(text):
