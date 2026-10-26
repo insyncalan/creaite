@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_meetings import week_calendar  # noqa: E402
-from test_tracker import REPO, Vault  # noqa: E402
+from test_tracker import REPO, Vault, assert_importable  # noqa: E402
 from test_transcripts import DAY, NOW, VTT, event, transcript_result  # noqa: E402
 
 sys.path.insert(0, str(REPO / "system" / "scripts"))
@@ -57,6 +57,7 @@ class Fetch(unittest.TestCase):
     def setUp(self):
         self.v = Vault()
         self.addCleanup(self.v.cleanup)
+        assert_importable(self.v.root, "transcript_hold")      # without it every fetch is held as 'calendar unreadable'
         self.v.run("init")
         week_calendar(self.v)
         # a sweep writes a sensitivity for every row that isn't private (sweep.invite_details); the fixture didn't

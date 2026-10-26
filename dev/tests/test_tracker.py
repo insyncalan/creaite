@@ -48,54 +48,28 @@ def vault_prefix():
 # ===== end BL-172 =====
 
 
+# Every file in system/scripts/ except the vendored libraries (copied below) and caches. One list for every test vault, so a
+# module that a script imports lazily (inside try/except, where a missing one looks like 'unavailable') is never missing.
+ALL_SCRIPTS = sorted(p.name for p in (REPO / "system" / "scripts").iterdir()
+                     if p.is_file() and not p.name.endswith((".pyc", ".orig", ".rej")) and not p.name.startswith("."))
+
+
+def assert_importable(root, *modules):
+    """Precondition for a test that depends on a module the code under test imports lazily: fail loudly, never fall back."""
+    for m in modules:
+        assert (Path(root) / "system" / "scripts" / f"{m}.py").exists(), f"test vault lacks system/scripts/{m}.py (a lazy import would be skipped)"
+
+
 def make_vault():
     os.environ["CREAITE_NO_LAUNCH"] = "1"    # BL-171: every test that builds a vault inherits it, so /api/open never starts Word
     tmp = Path(tempfile.mkdtemp(prefix=vault_prefix()))
     MADE_VAULTS.append(tmp)                  # BL-172
     scripts = tmp / "system" / "scripts"
     scripts.mkdir(parents=True)
-    for f in ("paths.py", "schema.sql", "tracker.py", "doctor.py", "excel_sync.py", "docx_tools.py",
-              "minutes.py", "review.py", "build_dashboard.py", "live_server.py",
-              "sweep.py", "session.py", "propose.py",
-              "report.py", "update.py", "search.py", "permissions.py", "locations.py", "filechange.py", "reach.py", "launch.py", "log.py", "transcripts.py",
-              "prep_page.py", "prep_shape.py", "prep_view.py", "status_facts.py", "status_checks.py", "status_prompt.py", "forecast.py",
-              "drafts.py",   # AI drafts (sprint-drafts-fields)
-              "draft_delivery.py",                                  # #183: the Outlook draft, never a send
-              "close_day.py",                                       # BL-295
-              "health_fixes.py",                                    # BL-320: Health's Fix it
-              "backup.py",                                          # BL-323: the daily zip, retention, Tidy up, restore
-              "extraction.py", "quality.py",                       # sprint-drafts-extraction
-              "claims.py",                                         # BL-314
-              "settings_catalogue.py", "health.py",                # BL-320
-              "archive.py",                                        # BL-10, BL-03
-              "usage_log.py", "usage_report.py",                   # #197, #238: the Usage figures in the page's data
-              "usage_reviews.py",                                  # #238 delta (v2.5.3): Your reviews on the Usage tab
-              "minutes_destination.py",                            # #324, #326, #332: where minutes are filed (live_server imports it)
-              "vip_schedule.py",                                   # #97: the alert check's quiet hours
-              "notes.py",                                          # BL-301: the note format, read by search
-              "meeting_match.py", "mail_domains.py", "capture.py",                                        # BL-301 C: the capture drawer's server side
-              "edit_ai.py",                                        # BL-301 D: AI on selected text
-              "sneak_peek.py",                                     # BL-322
-              "notes_find.py",                                     # BL-301 E: Find updates
-              "client_leak.py", "report_doc.py", "report_server.py",   # v2.1.0 P3
-              "client_check.py",   # v2.1.0 P8
-              "export_page.py",    # #226: the report page as the HTML and PDF export
-              "logo_check.py",     # p240-leakfix: a logo is looked into before it is saved
-              "creaite_doc.py",                                    # v2.1.0 P1: creaite's document format
-              "minutes_record.py", "date_words.py",                # v2.1.0 P4: the minutes record, dates in words
-              "minutes_spec.py",                                   # #269: what minutes.py stage accepts as a meeting spec
-              "linktext.py",                                       # #121: links in plain text, read by the reports, search and the Excel export
-              "confusables.py", "client_output.py",                # v2.5.1 (#239): the look-alike skeleton, the client output check
-              "client_snapshot.py",                                # v2.5.1 (#239, step 2): the checked snapshot, the one client export
-              "intake_process.py",                                 # #264: Intake's Process, its own run kind
-              "calendar_refresh.py",                               # #265: Calendar import's Refresh, its own run kind
-              "reextract.py",                                      # #283: the Minutes view's Read again, its own run kind
-              "invite_clean.py",                                   # #265 review M1, M2: what a saved invite may keep
-              "transcript_hold.py",                                # #250 slice B: the calendar hold (transcripts.default_hold imports it)
-              "item_history.py",                                   # #241 D: a work item's complete history (read only)
-              "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
+    for f in ALL_SCRIPTS:                                  # every script, so a new module is never forgotten
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
     shutil.copytree(REPO / "system" / "scripts" / "vendor", scripts / "vendor", ignore=NO_CACHE)
+    assert_importable(tmp, "transcript_hold", "ai_budget", "invite_clean", "transcripts")     # lazy imports that fail closed or look benign
     shutil.copytree(REPO / "system" / "config", tmp / "system" / "config",   # never the dev repo's own logs (git-ignored):
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyc.*", "*.jsonl"))   # change numbers start at 1
     cfg = tmp / "system" / "config" / "settings.json"    # trial state from the dev repo never leaks into tests

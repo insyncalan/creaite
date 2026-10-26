@@ -10,3 +10,12 @@ Draft paragraph for the release notes (Romanoff writes the final note).
 - When the clocks go back, a meeting in the repeated hour is held back rather than risk fetching a confidential one. Press **Process**.
 - The fetch is off until you switch it on.
 - The form of the transcript links from live Microsoft 365 is still to be checked on a real account; until then, a link creaite does not recognise is left for **Process**.
+
+**Held more than before (fail closed).** When creaite cannot be sure a transcript is safe to fetch, it holds the transcript and leaves it for **Process**. Five cases:
+- A transcript created more than 15 minutes before the meeting's start, or after its end, is held and goes to **Process**.
+- A meeting booked at the same time as a confidential one is held, even if its own transcript is genuine.
+- A confidential all-day entry holds every transcript on that day.
+- Saved calendar entries written before 20-10 with no sensitivity stamp are held as unknown.
+- A transcript with no created time is held.
+
+One gap remains. A confidential meeting that was dropped from the saved calendar, whose transcript is created inside an identical time slot of a normal meeting, is not detected until the sweep stub is built.
