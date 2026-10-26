@@ -762,11 +762,11 @@ class _Reader:
                 self.anchors = [*self.anchors, len(self.kept) - 1] if chain else []
             if kind == "leads":
                 self.soft.append([WINDOW, len(self.kept) - 1])      # a kept, finished phrase: the next three lines are looked at
+        elif not reach and not (consumed and self.digit_wait):
+            self.anchors = []                  # (a removed line between "Meeting ID." and its number keeps the chain)
         if self.soft_qualified:
             self.kept.append(None)                       # "Pin board": removed, and the next three lines are looked at like a soft heading
             self.soft.append([WINDOW, len(self.kept) - 1])
-        elif not reach and not (consumed and self.digit_wait):
-            self.anchors = []                  # (a removed line between "Meeting ID." and its number keeps the chain)
 
 
 def invite_text(body):

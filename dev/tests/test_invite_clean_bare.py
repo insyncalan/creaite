@@ -826,7 +826,7 @@ class Mutants(unittest.TestCase):
                          "p-meeting-id-hyphen"} <= set(bad), bad)
 
     def test_is_tail_removed(self):
-        m = mutant('\\s*{SEPRUN}|\\s*_|\\s+(?:is|are)', '\\s*{SEPRUN}|\\s*_|\\s+(?:zzz|zzzz)')
+        m = mutant('\\s*{SEPRUN}|\\s*_|\\s+(?:is|are|was|were)', '\\s*{SEPRUN}|\\s*_|\\s+(?:zzz|zzzz)')
         # bare22: "Passcode is" is also a qualified label now (a one-word phrase), so removing the "is" tail alone leaks nothing
         self.assertEqual(self.next_line_bad(m), [])
 

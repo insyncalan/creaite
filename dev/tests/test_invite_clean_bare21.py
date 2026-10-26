@@ -259,7 +259,7 @@ class Mutants(unittest.TestCase):
         self.assertIn("12-11-2026", I.invite_text("Password reset\n12-11-2026\nAOB"))
 
     def test_qualifier_without_the_end_anchor_eats_sentences(self):
-        m = mutant("{_QUAL}(?:{_ALONE_TAIL})?{_QUIET}$\"", "{_QUAL}(?:{_ALONE_TAIL})?{_QUIET}\"")
+        m = mutant("{_QUAL}(?:\\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}$\"", "{_QUAL}(?:\\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}\"")
         self.assertNotEqual(m.invite_text("Passcode for staff is set by the admin team\nAOB"), "AOB")
 
     def test_dates_not_exempt(self):

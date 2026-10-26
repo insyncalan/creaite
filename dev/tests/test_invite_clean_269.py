@@ -198,6 +198,132 @@ def agenda_kept(seed=SEED):
     return kept, total, lost
 
 
+# ---- rows and mutants ----
+SCRIPTS = HERE.parents[1] / "system" / "scripts"
+
+
+def mutant(old, new):
+    import importlib.util
+    src = (SCRIPTS / "invite_clean.py").read_text(encoding="utf-8")
+    assert old in src, old
+    spec = importlib.util.spec_from_loader("invite_clean_269m", loader=None)
+    mod = importlib.util.module_from_spec(spec)
+    mod.__dict__["__file__"] = str(SCRIPTS / "invite_clean.py")
+    exec(compile(src.replace(old, new, 1), "invite_clean_269m", "exec"), mod.__dict__)
+    return mod
+
+
+H2_ROWS = ["Meeting ID below: 345 678 912 345", "Meeting ID required: 345 678 912 345", "Meeting ID for the weekly sync 345 678 912 345",
+           "Meeting ID (Teams) 987 654 321", "Meeting ID if asked 987654321", "Meeting number to join - 482915", "Webinar ID for Zoom = 987 654 321",
+           "Meeting ID for Teams \u2192 345 678 912", "Meeting ID to join > 345-678-912", "Meeting ID required | 987 654 321",
+           "Meeting ID required\t987 654 321", "Meeting ID is 987 654 321", "Meeting ID was 987 654 321", "Conference ID (organiser only) 4829157",
+           "Webex meeting number below 2552 123 4567", "Meeting ID for the call (Teams) \u2014 345 678 912 345"]
+H4_ROWS = ["Zoom 482 915 7731", "Teams 123 456 789", "Webex 2552 123 4567", "Zoom: 855 1234 5678", "Steering (Teams 345 678 912 345)",
+           "Zoom-482-915-7731", "Teams \u2013 345 678 912 345", "Webex meeting 2552 123 4567", "Skype 482915", "Google Meet 345 678 912",
+           "Join Zoom 482 915 7731 now", "Zoom \u2192 855 1234 5678"]
+STAY = ["Teams 2026 roadmap", "Zoom 2026 budget", "Teams 365 licences", "Q3 2026 Teams rollout", "Meet 12 Nov 2026", "Zoom 2026-11-12",
+        "Meeting number of attendees 12", "Meeting ID card renewal 2026", "Meet the team 12:30", "Webex retirement plan", "Room 4",
+        "Teams adoption plan 2026", "Zoom licences: 40"]
+SEPARATORS = [("Passcode, for dial-in:", "4417"), ("PIN for the weekly 1:1:", "4417"), ("Meeting ID / dial-in", "987 654 321"),
+              ("PIN for dial-in;", "Abc4417"), ("Meeting ID, (Teams)", "686339850"), ("Password, - Zoom,", "982-251-4652"),
+              ("Meeting number required.", "4019154"), ("Access code for Teams\u2192", "345-453-7812"), ("PIN is was", "4417")]
+EATERS = ["Pin board", "Token budget", "Pin the roadmap", "Secret Santa party", "Password reset \u2013 ABC", "Code review \u2013 ABC"]
+
+
+class Rows(unittest.TestCase):
+    def test_h2_a_qualified_id_with_its_number_on_the_line_goes(self):
+        for t in H2_ROWS:
+            self.assertEqual(I.invite_text("Agenda\n" + t + "\nAOB"), "Agenda\nAOB", t)
+            self.assertEqual(I.scrub(t, 140), "", t)
+
+    def test_h4_a_provider_and_a_number_goes(self):
+        for t in H4_ROWS:
+            self.assertEqual(I.invite_text("Agenda\n" + t + "\nAOB"), "Agenda\nAOB", t)
+            self.assertEqual(I.scrub(t, 140), "", t)
+
+    def test_ordinary_lines_with_a_provider_or_a_short_number_stay(self):
+        for t in STAY:
+            self.assertEqual(I.invite_text("Agenda\n" + t + "\nAOB"), "Agenda\n" + t + "\nAOB", t)
+
+    def test_qualified_labels_with_any_separator_take_the_next_line(self):
+        for head, v in SEPARATORS:
+            for body in (f"{head}\n{v}\nAOB", f"<p>{head}</p><p>{v}</p><p>AOB</p>", f"<ul><li>{head}</li><li>{v}</li></ul>\nAOB"):
+                out = I.invite_text(body)
+                self.assertNotIn(v, out, body)
+                self.assertTrue(out.endswith("AOB"), body)
+
+    def test_label_word_agenda_lines_no_longer_take_the_lines_below(self):
+        tail = ["Training dates", "Sign-off", "Reporting line", "AOB"]
+        for h in EATERS:
+            for lines in (["Agenda", h, *tail], ["Agenda", h, *[f"{i}. {x}" for i, x in enumerate(tail, 1)]]):
+                out = I.invite_text("\n".join(lines))
+                self.assertEqual([x for x in tail if x not in out], [], h)
+            self.assertEqual(I.invite_text("Agenda\n" + h + "\nBudget review"), "Agenda\n" + h + "\nBudget review" if h.endswith("ABC") else "Agenda\nBudget review", h)
+
+    def test_a_number_under_such_a_line_still_goes(self):
+        for h in EATERS:
+            for v in ("4417", "987 654 321", "ZQ7742"):
+                self.assertNotIn(v, I.invite_text(f"Agenda\n{h}\n{v}\nAOB"), (h, v))
+
+    def test_instruction_words_keep_the_hard_rule(self):
+        for h in ("PIN below", "Token for the build", "OTP to follow", "Secret is", "PIN number", "PIN (Teams)", "Token - Zoom"):
+            self.assertEqual(I.invite_text(f"Agenda\n{h}\nhunter\nAOB"), "Agenda\nAOB", h)
+
+    def test_the_agenda_set_keeps_at_least_this_many_lines(self):
+        kept, total, _ = agenda_kept()
+        self.assertEqual(total, 200)
+        self.assertGreaterEqual(kept, 135)
+
+    def test_idempotent_on_every_row(self):
+        for t in [*H2_ROWS, *H4_ROWS, *STAY, *EATERS]:
+            for body in (t, "Agenda\n" + t + "\nBudget\n4417\nAOB"):
+                once = I.invite_text(body)
+                self.assertEqual(I.invite_text(once), once, body)
+
+
+class Mutants(unittest.TestCase):
+    def test_without_the_same_line_rule_h2_and_h4_leak(self):
+        m = mutant("SAME_LINE_NUMBER = re.compile(", "SAME_LINE_NUMBER = re.compile(r'(?!)' + ")
+        leaked = [t for t in [*H2_ROWS, *H4_ROWS] if m.invite_text("Agenda\n" + t + "\nAOB") != "Agenda\nAOB"]
+        self.assertGreaterEqual(len(leaked), 8)          # the rest are also caught by older rules (a dial-in word, "ID is")
+
+    def test_without_the_provider_half_h4_leaks(self):
+        m = mutant("|(?<![\\w-])(?:{_PROVIDER_WORD})", "|(?!)(?:{_PROVIDER_WORD})")
+        self.assertTrue([t for t in H4_ROWS if "9" in m.invite_text(t) or "123" in m.invite_text(t)])
+
+    def test_a_year_rule_that_takes_any_digits_eats_the_stay_rows(self):
+        m = mutant("(?:\\d{6,}|\\d{3,}[ -]\\d{3,}", "(?:\\d{3,}|\\d{3,}[ -]\\d{3,}")
+        self.assertTrue([t for t in STAY if m.invite_text(t) != t])
+
+    def test_without_the_comma_slash_and_semicolon_lead_the_separators_leak(self):
+        m = mutant("(?:\\s*[,/;]){{1,2}}\\s*(?:{_QDASH}\\s+)?|", "")
+        self.assertTrue([1 for head, v in SEPARATORS if v in m.invite_text(f"{head}\n{v}\nAOB")])
+
+    def test_without_the_trailing_mark_the_sentence_end_leaks(self):
+        m = mutant("(?:\\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}$", "(?:{_ALONE_TAIL})?{_QUIET}$")
+        self.assertIn("4019154", m.invite_text("Meeting number required.\n4019154\nAOB"))
+
+    def test_without_the_one_to_one_rule_it_leaks(self):
+        m = mutant('_ONE_TO_ONE = re.compile(r"(?<![\\w:])1:1(?!\\w|:\\d)")', '_ONE_TO_ONE = re.compile(r"(?!)")')
+        self.assertIn("4417", m.invite_text("PIN for the weekly 1:1:\n4417\nAOB"))
+
+    def test_without_the_soft_qualified_rule_the_agenda_is_eaten(self):
+        m = mutant("    if _soft_qualified(line):\n        return False", "    if False:\n        return False")
+        self.assertNotIn("Training dates", m.invite_text("Agenda\nPin board\nTraining dates\nSign-off\nAOB"))
+
+    def test_without_the_soft_window_a_number_below_pin_board_leaks(self):
+        m = mutant("        if self.soft_qualified:\n", "        if False:\n")
+        self.assertIn("4417", m.invite_text("Agenda\nPin board\n4417\nAOB"))
+
+    def test_without_the_instruction_words_pin_below_leaks(self):
+        m = mutant('_INSTR = ("for|to|of|is|are|was|were|if|when|via|by|from|with|in|on|at|as|per|and|or|below|', '_INSTR = ("zzzz|below|')
+        self.assertIn("hunter", m.invite_text("PIN to follow\nhunter\nAOB"))
+
+    def test_without_the_project_code_suffix_the_heading_is_removed(self):
+        m = mutant('r"(?:\\s*[-\\u2013\\u2014|]\\s*(?-i:[A-Z][A-Z0-9]{1,6}))?[\\s.,;!?*_~`]*$")', 'r"[\\s.,;!?*_~`]*$")')
+        self.assertNotIn("Training dates", m.invite_text("Agenda\nPassword reset \u2013 ABC\nTraining dates\nSign-off\nAOB"))
+
+
 class Fuzz(unittest.TestCase):
     pass
 
