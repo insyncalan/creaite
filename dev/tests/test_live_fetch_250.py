@@ -206,6 +206,22 @@ class Ends(unittest.TestCase):
         ev = [e for e in EVENTS if e["type"] != "result"] + [{"type": "result", "is_error": False, "result": "Swept."}]
         self.assertEqual(self.ended(events=ev)[0].finished, [True])
 
+    def test_a_stop_after_a_good_result_settles_with_false(self):
+        """The stop clause alone: a good result and exit 0, but Stop was pressed (a stop that comes after the answer)."""
+        spy = Spy([])
+        run, log = build(spy)
+        spy.log = log
+        orig = run._on_result
+
+        def result_then_stop(ev):
+            out = orig(ev)
+            run.stop = True                                  # Stop arrives after the good result, before the process ends
+            return out
+        run._on_result = result_then_stop
+        L.Run.read(run)
+        self.assertEqual(spy.finished, [False])
+        self.assertTrue(run.usage_result and not run.usage_result.get("is_error"))      # the result itself was good
+
     def test_answered_is_a_helper_that_reads_the_stream_result_not_the_exit_code_alone(self):
         run = L.Run.__new__(L.Run)
         run.stop = False
