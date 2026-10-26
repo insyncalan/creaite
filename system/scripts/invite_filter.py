@@ -59,12 +59,18 @@ def _skeleton(line):
         s = unicodedata.normalize("NFKC", s)
         s = s.translate(_CONFUSABLES)
     s = " ".join(s.lower().split())
+    if "." in s:
+        s = _DOTTED_LETTERS.sub(lambda m: m.group().replace(".", ""), s)
     return _SPACED_LETTERS.sub(_join_letters, s) if " " in s else s
 
 
 # E1 pass 2, finding 9: 'P A S S W O R D : 4330' reads as 'password : 4330' (four or more single letters in a row, one space apart)
 # (a run of more than 24 letters is text, not a label, and stays as it is)
 _SPACED_LETTERS = re.compile(r"(?<![^\W\d_])(?<![^\W\d_] )(?:[^\W\d_] ){3,}[^\W\d_](?![^\W\d_])")
+
+
+# Cap re-check 2, LOW: 'P.A.S.S.C.O.D.E: 4330' reads as 'passcode: 4330' (four or more single letters, each followed by a dot)
+_DOTTED_LETTERS = re.compile(r"(?<![^\W\d_.])(?<![^\W\d_]\.)(?:[^\W\d_]\.){3,}[^\W\d_]\b\.?(?![^\W\d_])")
 
 
 def _join_letters(m):
@@ -580,12 +586,22 @@ def _orphan_drops(kinds, skels, drop, whole):
 # that carries a session (digits, a passcode/token query, a long mixed token, a meeting-join path) keeps dropping the block.
 _LINK_QUERY = re.compile(r"[?&;#][a-z0-9_.\-]*(?:pwd|pass|token|code|pin|secret|otp|key|sig|auth|session|mtid|meetingid|confid|uid)"
                          r"[a-z0-9_.\-]*=")
-_LINK_JOIN = re.compile(r"meetup-join|/join(?:[/?#]|$)|/j/|j\.php|/wc/|/webinar/|/conference/|/meeting/")
+_LINK_JOIN = re.compile(r"meetup-join|/join(?:[/?#]|$)|/j/|j\.php|/wc/|/webinar/|/conference/|/meeting/|/meet/|/my/")
 _LINK_DIGITS = re.compile(r"(?<!\d)(?!(?:19|20)\d\d(?!\d))\d{4}")       # four digits that are not a year
 _LINK_TOKEN = re.compile(r"(?=[a-z0-9_\-]*\d)[a-z0-9_\-]{16,}")
 
 
 _LINK_MEET = re.compile(r"(?<![a-z0-9])[a-z]{3}-[a-z]{4}-[a-z]{3}(?![a-z0-9])")       # a Google Meet code: abc-defg-hij
+_MEET_HOST = re.compile(r"(?<![\w-])meet\.[a-z0-9-]+\.[a-z]{2,}", re.I)
+
+
+def _meet_link(tok):
+    """A Meet code counts only on a Meet host ('meet.google.com/abc-defg-hij', 'meet.example.org/...') or a provider host; an ordinary
+    slug of the same shape on a wiki ('wiki.example.org/bid-plan-two', 'sop-hand-off') is not a join secret (Cap re-check 2, MEDIUM)."""
+    if not _LINK_MEET.search(tok):
+        return False
+    mod = _scrub_module()
+    return bool(_MEET_HOST.search(tok) or (mod is not None and mod.HOSTS.search(tok)))
 
 
 def _plain_link(s):
@@ -596,7 +612,7 @@ def _plain_link(s):
     for tok in s.split():
         if _URL.search(tok) or _HOSTPATH.search(tok):
             if (_LINK_QUERY.search(tok) or _LINK_JOIN.search(tok) or _LINK_TOKEN.search(tok) or _LINK_DIGITS.search(tok)
-                    or _LINK_MEET.search(tok)):
+                    or _meet_link(tok)):
                 return False
     return True
 
@@ -1084,6 +1100,13 @@ def _line_breaks(text):
 _BREAKS = ("\x0b", "\x0c", "\x85", "\u2028", "\u2029")
 
 
+def _own_value_drop(scrub, piece):
+    """A piece that drops on its own AND carries its own value ('Passcode: 8825'). A bare label ('Passcode:', 'Meeting ID') drops alone
+    too, but its value is in a sibling piece, so it explains nothing (Cap re-check 2, HIGH 1). Known gap, stated: a word-only value after
+    a break ('Passcode: 8825<NEL>zejumud') keeps the word."""
+    return not scrub.invite_text(piece).strip() and not _ends_with_label(_skeleton(piece)) and not _label_only(piece)
+
+
 def _original_pieces(text, scrub):
     """Cap review of group C: the scrub also runs on the plain-text body AS WRITTEN, where a break inside a label's window keeps the
     label and the line after it together ('Zoom passcode:' / 'Decisions <NEL>log' / 'mupiwoc'). Returns a Counter of the keys of the
@@ -1103,7 +1126,7 @@ def _original_pieces(text, scrub):
             kept_o[_scrub_key(mod, line)] -= 1
             continue
         pieces = [x for x in _line_breaks(line).split("\n") if x.strip()]
-        if not any(not scrub.invite_text(x).strip() for x in pieces):       # no piece drops on its own: the original drop was the window's
+        if not any(_own_value_drop(scrub, x) for x in pieces):       # no piece drops on its own VALUE: the original drop was the window's
             drop.update(_scrub_key(mod, x) for x in pieces)
     return drop
 
@@ -1123,6 +1146,11 @@ def _union_drops(lines, pieces):
     return out
 
 
+def _is_html(text):
+    mod = _blocks_module()
+    return mod is not None and mod.looks_like_html(text)
+
+
 def _raw_first(text):
     """Composition D: the scrub on the raw body, the block boundaries it removed put back for the anchor layer, the orphan and sentence
     rules, the extended label pass (repeated until nothing changes, so the result is stable), then the CAP."""
@@ -1130,7 +1158,8 @@ def _raw_first(text):
     if scrub is None:
         return ""
     asked = text[:BODY_MAX * 5]
-    raw = _line_breaks(asked)
+    html = _is_html(asked)
+    raw = asked if html else _line_breaks(asked)      # HTML keeps its breaks as written: the scrub and invite_blocks treat them as white space
     scrubbed = [x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]
     scrubbed = _union_drops(scrubbed, _original_pieces(asked, scrub))
     aug, flags = _with_boundaries(raw, _fit(scrubbed))
