@@ -30,6 +30,7 @@ Layers, in order (each decides a line from the line itself, its block or its reg
   3. Second layer (drop_labelled_values), the safety net for a secret typed into prose. See that function.
 """
 import bisect
+import collections
 import re
 import unicodedata
 
@@ -584,6 +585,9 @@ _LINK_DIGITS = re.compile(r"(?<!\d)(?!(?:19|20)\d\d(?!\d))\d{4}")       # four d
 _LINK_TOKEN = re.compile(r"(?=[a-z0-9_\-]*\d)[a-z0-9_\-]{16,}")
 
 
+_LINK_MEET = re.compile(r"(?<![a-z0-9])[a-z]{3}-[a-z]{4}-[a-z]{3}(?![a-z0-9])")       # a Google Meet code: abc-defg-hij
+
+
 def _plain_link(s):
     """Is the line's only anchor a link that carries no session: no digit run, no passcode-like query, no meeting-join path and no long
     mixed token? (The caller has already found it holds an anchor.)"""
@@ -591,7 +595,8 @@ def _plain_link(s):
         return False
     for tok in s.split():
         if _URL.search(tok) or _HOSTPATH.search(tok):
-            if _LINK_QUERY.search(tok) or _LINK_JOIN.search(tok) or _LINK_TOKEN.search(tok) or _LINK_DIGITS.search(tok):
+            if (_LINK_QUERY.search(tok) or _LINK_JOIN.search(tok) or _LINK_TOKEN.search(tok) or _LINK_DIGITS.search(tok)
+                    or _LINK_MEET.search(tok)):
                 return False
     return True
 
@@ -1076,14 +1081,59 @@ def _line_breaks(text):
     return text
 
 
+_BREAKS = ("\x0b", "\x0c", "\x85", "\u2028", "\u2029")
+
+
+def _original_pieces(text, scrub):
+    """Cap review of group C: the scrub also runs on the plain-text body AS WRITTEN, where a break inside a label's window keeps the
+    label and the line after it together ('Zoom passcode:' / 'Decisions <NEL>log' / 'mupiwoc'). Returns a Counter of the keys of the
+    pieces to drop from the normalised pass: the pieces of a line (or a line) that the original pass dropped when none of its
+    pieces drops on its own (a piece that does, 'Passcode: 8825', explains the original drop and the rest stays).
+    None when the body has no extra break or is HTML."""
+    mod = _blocks_module()
+    if not any(b in text for b in _BREAKS) or (mod is not None and mod.looks_like_html(text)):
+        return None
+    mod = _scrub_module()
+    kept_o = collections.Counter(_scrub_key(mod, o) for o in _cut(scrub.invite_text(text)).split("\n") if o.strip())
+    drop = collections.Counter()
+    for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if not line.strip():
+            continue
+        if kept_o[_scrub_key(mod, line)] > 0:
+            kept_o[_scrub_key(mod, line)] -= 1
+            continue
+        pieces = [x for x in _line_breaks(line).split("\n") if x.strip()]
+        if not any(not scrub.invite_text(x).strip() for x in pieces):       # no piece drops on its own: the original drop was the window's
+            drop.update(_scrub_key(mod, x) for x in pieces)
+    return drop
+
+
+def _union_drops(lines, pieces):
+    """Drop, from the normalised pass, the lines _original_pieces names."""
+    if not pieces:
+        return lines
+    mod, out = _scrub_module(), []
+    for x in lines:
+        if x.strip():
+            k = _scrub_key(mod, x)
+            if pieces[k] > 0:
+                pieces[k] -= 1
+                continue
+        out.append(x)
+    return out
+
+
 def _raw_first(text):
     """Composition D: the scrub on the raw body, the block boundaries it removed put back for the anchor layer, the orphan and sentence
     rules, the extended label pass (repeated until nothing changes, so the result is stable), then the CAP."""
     scrub = _scrub_module()
     if scrub is None:
         return ""
-    raw = _line_breaks(text[:BODY_MAX * 5])
-    aug, flags = _with_boundaries(raw, _fit([x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]))
+    asked = text[:BODY_MAX * 5]
+    raw = _line_breaks(asked)
+    scrubbed = [x.strip() for x in _cut(scrub.invite_text(raw)).split("\n")]
+    scrubbed = _union_drops(scrubbed, _original_pieces(asked, scrub))
+    aug, flags = _with_boundaries(raw, _fit(scrubbed))
     kept = _tidy_blanks([aug[i] for i in keep_indices(aug, second_layer=False, extras=True) if not flags[i]])
     kept = _tidy_blanks(_without_orphans(raw, kept))
     for _ in range(4):
