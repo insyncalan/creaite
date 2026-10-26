@@ -368,9 +368,28 @@ def _signature_drops(strong, drop, skels, sg, j):
                 drop[k - 1] = 1
 
 
-def _block_drops(kinds, strong, drop, skels=None):
+def _strong_block(kinds, strong, drop, skels, weak, i, j):
+    """The block i..j-1 holds a strong anchor: a signature block loses only its anchor lines (and plain links, and a phone label line
+    above one); any other block goes whole (or, with _WHOLE_BLOCK off, only its anchor lines). Returns 'sig', 'whole' or 'lines'."""
+    sg = _signature_start(kinds, skels, i, j) if (_USE_SIGNATURE and skels is not None) else None
+    if sg is not None and sg < next(k for k in range(i, j) if strong[k]):
+        _signature_drops(strong, drop, skels, sg, j)
+        if weak is not None:
+            for k in range(sg + 1, j):
+                drop[k] = drop[k] or weak[k]
+        return "sig"
+    if _WHOLE_BLOCK:
+        _mark(drop, kinds, i, j)
+        return "whole"
+    for k in range(i, j):
+        drop[k] = drop[k] or strong[k]
+    return "lines"
+
+
+def _block_drops(kinds, strong, drop, skels=None, weak=None):
     """Drop the whole block (or, with _WHOLE_BLOCK off, only the anchor line) wherever a block holds an anchor.
     A signature block (a sign-off line before the anchor, 2.6.9) loses only the anchor lines and the phone label line just above one.
+    weak (E1 pass 2, finding 3): lines whose only anchor is a plain link; in a block with no strong anchor they go alone.
     Returns the set of block starts handled as signatures and the set dropped as a whole."""
     n, i = len(kinds), 0
     sig_blocks, whole = set(), set()
@@ -380,16 +399,14 @@ def _block_drops(kinds, strong, drop, skels=None):
             continue
         j = _block_end(kinds, i)
         if any(strong[i:j]):
-            sg = _signature_start(kinds, skels, i, j) if (_USE_SIGNATURE and skels is not None) else None
-            if sg is not None and sg < next(k for k in range(i, j) if strong[k]):
+            how = _strong_block(kinds, strong, drop, skels, weak, i, j)
+            if how == "sig":
                 sig_blocks.add(i)
-                _signature_drops(strong, drop, skels, sg, j)
-            elif _WHOLE_BLOCK:
-                _mark(drop, kinds, i, j)
+            elif how == "whole":
                 whole.add(i)
-            else:
-                for k in range(i, j):
-                    drop[k] = drop[k] or strong[k]
+        elif weak is not None:
+            for k in range(i, j):
+                drop[k] = drop[k] or weak[k]
         i = j
     return sig_blocks, whole
 
@@ -547,15 +564,40 @@ def _orphan_drops(kinds, skels, drop, whole):
         i = j
 
 
+# E1 pass 2, finding 3: a plain link (a wiki page, a company site) is not a join secret, so it costs its own line, not its block. A link
+# that carries a session (digits, a passcode/token query, a long mixed token, a meeting-join path) keeps dropping the block.
+_LINK_QUERY = re.compile(r"[?&;#][a-z0-9_.\-]*(?:pwd|pass|token|code|pin|secret|otp|key|sig|auth|session|mtid|meetingid|confid|uid)"
+                         r"[a-z0-9_.\-]*=")
+_LINK_JOIN = re.compile(r"meetup-join|/join(?:[/?#]|$)|/j/|j\.php|/wc/|/webinar/|/conference/|/meeting/")
+_LINK_DIGITS = re.compile(r"(?<!\d)(?!(?:19|20)\d\d(?!\d))\d{4}")       # four digits that are not a year
+_LINK_TOKEN = re.compile(r"(?=[a-z0-9_\-]*\d)[a-z0-9_\-]{16,}")
+
+
+def _plain_link(s):
+    """Is the line's only anchor a link that carries no session: no digit run, no passcode-like query, no meeting-join path and no long
+    mixed token? (The caller has already found it holds an anchor.)"""
+    if _DIAL.search(s) or _digit_run(s) or _address_pin(s) or not (_URL.search(s) or _HOSTPATH.search(s)):
+        return False
+    for tok in s.split():
+        if _URL.search(tok) or _HOSTPATH.search(tok):
+            if _LINK_QUERY.search(tok) or _LINK_JOIN.search(tok) or _LINK_TOKEN.search(tok) or _LINK_DIGITS.search(tok):
+                return False
+    return True
+
+
 def _judge(lines, extras):
-    """The skeletons, the line kinds and the strong-anchor flags of the lines."""
+    """The skeletons, the line kinds, the strong-anchor flags and (extras) the plain-link flags of the lines."""
     skels = [_skeleton(x) for x in lines]
     kinds = [_BLANK if not s else (_DIVIDER if _is_divider(s) else _TEXT) for s in skels]
     strong = [1 if k == _TEXT and _has_anchor(s) else 0 for s, k in zip(skels, kinds)]
+    weak = [0] * len(lines)
     if extras:
         for k in _joined_digit_lines(kinds, skels):      # adjacency changes when a line goes, so only where D loops to a fixpoint
             strong[k] = 1
-    return skels, kinds, strong
+        for k in range(len(lines)):
+            if strong[k] and kinds[k] == _TEXT and _plain_link(skels[k]):
+                strong[k], weak[k] = 0, 1
+    return skels, kinds, strong, weak
 
 
 def _context_drops(kinds, skels, drop, whole, orph):
@@ -577,9 +619,9 @@ def _anchor_layer(lines, _orph=None, extras=False):
     _orph (a set) receives the indices the orphan rule dropped.
     extras (2.6.9, off by default so the layer stays label-free and local, P4): the joined digit lines, the orphan rule and the
     sentence-code rule, which look at context and at words. Only the scrub-first-pass body filter turns them on."""
-    skels, kinds, strong = _judge(lines, extras)
+    skels, kinds, strong, weak = _judge(lines, extras)
     drop = bytearray(len(lines))
-    sig_blocks, whole = _block_drops(kinds, strong, drop, skels)
+    sig_blocks, whole = _block_drops(kinds, strong, drop, skels, weak if extras else None)
     if _USE_REGIONS:
         skip = set()
         for s0 in sig_blocks:

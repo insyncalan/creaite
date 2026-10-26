@@ -584,7 +584,7 @@ GEN_N = 400     # bodies per generator in the unit tests (the --report run uses 
 # name: (max C leaks, max C lost keepers, max non-idempotent).  Old scrub for comparison: leaks 479/28/15/0/8/0/0/0/0/39, lost 0 everywhere
 # except encodings (480, the same).
 RATCHET = {
-    "orphans": (4, 72, 0), "single_anchor": (0, 428, 0), "provider_one_line": (0, 16, 0), "encodings": (0, 480, 0),
+    "orphans": (4, 72, 0), "single_anchor": (0, 75, 0), "provider_one_line": (0, 0, 0), "encodings": (0, 480, 0),
     "label_markup": (3, 0, 0), "safelinks": (0, 0, 0), "repeated": (0, 0, 0), "numbered_long": (0, 615, 0), "tz_and_dial": (0, 0, 0),
     "provider_unknown": (13, 4, 0),
 }
@@ -677,7 +677,6 @@ class OrphanFindings(unittest.TestCase):
 class AnchorFindings(unittest.TestCase):
     """Agendas with exactly one link or one phone number."""
 
-    @unittest.expectedFailure
     def test_A1_one_link_in_a_contiguous_agenda_drops_the_whole_agenda(self):
         """'2. Read https://wiki.example.test/spec first' in a contiguous agenda: the URL is a strong anchor, so the BLOCK goes (every
         agenda line). The old scrub keeps all four lines. (MED, the largest data loss found: any plain-text agenda with a link.)"""
@@ -685,20 +684,39 @@ class AnchorFindings(unittest.TestCase):
         self.assertIn("1. Welcome", C(t))
         self.assertIn("3. Close", C(t))
 
-    @unittest.expectedFailure
     def test_A2_bare_host_path_drops_the_whole_agenda(self):
         t = "Agenda\n1. Welcome\n2. Read wiki.example.test/spec\n3. Close\n"
         self.assertIn("1. Welcome", C(t))
 
-    @unittest.expectedFailure
     def test_A3_www_host_drops_the_whole_agenda(self):
         t = "Agenda\n1. Welcome\n2. Read www.example.test first\n3. Close\n"
         self.assertIn("3. Close", C(t))
 
-    @unittest.expectedFailure
     def test_A4_angle_bracket_link_under_agenda_drops_it(self):
         t = "Agenda\n1. Welcome\n2. Close\nSee <https://wiki.example.test/spec>"
         self.assertIn("2. Close", C(t))
+
+    def test_A13_plain_link_costs_its_own_line_only(self):
+        """Fix of finding 3: a link with no session (no digits, no passcode query) goes alone; the agenda around it stays."""
+        for line in ("Read https://wiki.example.test/spec first", "Read wiki.example.test/spec first", "Our site: www.example.test",
+                     "See <https://wiki.example.test/spec>", "Read https://wiki.example.test/2026/plan first"):
+            out = C("Agenda\n1. Welcome\n" + line + "\n3. Close\n")
+            self.assertEqual(out, "Agenda\n1. Welcome\n3. Close", line)
+
+    def test_A14_a_link_that_carries_a_session_still_takes_its_block(self):
+        """The whole-block drop stays for a link the scrub leaves alone but that holds a long mixed token; the others the scrub removes
+        itself (the link never reaches the anchor layer), so the agenda stays and the link and its secret are gone."""
+        out = C("Agenda\n1. Welcome\nNotes https://x.example.test/r/q4mkeu4nzz9wq2rt7\n3. Close\n")
+        self.assertNotIn("Welcome", out)
+        for line in ("Join https://zoom.example.test/j/91234567890", "Notes https://x.example.test/room?pwd=abcDEF",
+                     "Notes https://x.example.test/a?token=zz", "Notes https://teams.example.test/l/meetup-join/19%3ameeting_abc/0",
+                     "Notes https://x.example.test/p?id=4417"):
+            out = C("Agenda\n1. Welcome\n" + line + "\n3. Close\n")
+            self.assertNotIn("example.test", out, line)
+
+    def test_A15_bare_meet_link_under_the_agenda_goes_alone(self):
+        out = C("Agenda\n1. Welcome\n2. Close\nhttps://meet.example.test/abc-defg-hij")
+        self.assertEqual(out, "Agenda\n1. Welcome\n2. Close")
 
     def test_A5_one_phone_number_drops_only_its_line(self):
         t = "Agenda\n1. Welcome\n2. Call Pat on +44 20 7946 0958 re budget\n3. Close\n"

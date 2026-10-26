@@ -33,7 +33,7 @@ HIGH = digit/ID leak in a common layout; MED = ordinary data lost, or leak in an
 |---|-----|---------|--------|-----------------|---------------|------|---|
 | 1 | HIGH | A 4-digit value directly under the ID line leaks when there is no blank line between them: HTML `<p>`, `<div>`, `<br>` and plain text. The orphan rule needs a block "dropped whole" by the anchor layer, but D's scrub has already removed the ID line, so nothing is dropped whole; the 6-digit bare-PIN rule and `_without_orphans` (blank-separated only) do not cover it. Old scrub leaks it too. | Controlled (40 bodies per cell): `tight`, `html_p`, `divider`: 4-digit 40/40 leak, 6 digits and alphanumeric 0/40; `blank`: 0/40. Generated: 4-digit shape leaks 48% over all separations | `<p>Meeting ID: 412 889 330</p><p>8825</p><p>Agenda: budget</p>` returns `8825\nAgenda: budget` | `_without_orphans` should also accept a value-only line **adjacent** to a line the scrub removed (use `_boundary_kinds`, which already knows which lines went), not only a blank-separated block | O8, O9 | fixed (A) |
 | 2 | HIGH | A spaced 3+3 (or 2+2) value is never an orphan: `_orphan_value` judges one token and `984`, `522` are three digits each. Leaks in every separation (blank, divider, tight, list, `<p>`). | pin_spaced shape 40/40 in every cell; 68% of all generated spaced values (791 of 1,166) | `Meeting ID: 412 889 330\n\n984 522\n\nAgenda: x` returns `984 522` in the output | judge the block, not the token: a 1 to 2 line block whose digits and letter-digits, spaces removed, are 4 to 8 characters | O10 | fixed (A) |
-| 3 | MED | **A link without a query drops its whole block.** The scrub keeps a plain link (old keeps the agenda), the anchor layer treats a URL as a strong anchor and drops every line of the block. Phone numbers, ICS lines (`URL:`, `LOCATION:`, `X-MICROSOFT-SKYPETEAMSMEETINGURL:`), mailto, a link with `?id=` and a signature dial-in are all handled by the scrub first and cost only their own line (0 other lines lost). | `url_plain` 77 of 279 bodies lose every agenda line, `url_inline` 98/297, `host_only` 78/283, `www_only` 71/292, `sip` 77/287; by layout: contiguous lines 71% (119 of 168), `<div>` 62%, table 60%; `<p>` per line and `<li>`: 0 (the converter separates them). Provider invites: a bare Meet link directly under the agenda, 10 of 10 | `Agenda\n1. Welcome\n2. Read https://wiki.example.test/spec first\n3. Close` returns `""` (old keeps all four lines) | In `_block_drops`, make a URL that holds no digit run, no `pwd`/`token`/`code` query and no join-host word a **line-level** anchor (like the phone case); keep whole-block for join URLs | A1 to A4 | open |
+| 3 | MED | **A link without a query drops its whole block.** The scrub keeps a plain link (old keeps the agenda), the anchor layer treats a URL as a strong anchor and drops every line of the block. Phone numbers, ICS lines (`URL:`, `LOCATION:`, `X-MICROSOFT-SKYPETEAMSMEETINGURL:`), mailto, a link with `?id=` and a signature dial-in are all handled by the scrub first and cost only their own line (0 other lines lost). | `url_plain` 77 of 279 bodies lose every agenda line, `url_inline` 98/297, `host_only` 78/283, `www_only` 71/292, `sip` 77/287; by layout: contiguous lines 71% (119 of 168), `<div>` 62%, table 60%; `<p>` per line and `<li>`: 0 (the converter separates them). Provider invites: a bare Meet link directly under the agenda, 10 of 10 | `Agenda\n1. Welcome\n2. Read https://wiki.example.test/spec first\n3. Close` returns `""` (old keeps all four lines) | In `_block_drops`, make a URL that holds no digit run, no `pwd`/`token`/`code` query and no join-host word a **line-level** anchor (like the phone case); keep whole-block for join URLs | A1 to A4 | fixed (B) |
 | 4 | MED | Orphan rule over-takes ordinary lines after a dropped block: any 1 to 2 line block of at most 24 characters and 4 tokens with one 4 to 8 digit or letter-digit token. | `Ext 4417 for help` lost 60/60; `Room 1204`-style (4-digit room) 36 to 44 of 60; `Ticket INC1234 follow-up` 23 to 29 of 60 (and, after one orphan, the second slot takes the next line too); all go to 0 once two real orphans fill the chain | `Meeting ID: 412 889 330\n\nExt 4417 for help` returns nothing after the subject | require the block to be **only** value tokens (no word of 3+ letters) except a known label; drop `ext`/`room`/`floor` lead words from the candidates | O3, O4, O12 | fixed (A) |
 | 5 | MED | The orphan rule stops at a divider line, so a PIN under a rule line survives; and after an unlisted label (`Clave`) plus a first orphan, the **second** orphan survives (the label block counts as a chain step). | divider: 4-digit and spaced values 80/240 in the controlled grid | `Hi\n\nMeeting ID: 412 889 330\n________\n8825` returns `8825` | allow one divider between the anchor block and its orphans (as for blank lines); do not count a label-only block in `chain` | O1, O2 | fixed (A) |
 | 6 | MED | List marker hides an orphan: `- 4076`, `- ab12cd` under the ID line leaks for every shape but 8 digits. | list layout 55% of generated orphans (667 of 1,217); controlled 160/240 | `Meeting ID: 526 903 470\n- 4076` returns `- 4076` | strip `-`, `*`, bullet, `1.` before `_orphan_block` judges | O11 | fixed (A) |
@@ -58,20 +58,20 @@ HIGH = digit/ID leak in a common layout; MED = ordinary data lost, or leak in an
 
 Composition D ships in 2.6.9 only if all five criteria are met (Jarvis). Measured after each fix group on `v269-fix2` (from 6ce15ff9). Tools: `python3 dev/tests/test_e1_adversarial2.py --report`; the 40,000-body harness; the 32-format fixture set and the 40-agenda trap set (lines kept of 130 and 200); the one-link layouts of the single_anchor generator (links in plain text and tight lines, 3,000 bodies, 234 in those layouts: lines kept of 1,025; the 2.6.8 scrub `invite_clean.invite_text` keeps 1,025 of 1,025 and, on the fixtures, 86 of 130 and 150 of 200).
 
-| Criterion | Baseline 6ce15ff9 | After A (orphans) |
-|---|---|---|
-| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 |
-| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 |
-| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) |
-| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 |
-| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 |
-| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 |
-| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 |
+| Criterion | Baseline 6ce15ff9 | After A (orphans) | After B (plain links) |
+|---|---|---|---|
+| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 |
+| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 |
+| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) |
+| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 |
+| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 |
+| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 |
+| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 |
 
-Verdicts as of the last commit of this table (A only):
+Verdicts as of the last commit of this table (A and B):
 
-1. Agenda loss not worse than 2.6.8: **not met** (fixtures 79 vs 86, one-link contiguous 115 vs 1,025; fixed by B).
+1. Agenda loss not worse than 2.6.8: **partly met**. One-link contiguous layouts and the trap set: met (1,025 of 1,025; 150 of 200, the same as the scrub). The 32 fixtures: **not met** by 3 lines (83 against 86): two are link-only boilerplate lines D now drops by design (`New to GoTo? ... https://global.example.org/install/`, `Find your local number: https://zoom.example.org/u/abcdefg`), one is the broken_html fixture D empties (an unclosed `<script>` holding a 10-digit number).
 2. Harness: **met** (304 / 4).
-3. Provider invites: **met** on leaks (0); 40 agenda lines of 10 bodies lost (a bare Meet link directly under the agenda; B).
+3. Provider invites: **met** (0 leaks, 0 agenda lines lost).
 4. Idempotence: **met**.
-5. HIGH 1: **met** (fixed by A).
+5. HIGH 1: **met**.
