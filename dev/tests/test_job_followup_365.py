@@ -34,13 +34,10 @@ class Followup(unittest.TestCase):
         finally:
             live_server.extra_dirs = orig
 
-    def test_the_model_is_not_named_for_these_jobs(self):       # #382: Claude Code's own default, as before; not Sonnet
-        for kind in ("check", "load"):
+    def test_these_jobs_stay_on_sonnet(self):       # #382 (Alan): a transcript load must not move to the account's default model
+        for kind in ("check", "load", "edit-ai"):
             args, _, _ = live_server.launch_context(kind)
-            self.assertNotIn("--model", args)
-            self.assertNotIn("sonnet", args)
-        args, _, _ = live_server.launch_context("edit-ai")           # the tool-less kinds still name it
-        self.assertEqual(args[args.index("--model") + 1], "sonnet")
+            self.assertEqual(args[args.index("--model") + 1], "sonnet", kind)
 
     def test_the_prompt_does_not_say_the_vault(self):
         self.assertNotIn("headless in the vault", live_server.KIND_PROMPTS["load"])
