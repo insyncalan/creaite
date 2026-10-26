@@ -104,7 +104,32 @@ def g_next_line(r):
     return body, secrets, ordinary, []
 
 
-GENERATORS = [("same_line", g_same_line), ("next_line", g_next_line)]
+def g_eaters(r):
+    """Agendas with label-word lines (Pin board, Token budget, ... ) mixed with ordinary lines and numbers planted at most three lines
+    below one: the number must go (idempotently) and the ordinary lines below must stay."""
+    heads = ["Pin board", "Token budget", "Pin the roadmap", "Secret Santa party", "Password reset \u2013 ABC", "Code review \u2013 ABC",
+             "Token refresh", "Password reset", "Code of conduct"]
+    lines, secrets, keep = fill(r, r.randint(0, 2)), [], []
+    for _ in range(r.randint(1, 3)):
+        lines.append(r.choice(heads))
+        for _ in range(r.randint(0, 2)):
+            x = r.choice(["Training dates", "Sign-off", "Reporting line", "Lunch at 12:30", "Go/no-go", "Q3 forecast"])
+            lines.append(x)
+            keep.append(x)
+        if r.random() < 0.6:
+            v = digits(r, r.choice(["long", "grouped9", "plain6"]))
+            lines.append(v)
+            secrets.append(v)
+        lines += fill(r, r.randint(0, 2))
+    if r.random() < 0.3:
+        lines = [f"{n}. {x}" for n, x in enumerate(lines, 1)]
+    body = "\n".join(lines)
+    if r.random() < 0.25:
+        body = "<ul>" + "".join(f"<li>{x}</li>" for x in lines) + "</ul>"
+    return body, secrets, keep, []
+
+
+GENERATORS = [("same_line", g_same_line), ("next_line", g_next_line), ("eaters", g_eaters)]
 
 
 def digits_of(s):
@@ -121,10 +146,10 @@ def check(body, secrets, ordinary, same):
     for v in secrets:
         if v in once or re.sub(r"[\s\-]+", "", v) in flat:
             bad.append(("leak", v))
+    lost = [o for o in ordinary if o not in once]
+    if lost:
+        bad.append(("eaten", lost[0]))
     if same:
-        lost = [o for o in ordinary if o not in once.split("\n")]
-        if lost:
-            bad.append(("eaten", lost[0]))
         for line in same:
             if I.scrub(line, 140):
                 bad.append(("field", line))
