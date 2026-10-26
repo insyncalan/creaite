@@ -580,7 +580,7 @@ def _orphan_drops(kinds, skels, drop, whole):
 # that carries a session (digits, a passcode/token query, a long mixed token, a meeting-join path) keeps dropping the block.
 _LINK_QUERY = re.compile(r"[?&;#][a-z0-9_.\-]*(?:pwd|pass|token|code|pin|secret|otp|key|sig|auth|session|mtid|meetingid|confid|uid)"
                          r"[a-z0-9_.\-]*=")
-_LINK_JOIN = re.compile(r"meetup-join|/join(?:[/?#]|$)|/j/|j\.php|/wc/|/webinar/|/conference/|/meeting/")
+_LINK_JOIN = re.compile(r"meetup-join|/join(?:[/?#]|$)|/j/|j\.php|/wc/|/webinar/|/conference/|/meeting/|/meet/|/my/")
 _LINK_DIGITS = re.compile(r"(?<!\d)(?!(?:19|20)\d\d(?!\d))\d{4}")       # four digits that are not a year
 _LINK_TOKEN = re.compile(r"(?=[a-z0-9_\-]*\d)[a-z0-9_\-]{16,}")
 
@@ -592,11 +592,21 @@ def _plain_link(s):
     """Is the line's only anchor a link that carries no session: no digit run, no passcode-like query, no meeting-join path and no long
     mixed token? (The caller has already found it holds an anchor.)"""
     if _DIAL.search(s) or _digit_run(s) or _address_pin(s) or not (_URL.search(s) or _HOSTPATH.search(s)):
+_MEET_HOST = re.compile(r"(?<![\w-])meet\.[a-z0-9-]+\.[a-z]{2,}", re.I)
+
+
+def _meet_link(tok):
+    """A Meet code counts only on a Meet host ('meet.google.com/abc-defg-hij', 'meet.example.org/...') or a provider host; an ordinary
+    slug of the same shape on a wiki ('wiki.example.org/bid-plan-two', 'sop-hand-off') is not a join secret (Cap re-check 2, MEDIUM)."""
+    if not _LINK_MEET.search(tok):
+        return False
+    mod = _scrub_module()
+    return bool(_MEET_HOST.search(tok) or (mod is not None and mod.HOSTS.search(tok)))
         return False
     for tok in s.split():
         if _URL.search(tok) or _HOSTPATH.search(tok):
             if (_LINK_QUERY.search(tok) or _LINK_JOIN.search(tok) or _LINK_TOKEN.search(tok) or _LINK_DIGITS.search(tok)
-                    or _LINK_MEET.search(tok)):
+                    or _meet_link(tok)):
                 return False
     return True
 
