@@ -58,15 +58,15 @@ HIGH = digit/ID leak in a common layout; MED = ordinary data lost, or leak in an
 
 Composition D ships in 2.6.9 only if all five criteria are met (Jarvis). Measured after each fix group on `v269-fix2` (from 6ce15ff9). Tools: `python3 dev/tests/test_e1_adversarial2.py --report`; the 40,000-body harness; the 32-format fixture set and the 40-agenda trap set (lines kept of 130 and 200); the one-link layouts of the single_anchor generator (links in plain text and tight lines, 3,000 bodies, 234 in those layouts: lines kept of 1,025; the 2.6.8 scrub `invite_clean.invite_text` keeps 1,025 of 1,025 and, on the fixtures, 86 of 130 and 150 of 200).
 
-| Criterion | Baseline 6ce15ff9 | After A (orphans) | After B (plain links) | After C (line breaks) | After D (looks_like_html) | After E (spaced letters, bare long label) | After Cap review |
-|---|---|---|---|---|---|---|---|
-| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 | 83 | 83 | 83 | 83 |
-| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 | 150 | 150 | 150 | 150 |
-| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) |
-| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 |
-| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 (letters-only Meet code link now drops its block: 4 agenda lines per such body) |
-| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 |
+| Criterion | Baseline 6ce15ff9 | After A (orphans) | After B (plain links) | After C (line breaks) | After D (looks_like_html) | After E (spaced letters, bare long label) | After Cap review | After Cap re-check 2 |
+|---|---|---|---|---|---|---|---|---|
+| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 | 83 | 83 | 83 | 83 | pending (not run: laptop load above 120) |
+| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 | 150 | 150 | 150 | 150 | pending (not run: laptop load above 120) |
+| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | pending (not run: laptop load above 120) |
+| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | pending (not run: laptop load above 120) |
+| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 (letters-only Meet code link now drops its block: 4 agenda lines per such body) | pending (not run: laptop load above 120) |
+| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | pending (not run: laptop load above 120) |
+| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | pending (not run: laptop load above 120) |
 
 Verdicts as of the last commit (A to E):
 
@@ -99,3 +99,12 @@ Not fixed: finding 11 (the cap, by design); a third orphan (the chain of two is 
 
 * HIGH (break inside a label's window): D now also runs the scrub on the plain-text body as written; a line (or the pieces of a line with CR/VT/FF/NEL/U+2028/U+2029) that pass drops is dropped from the normalised pass too, unless a piece drops on its own when scrubbed alone (that piece explains the drop, e.g. `Passcode: 8825` inside a one-line body). `Zoom passcode:` / `Decisions <NEL>log` / `mupiwoc` now returns empty (was `log`, `mupiwoc`); the one-line bodies of group C still keep their agenda. Cost, measured: encodings generator 0 keepers lost of 5,000, agenda sets, fixtures and one-link layouts unchanged (the union runs only on bodies that hold one of those breaks).
 * MEDIUM (Meet code link): a link holding `abc-defg-hij` is no longer a plain link; it takes its block like other join links. One-link layouts for a non-join link still keep 1,025 of 1,025.
+
+
+## After Cap re-check 2
+
+* HIGH 1: a self-dropping piece explains the as-written drop only when it carries its own value (`Passcode: 8825`); a bare label piece (`Passcode:`, `Meeting ID`) no longer does, so its value in a sibling piece goes. Stated gap, kept: `Passcode: 8825<NEL>zejumud` keeps the word-only value (narrowing it would drop innocent words after a valued line).
+* HIGH 2: an HTML body keeps its breaks as written (the scrub and invite_blocks read them as white space), so the label and its value stay together; all five break characters, the three reproducers, and the scrub's own result are tested.
+* MEDIUM: a 3-4-3 letter segment is a Meet code only on a `meet.` host or a provider host; `/meet/` and `/my/` join a path with the other join paths.
+* LOW fixed: dotted letters (`P.A.S.S.C.O.D.E: 4330`). Not fixed: `Passcode: 44` followed by `17` on the next line (the scrub itself keeps the tail), a third orphan group after the chain of two (by design).
+* Tests: `dev/tests/test_e1_recheck2.py` (17, with mutants).
