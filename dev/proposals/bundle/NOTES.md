@@ -12,3 +12,5 @@
 - A path filter cannot follow a private file that was renamed to another path. Only `system/staging`, `system/logs` and `system/branding` are filtered.
 - **Release-notes line (plain words):** "Your daily backup no longer carries ask creaite chats, their pictures or your VIP list in its history copy. If your vault's history already held them, the history copy in new backups is one snapshot of your latest state instead of every earlier version. Older backup zips are unchanged: delete them if you want those files gone."
 - Health shows "git history in the zip: one snapshot commit" under the weekly restore check when the newest zip is a snapshot.
+- A history whose latest commit holds nothing outside the private paths gives no bundle (the snapshot would be empty; it fails closed and the manifest says why).
+- A detached HEAD together with private history gives no git history in the zip (there is no branch to snapshot; fails closed). A clean history with a detached HEAD is bundled whole as before.

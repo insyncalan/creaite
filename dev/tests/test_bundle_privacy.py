@@ -136,7 +136,8 @@ def patched():
 def vault_py(root, code, *args, env=None):
     """Run Python inside the vault's scripts folder; returns the completed process."""
     return subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import backup; " + code,
-                           *args], cwd=root, capture_output=True, text=True, timeout=300, env=env or ENV)
+                           *args], cwd=root, capture_output=True, text=True, timeout=300,
+                          env={**(env or ENV), "PYTHONDONTWRITEBYTECODE": "1"})
 
 
 @unittest.skipUnless(GIT and patched(), "needs git and the filtered bundle (dev/proposals/bundle/backup-bundle.diff)")
@@ -258,12 +259,13 @@ class ExistingVault(unittest.TestCase):
         hooks.mkdir()
         (hooks / "pre-commit").write_text(f"#!/bin/sh\ntouch {marker}\n")
         (hooks / "pre-commit").chmod(0o755)
-        cfg = self.work / "gitconfig"
-        cfg.write_text(f"[core]\n\thooksPath = {hooks}\n\texcludesFile = {self.work}/ignore\n")
+        home = self.work / "home"                                      # the user's real global config: ~/.gitconfig
+        home.mkdir()
+        (home / ".gitconfig").write_text(f"[core]\n\thooksPath = {hooks}\n\texcludesFile = {self.work}/ignore\n")
         (self.work / "ignore").write_text("*.txt\n")
         dest = self.work / "vault.bundle"
         r = vault_py(self.root, "print(json.dumps(backup.make_bundle(sys.argv[1])))", str(dest),
-                     env={**ENV, "GIT_CONFIG_GLOBAL": str(cfg)})
+                     env={**ENV, "HOME": str(home)})
         self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]), None, r.stderr)
         self.assertFalse(marker.exists(), "the user's commit hook ran on the snapshot")
         clone = self.everything(dest)[0]
@@ -271,6 +273,27 @@ class ExistingVault(unittest.TestCase):
         self.assertIn("notes/export.txt", names)
         self.assertIn("kept-but-ignored.txt", names)
         self.assertIn(".gitattributes", names)
+
+    def test_exported_git_variables_cannot_reach_the_real_repository(self):
+        self.old_history(untrack=False)
+        gd = self.root / ".git"
+        cases = {"GIT_INDEX_FILE": {"GIT_INDEX_FILE": str(gd / "index")},
+                 "GIT_DIR": {"GIT_DIR": str(gd)},
+                 "GIT_DIR+GIT_WORK_TREE": {"GIT_DIR": str(gd), "GIT_WORK_TREE": str(self.root)},
+                 "GIT_OBJECT_DIRECTORY": {"GIT_OBJECT_DIRECTORY": str(gd / "objects")}}
+        for name, extra in cases.items():
+            with self.subTest(name):
+                status = git(self.root, "status", "--porcelain")           # refreshes the index first
+                before = ((gd / "index").read_bytes(), (gd / "config").read_bytes(), (gd / "HEAD").read_bytes(),
+                          git(self.root, "for-each-ref"), status)
+                dest = self.work / f"{name}.bundle"
+                r = vault_py(self.root, "print(json.dumps(backup.make_bundle(sys.argv[1])))", str(dest),
+                             env={**ENV, **extra})
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIsNone(json.loads(r.stdout.strip().splitlines()[-1]), r.stdout)
+                idx, cfg, head = (gd / "index").read_bytes(), (gd / "config").read_bytes(), (gd / "HEAD").read_bytes()
+                after = (idx, cfg, head, git(self.root, "for-each-ref"), git(self.root, "status", "--porcelain"))
+                self.assertEqual(after, before, f"{name} changed the vault's repository")
 
     def test_a_moved_private_file_stays_in_the_snapshot(self):
         """Known limit of a path filter (README, NOTES): a private file renamed to another path is not recognised."""
