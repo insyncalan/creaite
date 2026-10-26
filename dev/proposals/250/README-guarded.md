@@ -1,6 +1,6 @@
 # #250 guarded diffs G3 and G4 (2.6.10)
 
-G3 is at **revision 2** (sha256 `6c49cc90f91f831279faab5e3665a70b3499a2578bd7383fea63a0f22aa29e05`): `answered` also needs the stream's `result` event (not `is_error`) and a non-empty final answer, in the helper `Run._answered(proc, final)`. Revision 1 (`fb93369c...`) let an exit 0 with no answer write.
+G3 is at **revision 2** (sha256 `920b91643838b92529ef19f8163c8b4c41095e7c986832fe98ce0ca0d098ed85`): `answered` also needs the stream's `result` event (not `is_error`) and a non-empty final answer, in the helper `Run._answered(proc, final)`. Revision 1 (`fb93369c...`) let an exit 0 with no answer write.
 
 Patch files only; nothing guarded is edited in a commit. Chain: `dev/proposals/GUARDED-2.6.10.chain` (not pinned, no marked commit). Order: G1, G2, G3, G4.
 Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on branch `v269-g12`.
