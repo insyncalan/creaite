@@ -143,15 +143,8 @@ class Fetch(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout.strip().splitlines()[-1])
 
-    def needs_setting(self):
-        """The setting, its catalogue entry and its Settings card are slice D's (v2610-d): these two tests wait for them."""
-        import settings_catalogue
-        if "sweep.fetch_transcripts" not in settings_catalogue.CATALOGUE:
-            self.skipTest("sweep.fetch_transcripts is slice D's (catalogue, defaults, Settings card)")
-
     # ── off by default, and off means nothing happens ──
     def test_the_setting_is_off_by_default(self):
-        self.needs_setting()
         defaults = json.loads((REPO / "system/templates/settings-defaults.json").read_text())
         self.assertIs(defaults["sweep"]["fetch_transcripts"], False)
         self.assertIs(json.loads((REPO / "system/config/settings.json").read_text())["sweep"]["fetch_transcripts"], False)
@@ -444,13 +437,13 @@ class Fetch(unittest.TestCase):
         self.assertIsNone(self.in_process(f"T.read_spooled('saved to {inside}')", "T.RESULT_FILE_MAX = 10"))
 
     def test_low9_the_catalogue_help_is_the_briefs_wording(self):
-        self.needs_setting()
         import settings_catalogue
-        _, label, line, reason = settings_catalogue.CATALOGUE["sweep.fetch_transcripts"]
+        group, label, line, reason = settings_catalogue.CATALOGUE["sweep.fetch_transcripts"]
         self.assertEqual(label, "Fetch transcripts as they appear")
         self.assertEqual(reason, HELP)                                             # the brief's help text (plain words: "check")
         self.assertTrue(HELP.endswith(line))                                       # the one-line summary is its own words
-        self.assertIn(HELP, (REPO / "system/templates/dashboard/src/settings.js").read_text())
+        self.assertEqual(group, "Checking mail and Teams")                           # Advanced: not one of the Essentials rows
+        self.assertNotIn("sweep.fetch_transcripts", {k for r in settings_catalogue.ESSENTIAL_ROWS for k in r[3]})
 
     # ── every eligibility rule, each on its own (mutation survivors in the review) ──
     def test_a_fetched_meeting_isnt_fetched_again_even_when_its_file_is_gone(self):

@@ -516,6 +516,22 @@ class SettingsPage(LiveBrowserCase):
         self.adv_change("inbox.meetings_from", " Monday ")
         self.assertTrue(self.wait_file(lambda c: c["inbox"]["meetings_from"] == "monday"))
 
+    def test_the_fetch_transcripts_switch_is_off_with_its_words_and_saves(self):     # #250 (v2.6.10)
+        self.open("sweep")
+        row = "document.querySelector('[data-keys=\"sweep.fetch_transcripts\"]')"
+        self.b.wait(f"!!{row}")
+        self.assertEqual(self.b.eval(f"{row}.querySelector('span[id]').textContent"), "Fetch transcripts as they appear")
+        self.assertIn("Confidential meetings are never fetched.", self.b.eval(f"{row}.textContent"))
+        self.assertFalse(self.b.eval(f"{row}.querySelector('input[type=checkbox]').checked"))
+        self.assertIsNot(self.settings_file()["sweep"].get("fetch_transcripts"), True)
+        self.b.eval(f"{row}.querySelector('input[type=checkbox]').click()")
+        self.b.wait("true")
+        for _ in range(50):
+            if self.settings_file()["sweep"].get("fetch_transcripts") is True:
+                break
+            time.sleep(0.2)
+        self.assertIs(self.settings_file()["sweep"]["fetch_transcripts"], True)
+
     def test_search_finds_a_row_in_everything_else(self):
         self.open("essentials")
         self.type_query("waits after typing")
