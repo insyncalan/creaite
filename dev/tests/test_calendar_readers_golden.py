@@ -11,6 +11,7 @@ All values are made up.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -123,6 +124,13 @@ READERS = {
 # reads a private row either way). A private or confidential row is compared by its head fields: the gateway gives no place, Teams
 # flag or organiser for it, whatever the purpose (every reader that wants them skips such a row first).
 BODY = "body"
+# Counts of what the saved file holds: 2.6.8 counted every list item and every key of "days", the gateway only well-formed meetings on
+# real days (the fixture holds a day named "garbage", a day that is not a list, and three rows that are not meetings: 1 + 3 fewer).
+COUNTS = {
+    "sweep.saved_meetings_from": ([28, 27], [24, 23], "the gateway counts meetings only"),
+    "calendar_refresh.outcome": ({"days": 6, "meetings": 29, "saved": True, "transcripts": False},
+                                 {"days": 4, "meetings": 25, "saved": True, "transcripts": False}, "the gateway counts real days and meetings only"),
+}
 ALLOWED = {
     "build_dashboard.saved_calendar_days": {BODY: "filtered by the 2.6.9 composition D filter (checked on its own)",
                                             "registered": "no reader uses an attendee's registered flag"},
@@ -149,6 +157,7 @@ def build_vault(test=None):
     v = Vault()
     if test:
         test.addCleanup(v.cleanup)
+    v.run("init")                                   # a database: a 2.6.8 reader of the Prep people opens it
     cal = v.root / "system/staging/calendar.json"
     cal.parent.mkdir(parents=True, exist_ok=True)
     cal.write_text(json.dumps({"fetched": "2026-10-26 08:00", "to": "2026-10-30", "days": ROWS}), encoding="utf-8")
@@ -181,6 +190,10 @@ class Golden(unittest.TestCase):
     def same(self, name):
         drop = set(ALLOWED.get(name, {}))
         self.maxDiff = None
+        if name in COUNTS:
+            self.assertEqual(self.old[name], COUNTS[name][0], f"{name}: the 2.6.8 golden")
+            self.assertEqual(self.new[name], COUNTS[name][1], f"{name}: {COUNTS[name][2]}")
+            return
         self.assertEqual(norm(self.new[name], drop), norm(self.old[name], drop), f"{name}: output differs from 2.6.8")
 
     def test_the_golden_covers_every_reader(self):
@@ -210,6 +223,7 @@ class Intended(unittest.TestCase):
     def setUpClass(cls):
         cls.v = build_vault()
         cls.new = run_all(cls.v)
+        cls.old = json.loads(GOLDEN.read_text(encoding="utf-8"))
 
     @classmethod
     def tearDownClass(cls):
@@ -231,7 +245,9 @@ class Intended(unittest.TestCase):
 
     def test_the_day_views_carry_no_address(self):
         for name in ("build_dashboard.calendar", "transcripts.calendar_rows", "close_day.Lookup.meeting", "drafts._meeting_attendees"):
-            self.assertNotIn("@", json.dumps(self.new[name]), name)
+            # no address beyond what 2.6.8 showed (a person whose only name is an address is shown by it, as in 2.6.8)
+            seen = set(re.findall(r"[\w.+-]+@[\w.-]+", json.dumps(self.old[name])))
+            self.assertLessEqual(set(re.findall(r"[\w.+-]+@[\w.-]+", json.dumps(self.new[name]))), seen, name)
 
     def test_the_bodies_are_filtered(self):
         for name in ("build_dashboard.saved_calendar_days", "drafts.calendar_event", "prep_page._event"):

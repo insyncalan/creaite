@@ -83,9 +83,9 @@ class Mutants(unittest.TestCase):
         v, _cal = vault(self)
         f = v.root / "system/scripts/calendar_gateway.py"                  # #375 S4: the readers' clean-up is the gateway's now
         src = f.read_text(encoding="utf-8")
-        old = "    if not is_stamped(row) or not _well_formed(row):\n        return _safe_clean(row)"
+        old = "    return keep_row(row) if trusted(row) else _safe_clean(row)"
         self.assertIn(old, src)
-        f.write_text(src.replace(old, "    if not is_stamped(row) or not _well_formed(row):\n        return dict(row)", 1), encoding="utf-8")
+        f.write_text(src.replace(old, "    return keep_row(row) if trusted(row) else dict(row)", 1), encoding="utf-8")
         leaked = [n for n, code in READERS.items() if "swordfish" in run(v, code).stdout.lower() or "rtyu" in run(v, code).stdout.lower()]
         self.assertTrue(leaked, "no reader noticed clean_calendar being switched off")
 

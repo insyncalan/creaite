@@ -102,9 +102,9 @@ class Rescrub(Base):
         self.put({"2026-10-26": [ev("a", description="x", joinUrl="https://x.test")]}, note="stray")
         sweep.rescrub_calendar()
         cal = self.load()
-        self.assertEqual(set(cal), {"fetched", "to", "days", "clean"})
+        self.assertEqual(set(cal), {"fetched", "to", "days", "clean", "clean_v"})
         for r in self.rows():
-            self.assertLessEqual(set(r), set(G.ROW_KEYS) | {"clean"})
+            self.assertLessEqual(set(r), set(G.ROW_KEYS) | {"clean", "clean_v"})
 
     def test_served_as_stored_after_rescrub(self):
         self.put({"2026-10-26": [ev("a")]})
@@ -200,7 +200,7 @@ class Save(Base):
         self.assertGreaterEqual(len(rows), 3)
         for r in rows:
             self.assertEqual(r["clean"], G.CLEAN)
-            self.assertLessEqual(set(r), set(G.ROW_KEYS) | {"clean"})
+            self.assertLessEqual(set(r), set(G.ROW_KEYS) | {"clean", "clean_v"})
             self.assertNotIn("https", r.get("body", ""))
         conf = [r for r in rows if r["id"] == "n2"][0]
         self.assertNotIn("body", conf)

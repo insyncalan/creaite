@@ -64,7 +64,7 @@ class Base(unittest.TestCase):
 class Purposes(Base):
     def setUp(self):
         super().setUp()
-        self.save({"2026-10-26": [ev(clean=1)]})
+        self.save({"2026-10-26": [ev(clean=1, clean_v=G.fingerprint())]})
 
     def test_closed_set(self):
         self.assertEqual(set(G.purpose_names()), {"meta", "day", "intake", "prep_rank", "prep_panel", "prep_page", "agenda", "shape"})
@@ -114,7 +114,7 @@ class Purposes(Base):
         """The follow-up email's To list (agenda), Intake's and Prep's project match by email domain (intake, prep_panel) need the
         attendees' addresses, as the 2.6.8 read gave them; every other purpose gives name, type and response only."""
         who = {"name": "Omar Reyes", "email": "omar@client.example", "type": "required", "response": "accepted"}
-        e = ev(clean=1, attendees=[who])
+        e = ev(clean=1, clean_v=G.fingerprint(), attendees=[who])
         for purpose in G.purpose_names():
             got = G.view(e, purpose).get("attendees")
             if purpose in ("agenda", "intake", "prep_panel"):
@@ -126,7 +126,7 @@ class Purposes(Base):
                 self.assertNotIn("@", json.dumps(G.view({**e, "sensitivity": sens}, purpose)), (sens, purpose))
 
     def test_view_returns_new_objects(self):
-        e = ev(clean=1)
+        e = ev(clean=1, clean_v=G.fingerprint())
         v = G.view(e, "prep_panel")
         v["attachments"].append("x")
         v["attendees"][0]["name"] = "changed"
@@ -167,7 +167,7 @@ class Stamp(Base):
 
     def test_clean_row_keeps_only_row_keys(self):
         out = G.clean_row({**ev(), "joinUrl": "https://x.test/j/1", "description": "d"})
-        self.assertEqual(set(out) - set(G.ROW_KEYS), {"clean"})
+        self.assertEqual(set(out) - set(G.ROW_KEYS), {"clean", "clean_v"})
 
     def test_clean_row_confidential_has_no_body(self):
         out = G.clean_row(ev(sensitivity="confidential"))
@@ -175,25 +175,49 @@ class Stamp(Base):
         self.assertEqual(out["clean"], G.CLEAN)
 
     def test_stamp_row_leaves_a_stamped_row(self):
-        row = ev(clean=G.CLEAN)
+        row = ev(clean=G.CLEAN, clean_v=G.fingerprint())
         self.assertEqual(G.stamp_row(row), row)
         self.assertIsNot(G.stamp_row(row), row)
 
     def test_stamp_rows_and_calendar(self):
-        days = {"2026-10-26": [ev("a"), ev("b", clean=1), "junk"], "2026-10-27": "junk"}
+        days = {"2026-10-26": [ev("a"), ev("b", clean=1, clean_v=G.fingerprint()), "junk"], "2026-10-27": "junk"}
         out = G.stamp_rows(days)
         self.assertEqual(list(out), ["2026-10-26"])
         self.assertTrue(all(r["clean"] == G.CLEAN for r in out["2026-10-26"]))
         self.assertEqual(len(out["2026-10-26"]), 2)
         cal = G.stamp_calendar({"fetched": "f", "to": "t", "days": days, "junk": 1})
         self.assertEqual(cal["clean"], G.CLEAN)
-        self.assertEqual(set(cal), {"fetched", "to", "days", "clean"})
+        self.assertEqual(set(cal), {"fetched", "to", "days", "clean", "clean_v"})
 
     def test_bool_and_low_stamps_do_not_count(self):
         for bad in (True, 0, "1", None, -1):
             self.assertFalse(G.is_stamped({"clean": bad}), bad)
-        self.assertTrue(G.is_stamped({"clean": G.CLEAN}))
-        self.assertTrue(G.is_stamped({"clean": G.CLEAN + 1}))
+        self.assertFalse(G.is_stamped({"clean": G.CLEAN}))                              # a bare stamp is not trusted (no fingerprint)
+        self.assertFalse(G.is_stamped({"clean": G.CLEAN, "clean_v": "f1"}))             # a guessed or an older fingerprint is not either
+        self.assertTrue(G.is_stamped({"clean": G.CLEAN, "clean_v": G.fingerprint()}))
+        self.assertTrue(G.is_stamped({"clean": G.CLEAN + 1, "clean_v": G.fingerprint()}))
+
+    def test_the_fingerprint_is_a_hash_of_the_two_filter_files(self):
+        import hashlib
+        h = hashlib.sha256()
+        for name in ("invite_filter", "invite_clean"):
+            h.update((Path(G.__file__).parent / f"{name}.py").read_bytes())
+        self.assertEqual(G.fingerprint(), h.hexdigest()[:16])
+
+    def test_a_forged_or_old_fingerprint_is_filtered_again(self):
+        stored = f"Agenda: budget\n{LINK}"
+        self.save({"2026-10-26": [ev(body=stored, clean=1, clean_v="f1"), ev("b", body=stored, clean=1, clean_v="0123456789abcdef")]})
+        for r in G.read("prep_panel", self.path)["days"]["2026-10-26"]:
+            self.assertNotIn("meet.example", r["body"])
+
+    def test_no_fingerprint_trusts_no_row(self):
+        old = G.fingerprint
+        G.fingerprint = lambda: None
+        try:
+            self.save({"2026-10-26": [ev(body=f"Agenda: budget\n{LINK}", clean=1, clean_v="x")]})
+            self.assertNotIn("meet.example", G.read("prep_panel", self.path)["days"]["2026-10-26"][0]["body"])
+        finally:
+            G.fingerprint = old
 
     def test_lock_is_taken_and_released(self):
         old, G.LOCK = G.LOCK, Path(self.tmp.name) / "cal.lock"
@@ -218,18 +242,18 @@ class InMemoryFilter(Base):
 
     def test_stamped_row_is_served_as_stored(self):
         stored = f"Agenda: budget\n{LINK}"                       # the stand-in would drop the second line: it must not run
-        self.save({"2026-10-26": [ev(body=stored, clean=1)]})
+        self.save({"2026-10-26": [ev(body=stored, clean=1, clean_v=G.fingerprint())]})
         self.assertEqual(G.read("prep_panel", self.path)["days"]["2026-10-26"][0]["body"], stored)
 
     def test_mixed_rows(self):
-        self.save({"2026-10-26": [ev("a"), ev("b", body=f"kept\n{LINK}", clean=1)], "2026-10-27": [ev("c", clean=0)]})
+        self.save({"2026-10-26": [ev("a"), ev("b", body=f"kept\n{LINK}", clean=1, clean_v=G.fingerprint())], "2026-10-27": [ev("c", clean=0)]})
         cal = G.read("agenda", self.path)["days"]
         self.assertNotIn("meet.example", cal["2026-10-26"][0]["body"])
         self.assertIn("meet.example", cal["2026-10-26"][1]["body"])
         self.assertNotIn("meet.example", cal["2026-10-27"][0]["body"])
 
     def test_no_write_on_read(self):
-        self.save({"2026-10-26": [ev(), ev("b", clean=1)]})
+        self.save({"2026-10-26": [ev(), ev("b", clean=1, clean_v=G.fingerprint())]})
         before_bytes, st = self.path.read_bytes(), self.path.stat()
         old = time.time() - 5000
         os.utime(self.path, (old, old))
@@ -306,7 +330,7 @@ class Cache(Base):
         self.assertEqual(G.read("agenda", self.path)["days"]["2026-10-26"][0]["body"], "only")
 
     def test_results_are_independent_copies(self):
-        self.save({"2026-10-26": [ev(clean=1)]})
+        self.save({"2026-10-26": [ev(clean=1, clean_v=G.fingerprint())]})
         a = G.read("prep_panel", self.path)
         a["days"]["2026-10-26"][0]["attachments"].append("x")
         a["days"]["2026-10-26"].clear()
@@ -362,7 +386,7 @@ class Files(Base):
         old = paths.CALENDAR
         paths.CALENDAR = self.path
         try:
-            self.save({"2026-10-26": [ev(clean=1)]})
+            self.save({"2026-10-26": [ev(clean=1, clean_v=G.fingerprint())]})
             self.assertEqual(G.read("meta")["days"]["2026-10-26"], [{"id": "e1"}])
         finally:
             paths.CALENDAR = old
@@ -421,7 +445,7 @@ class Mutants(Base):
         self.assertTrue(leaked)                                 # the mutant leaks, so test_unstamped_row_is_filtered_on_read would fail
 
     def test_filtering_every_row_is_seen(self):
-        self.save({"2026-10-26": [ev(body=f"kept\n{LINK}", clean=1)]})
+        self.save({"2026-10-26": [ev(body=f"kept\n{LINK}", clean=1, clean_v=G.fingerprint())]})
         changed = self.run_with({"is_stamped": lambda r: False},
                                 lambda: "meet.example" not in G.read("agenda", self.path)["days"]["2026-10-26"][0]["body"])
         self.assertTrue(changed)                                # so test_stamped_row_is_served_as_stored would fail
@@ -429,7 +453,7 @@ class Mutants(Base):
     def test_view_without_the_field_limit_is_seen(self):
         wide = {k: v for k, v in G.PURPOSES.items()}
         wide["day"] = wide["agenda"]
-        row = self.run_with({"PURPOSES": wide}, lambda: G.view(ev(clean=1), "day"))
+        row = self.run_with({"PURPOSES": wide}, lambda: G.view(ev(clean=1, clean_v=G.fingerprint()), "day"))
         self.assertIn("body", row)                              # so test_day_has_no_body_or_attachments would fail
 
     def test_a_cache_without_the_mtime_is_seen(self):

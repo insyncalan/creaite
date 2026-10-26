@@ -7,8 +7,8 @@ sweep.rescrub_calendar (_clean_calendar_file). A fixture sweep reply (normal, st
 organiser, attachments, Teams, recurrence, an all-day row, a private and a confidential row, an ignored row, a repeated ID, a bad time)
 and a held calendar (past days: unstamped rows with a join link and a passcode, a junk key, a stamped row, a private row) are written by
 each writer, and the file is compared key by key with dev/tests/fixtures/writers_golden_268.json, the same run on the 2.6.8 release.
-Allowed differences, and only these: the `clean` stamps (top level and rows), the body (filtered: every line left must be a line the
-2.6.8 file held, and no join link or passcode is in it), and keys outside ROW_KEYS on a saved row (junk the filter removes).
+Allowed differences, and only these: the `clean` and `clean_v` stamps (top level and rows), the body (filtered: every line left must be a line the
+2.6.8 file held, and no join link or passcode is in it), and keys outside ROW_KEYS on a saved row (junk the filter removes), and `sensitivity: private` written on a private row (it was implied by `private: true`).
 Regenerate the golden (only from a 2.6.8 tree):  python3 test_calendar_writers_golden.py --generate <out.json>
 All values are made up.
 """
@@ -74,7 +74,7 @@ HELD_ROWS = {
 SAVED = {"fetched": "2026-10-27 08:00", "to": "2026-10-30", "days": HELD_ROWS}
 SCENARIOS = ("sweep_save", "rescrub")
 SAVED_KEYS = {"id", "start", "end", "all_day", "title", "where", "teams", "private", "organiser", "sensitivity", "organiser_email", "recurrence",
-              "body", "attendees", "attachments", "clean"}
+              "body", "attendees", "attachments", "clean", "clean_v"}
 
 
 def build_vault(test=None):
@@ -117,7 +117,7 @@ def run_all():
 def norm(x, drop):
     """Without the stamps and the keys in `drop`; without empty lists (a filter that leaves nothing leaves no key)."""
     if isinstance(x, dict):
-        return {k: norm(v, drop) for k, v in x.items() if k not in drop and v != []}
+        return {k: norm(v, drop) for k, v in x.items() if k not in drop and v != [] and not (k == "sensitivity" and v == "private")}
     if isinstance(x, list):
         return [norm(v, drop) for v in x]
     return x
@@ -139,13 +139,13 @@ class Writers(unittest.TestCase):
 
     def _compare(self, name):
         old, new = self.old[name], self.new[name]
-        self.assertEqual({k: v for k, v in new.items() if k not in ("clean", "days")}, {k: v for k, v in old.items() if k not in ("clean", "days")},
+        self.assertEqual({k: v for k, v in new.items() if k not in ("clean", "clean_v", "days")}, {k: v for k, v in old.items() if k not in ("clean", "clean_v", "days")},
                          f"{name}: fetched/to differ")
         self.assertEqual(sorted(map(str, rows(new))), sorted(map(str, rows(old))), f"{name}: the saved meetings differ")
         self.assertEqual(list(new["days"]), list(old["days"]), f"{name}: the days or their order differ")
         for key, o in rows(old).items():
             n = rows(new)[key]
-            drop = {"clean", "body"}
+            drop = {"clean", "clean_v", "body"}
             self.assertEqual(norm({k: v for k, v in n.items() if k in SAVED_KEYS}, drop), norm({k: v for k, v in o.items() if k in SAVED_KEYS}, drop),
                              f"{name} {key}: a field changed or was lost")
             # the body: filtered, so every line left is a line 2.6.8 held, and nothing to join or unlock a meeting

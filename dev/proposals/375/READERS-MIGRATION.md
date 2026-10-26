@@ -83,11 +83,10 @@ Two readers silently regressed in the S4 migration: the follow-up email lost the
 | `sweep.calendar` / `calendar_row` (a save) | id, times, all_day, title, where, teams, private, organiser, sensitivity, organiser_email, recurrence, attendees (name, email, type, response), attachments, body (filtered), fetched, to | the same; private keeps ID and Teams only, confidential keeps title and times | OK |
 | `keep_held_past_days` (past days already held) | the held row as stored (ROW_KEYS only) when stamped; an unstamped row cleaned, filtered, stamped | all held past days and rows, in order, attendee emails, organiser, attachments | OK |
 | `rescrub_calendar` / `_clean_calendar_file` | every row, every ROW_KEYS field, the filtered body, fetched and to | the same; junk keys, bad days and non-meeting rows are removed by design | OK |
-=======
+
 ## fix4 (Banner's review of 08:10)
 
 - H1: `prep_page._event` reads `prep_panel`, so `prep_view.people` / `brief` get `organiser_email` again. The golden test now runs `prep_view.brief` people for an address-only organiser and has no allowance for it.
 - H2: the stamp is now `clean` (>= CLEAN) plus `clean_v` (`invite_filter.VERSION`, `calendar_gateway.fingerprint()`). A row without the right `clean_v`, or not well formed, is filtered in memory when the cache is filled (once per file version) and the rescrub writes it back stamped. A filter fix therefore reaches saved rows by bumping `invite_filter.VERSION`; no CLEAN bump is needed. Re-filtering every row on every cache fill was measured and rejected: the body filter costs about 8 ms cpu a row (short fields 0.6 ms), so 3,000 rows would take tens of seconds. Trusted rows cost no filtering (test: 3,000 rows under 3 s cpu on a loaded laptop).
 - M1: `keep_row` works out sensitivity before trimming; a bare `confidential: true` becomes `sensitivity` and the body is dropped. M2: the sweep's `_stamped` is `calendar_gateway.stamp_row` (stamped AND well formed).
 - Left as is, by decision: L1 a private row keeps head fields only, so its `teams` flag is not served (Intake may say "Not a Teams meeting" for a private meeting); L2 meeting counts fall when the file holds junk rows (they are not meetings); L3 the attendee `registered` flag is dropped (no reader uses it); L4 a nameless attendee's address is shown as the name in day views, as in 2.6.8.
->>>>>>> v269-fix4

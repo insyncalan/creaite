@@ -7,7 +7,7 @@
                                                           catch OSError and ValueError, so a typo is not swallowed as "no calendar")
     clean_row(row), stamp_row(row), stamp_rows(days), stamp_calendar(cal), lock()   for the writers (sweep), later
 
-THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (the body filter's version). A row
+THE STAMP. A row written by today's sweep carries "clean": CLEAN (an int) and "clean_v": fingerprint() (a hash of the filter's two source files). A row
 with no stamp, a lower one, another filter version, or a stamp but a wrong shape (_well_formed) is filtered IN MEMORY when the file is
 read (once per file version, the cache) and served filtered; only a trusted row is served as stored. A bare confidential flag is
 turned into "sensitivity" before a trusted row is trimmed (keep_row). Re-filtering every row on every cache fill was measured and
@@ -50,6 +50,7 @@ import os
 import re
 import time
 import unicodedata
+from pathlib import Path
 
 import paths
 
@@ -180,15 +181,29 @@ def _sens(ev):
 
 # ---- rows: clean (writer side) and normalise (reader side) --------------------------------------------------------------------
 
+_FP = []                # the fingerprint, worked out once per process (a one-item list: empty means not yet)
+
+
 def fingerprint():
-    """What a stamp must say besides CLEAN: the body filter's version (invite_filter.VERSION). A saved row stamped by an older filter
-    is filtered again on its next read, and the rescrub writes it back stamped, so a fix to the filter reaches saved rows without
-    anyone bumping CLEAN. None when the filter cannot be loaded: then no row is trusted as stored (fails closed)."""
+    """What a stamp must say besides CLEAN: a hash (sha256 of the bytes, 16 hex digits) of the two files that decide what a saved row may
+    keep, invite_filter.py and invite_clean.py. A row stamped by an earlier version of either is filtered again on its next read, and the
+    rescrub writes it back stamped, so a fix to either file reaches saved rows without anyone bumping a number (saved calendars are
+    cleaned again at the first start-up after an update). Worked out once per process. None when either file cannot be read: then no row
+    is trusted as stored (fails closed)."""
+    if _FP:
+        return _FP[0]
     try:
+        import hashlib
+        import invite_clean
         import invite_filter
-        return f"f{int(invite_filter.VERSION)}"
-    except (ImportError, AttributeError, TypeError, ValueError):
-        return None
+        h = hashlib.sha256()
+        for mod in (invite_filter, invite_clean):
+            h.update(Path(mod.__file__).read_bytes())
+        fp = h.hexdigest()[:16]
+    except (ImportError, AttributeError, TypeError, OSError):
+        return None             # not remembered: tried again next time
+    _FP.append(fp)
+    return fp
 
 
 def is_stamped(row):
@@ -211,7 +226,7 @@ def keep_row(row):
     keeps no body."""
     sens = _sens(row)
     out = {k: row[k] for k in ROW_KEYS if k in row}
-    out["clean"], out["clean_v"] = CLEAN, row["clean_v"]
+    out["clean"], out["clean_v"] = CLEAN, row.get("clean_v")
     if sens != "normal":
         out["sensitivity"], out["private"] = sens, sens == "private"
         out.pop("body", None)
@@ -229,7 +244,10 @@ def clean_row(row):
         body = filter_body(row.get("body"))
         if body:
             out["body"] = body
+    sens = _sens(out) if _sens(row) == "normal" else _sens(row)
     out = {k: out[k] for k in ROW_KEYS if k in out}
+    if sens != "normal":                                 # as keep_row writes it, so a cleaned row is kept as it is (one pass, then stable)
+        out["sensitivity"], out["private"] = sens, sens == "private"
     out["clean"] = CLEAN
     fp = fingerprint()
     if fp is not None:
@@ -406,7 +424,7 @@ def read(purpose, path=None):
     path = path if path is not None else paths.CALENDAR
     key = str(path)
     st = path.stat()
-    sig = (st.st_mtime_ns, st.st_size, st.st_ino, CLEAN, id(FILTER), id(SHORT))
+    sig = (st.st_mtime_ns, st.st_size, st.st_ino, CLEAN, id(FILTER), id(SHORT), fingerprint())
     hit = _CACHE.get(key)
     if hit and hit[0] == sig:
         cal = hit[1]
@@ -416,7 +434,7 @@ def read(purpose, path=None):
         except RecursionError:
             raise ValueError("calendar file is nested too deeply") from None
         st2 = path.stat()
-        if (st2.st_mtime_ns, st2.st_size, st2.st_ino, CLEAN, id(FILTER), id(SHORT)) == sig:
+        if (st2.st_mtime_ns, st2.st_size, st2.st_ino, CLEAN, id(FILTER), id(SHORT), fingerprint()) == sig:
             _CACHE[key] = (sig, cal)
     out = {k: cal[k] for k in ("fetched", "to") if k in cal}
     out["days"] = {d: [view(r, purpose) for r in rows] for d, rows in cal["days"].items()}
