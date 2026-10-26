@@ -640,7 +640,7 @@ except ValueError as e:
     print(json.dumps(str(e)))"""
         good, bad = self.both(code, paths_mutant(' and "\\0" not in value\n', "\n"))
         self.assertEqual(good, "ordinary")
-        self.assertIn("null byte", bad)                                       # mutant: every check raises
+        self.assertRegex(bad, "null (byte|character)")                                       # mutant: every check raises
 
 
 class StackOn292And261(unittest.TestCase):

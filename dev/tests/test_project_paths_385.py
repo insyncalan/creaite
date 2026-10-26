@@ -199,7 +199,7 @@ print(json.dumps([paths.in_mapped_notes(own / '08 Notes' / 'n.md'), paths.in_map
         self.map({ABC: OWN}, projects_root="")
         o = self.py("import paths; print(json.dumps([{k: str(v) for k, v in paths.project_roots().items()}, paths.project_paths(), paths.external(), "
                     "str(paths.resolve('projects/Example Programme/x'))]))")
-        self.assertEqual(o, [{}, {}, False, str(self.v.root / "projects/Example Programme/x")])
+        self.assertEqual(o[:3] + [os.path.realpath(o[3])], [{}, {}, False, os.path.realpath(self.v.root / "projects/Example Programme/x")])      # macOS: /private/var is /var
 
 
 class Unmounted(MappedCase):

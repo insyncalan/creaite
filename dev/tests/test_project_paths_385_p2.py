@@ -593,7 +593,7 @@ print(json.dumps([paths.project_mapping_problem({ABC!r}, {v!r}, paths.locations(
         self.map({ABC: OWN, DEF: "~/Work/Dig\0ital"})
         r = subprocess.run([sys.executable, "-c", f"import sys, json; sys.path.insert(0, 'system/scripts'); {self.NUL.replace('ABC', repr(ABC))}"],
                            cwd=self.v.root, capture_output=True, text=True)
-        self.assertIn("embedded null byte", r.stderr)                             # mutant: every project's resolve raises
+        self.assertRegex(r.stderr, "embedded null (byte|character)")                             # mutant: every project's resolve raises
 
 
 if __name__ == "__main__":
