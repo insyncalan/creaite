@@ -1,5 +1,5 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
-index c973a34f..3f52cb70 100644
+index c973a34f6..dabf7afe7 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
 @@ -2617,6 +2617,23 @@ def run_prompt(kind, confirmed):
@@ -19,7 +19,7 @@ index c973a34f..3f52cb70 100644
 +    cmds = [re.sub(r" \*$", " …", r[len(head):-1]) for r in KIND_TOOLS.get(kind, []) if r.startswith(head) and r not in READ_TOOLS]
 +    return (f" Today is {build_dashboard.clock():%Y-%m-%d} (YYYY-MM-DD). "
 +            + (f"Besides the read commands, run only: {'; '.join(cmds)}. " if cmds else "You have no shell. ")
-+            + "Never grep, tail or date, and never read a file the message doesn't name.")
++            + "Do not run grep, tail or date, and never read a file that neither the message nor your own skill's read list names.")
 +# ===== end #370 =====
 +
 +
@@ -74,17 +74,34 @@ index c973a34f..3f52cb70 100644
      def server_bind(self):
          """Bind as TCPServer does, then name the server after its own address instead of looking the name up."""
          import socketserver
-@@ -6242,7 +6276,13 @@ HEALTH_DOCTOR = ["doctor.py", "--read-only", "--json"]
+@@ -6239,10 +6273,30 @@ SETUP_ROUTES.update(AUTOSTART_ROUTES)
+ HEALTH_DOCTOR = ["doctor.py", "--read-only", "--json"]
+ 
+ 
++CATALOGUE_FAILS = []          # #370 D1: when the catalogue last failed to read (monotonic seconds), the last 60 s only
++
++
++def catalogue_lasting(e):
++    """#370 D1: whether a failed catalogue read is a lasting fault: a corrupt file (ValueError) or the third failure in 60 s."""
++    now = time.monotonic()
++    CATALOGUE_FAILS[:] = [t for t in CATALOGUE_FAILS if now - t < 60] + [now]
++    return isinstance(e, ValueError) or len(CATALOGUE_FAILS) >= 3
++
++
  def settings_catalogue_route(handler, req):
      """POST /api/settings/catalogue: every setting with its group, tier, default, reason, value and whether it is changed."""
      import settings_catalogue
 -    return handler.send(200, dict(settings_catalogue.catalogue(), ok=True))
 +    try:
 +        body = settings_catalogue.catalogue()
-+    except (OSError, ValueError) as e:                    # #370 D1: settings.json or its log mid-write: ask again, not a 500
-+        debuglog.info("settings", f"catalogue not ready: {type(e).__name__}")
++    except (OSError, ValueError) as e:                    # #370 D1: a race is a 503 to retry; a lasting fault is a plain 500
++        if catalogue_lasting(e):
++            debuglog.error("settings", f"catalogue can't be read: {type(e).__name__}")
++            return handler.send(500, {"ok": False, "message": "Settings can't be read. See Settings > Health."})
++        debuglog.warn("settings", f"catalogue not ready: {type(e).__name__}")
 +        return handler.send(503, {"ok": False, "retry": True, "message": "Settings are being saved. Try again in a moment."},
 +                            extra={"Retry-After": "1"})
++    CATALOGUE_FAILS.clear()
 +    return handler.send(200, dict(body, ok=True))
  
  

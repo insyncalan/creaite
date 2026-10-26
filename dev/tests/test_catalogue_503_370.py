@@ -23,25 +23,51 @@ class FakeHandler:
 
 @unittest.skipUnless(APPLIED, "the #370 slice 3 patch is not applied")
 class Catalogue503(unittest.TestCase):
-    def test_a_read_that_fails_is_a_503_with_a_plain_message(self):
-        for exc in (OSError("busy"), ValueError("half a file")):
-            with self.subTest(type(exc).__name__), mock.patch.object(settings_catalogue, "catalogue", side_effect=exc), \
-                    mock.patch.object(live_server, "debuglog"):
-                h = FakeHandler()
-                live_server.settings_catalogue_route(h, {})
-            code, body, extra = h.sent
-            self.assertEqual(code, 503)
-            self.assertFalse(body["ok"])
-            self.assertEqual(body["message"], "Settings are being saved. Try again in a moment.")
-            self.assertEqual(extra, {"Retry-After": "1"})
+    def setUp(self):
+        live_server.CATALOGUE_FAILS.clear()
 
-    def test_a_good_read_is_unchanged(self):
+    def call(self, exc):
+        with mock.patch.object(settings_catalogue, "catalogue", side_effect=exc), \
+                mock.patch.object(live_server, "debuglog") as log:
+            h = FakeHandler()
+            live_server.settings_catalogue_route(h, {})
+        return h.sent, log
+
+    def test_one_oserror_is_a_503_and_a_warn(self):
+        (code, body, extra), log = self.call(OSError("busy"))
+        self.assertEqual((code, extra), (503, {"Retry-After": "1"}))
+        self.assertEqual(body["message"], "Settings are being saved. Try again in a moment.")
+        log.warn.assert_called_once()
+        self.assertIn("OSError", log.warn.call_args[0][1])
+        log.error.assert_not_called()
+
+    def test_a_valueerror_is_a_500_and_an_error(self):
+        (code, body, _), log = self.call(ValueError("half a file"))
+        self.assertEqual(code, 500)
+        self.assertEqual(body["message"], "Settings can't be read. See Settings > Health.")
+        log.error.assert_called_once()
+        self.assertNotIn("half a file", log.error.call_args[0][1])
+
+    def test_three_oserrors_in_a_minute_escalate(self):
+        codes = [self.call(OSError("busy"))[0][0] for _ in range(3)]
+        self.assertEqual(codes, [503, 503, 500])
+        _, log = self.call(OSError("busy"))
+        log.error.assert_called_once()
+
+    def test_failures_older_than_a_minute_do_not_count(self):
+        live_server.CATALOGUE_FAILS[:] = [live_server.time.monotonic() - 120] * 5
+        self.assertEqual(self.call(OSError("busy"))[0][0], 503)
+
+    def test_success_resets_the_count(self):
+        self.call(OSError("busy"))
+        self.call(OSError("busy"))
         h = FakeHandler()
         live_server.settings_catalogue_route(h, {})
         self.assertEqual(h.sent[0], 200)
-        self.assertTrue(h.sent[1]["ok"])
+        self.assertEqual(live_server.CATALOGUE_FAILS, [])
+        self.assertEqual(self.call(OSError("busy"))[0][0], 503)
 
-    def test_another_error_is_still_a_500_by_the_dispatcher(self):
+    def test_another_error_is_still_raised_to_the_dispatcher(self):
         with mock.patch.object(settings_catalogue, "catalogue", side_effect=KeyError("x")):
             with self.assertRaises(KeyError):
                 live_server.settings_catalogue_route(FakeHandler(), {})

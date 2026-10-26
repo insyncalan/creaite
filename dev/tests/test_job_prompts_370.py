@@ -30,7 +30,9 @@ class RunLimits(unittest.TestCase):
             with self.subTest(kind):
                 text = live_server.run_limits(kind)
                 self.assertIn("2026-11-03", text)
-                self.assertIn("Never grep, tail or date", text)
+                self.assertIn("Do not run grep, tail or date", text)
+                self.assertIn("neither the message nor your own skill's read list names", text)
+                self.assertNotIn("doesn't name", text)
 
     def test_allowed_commands_are_the_kinds_own_rules(self):
         process = live_server.run_limits("process")
@@ -39,6 +41,12 @@ class RunLimits(unittest.TestCase):
         self.assertNotIn("tracker.py", process)
         self.assertIn("sweep.py calendar-window", live_server.run_limits("calendar"))
         self.assertIn("sweep.py …", live_server.run_limits("sweep"))
+
+    def test_the_skills_do_have_read_lists_the_sentence_allows(self):
+        for skill in ("cx-sweep", "cx-minutes"):
+            text = (REPO / ".claude" / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("projects/_portfolio/project-register.md", text)
+            self.assertIn("people-register.md", text)
 
     def test_a_kind_without_scripts_has_no_shell(self):
         for kind in ("check", "load"):
