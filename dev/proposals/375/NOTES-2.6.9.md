@@ -54,3 +54,7 @@ Two readers silently regressed in the S4 migration: the follow-up email lost rec
 ## The stamp is a hash of the filter's files
 
 `calendar_gateway.fingerprint()` is now the first 16 hex digits of the sha256 of `invite_filter.py` and `invite_clean.py` (read once per process; None, and so no row trusted, when either cannot be read). A row stamped by any earlier version of either file, a forged `clean_v` such as "f1", or a bare `clean: 1` is cleaned again on read and written back by the rescrub. Saved calendars are cleaned again at the first start-up after an update. The read cache signature includes the fingerprint.
+
+## Limit: a word-only value several lines below a hard label (fix5, 26-10-2026)
+
+`Weekly sync / Passcode: / Budget review for Q4 / Vendors / rukuponurif / Risks` keeps `rukuponurif`. The 2.6.8 scrub and D give the same output: a hard label's window removes only value-looking lines, and a lone word is not one. On a 5-label by 0-3-ordinary-lines matrix in plain, `<p>` and `<td>` forms the scrub and D leak the same bodies (1 line between: 16 of 30, 2: 20 of 30, 3: 30 of 30). A bare `PIN` cell (no colon) is the same shape as `PIN:`: with 1 to 3 agenda lines between, a digit or mixed value (882541, a6ad063a9, 8825) is removed in every td, row, markdown and plain form for PIN, Passcode, Password, OTP and Token, and a word-only value stays with or without the colon. Not widened; accepted limit.
