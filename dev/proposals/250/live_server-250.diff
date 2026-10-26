@@ -64,7 +64,7 @@ index dcd4b703..0a3fe302 100644
 +
 +    def _fetch_finish(self, proc, final):
 +        """After proc.wait(), before _done(): settle the fetch. Only a run that ended with its answer (not stopped, not timed out,
-+        exit code 0, a result event that is not an error, a final answer; see _answered) writes; any other ending leaves every read for Process. Any fault is logged by name; _done() runs."""
++        exit 0, a non-error result and a final answer: _answered) writes; any other ending leaves every read for Process. A fault is logged; _done() runs."""
 +        fetch = getattr(self, "fetch", None)
 +        if fetch is None:
 +            return
