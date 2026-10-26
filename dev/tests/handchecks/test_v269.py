@@ -160,6 +160,9 @@ def provider_body(name, html, position):
     return "<html><body>" + paras + "</body></html>"
 
 
+APPROVED_GUARDED = ["system/scripts/backup.py", "system/scripts/live_server.py"]   # the approved 2.6.9 chain
+
+
 class V269(unittest.TestCase):
     # ---- the release shape (skipped until the cut) --------------------------------------------------------------------------
     def test_c11_version(self):
@@ -204,11 +207,13 @@ class V269(unittest.TestCase):
             self.assertNotRegex(t, r"creaite 2\.6\.[0-8] ·")
 
     def test_c15_guarded_unchanged(self):
+        """Only the two files the approved 2.6.9 chain (marked commit 392e8918: #371, #382, backup bundle) changes; the pin test
+        (test_guarded_chain.py) checks their content."""
         ref = baseline_ref()
         if ref is None:
             self.skipTest("neither the tag v2.6.8 nor v268-release exists here")
         d = git("diff", "--name-only", ref, "HEAD", "--", *GUARDED).stdout.split()
-        self.assertEqual(d, [], f"guarded files changed since 2.6.8: {d} (they must travel as diffs under dev/proposals)")
+        self.assertEqual(sorted(d), APPROVED_GUARDED, f"guarded files changed since 2.6.8 beyond the approved 2.6.9 chain: {d} (they must travel as diffs under dev/proposals)")
 
     def test_c16_scrub_unchanged(self):
         """2.6.9 intends the scrub changes from v269-scrub (H2/H4, separators, eaters) in invite_clean.py. So this no longer asks for
@@ -232,7 +237,7 @@ class V269(unittest.TestCase):
             self.assertIn(name, new, f"invite_clean.{name} has gone since 2.6.8")
             self.assertEqual(new[name], sig, f"invite_clean.{name} changed its arguments since 2.6.8")
         d = git("diff", "--name-only", ref, "HEAD", "--", *GUARDED).stdout.split()
-        self.assertEqual(d, [], f"guarded files changed since 2.6.8: {d}")
+        self.assertEqual(sorted(d), APPROVED_GUARDED, f"guarded files changed since 2.6.8 beyond the approved 2.6.9 chain: {d}")
 
     # ---- the gateway ----------------------------------------------------------------------------------------------------------
     def test_c20_read_never_writes(self):
@@ -252,7 +257,7 @@ class V269(unittest.TestCase):
         day = head | {"where", "teams", "organiser", "recurrence", "attendees"}
         allowed = {"meta": {"id"}, "day": day, "prep_rank": day | {"attachments", "body"},
                    "prep_panel": day | {"attachments", "organiser_email", "body"}, "prep_page": day | {"attachments", "body"},
-                   "agenda": day | {"body"}, "shape": head | {"body"}}
+                   "agenda": day | {"body"}, "shape": head | {"body"}, "intake": day}
         caps = {"prep_rank": 1500, "prep_panel": 1500, "prep_page": 1500, "agenda": 1500, "shape": 600}
         self.assertEqual(set(G.purpose_names()), set(allowed), "the closed set of purposes changed; update the sheet and this table")
         body = "\n".join(f"Agenda line {i} for the programme review" for i in range(200))
@@ -276,7 +281,7 @@ class V269(unittest.TestCase):
     def test_c22_unstamped_filtered_in_memory(self):
         G = gateway()
         raw = "Agenda\n1. Budget 12-11-2026\n\n" + PROVIDERS["teams"][0]
-        days = {"2026-11-03": [row(raw, id="old"), row("Stored as is: 412 889 330", id="new", clean=1)]}
+        days = {"2026-11-03": [row(raw, id="old"), row("Stored as is: 412 889 330", id="new", clean=G.CLEAN, clean_v=G.fingerprint())]}
         with calendar(days) as p:
             before = snapshot(p)
             got = {r["id"]: r for r in G.read("agenda", p)["days"]["2026-11-03"]}
