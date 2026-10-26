@@ -190,6 +190,33 @@ class Ends(unittest.TestCase):
         self.assertEqual(self.ended(code=1)[0].finished, [False])                          # an answer but a non-zero exit is not answered
         self.assertEqual(self.ended(attrs={"failed": True})[0].finished, [False])          # the run's own failed flag, even at exit 0
 
+    def test_exit_0_with_an_error_result_settles_with_false(self):
+        ev = [e for e in EVENTS if e["type"] != "result"] + [{"type": "result", "is_error": True, "result": "Swept."}]
+        self.assertEqual(self.ended(events=ev)[0].finished, [False])
+
+    def test_exit_0_with_no_result_event_settles_with_false(self):
+        self.assertEqual(self.ended(events=[e for e in EVENTS if e["type"] != "result"])[0].finished, [False])
+
+    def test_exit_0_with_a_result_but_an_empty_final_settles_with_false(self):
+        for text in ("", None):
+            ev = [e for e in EVENTS if e["type"] != "result"] + [{"type": "result", "result": text}]
+            self.assertEqual(self.ended(events=ev)[0].finished, [False], text)
+
+    def test_exit_0_with_a_good_result_and_a_final_settles_with_true(self):
+        ev = [e for e in EVENTS if e["type"] != "result"] + [{"type": "result", "is_error": False, "result": "Swept."}]
+        self.assertEqual(self.ended(events=ev)[0].finished, [True])
+
+    def test_answered_is_a_helper_that_reads_the_stream_result_not_the_exit_code_alone(self):
+        run = L.Run.__new__(L.Run)
+        run.stop = False
+        proc = Proc("", 0)
+        proc.returncode = 0
+        self.assertFalse(run._answered(proc, "Swept."))                     # no usage_result yet
+        run.usage_result = {"result": "Swept."}
+        self.assertTrue(run._answered(proc, "Swept."))
+        run.usage_result = ["not", "a", "dict"]
+        self.assertFalse(run._answered(proc, "Swept."))
+
     def test_finish_is_called_once_for_every_ending(self):
         for kw in ({}, {"attrs": {"stop": True}}, {"code": 2}):
             self.assertEqual(len(self.ended(**kw)[0].finished), 1)

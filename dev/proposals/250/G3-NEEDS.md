@@ -1,22 +1,18 @@
-# #250 G3: what the guarded `live_server.py` still needs (Cap's review, 26-10-2026)
+# #250 G3: status of Cap's review finding (26-10-2026)
 
-One change, in the guarded file `live_server-250.diff`; the ordinary side cannot close it.
+**Implemented in G3 revision 2** (`live_server-250.diff`, see `README-guarded.md` for the hash). The history below is kept.
 
-**Case: exit 0 with no final answer still writes.** `Run._fetch_finish` sets `answered = ended_well and proc.returncode == 0`. A Claude
-process that exits 0 without a `result` event (or whose `result` event has `is_error: true`) counts as answered, so `SweepFetch.finish(True)`
-settles and writes. `SweepFetch` only sees `read_resource` results (`observe`), never the stream's `result` event, so it cannot tell.
-The ordinary code stays fail-closed for everything it can see (`finish(False)` writes nothing, and a transcript it cannot tie to one
-meeting is held), but whether the run answered is the server's fact.
+**Case (rev 1): exit 0 with no final answer still wrote.** `Run._fetch_finish` set `answered = ended_well and proc.returncode == 0`, so a Claude
+process that exited 0 without a `result` event (or with `is_error: true`, or empty text) counted as answered and `SweepFetch.finish(True)` wrote.
+`SweepFetch` sees only `read_resource` results, never the stream's `result` event, so only the server could tell.
 
-**The line** (in `_fetch_finish`, `live_server-250.diff` line 72):
+**The fix (rev 2):** `_fetch_finish` calls a small helper, `Run._answered(proc, final)`:
 
 ```
--            answered = ended_well and proc.returncode == 0
-+            result = getattr(self, "usage_result", None)           # the stream's result event, set by _on_result
-+            answered = (ended_well and proc.returncode == 0 and isinstance(result, dict) and not result.get("is_error") and bool(final))
+ended_well = not (self.stop or timed_out or failed)
+result = getattr(self, "usage_result", None)      # set only by _on_result
+return bool(ended_well and proc.returncode == 0 and isinstance(result, dict) and not result.get("is_error") and final)
 ```
 
-`self.usage_result` is set only by `_on_result` (live_server.py `_on_result`, `self.usage_result = ev`), so it is None when no `result`
-event arrived; `final` is already passed to `_fetch_finish(proc, final)` and is the result text. Both are available at that point.
-Needs: a mutant in `test_live_fetch_250` (exit 0 with no result event writes nothing; a result with `is_error` writes nothing).
-Complexity: `_fetch_finish` stays under the limit if the condition is moved into a small helper `_answered(proc, final)`.
+Tests: `test_live_fetch_250` (exit 0 with an error result, with no result event, with an empty final: `finish(False)`; a good result and a final:
+`finish(True)`; the helper itself) and one mutant per clause (all killed).

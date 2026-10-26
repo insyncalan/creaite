@@ -1,7 +1,8 @@
 diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index dcd4b703..0a3fe302 100644
 --- a/system/scripts/live_server.py
 +++ b/system/scripts/live_server.py
-@@ -2819,6 +2819,7 @@ class Run:
+@@ -2812,6 +2812,7 @@ class Run:
          self.resumed = resumed                                  # #327 B: the usage line says which (counts only)
          self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
          self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
@@ -9,7 +10,7 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
          self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
          self.events, self.cond, self.watchers = [], threading.Condition(), 0
          self.pending, self.said, self.steps = {}, [], []
-@@ -2922,6 +2923,7 @@ class Run:
+@@ -2913,6 +2914,7 @@ class Run:
              self._end_answered(final)
          if self.job and not self.stop:                     # the status and the files are written here, from the tool results
              self._finish_job()
@@ -17,7 +18,7 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
          self._done()
  
      def _on_assistant(self, ev):
-@@ -2987,6 +2989,7 @@ class Run:
+@@ -2978,6 +2980,7 @@ class Run:
          return False
  
      def _on_tool_result(self, part):
@@ -25,7 +26,7 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
          if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
              self.job_observe(part)   # BL-228 (sprint-debt-safety)
          # ===== BL-248 (sprint-portability): a creaite script that failed before it started is creaite's fault =====
-@@ -3188,6 +3191,7 @@ class Run:
+@@ -3179,6 +3182,7 @@ class Run:
          """Emit the closure, keep the run's plain lines in the day's history chat and the run record in the debug log."""
          c = self._closing(failed)
          c = {k: v for k, v in c.items() if k in ("ok", "line", "href", "link", "stopped")}
@@ -33,7 +34,7 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
          if not str(c.get("href") or "#").startswith("#"):           # a link is only ever a place in the dashboard
              c.pop("href", None)
              c.pop("link", None)
-@@ -3224,6 +3228,55 @@ class Run:
+@@ -3215,6 +3219,61 @@ class Run:
          EVENTS.poke()                                     # BL-253 (sprint-live-updates): what the run wrote shows at once
      # ===== end BL-229 (read) =====
  
@@ -63,13 +64,12 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
 +
 +    def _fetch_finish(self, proc, final):
 +        """After proc.wait(), before _done(): settle the fetch. Only a run that ended with its answer (not stopped, not timed out,
-+        exit code 0, not failed) writes; any other ending leaves every read for Process. Any fault is logged by name; _done() runs."""
++        exit code 0, a result event that is not an error, a final answer; see _answered) writes; any other ending leaves every read for Process. Any fault is logged by name; _done() runs."""
 +        fetch = getattr(self, "fetch", None)
 +        if fetch is None:
 +            return
 +        try:
-+            ended_well = not (self.stop or getattr(self, "timed_out", False) or getattr(self, "failed", False))
-+            answered = ended_well and proc.returncode == 0
++            answered = self._answered(proc, final)
 +            self.fetch_line = vault_transcripts.fetch_text(fetch.finish(answered))
 +            if self.fetch_line and not self.plain:         # a typed sweep has no closure: the count is a line of the chat
 +                self.said.append(self.fetch_line)
@@ -77,6 +77,13 @@ diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
 +                self.record()
 +        except Exception as e:  # noqa: BLE001
 +            swallowed("fetch finish", e)
++
++    def _answered(self, proc, final):
++        """True only for a run that ended well (not stopped, timed out or failed), exited 0 and sent a result event that is not an
++        error and carries a final answer: an exit 0 with no answer (no result event, is_error, empty text) settles nothing."""
++        ended_well = not (self.stop or getattr(self, "timed_out", False) or getattr(self, "failed", False))
++        result = getattr(self, "usage_result", None)           # the stream's result event, set only by _on_result
++        return bool(ended_well and proc.returncode == 0 and isinstance(result, dict) and not result.get("is_error") and final)
 +
 +    def _with_fetch_line(self, c):
 +        """The closure with the fetch's count after its own words (counts only: no title, name or reason)."""
