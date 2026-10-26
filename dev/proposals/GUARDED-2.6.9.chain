@@ -1,0 +1,21 @@
+# The guarded chain for 2.6.9 (nothing is pinned by this file alone: the pin is in dev/tests/guarded_chain.py, added after the marked commit). One diff per line, in landing order.
+# Base: the 2.6.8 release (tag v2.6.8, 286b03c1); the guarded files on the trunk equal that release's.
+# Guarded files only: system/scripts/live_server.py (G1, G2) and system/scripts/backup.py (bundle).
+# Approved by Alan on 26-10-2026 ("approve the #382 and #371 diffs", "approve the bundle diff"); the bytes are frozen.
+#
+# G1 #382 (sha256 be27770da2b4dfcc95d66e7c1d605820f596525bbf2af78142c45b976273c9e3): the #365 follow-up. The check and load job runs start context-less
+# (CONTEXTLESS_JOBS: an empty folder outside the vault, NO_CONTEXT_ARGS with the model named as sonnet, no session saved, no --add-dir; held mode's hook still
+# passed); launch_context and run_dirs follow; KIND_PROMPTS for check and load say so; TRANSCRIPT_PROMPT step 1 searches one hour either side, then the
+# whole day, then the exact start and end, never more than three searches, and takes only the event whose id is exactly the asked one.
+dev/proposals/382/live_server-382.diff
+# G2 #371 (sha256 3145004945ec7ae613629b42ad54ed50ad488a64ed70d54ba5037e324fbb37e2): on each run's init event one debug-log line (area run) with the count
+# of MCP servers by status and the number of tools listed at start (init_summary: counts only, no names, no text).
+dev/proposals/371/live_server-371.diff
+# Bundle (sha256 c366014b52cdab015b3f6f4a03a99a1ffcb527bf5e1a17e5eef3007e2ff89659): backup.py's make_bundle no longer bundles history that holds
+# system/staging, system/logs or system/branding: it makes one snapshot commit without them in a temporary repository (the vault's repository is only read,
+# every GIT_* variable of the caller dropped), and keeps the plain --all bundle when no commit ever held those paths; the snapshot is shown in the manifest,
+# the restore plan and the restore check (Health); verify_bundle and restore_git use the same environment.
+dev/proposals/bundle/backup-bundle.diff
+#
+# Not guarded (ordinary commits): dev/tests/test_job_followup_365.py, dev/tests/test_job_init_log_371.py, dev/tests/test_run_tools_explicit.py, system/scripts/transcripts.py (search count and diagnosis),
+# dev/tests/test_transcripts.py, dev/tests/test_bundle_privacy.py, system/templates/vault-gitignore, .claude/skills/cx-setup/SKILL.md, system/scripts/doctor.py (backup_check note)
