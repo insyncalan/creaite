@@ -217,13 +217,13 @@ def hold(v, other=False):
 def leaks(root, held):
     """{category: [file (words)]} for every vault file outside creaite's engine that holds the client's name or the held reason,
     except the places meant for them: the Review row (dashboard.html and its history snapshot), the proposal and its draft minutes
-    (and a file-change backup of that draft)."""
+    (and a file-change backup of that draft). The search index is in tracker.db, which is scanned like any other file."""
     allowed = {"dashboard.html", f"system/staging/{held.name}", DRAFT}
     out = {}
     for f in sorted(root.rglob("*")):
         rel = f.relative_to(root).as_posix()
-        if not f.is_file() or rel in allowed or rel.startswith(("system/scripts/", "system/templates/", "system/branding/", ".git/",
-                                                                 "system/history/")) or "__pycache__" in rel:
+        if not f.is_file() or rel in allowed or rel.startswith(("system/scripts/", "system/templates/", "system/branding/", ".git/")) \
+                or "__pycache__" in rel or re.fullmatch(r"system/history/dashboard-[^/]+\.html", rel):     # only the dashboard snapshot
             continue
         if rel.startswith("system/backups/files/") and f.name == Path(DRAFT).name:
             continue
@@ -352,6 +352,7 @@ CANARY = "KITCANARY277 the quarter's quiet words"
 BAD = [("list", ["ABC"]), ("two-item list", ["ABC", "DEF"]), ("empty list", []), ("int", 7), ("float", 7.5), ("dict", {"code": "ABC"}),
        ("nested list", [["ABC"]]), ("true", True), ("false", False)]
 ROUTES = ("match-check", "check", "save", "pick", "reshow", "approve")
+PROJECT_REFUSALS = ("Its project must be one project code.", "Say which report: weekly or client, and the project's code.")
 
 
 class NonStringProjectOnEveryRoute(unittest.TestCase):
@@ -388,18 +389,31 @@ class NonStringProjectOnEveryRoute(unittest.TestCase):
 
     def body(self, route, doc):
         return {"match-check": {"docs": [doc]}, "check": {"doc": doc}, "save": {"doc": doc, "base_version": doc.get("version")},
-                "pick": {"doc": doc}, "reshow": {"doc": doc, "section": doc["sections"][0]["id"], "refs": []},
+                "pick": {"doc": doc}, "reshow": {"doc": doc, "section": self.table_id(doc), "refs": ["ABC-A-001"]},
                 "approve": {"kind": "client", "code": "ABC", "week_ending": WEEK, "force": True, "doc": doc,
                             "base_version": doc.get("version")}}[route]
+
+    @staticmethod
+    def table_id(doc):
+        return next(s["id"] for s in doc["sections"] if s.get("type") == "table")
 
     def test_each_route_refuses_a_non_string_project_with_a_sentence_and_writes_nothing(self):
         d = self.fresh()["doc"]
         d["sections"].append({"id": "free_277", "type": "freetext", "heading": "Notes", "default_heading": "", "hidden": False,
                               "text": CANARY, "audience": "client"})
         d["layout"]["order"] = [s["id"] for s in d["sections"]]
-        for route in ROUTES:                                       # control: a string project is answered, not refused for its type
+        for route in ROUTES:                                       # control: a string project is answered and accepted (Cap's MEDIUM 1)
             status, r = self.call(route, self.body(route, copy.deepcopy(d)))
-            self.assertEqual(status, 200, (route, r))
+            self.assertEqual((status, r.get("ok")), (200, True), (route, r))
+            if route == "save":                                    # the save bumps the draft's version: approve sends the new one
+                d["version"] = r["version"]
+        for label, bad in BAD:
+            for route in ROUTES:
+                with self.subTest(route=route, project=label):
+                    sent = copy.deepcopy(d)
+                    sent["project"] = bad
+                    status, r = self.call(route, self.body(route, sent))
+                    self.assertIn(str(r.get("message") or ""), PROJECT_REFUSALS, (route, r))     # refused for its type, nothing else
         for label, bad in BAD:
             for route in ROUTES:
                 with self.subTest(route=route, project=label):
@@ -424,7 +438,9 @@ MARKS = ('<span class="internal">Internal</span> ', "client · never sent</span>
 
 
 def unmarked(page):
-    """What a page lacks of the Internal marking (empty when it has it all)."""
+    """What a page lacks of the Internal marking (empty when it has it all), on what a reader sees: HTML comments are taken out
+    first, since prep_view's own comment says "not for the client" too (Cap's LOW 2)."""
+    page = re.sub(r"<!--.*?-->", "", page, flags=re.S)
     return [w for w, ok in (("Internal tag", re.search(r'class="internal"[^>]*>\s*Internal\s*<', page)),
                             ("never sent", "never sent" in page), ("not for the client", "not for the client" in page)) if not ok]
 

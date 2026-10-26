@@ -70,6 +70,7 @@ SPOOFS = [["jane@бrightwater.example"], [INSIDE, None], [INSIDE, ["x@client.exa
 PAGE_KEYS = {"internal": True, "internal ": True, "internal list": ["client.example"], "outside": False, "audience": "internal",
              "own_domains": ["client.example"], "ownDomains": ["client.example"], "domains": ["client.example"],
              "identity": {"own_domains": ["client.example"]}}
+NOT_EMAIL = "Addresses go only with the Draft email, so nothing was sent to Claude."     # edit_ai.NOT_EMAIL, as Alan reads it
 PLACES = ("Email", " email", "email ", "EMAIL", "email\x00", "e-mail", "emaıl", "client", "client_message ", "Client_message")
 
 DRIVER = r'''
@@ -227,6 +228,14 @@ class TheAddressesAndPlaces(_Gaps):
         for sp, g in zip(PLACES, run(self.root, [{"request": {**ask([OUTSIDE]), "place": sp}} for sp in PLACES])):
             with self.subTest(repr(sp)):
                 self.assertIn("refused", g["ctx"], f"{sp!r} went to Claude")
+                self.assertNotIn(HIDDEN, json.dumps(g["ctx"]))
+
+    def test_addresses_with_a_valid_place_that_is_not_the_draft_email_are_refused_by_that_check(self):
+        """Cap's LOW 1: every spelling above is refused by an earlier check, so this reaches NOT_EMAIL itself (edit_ai.request)."""
+        for place in ("notes", "minutes"):
+            g = run(self.root, [{"request": {**ask([OUTSIDE]), "place": place}}])[0]
+            with self.subTest(place):
+                self.assertEqual(g["ctx"].get("refused"), NOT_EMAIL, g["ctx"])
                 self.assertNotIn(HIDDEN, json.dumps(g["ctx"]))
 
 
