@@ -444,7 +444,7 @@ class RoundTrip(unittest.TestCase):
         """One calendar save as sweep.py makes it: the reply's days, the held past days put back, written."""
         days = sweep.keep_held_past_days(sweep.calendar_gateway.stamp_rows({d: list(r) for d, r in reply_days.items()}), self.START,
                                          self.TODAY)               # S4: the reply's rows are stamped before the held days are put back
-        v.write({"fetched": "2026-10-25 08:00", "to": "2026-10-30", "days": days, "clean": sweep.calendar_gateway.CLEAN})
+        v.write({"fetched": "2026-10-25 08:00", "to": "2026-10-30", "days": days, "clean": sweep.calendar_gateway.CLEAN, "clean_v": sweep.calendar_gateway.fingerprint()})
         return days
 
     def readers(self):
@@ -491,7 +491,7 @@ class RoundTrip(unittest.TestCase):
         self.save(self.v, {self.PAST: self.stable})
         once = sweep.keep_held_past_days({}, self.START, self.TODAY)
         self.assertEqual(sweep.keep_held_past_days(dict(once), self.START, self.TODAY), once)
-        drop = ("clean", "body")      # S4: rows carry the stamp, and the body is now filtered by the gateway (its own tests cover it)
+        drop = ("clean", "clean_v", "body", "sensitivity")     # a private row now says so      # S4: rows carry the stamp, and the body is now filtered by the gateway (its own tests cover it)
         self.assertEqual([{k: v for k, v in r.items() if k not in drop} for r in once[self.PAST]],
                          [{k: v for k, v in r.items() if k not in drop} for r in self.stable])
 

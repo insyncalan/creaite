@@ -50,3 +50,7 @@ Stays, by design or not yet fixed:
 ## S4 migration: two silent regressions, now guarded
 
 Two readers silently regressed in the S4 migration: the follow-up email lost recipient addresses from the invite, and the project match in Intake and Prep lost the attendee email-domain signal of #328, because the gateway kept only name, type and response. The golden test `test_calendar_readers_golden.py` (every migrated reader against stored 2.6.8 output) now guards it, and `test_calendar_writers_golden.py` does the same for the three writers (save, held past days, rescrub). The purpose `intake` and addresses in `agenda` and `prep_panel` fix it. Private and confidential rows never return addresses, and no address reaches the dashboard page.
+
+## The stamp is a hash of the filter's files
+
+`calendar_gateway.fingerprint()` is now the first 16 hex digits of the sha256 of `invite_filter.py` and `invite_clean.py` (read once per process; None, and so no row trusted, when either cannot be read). A row stamped by any earlier version of either file, a forged `clean_v` such as "f1", or a bare `clean: 1` is cleaned again on read and written back by the rescrub. Saved calendars are cleaned again at the first start-up after an update. The read cache signature includes the fingerprint.

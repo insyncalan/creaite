@@ -109,7 +109,7 @@ class E1Integration(unittest.TestCase):
     def test_stamped_rows_served_as_stored(self):
         stored = "Agenda\nhttps://meet.example.test/j/123456789?pwd=Zx81"
         r = row("s1", stored)
-        r["clean"] = G.CLEAN
+        r["clean"], r["clean_v"] = G.CLEAN, G.fingerprint()
         self.path.write_text(json.dumps({"fetched": "x", "to": "y", "days": {"2026-10-26": [r]}}), encoding="utf-8")
         G.clear_cache()
         self.assertEqual(G.read("agenda", self.path)["days"]["2026-10-26"][0]["body"], stored)
