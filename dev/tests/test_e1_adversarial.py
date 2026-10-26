@@ -895,12 +895,14 @@ SEEDS = {name: 7000 + i for i, (name, _) in enumerate(GENERATORS)}
 # and the default seed, re-measured 26-10-2026. They may only go DOWN (fix a finding, lower the number). Isolated data loss likewise.
 # (Measured under option (c) before: leaks localised 283, digit_styles 36, html_split 234, phones 218; loss localised 679, digit_styles 684,
 # agenda_isolated 4660, agenda_list 1015, table_cells 5064, noise 268, phrasing 109. D trades a few more leaked bodies for much less loss.)
-RATCHET_LEAK = {"localised": 52, "digit_styles": 30, "html_split": 0, "phones": 2, "urls": 0, "reply_chain": 1, "agenda_isolated": 0,
+RATCHET_LEAK = {"localised": 14, "digit_styles": 27, "html_split": 0, "phones": 2, "urls": 0, "reply_chain": 1, "agenda_isolated": 0,
                 "agenda_list": 0, "table_cells": 0, "templates": 0, "noise": 67, "phrasing": 52, "innocent": 0}
 # re-pinned after merging v269-b, v269-c (26-10-2026, order b then c). digit_styles loss is 539 against 533 before (6 more, the cost of
 # c's stricter number shapes); every other count is lower.
-RATCHET_LOSS = {"localised": 105, "digit_styles": 539, "html_split": 69, "phones": 0, "urls": 0, "reply_chain": 0, "agenda_isolated": 546,
-                "agenda_list": 119, "table_cells": 428, "templates": 0, "noise": 4, "phrasing": 163, "innocent": 3451}
+# phrasing 163 -> 211 and innocent 3451 -> 4113 (measured 26-10-2026, decided by Jarvis): the cost of the 2.6.8.1 scrub (H2/H4, the separators
+# and the label-word eaters), which drop more value-shaped lines to keep a secret out. Every other loss number is unchanged or lower.
+RATCHET_LOSS = {"localised": 105, "digit_styles": 539, "html_split": 69, "phones": 0, "urls": 0, "reply_chain": 0, "agenda_isolated": 537,
+                "agenda_list": 119, "table_cells": 428, "templates": 0, "noise": 4, "phrasing": 211, "innocent": 4113}
 
 
 # ======================================================================================== the report
@@ -1098,7 +1100,6 @@ class Findings(unittest.TestCase):
         out = kept("See agenda.\n\nBest regards,\nMia Hale\nProgramme Manager\nM: +44 7700 900123")
         self.assertIn("Programme Manager", out)
 
-    @unittest.expectedFailure
     def test_L09_ics_text_block_lost(self):
         """LOW: a pasted ICS block loses SUMMARY and LOCATION with the Teams URL line (block drop)."""
         out = kept("BEGIN:VEVENT\nSUMMARY:Budget review\nX-MICROSOFT-SKYPETEAMSMEETINGURL:https://teams.example.test/l/abc\nEND:VEVENT")

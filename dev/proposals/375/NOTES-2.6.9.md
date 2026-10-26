@@ -6,6 +6,8 @@ Saved calendars are cleaned and stamped once, at the first start-up after the up
 (`system/staging/calendar.json`) only. Older copies are not re-cleaned: dashboard history snapshots, Prep pages already written, and the
 backup zips keep what they held (Alan: "next release only").
 
+E1 composition D currently equals the 2.6.8 scrub on the fuzz and on loss; its added value is the join-block and dial-in anchors (provider invites 10 leaks / 516 lost lines -> 0/0) and the gateway/stamp.
+
 ## Documented limits of the invite filter (from DECISIONS-HIGH.md, ADVERSARIAL.md and the C and D reports)
 
 Codes the filter can miss:
@@ -27,5 +29,20 @@ Ordinary text the filter can lose:
 * A stamped row is trusted as stored (finding 15, by design): a hand edit that adds the stamp skips the filter. Wrongly typed fields are
   re-filtered.
 
-Numbers after the merge (3,000 bodies, default seeds, 26-10-2026): leak bodies localised 53, digit_styles 30, html_split 0, phones 2,
+Numbers after the merge (3,000 bodies, default seeds, 26-10-2026): leak bodies localised 14, digit_styles 27, html_split 0, phones 2,
 noise 67, phrasing 52; the 2.6.8 scrub alone leaked 1636, 75, 677, 1157, 752 and 141 on the same sets.
+
+## Limits after the composition D fix pass (ADVERSARIAL-2.md, 26-10-2026)
+
+Fixed now: orphan value blocks after a dropped block (a chain of two), a plain link as a line-level anchor, Unicode line breaks, a linear
+`looks_like_html` (1 MB in 0.03 s), spaced letters and a long bare label, provider invites (0 leaks, 0 lines lost).
+
+Stays, by design or not yet fixed:
+* A third orphan value block after a dropped block can leak (5 of 1,000 in the generator).
+* A `sip:` or `id@host` line takes its block with it (211 keepers lost on `single_anchor`).
+* An unclosed `<script>` holding a 10-digit number takes the whole block (the `broken_html` fixture; accepted, fail-closed).
+* Link-only lines are dropped by design, for example "New to GoTo? ... https://..." (accepted by Jarvis, 26-10-2026, with the unclosed script above: 3 lines of 130 on the 32-format fixtures).
+* A long numbered agenda is cut at 1,500 characters.
+* Hebrew labels are not recognised.
+* A9 (a plain link line is itself dropped).
+* Loss ratchets re-pinned 26-10-2026 for the 2.6.8.1 scrub: phrasing 163 -> 211, innocent 3451 -> 4113.

@@ -50,3 +50,4 @@ Tests and mutants for each rule: `test_invite_clean_269.py` (`Rows`, `Mutants`).
 - Digit leaks: existing fuzz unchanged (4 digit-bearing bodies, all already known); new generators 0.
 - Timing: the new patterns are bounded (at most eight tokens, no nested open repeat); `test_invite_clean_timing.py` and `test_invite_clean_expansion.py` pass.
 - Public surface unchanged; `dev/tools/check.py` clean (two ratchets needed attention: line length and one function's complexity, both fixed by wrapping and a helper).
+- **Cost of the 2.6.8.1 scrub on the loss ratchets (26-10-2026).** More ordinary lines are dropped to keep a secret out: phrasing lost-isolated 163 -> 211, innocent lost-isolated 3451 -> 4113 (3,000 bodies). Decided by Jarvis; every other loss ratchet is unchanged or lower.
