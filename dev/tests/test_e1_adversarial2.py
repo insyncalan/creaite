@@ -585,8 +585,8 @@ GEN_N = 400     # bodies per generator in the unit tests (the --report run uses 
 # except encodings (480, the same).
 RATCHET = {
     "orphans": (4, 72, 0), "single_anchor": (0, 75, 0), "provider_one_line": (0, 0, 0), "encodings": (0, 0, 0),
-    "label_markup": (3, 0, 0), "safelinks": (0, 0, 0), "repeated": (0, 0, 0), "numbered_long": (0, 615, 0), "tz_and_dial": (0, 0, 0),
-    "provider_unknown": (13, 4, 0),
+    "label_markup": (0, 0, 0), "safelinks": (0, 0, 0), "repeated": (0, 0, 0), "numbered_long": (0, 615, 0), "tz_and_dial": (0, 0, 0),
+    "provider_unknown": (0, 4, 0),
 }
 
 
@@ -798,14 +798,22 @@ class MoreOrphanFindings(unittest.TestCase):
         t = "<p>Agenda</p><p>Link: https://bridge.example.test/r/q4mkeu4n</p><p>Room key</p><p>7118</p><p>Thanks</p>"
         self.assertNotIn("7118", C(t))
 
-    @unittest.expectedFailure
     def test_O14_polish_label_with_pin_in_a_sentence_leaks(self):
         """'kod dost\u0119pu' is not a listed label; in a sentence ('ask for the kod dostepu 7118 at the desk') or a table cell it leaks.
         As 'Kod dost\u0119pu: 7118' on its own line it is caught."""
         t = "Agenda\n\nTo get in, ask for the kod dost\u0119pu 7118 at the desk.\n\nThanks"
         self.assertNotIn("7118", C(t))
 
-    @unittest.expectedFailure
+    def test_O16_spaced_letters_label_variants(self):
+        for t in ("Agenda\n\nP A S S C O D E :\n\n6960", "Agenda\n\nP I N 8825 x", "Agenda\n\nA C C E S S C O D E : 4417", "Agenda\n\nM E E T I N G  I D : 412 889 330"):
+            self.assertEqual(C(t), "Agenda", t)
+        keep = "Agenda\nOption A B C D is best\nPlan B"
+        self.assertEqual(C(keep), keep)
+
+    def test_O17_long_label_without_a_separator_in_a_sentence(self):
+        self.assertNotIn("4417", C("Agenda\n\nSee the codigo de acceso 4417-b9 in the mail\n\nThanks"))
+        self.assertIn("5 on the list", C("Agenda\n1. Budget number 5 on the list\n2. Close"))
+
     def test_O15_letter_spaced_label_leaks(self):
         """'P A S S W O R D : 4330' (letters spaced out): the label is not recognised. LOW: needs an author who does it on purpose."""
         self.assertNotIn("4330", C("Agenda: x\n\nP A S S W O R D : 4330"))

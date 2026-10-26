@@ -57,7 +57,18 @@ def _skeleton(line):
         s = "".join(c for c in s if unicodedata.category(c) not in ("Cf", "Mn"))
         s = unicodedata.normalize("NFKC", s)
         s = s.translate(_CONFUSABLES)
-    return " ".join(s.lower().split())
+    s = " ".join(s.lower().split())
+    return _SPACED_LETTERS.sub(_join_letters, s) if " " in s else s
+
+
+# E1 pass 2, finding 9: 'P A S S W O R D : 4330' reads as 'password : 4330' (four or more single letters in a row, one space apart)
+# (a run of more than 24 letters is text, not a label, and stays as it is)
+_SPACED_LETTERS = re.compile(r"(?<![^\W\d_])(?<![^\W\d_] )(?:[^\W\d_] ){3,}[^\W\d_](?![^\W\d_])")
+
+
+def _join_letters(m):
+    run = m.group()
+    return run.replace(" ", "") if len(run) <= 47 else run
 
 
 _DIV_CHARS = "_-=*~#." + "".join(chr(c) for c in range(0x2500, 0x2580)) + "‐‑‒–—―"
@@ -648,6 +659,9 @@ _LABELS_X = _LABELS + (
     "pass", "passwd", "security code", "entry code", "door code", "verification code", "auth code", "one-time code", "participant code",
     "host code", "moderator pin", "guest pin", "bridge code", "meeting code", "room code", "join code", "dial-in code", "meeting number",
 )
+# letter-spaced two-word labels lose their word break ('A C C E S S  C O D E' is read as 'accesscode'), so the extended pass also knows each
+# two-word label written solid (E1 pass 2, finding 9)
+_LABELS_X += tuple(sorted({x.replace(" ", "") for x in _LABELS_X if " " in x and x.isascii()} - set(_LABELS_X)))
 _USE_EXT_LABELS = True      # test hook
 
 
@@ -686,6 +700,22 @@ def _first_token(s, pos=0):
     return _TOK.match(s, _SKIP.match(s, pos).end()).group()
 
 
+def _bare_label_value(s, labels):
+    """E1 pass 2, finding 7 (the extended pass only): a long, distinctive label (8 characters or more: 'kod dostepu', 'codigo de acceso')
+    directly followed by a space and a value of 4 or more characters, with no separator: 'ask for the kod dostepu 7118 at the desk'."""
+    for lab in labels:
+        pos = s.find(lab) if len(lab) >= 8 else -1
+        while pos != -1:
+            end = pos + len(lab)
+            before_ok = pos == 0 or not (s[pos - 1].isalnum() or s[pos - 1] == "_")
+            if before_ok and s[end:end + 1] == " ":
+                tok = _first_token(s, end).rstrip(_TAIL_PUNCT)
+                if len(tok) >= 4 and _is_value_token(tok):
+                    return True
+            pos = s.find(lab, pos + 1)
+    return False
+
+
 def _same_line(s, labels=None):
     """Is there 'label, separator, value' on this line? The label is the last word(s) before the separator."""
     for m in (_SEP if labels is None else _SEP_X).finditer(s):
@@ -694,7 +724,7 @@ def _same_line(s, labels=None):
             j -= 1
         if _label_ends_at(s, j, labels) and _is_value_token(_first_token(s, m.end())):
             return True
-    return False
+    return labels is not None and _bare_label_value(s, labels)
 
 
 def _ends_with_label(s, labels=None):

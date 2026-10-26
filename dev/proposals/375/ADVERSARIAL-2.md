@@ -37,11 +37,11 @@ HIGH = digit/ID leak in a common layout; MED = ordinary data lost, or leak in an
 | 4 | MED | Orphan rule over-takes ordinary lines after a dropped block: any 1 to 2 line block of at most 24 characters and 4 tokens with one 4 to 8 digit or letter-digit token. | `Ext 4417 for help` lost 60/60; `Room 1204`-style (4-digit room) 36 to 44 of 60; `Ticket INC1234 follow-up` 23 to 29 of 60 (and, after one orphan, the second slot takes the next line too); all go to 0 once two real orphans fill the chain | `Meeting ID: 412 889 330\n\nExt 4417 for help` returns nothing after the subject | require the block to be **only** value tokens (no word of 3+ letters) except a known label; drop `ext`/`room`/`floor` lead words from the candidates | O3, O4, O12 | fixed (A) |
 | 5 | MED | The orphan rule stops at a divider line, so a PIN under a rule line survives; and after an unlisted label (`Clave`) plus a first orphan, the **second** orphan survives (the label block counts as a chain step). | divider: 4-digit and spaced values 80/240 in the controlled grid | `Hi\n\nMeeting ID: 412 889 330\n________\n8825` returns `8825` | allow one divider between the anchor block and its orphans (as for blank lines); do not count a label-only block in `chain` | O1, O2 | fixed (A) |
 | 6 | MED | List marker hides an orphan: `- 4076`, `- ab12cd` under the ID line leaks for every shape but 8 digits. | list layout 55% of generated orphans (667 of 1,217); controlled 160/240 | `Meeting ID: 526 903 470\n- 4076` returns `- 4076` | strip `-`, `*`, bullet, `1.` before `_orphan_block` judges | O11 | fixed (A) |
-| 7 | MED | Unlisted label words still leak when the value is in a sentence or stacked: Polish `kod dostępu`, English `Room key`. Same class as pass 1 finding 1; on a line of its own (`Kod dostępu: 7118`) they are caught. | provider_unknown: Polish 178 of 519 leaked and 68 lines lost (the label over-takes), `Room key` 38 of 516 (stacked and table styles) | `To get in, ask for the kod dostępu 7118 at the desk.`; `<p>Room key</p><p>7118</p>` | the value-adjacent-to-label rule (finding 1) covers `Room key`; add `dost[eę]pu`, `key` to the label list or generalise "short label line then value-only line" | O13, O14 | open |
+| 7 | MED | Unlisted label words still leak when the value is in a sentence or stacked: Polish `kod dostępu`, English `Room key`. Same class as pass 1 finding 1; on a line of its own (`Kod dostępu: 7118`) they are caught. | provider_unknown: Polish 178 of 519 leaked and 68 lines lost (the label over-takes), `Room key` 38 of 516 (stacked and table styles) | `To get in, ask for the kod dostępu 7118 at the desk.`; `<p>Room key</p><p>7118</p>` | the value-adjacent-to-label rule (finding 1) covers `Room key`; add `dost[eę]pu`, `key` to the label list or generalise "short label line then value-only line" | O13, O14 | fixed (A for 'Room key', E for the Polish label) |
 | 8 | MED | Plain text with Unicode line separators loses the whole body: U+2028, U+2029, NEL, VT, FF are not line breaks to the plain-text path (the HTML path splits them), so the text is one line and a passcode in it takes everything. Safe (0 leaks), but the old scrub does the same. | 1,275 of 5,000 keepers (every body in four of sixteen encodings: nel 176/176, u2028 212/212, u2029 176/176, vt_ff 178/178) | `Agenda budget Passcode: 8825 Thanks all` returns `""` | normalise `\x0b \x0c \x85    ` to `\n` in the plain path (the tuple `invite_blocks.NEWLINES` already exists) before the scrub runs in `_raw_first` | E1 | fixed (C) |
-| 9 | LOW | Letter-spaced label: `P A S S W O R D : 4330` is not recognised. | 49 of 131 (37%) of that form | `Agenda: x\n\nP A S S W O R D : 4330` | collapse single-letter runs in `_skeleton` | O15 | open |
+| 9 | LOW | Letter-spaced label: `P A S S W O R D : 4330` is not recognised. | 49 of 131 (37%) of that form | `Agenda: x\n\nP A S S W O R D : 4330` | collapse single-letter runs in `_skeleton` | O15 | fixed (E) |
 | 10 | LOW | **`invite_blocks.looks_like_html` is quadratic** on text with many tag starts and no `>`: for every `<b ` that `_tag_at` accepts, `text.find(">", i)` scans to the end of the text. Growth exponent: 1.87 (last six of ten sizes, 64 KB to 1 MB; 1.47 over all ten, small sizes are dominated by per-call cost). Doubling the size multiplies time by 3.7 to 4. `<!-` openers, `<div`, `<bx ` prefixes and a bare `<` run are linear (1.00). Production impact is bounded: the gateway cuts at 20,000 characters (1 ms) and D at 100,000 (30 ms); the 1 MB case is `filter_text` (test mode) and direct `to_lines` callers (3 s). | 64 KB 0.019 s, 128 KB 0.075 s, 256 KB 0.226 s, 512 KB 0.84 s, 1 MB 3.13 s (`<b ` repeated, or `a <` repeated); the same text with the fix: 0.033 s | `"<b " * 333334` | find the last `>` once: `last = text.rfind(">")` and accept a tag start only when `i < last` (a tag start after the last `>` can never be closed). Same answers as today on 3,000 random strings and 18 hand cases (`linear_looks_like_html` in the test file, exponent 1.0) | L1 | fixed (D) |
-| 11 | LOW | The 1,500-character cap ends a long agenda: items 1 to 100 keep what fits. Documented, recorded because it is where long agendas lose data. | k=100: 978 of 1,872 keepers lost, k=60: 485 of 1,992, k<=30: 0 | 100 numbered lines | none (design) | N1 (passes) | open |
+| 11 | LOW | The 1,500-character cap ends a long agenda: items 1 to 100 keep what fits. Documented, recorded because it is where long agendas lose data. | k=100: 978 of 1,872 keepers lost, k=60: 485 of 1,992, k<=30: 0 | 100 numbered lines | none (design) | N1 (passes) | open (design) |
 
 ## Checked and fine (no finding)
 
@@ -58,20 +58,39 @@ HIGH = digit/ID leak in a common layout; MED = ordinary data lost, or leak in an
 
 Composition D ships in 2.6.9 only if all five criteria are met (Jarvis). Measured after each fix group on `v269-fix2` (from 6ce15ff9). Tools: `python3 dev/tests/test_e1_adversarial2.py --report`; the 40,000-body harness; the 32-format fixture set and the 40-agenda trap set (lines kept of 130 and 200); the one-link layouts of the single_anchor generator (links in plain text and tight lines, 3,000 bodies, 234 in those layouts: lines kept of 1,025; the 2.6.8 scrub `invite_clean.invite_text` keeps 1,025 of 1,025 and, on the fixtures, 86 of 130 and 150 of 200).
 
-| Criterion | Baseline 6ce15ff9 | After A (orphans) | After B (plain links) | After C (line breaks) | After D (looks_like_html) |
-|---|---|---|---|---|---|
-| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 | 83 | 83 |
-| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 | 150 | 150 |
-| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) |
-| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 |
-| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 | 0 / 0 | 0 / 0 |
-| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 | 0 | 0 |
-| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 |
+| Criterion | Baseline 6ce15ff9 | After A (orphans) | After B (plain links) | After C (line breaks) | After D (looks_like_html) | After E (spaced letters, bare long label) |
+|---|---|---|---|---|---|---|
+| 1a. Agenda loss, 32 fixtures: lines kept of 130 (2.6.8 scrub: 86) | 79 | 79 | 83 | 83 | 83 | 83 |
+| 1b. Agenda loss, agenda trap set: kept of 200 (2.6.8 scrub: 150) | 150 | 150 | 150 | 150 | 150 | 150 |
+| 1c. Agenda loss, contiguous plain-text layouts with one link: kept of 1,025 (2.6.8 scrub: 1,025) | 115 (11.2%) | 115 (11.2%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) | 1,025 (100%) |
+| 2. Harness (40,000 bodies): leak bodies / digit-bearing (limit 304 / 4) | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 | 304 / 4 |
+| 3. Provider invites: leaks / agenda lines lost (1,000 bodies, 4,000 lines) | 0 / 40 | 0 / 40 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| 4. Idempotence failures (10 generators x 1,000, harness 40,000) | 0 | 0 | 0 | 0 | 0 | 0 |
+| 5. HIGH 1: 4-digit value directly under the ID line (4 layouts leaking) | 4 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 | 0 of 4 |
 
-Verdicts as of the last commit of this table (A and B):
+Verdicts as of the last commit (A to E):
 
-1. Agenda loss not worse than 2.6.8: **partly met**. One-link contiguous layouts and the trap set: met (1,025 of 1,025; 150 of 200, the same as the scrub). The 32 fixtures: **not met** by 3 lines (83 against 86): two are link-only boilerplate lines D now drops by design (`New to GoTo? ... https://global.example.org/install/`, `Find your local number: https://zoom.example.org/u/abcdefg`), one is the broken_html fixture D empties (an unclosed `<script>` holding a 10-digit number).
-2. Harness: **met** (304 / 4).
-3. Provider invites: **met** (0 leaks, 0 agenda lines lost).
-4. Idempotence: **met**.
-5. HIGH 1: **met**.
+1. Agenda loss not worse than the 2.6.8 scrub: **partly met, not met strictly**. One-link contiguous layouts: met (1,025 of 1,025, the scrub 1,025; it was 115). Agenda trap set: met (150 of 200, the scrub 150). The 32 fixtures: **not met, by 3 lines** (83 of 130 against 86): two are link-only boilerplate lines D now drops by design (`New to GoTo? ... https://global.example.org/install/`, `Find your local number: https://zoom.example.org/u/abcdefg`, the price of making a plain link a line-level anchor: the scrub keeps them), one is `broken_html`, which D empties (an unclosed `<script>` holding a 10-digit number takes the whole block; the scrub keeps `after table text tail`). Not touched by this pass: a `sip:` or `123456789@host` line still takes its block (211 of 4,313 single-anchor keepers lost, 77 bodies).
+2. Harness: **met** (304 leak bodies, 4 digit-bearing, 0 non-idempotent).
+3. Provider invites: **met** (0 leaks of 1,161 secrets, 0 of 4,000 agenda lines lost; was 40).
+4. Idempotence: **met** (0 failures on all 10 generators and the 40,000 harness bodies).
+5. HIGH 1: **met** (fixed by A; 4 of 4 layouts leaked, now 0 of 4).
+
+D meets the ship rule except the strict reading of criterion 1 on the 32-format fixtures (3 boilerplate lines of 130).
+
+## Result of the fix pass (n = 1,000 per generator; C = D; before in brackets)
+
+| Generator | Leaks | Keepers lost | Not idempotent |
+|-----------|------:|-------------:|---------------:|
+| orphans | 5 (363), all a third orphan, by design | 137 (216) | 0 |
+| single_anchor | 0 | 211 (1,031) | 0 |
+| provider_one_line | 0 | 0 (40) | 0 |
+| encodings | 0 | 0 (1,275) | 0 |
+| label_markup | 0 (8) | 0 | 0 |
+| provider_unknown | 0 (35) | 8 | 0 |
+| safelinks, repeated, tz_and_dial | 0 | 0 | 0 |
+| numbered_long | 0 | 1,463 (the 1,500-character cap, finding 11, by design) | 0 |
+
+`looks_like_html` at 1 MB: 0.033 s (was 2.9 s), growth exponent 1.00 (was 1.87) on all six hostile inputs.
+
+Not fixed: finding 11 (the cap, by design); a third orphan (the chain of two is documented); the remaining orphan keeper losses, which come from a divider placeholder opening a region (or a tight block) around an 8-digit value, a pre-existing rule; the Hebrew label (M1, same class as pass 1 finding 1); `A9` (a plain link line is itself dropped); `sip:`/`id@host` lines still take their block; `broken_html` emptied.

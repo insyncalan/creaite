@@ -895,7 +895,7 @@ SEEDS = {name: 7000 + i for i, (name, _) in enumerate(GENERATORS)}
 # and the default seed, re-measured 26-10-2026. They may only go DOWN (fix a finding, lower the number). Isolated data loss likewise.
 # (Measured under option (c) before: leaks localised 283, digit_styles 36, html_split 234, phones 218; loss localised 679, digit_styles 684,
 # agenda_isolated 4660, agenda_list 1015, table_cells 5064, noise 268, phrasing 109. D trades a few more leaked bodies for much less loss.)
-RATCHET_LEAK = {"localised": 51, "digit_styles": 27, "html_split": 0, "phones": 2, "urls": 0, "reply_chain": 1, "agenda_isolated": 0,
+RATCHET_LEAK = {"localised": 14, "digit_styles": 27, "html_split": 0, "phones": 2, "urls": 0, "reply_chain": 1, "agenda_isolated": 0,
                 "agenda_list": 0, "table_cells": 0, "templates": 0, "noise": 67, "phrasing": 52, "innocent": 0}
 # re-pinned after merging v269-b, v269-c (26-10-2026, order b then c). digit_styles loss is 539 against 533 before (6 more, the cost of
 # c's stricter number shapes); every other count is lower.
