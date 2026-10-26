@@ -1,0 +1,11 @@
+# The guarded chain for 2.6.9b: one diff, applied AFTER everything in GUARDED-2.6.9.chain. Nothing is pinned by this file alone.
+# Guarded file: system/scripts/backup.py only.
+# Rev 4's bytes (dev/proposals/bundle/backup-bundle.diff, approved c366014b) are superseded in the same release by rev 5: rev 5 is rev 4 plus this
+# incremental diff, which applies on the backup.py that rev 4 leaves.
+#
+# Bundle rev 5 (sha256 b3fc5d69ece73cf7b67e9d4a416e48776a4cd4c96713c64ff73631b7d6efd05d): the snapshot's temporary repository runs with no background gc or maintenance (gc.auto=0, maintenance.auto=false,
+# gc.autoDetach=false, on every step), and its temporary folder is deleted tolerantly (mkdtemp, try/finally, rmtree with ignore_errors), so a
+# folder that will not delete never discards a good bundle (CI run 40404813380: "Directory not empty" at snap/.git).
+dev/proposals/bundle/backup-bundle-rev5.diff
+#
+# Not guarded (ordinary commits): dev/tests/test_bundle_privacy.py
