@@ -222,6 +222,17 @@ def _loc_project_roots(loc) -> dict:
     return _loc_honoured(loc)[0]
 
 
+def _raw_name_ok(name) -> bool:
+    """A project_paths key that is well formed: a non-empty name with no slash, not . or .., no NUL byte."""
+    return (isinstance(name, str) and bool(name.strip()) and "/" not in name and "\\" not in name
+            and name not in (".", "..") and "\0" not in name)
+
+
+def _raw_value_ok(value) -> bool:
+    """A project_paths value that is well formed: non-empty text without a NUL byte (Cap's LOW 5: a NUL byte raises on every use)."""
+    return isinstance(value, str) and bool(value.strip()) and "\0" not in value
+
+
 def _loc_raw_roots(loc) -> dict:
     """{folder name: Path} from `loc` as written, unchecked: {} when it has no projects_root, and only the well-formed entries
     (a non-empty name without a slash, a non-empty text value). The path is expanded (~) and made absolute (a relative one is
@@ -233,9 +244,7 @@ def _loc_raw_roots(loc) -> dict:
     root = _loc_root(loc)
     out = {}
     for name, value in m.items():
-        if not isinstance(name, str) or not name.strip() or "/" in name or "\\" in name or name in (".", "..") or "\0" in name:
-            continue
-        if not isinstance(value, str) or not value.strip() or "\0" in value:     # Cap's LOW 5: a NUL byte raises on every use
+        if not _raw_name_ok(name) or not _raw_value_ok(value):
             continue
         p = Path(os.path.expanduser(value.strip()))
         out[name] = p if p.is_absolute() else root / p

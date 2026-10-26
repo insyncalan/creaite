@@ -1541,6 +1541,74 @@ def main_recode(args):
     return cmd_recode(rest[0], rest[1], flags["--name"], flags["--folder"], "--dry-run" in args)
 
 
+def _recode_keeps_own_folder(own, old_name, old_folder, folder):
+    """#385: refuse --folder for a project in a folder of its own (the register's folder name keys locations.project_paths)."""
+    if own and folder and paths._fold(folder) != paths._fold(old_folder):
+        # #385: the register's folder name is what locations.project_paths is keyed by, and every stored path starts with it; a
+        # recode never writes settings (BL-141), so changing that name here would leave the project's own folder behind
+        sys.exit(f"{old_name} is in a folder of its own ({paths.project_paths().get(own, '')}), which creaite knows by the register's "
+                 f"folder name “{old_folder}”. A recode keeps that name: run it again without --folder. Its folder on disk may be "
+                 "called anything; if you moved or renamed it, save its new place in the project's settings.")
+
+
+def _recode_mentions_ops(old, new):
+    """The ops that recode the ids in mentions.jsonl: [] when there is no file or nothing changes."""
+    if paths.MENTIONS.is_file():
+        cur = paths.MENTIONS.read_text(encoding="utf-8")
+        out = []
+        for ln in cur.splitlines():
+            try:
+                m = json.loads(ln)
+            except ValueError:
+                out.append(ln)
+                continue
+            if isinstance(m, dict) and isinstance(m.get("id"), str):
+                m["id"] = tracker.recode_id(m["id"], old, new)
+                ln = json.dumps(m, ensure_ascii=False)
+            out.append(ln)
+        fixed = "\n".join(out) + ("\n" if cur.endswith("\n") else "")
+        if fixed != cur:
+            return [{"op": "write", "path": paths.rel(paths.MENTIONS), "content": fixed}]
+    return []
+
+
+def _recode_search_ops(folder, old_folder, ops):
+    """`ops` with the search sidecars moved to the new folder name (only when the folder name changes)."""
+    if folder and old_folder and folder != old_folder and paths.SEARCH_DIR.is_dir():
+        a, b = f"projects/{old_folder}/", f"projects/{folder}/"
+        for f in sorted(paths.SEARCH_DIR.glob("*.json")):
+            try:
+                rec = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                continue
+            if isinstance(rec, dict) and str(rec.get("path", "")).startswith(a):
+                rec["path"] = b + rec["path"][len(a):]
+                target = tracker.sidecar_path(rec["path"])
+                ops += [{"op": "write", "path": paths.rel(target), "content": json.dumps(rec, ensure_ascii=False, indent=1), "previous": None}
+                        if not target.exists() else None, {"op": "remove", "path": paths.rel(f)}]
+        ops = [o for o in ops if o]
+    return ops
+
+
+def _recode_left_notes(old, old_name, new, notes):
+    """Add to `notes` what a recode leaves for Alan to check."""
+    things = [(paths.PEOPLE_REGISTER, "the people register"), (paths.PORTFOLIO_MEMORY, "PORTFOLIO.md")]
+    for p, what in things:
+        try:
+            hits = token_lines(p.read_text(encoding="utf-8"), old, old_name)
+        except OSError:
+            continue
+        if hits:
+            notes.append(f"{what} mentions {old} or “{old_name}” on line(s) {', '.join(map(str, hits[:8]))}: not changed.")
+    dismissed = list((paths.load_settings().get("reminders") or {}).get("dismissed_forever") or [])
+    moved = [re.sub(rf"^(weekly:[^:]+:){re.escape(old)}$", rf"\g<1>{new}", re.sub(rf"^client:{re.escape(old)}:", f"client:{new}:", d)) for d in dismissed]
+    if moved != dismissed:
+        notes.append("Reminders you dismissed for good under the old code will come back. After the apply, keep them dismissed with: "
+                     f"python3 system/scripts/propose.py setting reminders.dismissed_forever '{json.dumps(moved, ensure_ascii=False)}'")
+    notes.append(f"Mail and meetings may still say {old} or “{old_name}”: after the apply, teach the new project the old name with "
+                 f"`propose.py learn {new} alias \"{old_name}\"`.")
+
+
 # cmd_recode: change a project's code (and name) everywhere (BL-111): print the counts, new IDs and files that change, then
 # stage it approved (`dry` only shows it), and list what it leaves for Alan to check. (A comment, not a docstring: the function
 # is at its pinned length in dev/check-baseline.json.)
@@ -1561,12 +1629,7 @@ def cmd_recode(old, new, name, folder, dry):
             old_folder = ""
     notes = []
     own = paths._mapped_name(old_folder) if old_folder else None
-    if own and folder and paths._fold(folder) != paths._fold(old_folder):
-        # #385: the register's folder name is what locations.project_paths is keyed by, and every stored path starts with it; a
-        # recode never writes settings (BL-141), so changing that name here would leave the project's own folder behind
-        sys.exit(f"{old_name} is in a folder of its own ({paths.project_paths().get(own, '')}), which creaite knows by the register's "
-                 f"folder name “{old_folder}”. A recode keeps that name: run it again without --folder. Its folder on disk may be "
-                 "called anything; if you moved or renamed it, save its new place in the project's settings.")
+    _recode_keeps_own_folder(own, old_name, old_folder, folder)
     if folder and not paths.resolve(f"projects/{folder}").is_dir():
         sys.exit(f"The folder “{folder}” doesn't exist. creaite doesn't rename engagement folders: rename it yourself, then run this again with --folder.")
     if not paths.external():              # the default layout reads a project's code from the first word of its folder name
@@ -1596,37 +1659,8 @@ def cmd_recode(old, new, name, folder, dry):
             notes.append(f"{mem_rel} still mentions {old} on line(s) {', '.join(map(str, others[:8]))}: check them.")
     else:
         notes.append(f"{mem_rel} not found; the project's memory file is not changed.")
-    # mentions.jsonl: the ids of items raised again
-    if paths.MENTIONS.is_file():
-        cur = paths.MENTIONS.read_text(encoding="utf-8")
-        out = []
-        for ln in cur.splitlines():
-            try:
-                m = json.loads(ln)
-            except ValueError:
-                out.append(ln)
-                continue
-            if isinstance(m, dict) and isinstance(m.get("id"), str):
-                m["id"] = tracker.recode_id(m["id"], old, new)
-                ln = json.dumps(m, ensure_ascii=False)
-            out.append(ln)
-        fixed = "\n".join(out) + ("\n" if cur.endswith("\n") else "")
-        if fixed != cur:
-            ops.append({"op": "write", "path": paths.rel(paths.MENTIONS), "content": fixed})
-    # search sidecars (named by a hash of the path): only when the folder name changes
-    if folder and old_folder and folder != old_folder and paths.SEARCH_DIR.is_dir():
-        a, b = f"projects/{old_folder}/", f"projects/{folder}/"
-        for f in sorted(paths.SEARCH_DIR.glob("*.json")):
-            try:
-                rec = json.loads(f.read_text(encoding="utf-8"))
-            except ValueError:
-                continue
-            if isinstance(rec, dict) and str(rec.get("path", "")).startswith(a):
-                rec["path"] = b + rec["path"][len(a):]
-                target = tracker.sidecar_path(rec["path"])
-                ops += [{"op": "write", "path": paths.rel(target), "content": json.dumps(rec, ensure_ascii=False, indent=1), "previous": None}
-                        if not target.exists() else None, {"op": "remove", "path": paths.rel(f)}]
-        ops = [o for o in ops if o]
+    ops += _recode_mentions_ops(old, new)
+    ops = _recode_search_ops(folder, old_folder, ops)
     item = {"op": "recode", "table": "projects", "id": old, "changes": {"code": new, **({"name": new_name} if new_name else {})}}
     if folder and old_folder and folder != old_folder:
         item["folder"] = {"from": old_folder, "to": folder}
@@ -1639,22 +1673,7 @@ def cmd_recode(old, new, name, folder, dry):
         code = cmd_preview(f, write=not dry)
     finally:
         f.unlink(missing_ok=True)
-    # what creaite leaves for Alan to check
-    things = [(paths.PEOPLE_REGISTER, "the people register"), (paths.PORTFOLIO_MEMORY, "PORTFOLIO.md")]
-    for p, what in things:
-        try:
-            hits = token_lines(p.read_text(encoding="utf-8"), old, old_name)
-        except OSError:
-            continue
-        if hits:
-            notes.append(f"{what} mentions {old} or “{old_name}” on line(s) {', '.join(map(str, hits[:8]))}: not changed.")
-    dismissed = list((paths.load_settings().get("reminders") or {}).get("dismissed_forever") or [])
-    moved = [re.sub(rf"^(weekly:[^:]+:){re.escape(old)}$", rf"\g<1>{new}", re.sub(rf"^client:{re.escape(old)}:", f"client:{new}:", d)) for d in dismissed]
-    if moved != dismissed:
-        notes.append("Reminders you dismissed for good under the old code will come back. After the apply, keep them dismissed with: "
-                     f"python3 system/scripts/propose.py setting reminders.dismissed_forever '{json.dumps(moved, ensure_ascii=False)}'")
-    notes.append(f"Mail and meetings may still say {old} or “{old_name}”: after the apply, teach the new project the old name with "
-                 f"`propose.py learn {new} alias \"{old_name}\"`.")
+    _recode_left_notes(old, old_name, new, notes)
     for n in notes:
         print("Check: " + n)
     return code

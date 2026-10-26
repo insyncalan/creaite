@@ -638,7 +638,7 @@ try:
     print(json.dumps(reach.classify({str(self.own / 'CLAUDE.md')!r}, 'read')[0]))
 except ValueError as e:
     print(json.dumps(str(e)))"""
-        good, bad = self.both(code, paths_mutant(' or "\\0" in value:     # Cap\'s LOW 5', ":     # Cap's LOW 5"))
+        good, bad = self.both(code, paths_mutant(' and "\\0" not in value\n', "\n"))
         self.assertEqual(good, "ordinary")
         self.assertIn("null byte", bad)                                       # mutant: every check raises
 

@@ -357,6 +357,24 @@ def outside_projects(spec, own_dirs):
     return not any(spec.startswith(r + "/") or spec.startswith("//" + r.lstrip("/") + "/") for r in inside)
 
 
+def projects_unreadable(permissions, root, dirs):
+    """#385: (None, what Claude Code can't read from a Terminal session yet) for the projects folder and each project's own
+    folder; None when all can be read."""
+    unread = [root] if paths.external() and root not in dirs else []
+    own = [str(v).rstrip("/") for k, v in paths.project_paths().items()       # #385: each project's own folder, by either form
+           if str(v).rstrip("/") not in dirs and str(paths.project_roots()[k]).rstrip("/") not in dirs]
+    if unread or own:
+        cmd = "python3 system/scripts/permissions.py projects-root --why \"read the project documents\""
+        if hasattr(permissions, "project_dirs") or not own:             # the command adds every folder (the #385 permissions diff)
+            return None, (f"Claude Code can't read {', '.join(unread + own)} from a Terminal session yet: {cmd} adds "
+                          f"{'them' if len(unread + own) > 1 else 'it'} (the dashboard's ask creaite doesn't need it)")
+        said = [f"Claude Code can't read {root} from a Terminal session yet: {cmd} adds it"] if unread else []
+        said.append(f"a project's own folder ({', '.join(own)}) can't be read from a Terminal session yet, and this version of "
+                    "creaite can't add it for you; a later update lets the same command add it")
+        return None, "; ".join(said) + " (the dashboard's ask creaite doesn't need it)"
+    return None
+
+
 def assistant_permissions():
     """BL-93, BL-96: flag a rule in .claude/settings.json broader than creaite's own (F3: and a connector or acting built-in
     allowed in settings.local.json or ~/.claude/settings.json), and a missing projects-root folder."""
@@ -398,18 +416,9 @@ def assistant_permissions():
     if broad:
         return None, ("broader than creaite asks for: " + "; ".join(broad[:5]) + (f" (+{len(broad) - 5} more)" if len(broad) > 5 else "")
                       + ". Review them with python3 system/scripts/permissions.py list; undo the ones creaite added with permissions.py undo.")
-    unread = [root] if paths.external() and root not in dirs else []
-    own = [str(v).rstrip("/") for k, v in paths.project_paths().items()       # #385: each project's own folder, by either form
-           if str(v).rstrip("/") not in dirs and str(paths.project_roots()[k]).rstrip("/") not in dirs]
-    if unread or own:
-        cmd = "python3 system/scripts/permissions.py projects-root --why \"read the project documents\""
-        if hasattr(permissions, "project_dirs") or not own:             # the command adds every folder (the #385 permissions diff)
-            return None, (f"Claude Code can't read {', '.join(unread + own)} from a Terminal session yet: {cmd} adds "
-                          f"{'them' if len(unread + own) > 1 else 'it'} (the dashboard's ask creaite doesn't need it)")
-        said = [f"Claude Code can't read {root} from a Terminal session yet: {cmd} adds it"] if unread else []
-        said.append(f"a project's own folder ({', '.join(own)}) can't be read from a Terminal session yet, and this version of "
-                    "creaite can't add it for you; a later update lets the same command add it")
-        return None, "; ".join(said) + " (the dashboard's ask creaite doesn't need it)"
+    unreadable = projects_unreadable(permissions, root, dirs)
+    if unreadable:
+        return unreadable
     return True, "the assistant's rules are as narrow as creaite sets them" + (", with the projects folder readable" if paths.external() else "")
 
 

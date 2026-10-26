@@ -470,7 +470,7 @@ class Mutants(MappedCase):
         self.assertEqual(self.bad_roots(), [ABC])
 
     def test_read_time_drop_off_in_loc_project_roots(self):
-        self.mutate("    return _loc_honoured(loc)[0]\n\n\ndef _loc_raw_roots", "    return _loc_raw_roots(loc)\n\n\ndef _loc_raw_roots")
+        self.mutate("    return _loc_honoured(loc)[0]\n\n\ndef _raw_name_ok", "    return _loc_raw_roots(loc)\n\n\ndef _raw_name_ok")
         self.assertEqual(self.bad_roots(), sorted([ABC, "Vale Programme", "99 Archive"]))
 
     def test_home_parent_refusal_off(self):
