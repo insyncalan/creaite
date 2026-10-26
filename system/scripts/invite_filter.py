@@ -592,12 +592,6 @@ _LINK_TOKEN = re.compile(r"(?=[a-z0-9_\-]*\d)[a-z0-9_\-]{16,}")
 
 
 _LINK_MEET = re.compile(r"(?<![a-z0-9])[a-z]{3}-[a-z]{4}-[a-z]{3}(?![a-z0-9])")       # a Google Meet code: abc-defg-hij
-
-
-def _plain_link(s):
-    """Is the line's only anchor a link that carries no session: no digit run, no passcode-like query, no meeting-join path and no long
-    mixed token? (The caller has already found it holds an anchor.)"""
-    if _DIAL.search(s) or _digit_run(s) or _address_pin(s) or not (_URL.search(s) or _HOSTPATH.search(s)):
 _MEET_HOST = re.compile(r"(?<![\w-])meet\.[a-z0-9-]+\.[a-z]{2,}", re.I)
 
 
@@ -608,6 +602,12 @@ def _meet_link(tok):
         return False
     mod = _scrub_module()
     return bool(_MEET_HOST.search(tok) or (mod is not None and mod.HOSTS.search(tok)))
+
+
+def _plain_link(s):
+    """Is the line's only anchor a link that carries no session: no digit run, no passcode-like query, no meeting-join path and no long
+    mixed token? (The caller has already found it holds an anchor.)"""
+    if _DIAL.search(s) or _digit_run(s) or _address_pin(s) or not (_URL.search(s) or _HOSTPATH.search(s)):
         return False
     for tok in s.split():
         if _URL.search(tok) or _HOSTPATH.search(tok):
@@ -1100,12 +1100,6 @@ def _line_breaks(text):
 _BREAKS = ("\x0b", "\x0c", "\x85", "\u2028", "\u2029")
 
 
-def _original_pieces(text, scrub):
-    """Cap review of group C: the scrub also runs on the plain-text body AS WRITTEN, where a break inside a label's window keeps the
-    label and the line after it together ('Zoom passcode:' / 'Decisions <NEL>log' / 'mupiwoc'). Returns a Counter of the keys of the
-    pieces to drop from the normalised pass: the pieces of a line (or a line) that the original pass dropped when none of its
-    pieces drops on its own (a piece that does, 'Passcode: 8825', explains the original drop and the rest stays).
-    None when the body has no extra break or is HTML."""
 def _own_value_drop(scrub, piece):
     """A piece that drops on its own AND carries its own value ('Passcode: 8825'). A bare label ('Passcode:', 'Meeting ID') drops alone
     too, but its value is in a sibling piece, so it explains nothing (Cap re-check 2, HIGH 1). Known gap, stated: a word-only value after
@@ -1113,6 +1107,12 @@ def _own_value_drop(scrub, piece):
     return not scrub.invite_text(piece).strip() and not _ends_with_label(_skeleton(piece)) and not _label_only(piece)
 
 
+def _original_pieces(text, scrub):
+    """Cap review of group C: the scrub also runs on the plain-text body AS WRITTEN, where a break inside a label's window keeps the
+    label and the line after it together ('Zoom passcode:' / 'Decisions <NEL>log' / 'mupiwoc'). Returns a Counter of the keys of the
+    pieces to drop from the normalised pass: the pieces of a line (or a line) that the original pass dropped when none of its
+    pieces drops on its own (a piece that does, 'Passcode: 8825', explains the original drop and the rest stays).
+    None when the body has no extra break or is HTML."""
     mod = _blocks_module()
     if not any(b in text for b in _BREAKS) or (mod is not None and mod.looks_like_html(text)):
         return None
@@ -1146,17 +1146,17 @@ def _union_drops(lines, pieces):
     return out
 
 
+def _is_html(text):
+    mod = _blocks_module()
+    return mod is not None and mod.looks_like_html(text)
+
+
 def _raw_first(text):
     """Composition D: the scrub on the raw body, the block boundaries it removed put back for the anchor layer, the orphan and sentence
     rules, the extended label pass (repeated until nothing changes, so the result is stable), then the CAP."""
     scrub = _scrub_module()
     if scrub is None:
         return ""
-def _is_html(text):
-    mod = _blocks_module()
-    return mod is not None and mod.looks_like_html(text)
-
-
     asked = text[:BODY_MAX * 5]
     html = _is_html(asked)
     raw = asked if html else _line_breaks(asked)      # HTML keeps its breaks as written: the scrub and invite_blocks treat them as white space
