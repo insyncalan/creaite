@@ -221,6 +221,15 @@ export function Health() {
               </ul>
             </>
           )}
+          {(res.archived || []).length > 0 && (
+            <>
+              {/* #385 (Alan, 26-10-2026): every archived project in one place, with where its folder is now */}
+              <h3 class="hsub">Archived projects</h3>
+              <ul class="hsteps" id="healthArchived" aria-label="Archived projects">
+                {(res.archived || []).map(a => <li>{a}</li>)}
+              </ul>
+            </>
+          )}
           {alone.length > 0 && (
             <>
               <h3 class="hsub">If you need them</h3>

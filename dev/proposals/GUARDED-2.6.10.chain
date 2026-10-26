@@ -1,0 +1,19 @@
+# The guarded chain for 2.6.10. NOT pinned: dev/tests/guarded_chain.py does not know this chain, and it has no marked commit yet. A pin is added only on Alan's say. One diff per line, in landing order.
+# Base: the 2.6.9 candidate (v269-release, bd3322f3), whose live_server.py and backup.py already carry the 2.6.9 chain (G1 #382, G2 #371, bundle). git apply --check is clean for the four #385 diffs on that base, alone and in all 24 orders.
+# Approved by Alan on 27-10-2026 ("AM: approve the #385 diffs", recorded on #385). The bytes are frozen: any change needs Alan again.
+# All four use phase 2's paths.py API (project_roots, _mapping, archive_slot, parts_below_base, in_mapped_notes, tool_patterns, project_paths_problem, project_mapping_problem, _loc_project_roots), which the ordinary commits carry.
+#
+# #385 tracker (sha256 0dfd7d913534bbf4c1b4237aeefca9659193e28174c657f090a6c7c43379a6be): tracker.py safe_path looks for skipped names under every base (the projects root and each mapped project folder, compared as macOS compares names) and refuses any path, for every purpose, under a mapped folder or projects root that is missing; _copy_bases adds each mapped folder; _named_notes uses in_mapped_notes; check_move adds _outside_end_problem (an end outside allowed_roots only for an archive or restore going exactly to or from a mapped folder's slot); an undo of a write or remove into a missing base skips and says so.
+dev/proposals/385/385-tracker.diff
+# #385 reach (sha256 112a19b0082f4f6b632e8a96017a2c8195b325e5a7cf3d927a1c71104fba208c): reach.py roots() adds one "projects" root per mapped folder (never its parent, its slot or an archived entry); the never verdict checks skipped names under every base and refuses the archive folder beside a mapped project; archive_move_problem measures moves from the folder or exactly its slot; _portfolio_folder never treats a mapped name as the portfolio; grep marking includes each mapped folder.
+dev/proposals/385/385-reach.diff
+# #385 permissions (sha256 e0a3cef7e9131135d62475503a99ead2e122de0825c4e25c18cc747512920b2c): permissions.py _config_problem calls paths.project_paths_problem; project_dirs() (projects root plus each registered mapped folder, under ~, inside home only, never the home folder or a never-list place) feeds _add_refused, broad_rule and cmd_projects_root; additionalDirectories follow project_paths (dirs_for_locations, sync_project_dirs); card_dirs_problem refuses a settings.json change on a locations card that adds any other folder; log entries numbered with next_id().
+dev/proposals/385/385-permissions.diff
+# #385 live_server (sha256 9f83a7c628145879e2ac3f11996e43acbd3fbbc8a6da92100496ea8a730f2edc): live_server.py extra_dirs adds reach.mapped_roots(); deny_tools uses paths.tool_patterns; card_dirs puts the matching .claude/settings.json change on the same card (refused together if card_dirs_problem says so); a page save calls project_dirs_follow in the same save and answers ok:false with a plain message when the second write fails; the expect_text save of settings.json gets the notes-folder check and the matching additionalDirectories.
+dev/proposals/385/385-live_server.diff
+# Pending approval (placeholders, not files yet):
+# PENDING #250 G3 revision 3 (live_server.py, from Banner): pending approval
+# PENDING #250 G4 revision 3 (system/creaite-rules.md, from Banner): pending approval
+# PENDING #370 slice 3 (guarded diff): pending approval
+#
+# Not guarded (ordinary commits): system/scripts/paths.py (project_paths mapping and its checks), doctor.py, health.py, build_dashboard.py, minutes.py, prep_page.py, propose.py, settings_catalogue.py, settings-defaults.json, the dashboard sources and dashboard.html, cx-edit and cx-setup skills, dev/tests/test_project_paths_385*.py, dev/proposals/385/README.md

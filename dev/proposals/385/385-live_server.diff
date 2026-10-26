@@ -1,0 +1,141 @@
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index c973a34f..3b100b8f 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -560,13 +560,15 @@ TRANSCRIPT_CHAT = (
+ 
+ def deny_tools():
+     """DENY_TOOLS plus, for the folders creaite never reads or writes (99 Archive, _Archive, _Templates), a deny on every way in (BL-93)."""
+-    extra = [f"{t}({paths.tool_pattern(g)})" for g in paths.never_index_patterns() for t in ("Read", "Edit", "Write")]
++    extra = [f"{t}({pat})" for g in paths.never_index_patterns() for pat in paths.tool_patterns(g)   # #385: in a project's
++             for t in ("Read", "Edit", "Write")]                                                    # own folder too
+     return DENY_TOOLS + extra
+ 
+ 
+ def extra_dirs():
+-    """Folders outside the vault the run may read: the projects root when it is outside (BL-85, BL-93). Nothing else."""
+-    return [str(paths.projects_root())] if paths.external() else []
++    """Folders outside the vault the run may read: the projects root when it is outside (BL-85, BL-93) and (#385) each project's
++    own folder (reach.mapped_roots, as the guard hook's reach has them). Nothing else."""
++    return [str(paths.projects_root())] + [str(p) for p in reach.mapped_roots()] if paths.external() else []
+ 
+ 
+ def claude_path():
+@@ -1343,6 +1345,7 @@ class Handler(BaseHTTPRequestHandler):
+         clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
+         if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
+             return self.send(200, {"ok": False, "message": clash})
++        before_loc = paths.locations() if op == "write" and p == paths.SETTINGS else None     # #385
+         p.parent.mkdir(parents=True, exist_ok=True)
+         if op == "append":
+             with open(p, "a", encoding="utf-8") as f:
+@@ -1353,6 +1356,9 @@ class Handler(BaseHTTPRequestHandler):
+             import minutes_record                                                            # moves its minutes record's row too
+             with LOCK:
+                 minutes_record.follow(p)
++        if before_loc is not None:                 # #385: the matching additionalDirectories, in this same save
++            follow = project_dirs_follow(before_loc)
++            return self.send(200, {"ok": "message" not in follow, **follow})     # Cap's LOW 8: a failed second write says so
+         return self.send(200, {"ok": True})
+ 
+     def fs_read(self, p, rel):
+@@ -1364,7 +1370,12 @@ class Handler(BaseHTTPRequestHandler):
+         return self.send(200, {"ok": True, "text": text})
+ 
+     def fs_write_if_unchanged(self, p, rel, req, expect):
+-        """The write op with expect_text (#233 L5): a file that changed since the page read it is never written over."""
++        """The write op with expect_text (#233 L5): a file that changed since the page read it is never written over. #385 (Cap's
++        LOW 6): settings.json gets fs_save's checks and its matching additionalDirectories, as a plain write does."""
++        clash = settings_notes_clash(p, req.get("text", "")) if p == paths.SETTINGS else None
++        if clash:
++            return self.send(200, {"ok": False, "message": clash})
++        before_loc = paths.locations() if p == paths.SETTINGS else None
+         with LOCK:
+             with open(p, encoding="utf-8", newline="") as fh:
+                 changed = fh.read() != expect
+@@ -1372,6 +1383,9 @@ class Handler(BaseHTTPRequestHandler):
+                 paths.write_text_atomic(p, req.get("text", ""))
+         if changed:
+             return self.send(409, {"ok": False, "message": f"{rel} changed since it was read, so nothing was saved; try again"})
++        if before_loc is not None:                 # #385 (Cap's LOW 6): the matching additionalDirectories, in this same save
++            follow = project_dirs_follow(before_loc)
++            return self.send(200, {"ok": "message" not in follow, **follow})
+         return self.send(200, {"ok": True})
+ 
+     def fs_upload(self, p, req):
+@@ -5294,6 +5308,7 @@ def build_card(run, rule_item=None):
+             items.append(item)
+         else:
+             refused.append(why_not)
++    n = card_dirs(items, refused, n, run.was_marked)     # #385: settings.json's project folders and their permission, one card
+     if not items and not refused:
+         return None
+     card = None
+@@ -5514,6 +5529,67 @@ def edit_stage(c, how):
+     return (Path(m.group(1)).name, None) if code == 0 and m else (None, out.strip() or "propose.py stage failed")
+ 
+ 
++def project_dirs_follow(before_loc):
++    """#385 (Cap's LOW 4): after the page saved settings.json, the matching additionalDirectories in .claude/settings.json
++    (permissions.sync_project_dirs: a project's own folder added or taken out, backed up and logged), so the two never drift
++    apart. {} when nothing changed; {"dirs": [...]} when folders changed; {"message": why} when the second write failed."""
++    try:
++        changed = vault_permissions.sync_project_dirs(before_loc, paths.locations(), "dashboard")
++    except (OSError, ValueError, SystemExit) as e:
++        return {"message": f"Saved, but the folders Claude Code may read weren't updated to match ({type(e).__name__}). "
++                           "Settings › Health says how to put it right."}
++    return {"dirs": changed} if changed else {}
++
++
++def card_dirs(items, refused, n, marked):
++    """#385 (Cap's LOW 4): a card item changing locations in system/config/settings.json gets the matching additionalDirectories in
++    .claude/settings.json on the same card (permissions.dirs_for_locations), merged into the card's own change to that file when
++    it has one: Approve makes both or, when the second is refused, neither is offered. The next free item number."""
++    import filechange
++    def edits(target):
++        real = os.path.realpath(target)
++        return next((it for it in items if it["op"] in ("create", "edit")
++                     and os.path.realpath(filechange.resolve(it["path"])) == real), None)
++    cfg = edits(paths.SETTINGS)
++    if cfg is None:
++        return n
++    try:
++        before = json.loads(paths.SETTINGS.read_text(encoding="utf-8")) if paths.SETTINGS.is_file() else {}
++        after = json.loads(cfg["_change"]["data"].decode("utf-8"))
++        own = edits(paths.CLAUDE_SETTINGS)
++        base = json.loads(own["_change"]["data"].decode("utf-8") if own else paths.CLAUDE_SETTINGS.read_text(encoding="utf-8"))
++        new = vault_permissions.dirs_for_locations(base, before.get("locations") or {}, after.get("locations") or {})
++        current = json.loads(paths.CLAUDE_SETTINGS.read_text(encoding="utf-8")) if paths.CLAUDE_SETTINGS.is_file() else {}
++        wider = (vault_permissions.card_dirs_problem(current, base if new is None else new, after.get("locations") or {})
++                 if (before.get("locations") or {}) != (after.get("locations") or {}) else None)
++    except (OSError, ValueError, AttributeError, TypeError) as e:
++        items.remove(cfg)
++        refused.append(f"{cfg['path']}: its matching .claude/settings.json folders couldn't be worked out ({type(e).__name__})")
++        return n
++    if wider:                                     # Cap's Full review, MEDIUM 4: never a folder riding along with the card's
++        for it in (cfg, own):
++            if it is not None:
++                items.remove(it)
++        refused.append(f"{cfg['path']}: {wider}")
++        return n
++    if new is None:
++        return n
++    data = (json.dumps(new, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
++    if own is None:
++        n += 1
++    item, why_not = card_item(int(own["id"][1:]) if own else n, "edit", ".claude/settings.json", None,
++                              "the matching folder for a project's own folder (locations.project_paths)", data, marked)
++    if item is None:
++        items.remove(cfg)
++        refused += [f"{cfg['path']}: its matching .claude/settings.json change is refused", why_not]
++        return n
++    if own is not None:
++        items[items.index(own)] = dict(item, title=own["title"], reason=own["reason"], **{k: own[k] for k in ("rule",) if k in own})
++    else:
++        items.append(item)
++    return n
++
++
+ def settings_notes_clash(p, text):
+     """#128: why the page's settings.json `text` can't be saved (paths.locations_change_problem: a notes folder shared with
+     another kind, a notes folder renamed while notes are under the old name, a skeleton that isn't a template folder; L3: text

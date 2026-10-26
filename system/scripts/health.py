@@ -58,6 +58,7 @@ PLAIN = {
     "writable": ("creaite can't write to its own folders", "manual"),
     "projects_root": ("The projects folder can't be reached", "manual"),
     "project_folders_present": ("Some project folders are missing", "manual"),
+    "project_paths_present": ("A project's own folder can't be reached", "manual"),      # #385
     "mapped_folders": ("Some folders creaite files into are missing or read-only", "manual"),
     "assistant_permissions": ("ask creaite's permissions are broader than creaite asks for", "permissions"),
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
@@ -202,6 +203,49 @@ def problem(c):
             "dismissable": not keep, "keep_why": KEEP_WHY if keep else ""}
 
 
+def archived_projects():
+    """#385 (Alan, 26-10-2026: archived projects are listed in one place): [{code, name, where, own, there}] for every archived
+    project, where its folder is now: in the projects folder's 99 Archive, or (a project in a folder of its own) in the 99 Archive
+    beside that folder, which its settings entry, kept on archive, still names. Read only; [] when the record can't be read."""
+    import sqlite3
+    try:
+        import tracker
+        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    except (ImportError, sqlite3.Error):
+        return []
+    out = []
+    try:
+        for code, name in con.execute("SELECT code, name FROM main.projects WHERE archived = 1 ORDER BY code").fetchall():
+            last = tracker.last_archive(con, code) or {}
+            to = str(((last.get("folder") or {}).get("to")) or "")
+            if not to:
+                out.append({"code": code, "name": name, "where": "", "own": False, "there": False})
+                continue
+            stored = paths.follow_stored(to)
+            real = paths.resolve(stored, archived=False)
+            folder = str((last.get("folder") or {}).get("from") or "").split("/", 1)[-1]
+            out.append({"code": code, "name": name, "where": home_short(real), "own": paths.archive_slot(folder) is not None,
+                        "there": real.is_dir()})
+    except sqlite3.Error:
+        return out
+    finally:
+        con.close()
+    return out
+
+
+def archived_lines(rows=None):
+    """#385: archived_projects as Health's lines, in plain words."""
+    rows = archived_projects() if rows is None else rows
+    out = []
+    for r in rows:
+        if not r["where"]:
+            out.append(f"{r['name']}: where it was archived to isn't in the history")
+            continue
+        out.append(f"{r['name']}: {r['where']}" + (" (beside its own folder)" if r["own"] else "")
+                   + ("" if r["there"] else ". It isn't there now: was it moved by hand, or is OneDrive not running?"))
+    return out
+
+
 def health(result=None, dismissed=None):
     """{problems, dismissed, fine, fine_names, stopped, checked}: doctor's warnings and failures in plain words, each with its
     fix; the rest counted. `result` is a doctor --json result (the tests pass one), else doctor runs now; `dismissed` is a
@@ -221,6 +265,6 @@ def health(result=None, dismissed=None):
     backups = [f"{c.get('name', '')}: {home_short(c.get('detail', ''))}" for c in result.get("checks") or []   # BL-323
                if c.get("id") in BACKUP_LINES and c.get("status") == "pass"]
     return {"problems": problems, "dismissed": gone, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(),
-            "archiving": archiving, "backups": backups,
+            "archiving": archiving, "backups": backups, "archived": archived_lines(),
             "standalone": [built_fix(f) for f in health_fixes.STANDALONE],
             "read_only": bool(result.get("read_only")), "checked": datetime.now().strftime("%Y-%m-%d %H:%M")}

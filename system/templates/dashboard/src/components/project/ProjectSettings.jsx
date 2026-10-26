@@ -32,7 +32,7 @@ import {
 import { pName } from "../../core/data.js";
 import {
   PARTNER_NAME_MAX, PS_CATS, addPartner, loadPartners, nameProblem, partners, projectPeople, psCat, psCode, psProject, psQ, psTick,
-  removePartner, renamePartner, renameProject, setProjectActive, projectState,
+  removePartner, renamePartner, renameProject, setProjectActive, projectState, folderPlace, ownFoldersOn, ownPathProblem, setOwnFolder,
 } from "../../stores/projectSettings.js";
 
 /** the search text and whether the category's own name matched (so the whole category shows) */
@@ -88,7 +88,8 @@ const PsProblem = ({ msg, id }) => msg ? <span class="psmsg" role="alert" id={id
 
 /** @param {{code: string}} props */
 function General({ code }) {
-  const p = psProject(code), [err, setErr] = useState(""), folder = (D.folders || {})[code];
+  psTick.value;
+  const p = psProject(code), [err, setErr] = useState(""), folder = (D.folders || {})[code], place = folderPlace(code);
   const state = projectState(code);
   return (
     <div class="card" data-pscard data-cat="general"><h2>Project</h2>
@@ -123,11 +124,39 @@ function General({ code }) {
           <option value="closed" selected={state === "closed"}>Closed</option>
         </select>
       </PsRow>
-      <PsRow label="Folder" help="Where its minutes, transcripts and reports live." kw="files location">
-        <span class="sub" id="psFolder">{folder ? `projects/${folder}` : "No folder yet"}</span>
-        <button type="button" class="mini" id="psOpenFolder" disabled={!folder} onClick={() => openPath(`projects/${folder}`)}>Open folder</button>
+      <PsRow label="Folder" help="Where its minutes, transcripts and reports live." kw="files location onedrive">
+        <span class="sub" id="psFolder">{!folder ? "No folder yet" : place.where || `projects/${folder}`}</span>
+        <button type="button" class="mini" id="psOpenFolder" disabled={!folder || place.missing} onClick={() => openPath(`projects/${folder}`)}>Open folder</button>
       </PsRow>
+      {folder && ownFoldersOn() ? <OwnFolder code={code} archived={state === "archived"} /> : null}
     </div>
+  );
+}
+
+/** #385: the project's folder of its own (locations.project_paths), set or put back here; saved through the settings save, checked
+    by the server. Nothing is moved. @param {{code: string, archived: boolean}} props */
+function OwnFolder({ code, archived }) {
+  psTick.value;
+  const place = folderPlace(code), [err, setErr] = useState(""), [busy, setBusy] = useState(false);
+  const box = useRef(/** @type {HTMLInputElement|null} */ (null));
+  const run = async (/** @type {string} */ v) => {
+    if (v !== "") { const bad = ownPathProblem(v); if (bad) { setErr(bad); return; } }
+    setBusy(true); const bad = await setOwnFolder(code, v); setBusy(false); setErr(bad);
+  };
+  const state = place.dropped ? `Not used: ${place.dropped.why}` : place.missing ? "Can't be reached now: is OneDrive running, or the drive connected? Nothing is lost." : "";
+  return (
+    <PsRow label="Its own folder" kw="own folder location onedrive library move elsewhere project_paths" id="psOwnL"
+      help={archived ? "An archived project keeps its place here, so restoring it finds its folder."
+        : "For a project kept somewhere else in your home folder (another OneDrive library, say). Move the folder there yourself first, then give its place, written with ~. Empty: it is in the projects folder."}>
+      <input type="text" id="psOwn" size={34} aria-label="Its own folder" aria-describedby="psOwnErr psOwnState" key={place.own} defaultValue={place.own}
+        placeholder="~/Library/CloudStorage/…" disabled={archived || busy || !viaServer()} ref={box}
+        onInput={() => err && setErr("")}
+        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); run(/** @type {HTMLInputElement} */ (e.target).value); } }} />
+      <button type="button" class="mini" id="psOwnSave" disabled={archived || busy || !viaServer()} onClick={() => run(box.current ? box.current.value : "")}>Save</button>
+      {place.own ? <button type="button" class="mini" id="psOwnClear" disabled={archived || busy || !viaServer()} onClick={() => run("")}>Back to the projects folder</button> : null}
+      <PsProblem msg={err} id="psOwnErr" />
+      {state ? <span class="sub" id="psOwnState" role="status">{state}</span> : null}
+    </PsRow>
   );
 }
 

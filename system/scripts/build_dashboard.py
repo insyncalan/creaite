@@ -563,6 +563,21 @@ def _file_digest(f):
         return None
 
 
+def filed_transcripts():
+    """Every transcript filed in a project's (or the portfolio's) transcripts folder, wherever the project lives: the folder
+    each project maps (locations.folders.transcripts, in its own folder when it has one, #385), never an online-only file
+    (comparing it would download it). Was projects/*/transcripts/*, which missed a projects folder in OneDrive."""
+    out = []
+    for code, _ in paths.project_folders():
+        try:
+            d = paths.folder(code, "transcripts")
+        except (LookupError, KeyError, OSError):
+            continue                    # a project with no transcripts folder mapped: nothing filed there to compare
+        if d.is_dir():
+            out += [f for f in sorted(d.iterdir()) if f.is_file() and not f.name.startswith(".") and not paths.is_online_only(f)]
+    return out
+
+
 def inbox(projects):
     """Files waiting in inbox/ for the Inbox view (BL-42): type, size, likely project and state (and, #232-A1, `ft`: file_kind)."""
     if not paths.INBOX.is_dir():
@@ -575,9 +590,8 @@ def inbox(projects):
         if m.get("transcript") and not m.get("applied"):
             drafts[m["transcript"]] = p.name
     filed = {}
-    for f in paths.PROJECTS.glob("*/transcripts/*"):
-        if f.is_file():
-            filed.setdefault(f.stat().st_size, []).append(f)
+    for f in filed_transcripts():
+        filed.setdefault(f.stat().st_size, []).append(f)
     out = []
     for f in sorted(paths.INBOX.iterdir()):
         if not f.is_file() or f.name.startswith(".") or f.suffix.lower() not in INBOX_TYPES:
@@ -1886,6 +1900,36 @@ def ro_db():
     return tracker.hide_archived(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True))
 
 
+def folder_data(folders):
+    """#385: the page's `folders` ({code: the folder name stored paths use}, wherever the folder lives) and `own_folders`."""
+    return {"folders": {c: paths.stored_folder(c, f) for c, f in folders.items()}, "own_folders": own_folders(folders)}
+
+
+def own_folders(folders):
+    """#385: {where, paths, missing, dropped, archived, since} for the page. where: {code: the project's real folder, written with ~} when the
+    projects are outside the vault (Project settings' Folder row, as #374 shows it); paths: {code: its own folder as saved} for a
+    project in a folder of its own (locations.project_paths); missing: [{code, path}] for one of those that can't be reached now
+    (Today's line; nothing is ever created); dropped: [{folder, path, why}] for an entry not used because it breaks the rules;
+    archived: the folder names of archived projects whose entry is kept; since: the first release that reads the setting
+    (Settings › Undo update warns before going back further)."""
+    out = {"where": {}, "paths": {}, "missing": [], "dropped": [], "archived": [], "since": paths.PROJECT_PATHS_SINCE}
+    if not paths.external():
+        return out
+    import locations
+    saved, by_name = paths.project_paths(), {v: k for k, v in paths.register_folders().items()}
+    for c, f in folders.items():
+        out["where"][c] = locations.tilde(f)
+    for name, value in saved.items():
+        code = next((c for n, c in by_name.items() if paths._fold(n) == paths._fold(name)), None)
+        if code:
+            out["paths"][code] = value
+    out["archived"] = sorted(k for k in paths.mapped_project_paths() if k not in saved)    # kept on archive (folder names)
+    out["missing"] = [{"code": m["code"], "path": m["path"]} for m in paths.missing_project_paths()]
+    out["dropped"] = [dict(d, code=next((c for n, c in by_name.items() if paths._fold(n) == paths._fold(d["folder"])), None))
+                      for d in paths.dropped_project_paths()]
+    return out
+
+
 def project_states(con):
     """[{code, name, state}] for Settings › Projects (BL-09): every project, archived ones included (main.projects is the table
     itself, never the view that hides them). state is active, closed or archived."""
@@ -1984,7 +2028,7 @@ def collect(now=None, timings=None):
         "files_archived": archived_files(folders),            # BL-331: Files' Archived, each with Move back
         "notes": notes_data(folders),                          # BL-301 B: each project's notes (front matter and references, no text)
         "note_templates": note_templates(),                    # BL-301 B: the templates' bodies, for the editor's / menu
-        "folders": {c: f.name for c, f in folders.items()},
+        **folder_data(folders),                                # #385: folders (the stored names) and own_folders
         "image_dirs": {c: paths.rel(paths.folder(c, "images")) for c in folders},     # BL-85: where the editor files new pictures
         "stakeholders": stakeholders(),
         "inbox": timed("inbox", lambda: inbox(projects)),

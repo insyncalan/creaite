@@ -668,7 +668,16 @@ def archive_spec(code, cancel_open=False):
                  + ". Cancel them all and archive (--cancel-open), or stop.")
     folder = paths.project_dir(code)
     src = paths.rel(folder)
-    dst = f"projects/{paths.ARCHIVE}/{free_folder([paths.archive_dir(), *paths.archive_dirs(paths.projects_root())], folder.name)}"
+    named = paths.register_folders().get(code)
+    slot = paths.archive_slot(named) if named and paths.project_roots() else None
+    if slot is not None:            # #385: a project in a folder of its own archives beside it, to exactly its slot (Alan, 26-10-2026)
+        taken = [d / slot.name for d in [slot.parent, *paths.archive_dirs(slot.parent.parent)] if os.path.lexists(d / slot.name)]
+        if taken:                   # a numbered name would not lead back to the project's own folder: never one
+            sys.exit(f"{tracker.project_label(code)} can't be archived: there is already a folder called {slot.name} in "
+                     f"{taken[0].parent.name} beside its folder. Rename or move that one first.")
+        dst = f"projects/{paths.ARCHIVE}/{slot.name}"
+    else:
+        dst = f"projects/{paths.ARCHIVE}/{free_folder([paths.archive_dir(), *paths.archive_dirs(paths.projects_root())], folder.name)}"
     reg, old_row = archive_register(paths.REGISTER.read_text(encoding="utf-8"), code, row["name"])
     items = []
     for o in still:
@@ -694,7 +703,15 @@ def restore_spec(code):
     src, orig = paths.follow_stored(last["folder"]["to"]), last["folder"]["from"]     # #252: followed if renamed by hand
     if not paths.resolve(src, archived=False).is_dir():
         sys.exit(f"{src} isn't there any more, so {code} can't be restored.")
-    name = free_folder(paths.projects_root(), orig.split("/", 1)[1])
+    own = paths.archive_slot(orig.split("/", 1)[1]) is not None
+    if own:                         # #385: back into its own folder, never a numbered one (that would not be its folder)
+        name = orig.split("/", 1)[1]
+        if os.path.lexists(paths.resolve(orig, archived=False)):
+            sys.exit(f"{tracker.project_label(code)} can't be restored: its own folder "
+                     f"({paths.mapped_project_paths().get(paths.archive_slot(name).name, name)}) is there again already. "
+                     "Move that folder aside, or give the project another folder in its settings, first.")
+    else:
+        name = free_folder(paths.projects_root(), orig.split("/", 1)[1])
     dst = f"projects/{name}"
     cells = split_row(last["register_row"])
     if len(cells) > 2 and name != orig.split("/", 1)[1]:
@@ -1543,12 +1560,22 @@ def cmd_recode(old, new, name, folder, dry):
         except LookupError:
             old_folder = ""
     notes = []
+    own = paths._mapped_name(old_folder) if old_folder else None
+    if own and folder and paths._fold(folder) != paths._fold(old_folder):
+        # #385: the register's folder name is what locations.project_paths is keyed by, and every stored path starts with it; a
+        # recode never writes settings (BL-141), so changing that name here would leave the project's own folder behind
+        sys.exit(f"{old_name} is in a folder of its own ({paths.project_paths().get(own, '')}), which creaite knows by the register's "
+                 f"folder name “{old_folder}”. A recode keeps that name: run it again without --folder. Its folder on disk may be "
+                 "called anything; if you moved or renamed it, save its new place in the project's settings.")
     if folder and not paths.resolve(f"projects/{folder}").is_dir():
         sys.exit(f"The folder “{folder}” doesn't exist. creaite doesn't rename engagement folders: rename it yourself, then run this again with --folder.")
     if not paths.external():              # the default layout reads a project's code from the first word of its folder name
         if not folder or folder.split(" ", 1)[0] != new:
             sys.exit(f"Project folders here start with the code. Rename “{old_folder}” to start with {new} (for example "
                      f"“{new} {new_name or old_name}”), then run this again with --folder \"<the new folder name>\".")
+    elif own and old_folder and (tracker.code_token(old).search(old_folder) or (old_name and old_name in old_folder)):
+        notes.append(f"The register's folder name “{old_folder}” still carries the old code or name; it stays, because it is how "
+                     "creaite knows the project's own folder (#385). Nothing is lost by it.")
     elif not folder and old_folder and (tracker.code_token(old).search(old_folder) or (old_name and old_name in old_folder)):
         notes.append(f"The folder “{old_folder}” still carries the old code or name; creaite leaves it (rename it yourself, then recode with --folder).")
     folder_to = folder or old_folder

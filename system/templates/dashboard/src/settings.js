@@ -325,7 +325,7 @@ export async function drawUpdates(force){ const c=document.getElementById("updCa
   const src=r.releases&&(!r.downloads||vnum(r.releases.version)>=vnum(r.downloads.version))?"releases":(r.downloads?"downloads":null);
   const z=src&&r[src], newer=!!z&&vnum(z.version)>vnum(r.installed);
   putHTML(c,html`<h2>creaite version</h2>${raw(row("Installed",esc(r.installed==="0.0.0"?"Not set":r.installed)))}${r.dev
-    ?html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>`:html`${raw(row("Update",newer?`<button class="btn primary" id="updReview">Review ${esc(z.version)}</button>`:'<span class="sub">Up to date</span>',newer?`creaite ${esc(z.version)} is ready to install`:"Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file",`<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`,"The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r.last?raw(row(`Last update: ${esc(r.last.from)} → ${esc(r.last.to)}`,'<button class="btn" id="updUndo">Undo update</button>',fdt(r.last.at))):""}`}<div id="updPlan"></div>`);
+    ?html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>`:html`${raw(row("Update",newer?`<button class="btn primary" id="updReview">Review ${esc(z.version)}</button>`:'<span class="sub">Up to date</span>',newer?`creaite ${esc(z.version)} is ready to install`:"Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file",`<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`,"The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r.last?raw(row(`Last update: ${esc(r.last.from)} → ${esc(r.last.to)}`,`<button class="btn" id="updUndo" data-to="${esc(r.last.from)}">Undo update</button>`,fdt(r.last.at))):""}`}<div id="updPlan"></div>`);
   const b=id=>document.getElementById(id);
   if(b("updReview")) b("updReview").onclick=()=>updReview(src,false);
   if(b("updFile")) b("updFile").onclick=()=>b("updPick").click();
@@ -355,7 +355,16 @@ export async function updReview(source,reinstall){ updOut('<p class="sub">Checki
   document.getElementById("updGo").onclick=async e=>{ e.currentTarget.disabled=true; e.currentTarget.textContent="Installing…";
     const res=await api("/api/update/install",{source,reinstall});
     await drawUpdates(true); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart creaite`:"The update didn't install"); }; }
-export async function updUndo(btn,keep){ if(!btn.dataset.armed){ btn.dataset.armed="1"; btn.textContent="Confirm undo"; btn.classList.add("danger"); return; }
+/* #385 (Cap's LOW 2): going back to an engine older than the first that reads locations.project_paths, the projects kept in a
+   folder of their own drop out of view until creaite is updated again (nothing is lost: their files and stored paths stay).
+   Said, with their names, when Undo update is armed, before the route is called. @param {string} to the version undo goes back to */
+export function undoOwnFoldersWarning(to){ const o=D.own_folders||{}, since=o.since||"";
+  const live=Object.keys(o.paths||{}).map(c=>pName(c)), arch=(o.archived||[]).map(String);
+  if(!since||!to||vnum(to)>=vnum(since)||(!live.length&&!arch.length)) return "";
+  const all=[...live,...arch.map(n=>`${n} (archived)`)];
+  return `creaite ${to} doesn't know about projects kept in a folder of their own, so ${all.join(", ")} will drop out of view until you update again. Nothing is lost: their folders and files stay where they are.`; }
+export async function updUndo(btn,keep){ if(!btn.dataset.armed){ btn.dataset.armed="1"; btn.textContent="Confirm undo"; btn.classList.add("danger");
+    const w=undoOwnFoldersWarning(btn.dataset.to||""); if(w) updOut(`<p class="sub hbad" role="alert" id="updOwnWarn" style="margin:8px 0 0">${esc(w)}</p>`); return; }
   btn.disabled=true; const r=await api("/api/update/undo",{keep_database:keep});
   if(!r.ok&&/--keep-database/.test(r.message||"")){ updOut(updMsg("The database has changed since the update; undoing it would lose those changes.",true)+'<div style="margin-top:8px"><button class="btn" id="updKeep">Undo engine and settings only</button></div>');
     document.getElementById("updKeep").onclick=e=>{ e.currentTarget.dataset.armed="1"; updUndo(e.currentTarget,true); }; btn.disabled=false; return; }

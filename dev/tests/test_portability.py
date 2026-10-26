@@ -97,10 +97,10 @@ class VendorManifest(unittest.TestCase):
         finally:
             v.cleanup()
 
-    def test_doctor_has_36_checks(self):
+    def test_doctor_has_37_checks(self):
         text = (REPO / "system/scripts/doctor.py").read_text(encoding="utf-8")
         main = text[text.index("def main():"):]
-        self.assertEqual(len(re.findall(r"^    check\(", main, re.M)), 36)   # #124: notes have a folder of their own; BL-328: the sweep lock; #252: the two zz Archive checks are gone (no rename offer); BL-10: archiving of old items; BL-03: old reports and minutes; BL-323: restore check, Tidy up; BL-260: staged minutes have their Word draft; BL-252: refused commands; BL-267: record changes refused; BL-255: script policy reports; BL-305: the launcher
+        self.assertEqual(len(re.findall(r"^    check\(", main, re.M)), 37)   # #385: project folders of their own; #124: notes have a folder of their own; BL-328: the sweep lock; #252: the two zz Archive checks are gone (no rename offer); BL-10: archiving of old items; BL-03: old reports and minutes; BL-323: restore check, Tidy up; BL-260: staged minutes have their Word draft; BL-252: refused commands; BL-267: record changes refused; BL-255: script policy reports; BL-305: the launcher
 # ===== end BL-239 =====
 
 

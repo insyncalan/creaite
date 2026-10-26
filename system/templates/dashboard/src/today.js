@@ -197,6 +197,7 @@ export function renderToday(){
   mDots("today");
   renderSetup();   /* BL-155 */
   renderSweepDue();   /* #200 */
+  renderOwnFolders();   /* #385 */
   dcIcon(); } }   /* BL-205 */
 /* Today's day view: Alan's meetings (saved locally by cx-sweep from Outlook) as a line with a bump per meeting,
    a sun at the current time, and a headline naming the day's shape. Without a calendar the line is flat. */
@@ -472,6 +473,13 @@ const SDKEY="creaite-sweepdue-dismissed"; let SDMEM=null;
 const sdLast=()=>String((D.sweep_due&&D.sweep_due.last)||"");
 function sweepDueDismissed(){ const d=SDMEM||store.get(SDKEY,null); return !!(d&&d.day===TODAY&&d.last===sdLast()); }
 export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept())&&!sweepDueDismissed(); }
+/* #385: a project kept in a folder of its own that can't be reached now (OneDrive not running, a drive not connected), or whose
+   saved place breaks the rules and so isn't used: one plain line each, with the project's settings. creaite never creates the
+   folder; its files are where they were. */
+export function renderOwnFolders(){ const box=$("#ownFolders"); if(!box) return; const o=D.own_folders||{}, miss=o.missing||[], bad=(o.dropped||[]).filter(d=>d.code);
+  box.hidden=!miss.length&&!bad.length; if(box.hidden){ putHTML(box,html``); return; }
+  const link=c=>html`<a href="#project-settings=${c}">${pName(c)}</a>`;
+  putHTML(box,html`${miss.map(m=>html`<p><b>${link(m.code)}'s folder can't be reached</b> (${m.path}). Is OneDrive running and signed in, or the drive connected? Nothing is lost: creaite leaves it alone until it is back.</p>`)}${bad.map(d=>html`<p><b>${link(d.code)}'s own folder isn't used</b>: ${d.why} creaite treats it as if it were in the projects folder until its place is put right.</p>`)}`); }
 export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const on=sweepDueShown(); box.hidden=!on;
   if(!on){ putHTML(box,html``); return; }
   putHTML(box,html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last?`Last checked ${fd(String(D.sweep_due.last))}.`:"Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`); }

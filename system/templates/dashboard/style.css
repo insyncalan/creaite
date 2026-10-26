@@ -4156,6 +4156,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
+.ownfolders{margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
+.ownfolders[hidden]{display:none} .ownfolders p{margin:0} .ownfolders p+p{margin-top:4px}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}

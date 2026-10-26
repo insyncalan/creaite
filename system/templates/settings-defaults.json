@@ -309,7 +309,8 @@
       "_Templates",
       "99 System"
     ],
-    "offsite_backup": "_Portfolio/99 System/creaite backups"
+    "offsite_backup": "_Portfolio/99 System/creaite backups",
+    "project_paths": {}
   },
   "help": {
     "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",

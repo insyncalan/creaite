@@ -4166,6 +4166,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
+.ownfolders{margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
+.ownfolders[hidden]{display:none} .ownfolders p{margin:0} .ownfolders p+p{margin-top:4px}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
@@ -4447,6 +4449,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
         </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270; #284: no ? button here, the ? key opens Help -->
         <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
+        <div class="ownfolders" id="ownFolders" role="status" hidden></div><!-- #385: a project's own folder that can't be reached -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
           <section class="tsec" id="dnSec" aria-labelledby="hDn" hidden><h2 class="th" id="hDn">Decisions needed <span class="cnt" id="nDn"></span></h2><ol class="bl" id="dnList"></ol><div class="moreline" id="dnMore"></div></section><!-- BL-210 -->
@@ -5976,6 +5979,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     fmSet: () => fmSet,
+    folderPlace: () => folderPlace,
     forgetRenamed: () => forgetRenamed,
     formProject: () => formProject,
     fpName: () => fpName,
@@ -6680,7 +6684,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ovKey: () => ovKey,
     ovReapply: () => ovReapply,
     overdue: () => overdue,
+    ownFoldersOn: () => ownFoldersOn,
     ownHeld: () => ownHeld,
+    ownPathProblem: () => ownPathProblem,
+    ownPathStored: () => ownPathStored,
     ownedBy: () => ownedBy,
     ownerFinal: () => ownerFinal,
     ownerMatches: () => ownerMatches,
@@ -7060,6 +7067,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderLayoutBar: () => renderLayoutBar,
     renderMilestones: () => renderMilestones,
     renderNotes: () => renderNotes,
+    renderOwnFolders: () => renderOwnFolders,
     renderPeople: () => renderPeople,
     renderPerson: () => renderPerson,
     renderPrep: () => renderPrep,
@@ -7239,6 +7247,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setNotes: () => setNotes,
     setOf: () => setOf,
     setOpen: () => setOpen,
+    setOwnFolder: () => setOwnFolder,
     setPTab: () => setPTab,
     setPalette: () => setPalette,
     setPlay: () => setPlay,
@@ -7387,6 +7396,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     undatedRecount: () => undatedRecount,
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
+    undoOwnFoldersWarning: () => undoOwnFoldersWarning,
     undoWords: () => undoWords,
     unescHtml: () => unescHtml,
     uniq: () => uniq,
@@ -53093,6 +53103,67 @@ system/scripts/run launch.py agent ${what}`;
     const s5 = (D.project_states || []).find((x5) => x5.code === code);
     return s5 ? s5.state : "active";
   }
+  function folderPlace(code) {
+    const o5 = (
+      /** @type {any} */
+      D.own_folders || {}
+    );
+    return {
+      where: String((o5.where || {})[code] || ""),
+      own: String((o5.paths || {})[code] || ""),
+      missing: (o5.missing || []).some((m5) => m5.code === code),
+      dropped: (
+        /** @type {any} */
+        (o5.dropped || []).find((d5) => d5.code === code) || null
+      )
+    };
+  }
+  var ownFoldersOn = () => !!Object.keys(
+    /** @type {any} */
+    (D.own_folders || {}).where || {}
+  ).length;
+  var ownPathStored = (v5) => String(v5 || "").trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  function ownPathProblem(v5) {
+    const t47 = ownPathStored(v5);
+    if (/[\r\n]/.test(String(v5 || ""))) return "The folder's place is one line.";
+    if (!t47) return "Type the folder's place, or use Back to the projects folder.";
+    if (!t47.startsWith("~/")) return "Write it with ~ for your home folder, for example ~/Library/CloudStorage/OneDrive-Company/Client/Programme.";
+    if (t47.split("/").includes("..")) return "Give the folder itself, without “..”.";
+    return "";
+  }
+  async function setOwnFolder(code, value, undoing = false) {
+    const name = (D.folders || {})[code], before = folderPlace(code).own;
+    if (!name) return "This project has no folder in the register yet.";
+    if (!viaServer()) return "Not saved: creaite needs to be running to check the folder.";
+    const v5 = ownPathStored(value);
+    if (value !== "") {
+      const bad = ownPathProblem(value);
+      if (bad) return bad;
+    }
+    let why = "";
+    const ok2 = await writeSettings((js2) => {
+      const was = js2.locations && typeof js2.locations.project_paths === "object" && js2.locations.project_paths || {};
+      const map = { ...was };
+      if (v5) map[name] = v5;
+      else delete map[name];
+      return { "locations.project_paths": map };
+    }, { problem: (m5) => {
+      why = m5.replace(/^Settings not saved: /, "") || "Not saved.";
+    } });
+    if (!ok2) return why || "Not saved.";
+    await reloadData();
+    psChanged();
+    if (undoing) {
+      snack("Undone");
+      return "";
+    }
+    const label = (psProject(code) || {}).name || code;
+    snack(v5 ? `${label}: its own folder is saved` : `${label} is back in the projects folder`, async () => {
+      const bad = await setOwnFolder(code, before, true);
+      if (bad) snack(bad);
+    });
+    return "";
+  }
   function projectPeople(code) {
     const rs2 = resolver(), names = /* @__PURE__ */ new Set();
     const add = (n4) => {
@@ -56877,6 +56948,7 @@ ${pre}**Current state title:** ${title}`);
       mDots("today");
       renderSetup();
       renderSweepDue();
+      renderOwnFolders();
       dcIcon();
     }
   }
@@ -57514,6 +57586,18 @@ ${pre}**Current state title:** ${title}`);
   function sweepDueShown() {
     const sd2 = D.sweep_due;
     return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && !sweepDueDismissed();
+  }
+  function renderOwnFolders() {
+    const box = $("#ownFolders");
+    if (!box) return;
+    const o5 = D.own_folders || {}, miss = o5.missing || [], bad = (o5.dropped || []).filter((d5) => d5.code);
+    box.hidden = !miss.length && !bad.length;
+    if (box.hidden) {
+      putHTML(box, html``);
+      return;
+    }
+    const link = (c5) => html`<a href="#project-settings=${c5}">${pName(c5)}</a>`;
+    putHTML(box, html`${miss.map((m5) => html`<p><b>${link(m5.code)}'s folder can't be reached</b> (${m5.path}). Is OneDrive running and signed in, or the drive connected? Nothing is lost: creaite leaves it alone until it is back.</p>`)}${bad.map((d5) => html`<p><b>${link(d5.code)}'s own folder isn't used</b>: ${d5.why} creaite treats it as if it were in the projects folder until its place is put right.</p>`)}`);
   }
   function renderSweepDue() {
     const box = $("#sweepDue");
@@ -59311,6 +59395,10 @@ ${pre}**Current state title:** ${title}`);
           /* @__PURE__ */ u4("h3", { class: "hsub", children: "Archiving" }),
           /* @__PURE__ */ u4("ul", { class: "hsteps", id: "healthArchiving", "aria-label": "Archiving", children: (res.archiving || []).map((a5) => /* @__PURE__ */ u4("li", { children: a5 })) })
         ] }),
+        (res.archived || []).length > 0 && /* @__PURE__ */ u4(S2, { children: [
+          /* @__PURE__ */ u4("h3", { class: "hsub", children: "Archived projects" }),
+          /* @__PURE__ */ u4("ul", { class: "hsteps", id: "healthArchived", "aria-label": "Archived projects", children: (res.archived || []).map((a5) => /* @__PURE__ */ u4("li", { children: a5 })) })
+        ] }),
         alone.length > 0 && /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h3", { class: "hsub", children: "If you need them" }),
           /* @__PURE__ */ u4("ul", { class: "hlist", "aria-label": "Fixes no check can see", children: alone.map((f5) => /* @__PURE__ */ u4("li", { class: "hrow", "data-fix": f5.id, children: [
@@ -60143,7 +60231,7 @@ ${pre}**Current state title:** ${title}`);
     }
     const src = r4.releases && (!r4.downloads || vnum(r4.releases.version) >= vnum(r4.downloads.version)) ? "releases" : r4.downloads ? "downloads" : null;
     const z4 = src && r4[src], newer = !!z4 && vnum(z4.version) > vnum(r4.installed);
-    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `creaite ${esc(z4.version)} is ready to install` : "Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
+    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `creaite ${esc(z4.version)} is ready to install` : "Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, `<button class="btn" id="updUndo" data-to="${esc(r4.last.from)}">Undo update</button>`, fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
     const b5 = (id2) => document.getElementById(id2);
     if (b5("updReview")) b5("updReview").onclick = () => updReview(src, false);
     if (b5("updFile")) b5("updFile").onclick = () => b5("updPick").click();
@@ -60208,11 +60296,20 @@ ${pre}**Current state title:** ${title}`);
       snack(res.ok ? `creaite ${p6.to} installed; restart creaite` : "The update didn't install");
     };
   }
+  function undoOwnFoldersWarning(to2) {
+    const o5 = D.own_folders || {}, since = o5.since || "";
+    const live = Object.keys(o5.paths || {}).map((c5) => pName(c5)), arch = (o5.archived || []).map(String);
+    if (!since || !to2 || vnum(to2) >= vnum(since) || !live.length && !arch.length) return "";
+    const all = [...live, ...arch.map((n4) => `${n4} (archived)`)];
+    return `creaite ${to2} doesn't know about projects kept in a folder of their own, so ${all.join(", ")} will drop out of view until you update again. Nothing is lost: their folders and files stay where they are.`;
+  }
   async function updUndo(btn, keep2) {
     if (!btn.dataset.armed) {
       btn.dataset.armed = "1";
       btn.textContent = "Confirm undo";
       btn.classList.add("danger");
+      const w6 = undoOwnFoldersWarning(btn.dataset.to || "");
+      if (w6) updOut(`<p class="sub hbad" role="alert" id="updOwnWarn" style="margin:8px 0 0">${esc(w6)}</p>`);
       return;
     }
     btn.disabled = true;
@@ -70872,7 +70969,8 @@ ${d5.text}`);
   }
   var PsProblem = ({ msg, id: id2 }) => msg ? /* @__PURE__ */ u4("span", { class: "psmsg", role: "alert", id: id2, children: msg }) : null;
   function General({ code }) {
-    const p6 = psProject(code), [err, setErr] = d2(""), folder = (D.folders || {})[code];
+    psTick.value;
+    const p6 = psProject(code), [err, setErr] = d2(""), folder = (D.folders || {})[code], place2 = folderPlace(code);
     const state = projectState(code);
     return /* @__PURE__ */ u4("div", { class: "card", "data-pscard": true, "data-cat": "general", children: [
       /* @__PURE__ */ u4("h2", { children: "Project" }),
@@ -70958,11 +71056,74 @@ ${d5.text}`);
           ]
         }
       ) }),
-      /* @__PURE__ */ u4(PsRow, { label: "Folder", help: "Where its minutes, transcripts and reports live.", kw: "files location", children: [
-        /* @__PURE__ */ u4("span", { class: "sub", id: "psFolder", children: folder ? `projects/${folder}` : "No folder yet" }),
-        /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOpenFolder", disabled: !folder, onClick: () => openPath(`projects/${folder}`), children: "Open folder" })
-      ] })
+      /* @__PURE__ */ u4(PsRow, { label: "Folder", help: "Where its minutes, transcripts and reports live.", kw: "files location onedrive", children: [
+        /* @__PURE__ */ u4("span", { class: "sub", id: "psFolder", children: !folder ? "No folder yet" : place2.where || `projects/${folder}` }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOpenFolder", disabled: !folder || place2.missing, onClick: () => openPath(`projects/${folder}`), children: "Open folder" })
+      ] }),
+      folder && ownFoldersOn() ? /* @__PURE__ */ u4(OwnFolder, { code, archived: state === "archived" }) : null
     ] });
+  }
+  function OwnFolder({ code, archived }) {
+    psTick.value;
+    const place2 = folderPlace(code), [err, setErr] = d2(""), [busy2, setBusy] = d2(false);
+    const box = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const run = async (v5) => {
+      if (v5 !== "") {
+        const bad2 = ownPathProblem(v5);
+        if (bad2) {
+          setErr(bad2);
+          return;
+        }
+      }
+      setBusy(true);
+      const bad = await setOwnFolder(code, v5);
+      setBusy(false);
+      setErr(bad);
+    };
+    const state = place2.dropped ? `Not used: ${place2.dropped.why}` : place2.missing ? "Can't be reached now: is OneDrive running, or the drive connected? Nothing is lost." : "";
+    return /* @__PURE__ */ u4(
+      PsRow,
+      {
+        label: "Its own folder",
+        kw: "own folder location onedrive library move elsewhere project_paths",
+        id: "psOwnL",
+        help: archived ? "An archived project keeps its place here, so restoring it finds its folder." : "For a project kept somewhere else in your home folder (another OneDrive library, say). Move the folder there yourself first, then give its place, written with ~. Empty: it is in the projects folder.",
+        children: [
+          /* @__PURE__ */ u4(
+            "input",
+            {
+              type: "text",
+              id: "psOwn",
+              size: 34,
+              "aria-label": "Its own folder",
+              "aria-describedby": "psOwnErr psOwnState",
+              defaultValue: place2.own,
+              placeholder: "~/Library/CloudStorage/…",
+              disabled: archived || busy2 || !viaServer(),
+              ref: box,
+              onInput: () => err && setErr(""),
+              onKeyDown: (e4) => {
+                if (e4.key === "Enter") {
+                  e4.preventDefault();
+                  run(
+                    /** @type {HTMLInputElement} */
+                    e4.target.value
+                  );
+                }
+              }
+            },
+            place2.own
+          ),
+          /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOwnSave", disabled: archived || busy2 || !viaServer(), onClick: () => run(box.current ? box.current.value : ""), children: "Save" }),
+          place2.own ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOwnClear", disabled: archived || busy2 || !viaServer(), onClick: () => run(""), children: "Back to the projects folder" }) : null,
+          /* @__PURE__ */ u4(PsProblem, { msg: err, id: "psOwnErr" }),
+          state ? /* @__PURE__ */ u4("span", { class: "sub", id: "psOwnState", role: "status", children: state }) : null
+        ]
+      }
+    );
   }
   function PartnerRow({ code, name, i: i5 }) {
     const [edit, setEdit] = d2(false), [err, setErr] = d2("");
@@ -81200,7 +81361,7 @@ ${d5.text}`);
     return true;
   }
   var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", railLabels: "dashboard.rail_labels", helpLine: "help.first_line", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
-  async function writeSettings(changes) {
+  async function writeSettings(changes, opts = {}) {
     let sp2 = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {
       const box = document.querySelector(`#settingsBody [data-sec="${shared.SETROW.sec}"]`), r4 = box && box.querySelectorAll(".srow,.igrow")[shared.SETROW.i];
@@ -81219,7 +81380,7 @@ ${d5.text}`);
         try {
           await vq(async () => {
             const path = "system/config/settings.json", text = await shared.VW.read(path), js2 = JSON.parse(text), at2 = stampFull(), logs = [];
-            for (const [key2, val2] of Object.entries(changes)) {
+            for (const [key2, val2] of Object.entries(typeof changes === "function" ? changes(js2) : changes)) {
               const parts = key2.split(".");
               let o5 = js2;
               parts.slice(0, -1).forEach((q5) => {
@@ -81236,7 +81397,8 @@ ${d5.text}`);
           });
           return true;
         } catch (e4) {
-          snack("Settings not saved: " + e4.message);
+          if (opts.problem) opts.problem(String(e4.message || ""));
+          else snack("Settings not saved: " + e4.message);
           return false;
         }
       })();
@@ -82998,10 +83160,12 @@ Next: `;
         "typing",
         "undatedCard",
         "undoApply",
+        "undoOwnFoldersWarning",
         "undoWords",
         "unescHtml",
         "updReview",
         "updSave",
+        "updUndo",
         "uploadClientLogo",
         "uploadInboxFile",
         "validate",

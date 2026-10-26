@@ -653,6 +653,8 @@ def _in_minutes_folder(file, real, code):
     try:
         folder = paths.folder(code, "minutes")
         base = paths.projects_root() if paths.external() else paths.ROOT
+        if paths.external() and code in paths.register_folders() and paths.project_dir(code) in paths.project_roots().values():
+            base = paths.project_dir(code)       # #385: a project in a folder of its own: no link below that folder either
         return (file.startswith(paths.rel(folder) + "/") and _real_folder(folder, base)
                 and _inside(real, os.path.realpath(folder)))
     except (LookupError, ValueError, OSError):
