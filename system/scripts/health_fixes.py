@@ -50,6 +50,11 @@ FIXES = {
                    "does": "Clear the marker left by a check that has ended, so the next check can start. A check that is "
                            "still running keeps it.",
                    "command": ("sweep.py", "unlock", "--if-idle")},
+    # #370: the same catch-up Today's Check now starts. The page posts to `call` itself (the server's own catch-up route, which
+    # decides whether it can start); the fix runs no command of its own, so the fix route has nothing to run for it
+    "sweep_failed": {"title": "A mail and Teams check didn't run", "button": "Check now",
+                     "does": "Check your mail and Teams now, as Check now on Today does.",
+                     "call": "/api/day/catchup"},
 }
 
 # doctor check id → (fix id, words in its detail that mean this fix mends it: any of them, or None for any detail)
@@ -59,6 +64,7 @@ CHECK_FIXES = {
     "offsite_backup": ("offsite", ("no copy yet", "days ago")),       # not "can't write to …": a copy can't mend that
     "archive_reports": ("archive_reports", ("Archive ",)),            # BL-03: the monthly line
     "sweep_lock": ("sweep_lock", ("no sweep running",)),               # BL-328
+    "sweep_failed": ("sweep_failed", ("couldn't reach",)),             # #370
 }
 STANDALONE = ("icon", "m365")
 
@@ -78,6 +84,8 @@ def describe(fix_id):
     out = {"id": fix_id, "title": f["title"], "button": f["button"], "does": f["does"], "built": True}
     if "url" in f:
         out["url"] = f["url"]
+    elif "call" in f:                                    # #370: the page posts to this route itself (Check now)
+        out["call"] = f["call"]
     else:
         out["command"] = "system/scripts/run " + " ".join(f["command"])
     return out
@@ -114,6 +122,8 @@ def run_fix(fix_id, runner):
         log(fix_id, True)
         return {"ok": True, "fix": fix_id, "url": f["url"],
                 "message": "Opening Claude's connector settings: reconnect Microsoft 365 there, then check again."}
+    if "call" in f:                                      # #370: the page makes this call itself; nothing runs here
+        return {"ok": False, "fix": fix_id, "message": "Use Check now on Today, or the button in Health."}
     code, out = runner(*f["command"])
     log(fix_id, code == 0, code)
     lines = [ln for ln in (out or "").splitlines() if ln.strip()]

@@ -27,7 +27,8 @@ export const CARD_WAITING = "On the approval card, waiting for you";
 
 /** Run one built fix through its fixed route: no body, no query string. @param {import("../../stores/settings.js").Fix} f */
 export async function runHealthFix(f) {
-  const r = await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
+  /* #370: Check now starts the catch-up through its own route, as Today's does; the server says whether it can start */
+  const r = f.call ? await api(f.call, {}) : await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
   /* a move waits on the approval card: nothing has changed yet, so it is never "Done" (BL-09, #94) */
   if (r.ok && r.card) { markCardWaiting(f.id || ""); snack(CARD_WAITING + ": nothing moves until you approve it."); }
   else snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));

@@ -58,14 +58,15 @@ class Catalogue(unittest.TestCase):
 
     def test_the_fixes_are_the_ones_alan_decided(self):
         self.assertEqual(set(health_fixes.FIXES), {"launcher", "rosetta", "icon", "m365", "offsite",
-                                                      "archive_reports", "sweep_lock"})   # BL-03; BL-328; #252: no old_archive fix
+                                                      "archive_reports", "sweep_lock", "sweep_failed"})   # BL-03; BL-328; #252: no old_archive fix; #370
         commands = {k: f.get("command") for k, f in health_fixes.FIXES.items()}
         self.assertEqual(commands, {"launcher": ("launch.py", "make-launcher", "--replace"),
                                     "rosetta": ("launch.py", "make-launcher", "--if-present"),
                                     "icon": ("launch.py", "refresh-icon"), "m365": None,
                                     "offsite": ("session.py", "backup"),
                                     "archive_reports": ("archive.py", "reports"),          # BL-03: the same
-                                    "sweep_lock": ("sweep.py", "unlock", "--if-idle")})    # BL-328: only a lock no sweep holds
+                                    "sweep_lock": ("sweep.py", "unlock", "--if-idle"),     # BL-328: only a lock no sweep holds
+                                    "sweep_failed": None})                                  # #370: the page's own call, no command
         self.assertEqual(health_fixes.FIXES["m365"]["url"], "https://claude.ai/settings/connectors")
 
     def test_no_fix_runs_a_record_permission_or_microsoft_365_command(self):
@@ -102,11 +103,12 @@ class Catalogue(unittest.TestCase):
         cat = health_fixes.catalogue()
         self.assertEqual(cat["checks"], {"launcher_vault": "launcher", "python_version": "rosetta", "offsite_backup": "offsite",
                                          "archive_reports": "archive_reports",                  # BL-03
-                                         "sweep_lock": "sweep_lock"})                           # BL-328
+                                         "sweep_lock": "sweep_lock",                            # BL-328
+                                         "sweep_failed": "sweep_failed"})                       # #370
         self.assertEqual(cat["standalone"], ["icon", "m365"])
         for d in cat["fixes"]:
             self.assertTrue(d["does"] and d["title"] and d["button"] and d["built"])
-            self.assertTrue(("url" in d) != ("command" in d))
+            self.assertEqual(sum(k in d for k in ("url", "command", "call")), 1)          # #370: or the page's own call
             if "command" in d:
                 self.assertTrue(d["command"].startswith("system/scripts/run "))
 
