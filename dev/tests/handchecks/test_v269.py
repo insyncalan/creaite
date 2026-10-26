@@ -211,8 +211,10 @@ class V269(unittest.TestCase):
         self.assertEqual(d, [], f"guarded files changed since 2.6.8: {d} (they must travel as diffs under dev/proposals)")
 
     def test_c16_scrub_unchanged(self):
-        """invite_clean.py (the 2.6.8 scrub) is byte for byte its 2.6.8 release version: 2.6.9 intends no change to it (E1 sits on top).
-        If a later 2.6.9 slice changes it on purpose, this check changes with that decision, not before."""
+        """2.6.9 intends the scrub changes from v269-scrub (H2/H4, separators, eaters) in invite_clean.py. So this no longer asks for
+        byte equality with 2.6.8: (a) every top-level def of the 2.6.8 file is still there with the same argument list (additions
+        allowed), which is what sweep.rescrub_calendar and the guarded chain call; (b) the guarded files equal the tag (c15)."""
+        import ast
         ref = baseline_ref()
         if ref is None:
             self.skipTest("neither the tag v2.6.8 nor v268-release exists here")
@@ -222,8 +224,15 @@ class V269(unittest.TestCase):
                 break
         else:
             self.skipTest("cannot read the 2.6.8 invite_clean.py")
-        self.assertEqual((REPO / "system/scripts/invite_clean.py").read_text(encoding="utf-8"), r.stdout,
-                         "invite_clean.py differs from its 2.6.8 version")
+
+        def sigs(src):
+            return {n.name: ast.dump(n.args) for n in ast.parse(src).body if isinstance(n, ast.FunctionDef)}
+        old, new = sigs(r.stdout), sigs((REPO / "system/scripts/invite_clean.py").read_text(encoding="utf-8"))
+        for name, sig in old.items():
+            self.assertIn(name, new, f"invite_clean.{name} has gone since 2.6.8")
+            self.assertEqual(new[name], sig, f"invite_clean.{name} changed its arguments since 2.6.8")
+        d = git("diff", "--name-only", ref, "HEAD", "--", *GUARDED).stdout.split()
+        self.assertEqual(d, [], f"guarded files changed since 2.6.8: {d}")
 
     # ---- the gateway ----------------------------------------------------------------------------------------------------------
     def test_c20_read_never_writes(self):
