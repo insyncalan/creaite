@@ -23,7 +23,7 @@ def read(p):
 
 
 def sec(t):
-    return t.split("## creaite 2.6.8\n", 1)[1].split("## creaite 2.6.7\n", 1)[0]
+    return t.split("## creaite 2.6.8\n", 1)[1].split("## creaite 2.6.7\n", 1)[0]   # a later release's section above it is left out
 
 
 def unguarded(t):
@@ -64,10 +64,10 @@ class V268(unittest.TestCase):
         self.assertTrue(whats_new.has("2.6.8"))
 
     def test_c05_version(self):
-        self.assertEqual(read("VERSION").strip(), "2.6.8")
+        self.assertGreaterEqual(tuple(map(int, read("VERSION").strip().split("."))), (2, 6, 8))   # 2.6.9 contains 2.6.8
         for g in ("guide-first-day.html", "guide-how-to.html"):
             t = read(f"system/templates/{g}")
-            self.assertIn("creaite 2.6.8 ·", t)
+            self.assertRegex(t, r"creaite 2\.6\.[89] ·")   # 2.6.8 or later (test_v269 pins 2.6.9)
             self.assertNotRegex(t, r"creaite 2\.6\.[0-7] ·")
 
 

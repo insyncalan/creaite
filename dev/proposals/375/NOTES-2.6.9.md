@@ -42,6 +42,7 @@ Stays, by design or not yet fixed:
 * A `sip:` or `id@host` line takes its block with it (211 keepers lost on `single_anchor`).
 * An unclosed `<script>` holding a 10-digit number takes the whole block (the `broken_html` fixture; accepted, fail-closed).
 * Link-only lines are dropped by design, for example "New to GoTo? ... https://..." (accepted by Jarvis, 26-10-2026, with the unclosed script above: 3 lines of 130 on the 32-format fixtures).
+* A bare label such as "Google Meet link" directly above a removed join link is removed with it (the fixture count is 82 of 130 lines kept; the 2.6.8 scrub keeps 86).
 * A long numbered agenda is cut at 1,500 characters.
 * Hebrew labels are not recognised.
 * A9 (a plain link line is itself dropped).
