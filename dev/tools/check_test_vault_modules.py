@@ -64,7 +64,7 @@ def closure(copied, g):
     seen = set(copied)
     while todo:
         m = todo.pop()
-        for dep, how in g.get(m, {}).items():
+        for dep in g.get(m, {}):
             need.setdefault(dep, set()).add(m)
             if dep not in seen:
                 seen.add(dep)
