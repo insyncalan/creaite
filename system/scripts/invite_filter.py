@@ -1060,22 +1060,26 @@ def _without_orphans(raw, kept):
     kinds = [_BLANK if not s else (_DIVIDER if _is_divider(s) else _TEXT) for s in skels]
     drop, st, k = set(), _Chain(), 0
     while k < len(orig):
-        step = 1
-        if kinds[k] == _DIVIDER:
-            st.divider()
-        elif kinds[k] == _TEXT:
-            st.divs = 0
-            if k not in at:                      # a line that did not survive
-                bare = st.short or _label_only(skels[k])     # a removed bare label: a 3-digit value after it (and fill) is its value
-                st.reset()
-                st.armed = True
-                st.short = bare
-            elif st.open() and _label_only(skels[k]):
-                st.label = k                     # a bare label: the value after it goes with it, and may be a year
-            else:
-                step = _take_group(skels, kinds, at, st, k, drop)
-        k += step
+        k += _orphan_step(skels, kinds, at, st, k, drop)
     return [x for i, x in enumerate(kept) if i not in drop]
+
+
+def _orphan_step(skels, kinds, at, st, k, drop):
+    """One original line of _without_orphans' walk; returns how many lines it consumed."""
+    if kinds[k] == _DIVIDER:
+        st.divider()
+    elif kinds[k] == _TEXT:
+        st.divs = 0
+        if k not in at:                      # a line that did not survive
+            bare = st.short or _label_only(skels[k])     # a removed bare label: a 3-digit value after it (and fill) is its value
+            st.reset()
+            st.armed = True
+            st.short = bare
+        elif st.open() and _label_only(skels[k]):
+            st.label = k                     # a bare label: the value after it goes with it, and may be a year
+        else:
+            return _take_group(skels, kinds, at, st, k, drop)
+    return 1
 
 
 def _take_group(skels, kinds, at, st, k, drop):
