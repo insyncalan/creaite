@@ -167,7 +167,7 @@ LABEL = re.compile(rf"(?<![\w-])(?:{_EVERYWHERE})(?![\w-])|(?<![\w-])(?:{_BARE_N
                    rf"|(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_BARE}|{_BARE_LABELS})(?:{GLUED_VALUE})"   # bare20: "Token4417"
                    rf"|(?<![\w-])id\s*[:#=]\s*\d|(?:{_OTHER_ALPHABETS})", re.I)
 # a footnote mark "(1)", a separator run, "_", "is" or "are"
-_ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are)(?![\w-]))"
+_ALONE_ITEM = rf"(?:\s*[(\[]\d{{1,3}}[)\]]|\s*{SEPRUN}|\s*_|\s+(?:is|are|was|were)(?![\w-]))"
 _ALONE_TAIL = rf"{_ALONE_ITEM}{_ALONE_ITEM}*(?:\s*[.,;!?])?"               # one sentence-end mark may close it, after a separator
 _QUIET = r"[\s?~*`_]*"                                        # "Passcode?", "Passcode ?~": a question mark or markdown after a label
 # bare22: "Key" alone in a list item or cell is NOT a hard label any more (a RAG legend "Key" must keep its lines). Known limit: a list
@@ -179,17 +179,18 @@ _QUIET = r"[\s?~*`_]*"                                        # "Passcode?", "Pa
 # next lines, as for an unqualified label; because every hard window now removes only value-looking lines (_valueish), a wide net is cheap.
 # the bare hard labels (not Key, Code or Access alone: "Key milestones" is an agenda line)
 _QBARE = r"secrets?|tokens?|otp|api[\s-]*keys?"
-_QWORD = r"[^\W\d_](?:[^\W\d_]|['\u2019-])*"
+_QWORD = r"(?:1:1|[^\W\d_](?:[^\W\d_]|['\u2019-])*)"            # 2.6.9: "1:1" is a plain word here
 _QBRACKET = r"\s*[(\[](?!\d{1,3}[)\]])[^()\[\]\n]{0,60}[)\]]"      # a word with a digit is a value, not a qualifier
 _QDASH = r"[-\u2013\u2014]"
-_QPHRASE = rf"(?:\s*{_QDASH}\s+|\s*\|\s*|\s+){_QWORD}(?:\s+(?:{_QDASH}\s+)?{_QWORD}){{0,4}}"      # "is - Zoom", "- Teams"
-_QUAL = rf"(?:{_QBRACKET}(?:{_QPHRASE})?(?:{_QBRACKET})?|{_QPHRASE}(?:{_QBRACKET})?)"
+_QPHRASE = rf"(?:\s*{_QDASH}\s+|\s*\|\s*|(?:\s*[,/;]){{1,2}}\s*(?:{_QDASH}\s+)?|\s+){_QWORD}(?:\s+(?:{_QDASH}\s+)?{_QWORD}){{0,4}}"      # "is - Zoom", "- Teams"
+_QCOMMA = r"(?:\s*[,/;]){1,2}"                                  # 2.6.9: "Meeting ID, (Teams)", "PIN / dial-in"
+_QUAL = rf"(?:(?:{_QCOMMA})?{_QBRACKET}(?:{_QPHRASE})?(?:{_QBRACKET})?|{_QPHRASE}(?:{_QBRACKET})?)"
 # "Password reset": a finished soft phrase, not a qualifier
 # It must START with a listed word that is not a function word (for, of, to ...): "Passcode for the call" is a hard label with
 # a qualifier made of listed words, not a soft phrase (2.6.8 H1).
 _SOFT_FIRST = "|".join(sorted(BARE_LISTED - set(BARE_FUNCTION)))
 _SOFT_RUN = (rf"\s+(?:{_SOFT_FIRST})(?![\w-])(?:\s+(?:{'|'.join(sorted(BARE_LISTED))})(?![\w-]))*[\s.,;!?*_~`]*$")
-QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_QBARE})(?!\w)(?!{_SOFT_RUN}){_QUAL}(?:{_ALONE_TAIL})?{_QUIET}$"
+QUALIFIED_ALONE = rf"(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE}|{_QBARE})(?!\w)(?!{_SOFT_RUN}){_QUAL}(?:\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}$"
 _ALONE_PLAIN = (rf"(?:(?<![\w-])(?:{_EVERYWHERE}|{_WITH_VALUE})(?!\w)|(?:{_OTHER_ALPHABETS}))(?:{_ALONE_TAIL})?{_QUIET}$"
                 rf"|(?<![\w-])(?:{_BARE}|{_BARE_LABELS}|ids?)(?!\w){_ALONE_TAIL}\s*$"
                 rf"|^\W*(?:tokens?|secrets?|otp|api[\s-]*keys?)\W*$")
@@ -453,10 +454,13 @@ def _alone(line):
     return _link_label(line) or any(_label_alone(v) or _only_labels(v) for v in _views(_MARK.sub(" ", line)))
 
 
+_ONE_TO_ONE = re.compile(r"(?<![\w:])1:1(?!\w|:\d)")      # "PIN for the weekly 1:1": a 1:1 is a word, not a value
+
+
 def _label_alone(view):
     """A label with no value after it. A qualified label ("Passcode required") on a line that holds a digit already carries its value
     ("Meeting ID 12 - Passcode abcdefg"): the line goes, but no value is still to come."""
-    return bool(_LABEL_ALONE_PLAIN.search(view) or (LABEL_ALONE.search(view) and not re.search(r"\d", _LIST_STRIP.sub("", view))))
+    return bool(_LABEL_ALONE_PLAIN.search(view) or (LABEL_ALONE.search(view) and not re.search(r"\d", _ONE_TO_ONE.sub("", _LIST_STRIP.sub("", view)))))
 
 
 _FILLER = re.compile(r"(?:[\W_]|\b(?:and|und|et|is|are|or)\b)+")
