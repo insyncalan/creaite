@@ -7,6 +7,7 @@ backup.make_bundle, clones the bundle and looks for the marker strings.
 
 Run: python3 dev/tests/test_bundle_privacy.py     (quick tier; needs git)
 """
+import json
 import os
 import shutil
 import subprocess
@@ -98,8 +99,11 @@ class BundlePrivacy(unittest.TestCase):
         lines = [ln for ln in TEMPLATE.read_text().splitlines() if not ln.strip().startswith("system/staging")]
         weak.write_text("\n".join(lines) + "\n")
         names, text = self.bundle_text(weak)
-        self.assertIn("system/staging/ask/chat-x.json", names)
-        self.assertIn(VIP, text)
+        tracked = git(self.root, "ls-files").splitlines()
+        self.assertIn("system/staging/ask/chat-x.json", tracked)       # the template is what keeps it out of git
+        if not patched():                                              # with the filtered bundle the zip is safe anyway
+            self.assertIn("system/staging/ask/chat-x.json", names)
+            self.assertIn(VIP, text)
 
     def test_template_lists_the_entries(self):
         entries = {ln.strip() for ln in TEMPLATE.read_text().splitlines()}
@@ -108,6 +112,133 @@ class BundlePrivacy(unittest.TestCase):
         text = TEMPLATE.read_text()
         self.assertNotIn("system/config/", entries, "config is meant to stay in the history")
         self.assertIn("vip.json", text)       # the reason is written down
+
+
+def patched():
+    """True when system/scripts/backup.py has the filtered bundle (dev/proposals/bundle/backup-bundle.diff applied)."""
+    return "PRIVATE_PATHS" in (REPO / "system/scripts/backup.py").read_text(encoding="utf-8")
+
+
+def vault_py(root, code, *args):
+    """Run Python inside the vault's scripts folder; returns the completed process."""
+    return subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import backup; " + code,
+                           *args], cwd=root, capture_output=True, text=True, timeout=300, env=ENV)
+
+
+@unittest.skipUnless(GIT and patched(), "needs git and the filtered bundle (dev/proposals/bundle/backup-bundle.diff)")
+class ExistingVault(unittest.TestCase):
+    """A vault whose OLD history holds a chat and vip.json (made before the gitignore knew them)."""
+
+    def setUp(self):
+        self.v = Vault()
+        self.root = self.v.root
+        self.addCleanup(self.v.cleanup)
+        self.work = Path(tempfile.mkdtemp(prefix="creaite-bundle-")).resolve()
+        self.addCleanup(shutil.rmtree, self.work, ignore_errors=True)
+        (self.root / "projects/_portfolio").mkdir(parents=True, exist_ok=True)
+        (self.root / "projects/_portfolio/PORTFOLIO.md").write_text(f"# Portfolio\n{MEMORY}\n")
+        git(self.root, "init", "-q")
+
+    def old_history(self, untrack=True):
+        for rel in ("system/staging/ask/chat-x.json", "system/staging/vip.json"):
+            f = self.root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(f"{CHAT if 'chat' in rel else VIP}\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "old first commit")
+        if not untrack:                                                 # an old vault that never ran the untrack step
+            return
+        shutil.copy(TEMPLATE, self.root / ".gitignore")                 # later: ignored and untracked
+        git(self.root, "rm", "-r", "-q", "--cached", "system/staging")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "stop tracking staging")
+
+    def state(self):
+        return (git(self.root, "rev-parse", "HEAD"), git(self.root, "for-each-ref"), git(self.root, "status", "--porcelain"),
+                (self.root / ".git/index").read_bytes())
+
+    def bundle(self):
+        dest = self.work / "vault.bundle"
+        r = vault_py(self.root, "r = backup.make_bundle(sys.argv[1]); print(json.dumps(r))", str(dest))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return dest, json.loads(r.stdout.strip().splitlines()[-1])
+
+    def everything(self, dest):
+        clone = self.work / "clone"
+        subprocess.run([GIT, "clone", "-q", str(dest), str(clone)], check=True, env=ENV, capture_output=True)
+        text = ""
+        for line in git(clone, "rev-list", "--objects", "--all").splitlines():
+            sha = line.split(" ", 1)[0]
+            if git(clone, "cat-file", "-t", sha).strip() in ("blob", "commit"):
+                text += subprocess.run([GIT, "-C", str(clone), "cat-file", "-p", sha], capture_output=True).stdout.decode("utf-8", "replace")
+        return clone, text
+
+    def test_old_history_is_not_bundled_and_the_repo_is_untouched(self):
+        self.old_history()
+        before = self.state()
+        dest, why = self.bundle()
+        self.assertIsNone(why)
+        self.assertEqual(self.state(), before, "make_bundle changed the vault's repository")
+        clone, text = self.everything(dest)
+        for mark in (CHAT, VIP):
+            self.assertNotIn(mark, text)
+        self.assertIn(MEMORY, text)
+        self.assertEqual(git(clone, "rev-list", "--count", "--all").strip(), "1")      # a snapshot
+
+    def test_head_still_tracking_private_files_is_filtered(self):
+        self.old_history(untrack=False)
+        dest, why = self.bundle()
+        self.assertIsNone(why)
+        text = self.everything(dest)[1]
+        for mark in (CHAT, VIP):
+            self.assertNotIn(mark, text)
+
+    def test_clean_history_keeps_every_commit(self):
+        shutil.copy(TEMPLATE, self.root / ".gitignore")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "one")
+        (self.root / "projects/_portfolio/PORTFOLIO.md").write_text("# Portfolio\nchanged\n")
+        git(self.root, "commit", "-q", "-am", "two")
+        dest, why = self.bundle()
+        self.assertIsNone(why)
+        self.assertEqual(git(self.everything(dest)[0], "rev-list", "--count", "--all").strip(), "2")
+
+    def test_restore_reads_the_snapshot(self):
+        self.old_history()
+        dest, _ = self.bundle()
+        fresh = Path(tempfile.mkdtemp(prefix="creaite-fresh-")).resolve()
+        self.addCleanup(shutil.rmtree, fresh, ignore_errors=True)
+        (fresh / "system/scripts").mkdir(parents=True)
+        for f in (self.root / "system/scripts").glob("*.py"):
+            shutil.copy(f, fresh / "system/scripts" / f.name)
+        r = vault_py(fresh, "print(backup.restore_git(open(sys.argv[1], 'rb').read())); "
+                            "print(backup.verify_bundle(sys.argv[1], sys.argv[2]))", str(dest), str(self.work / "scratch"))
+        self.assertIn("git history restored", r.stdout, r.stdout + r.stderr)
+        self.assertEqual(r.stdout.strip().splitlines()[-1], "None")                  # the weekly check reads it
+        self.assertIn("projects/_portfolio/PORTFOLIO.md", git(fresh, "ls-tree", "-r", "--name-only", "HEAD"))
+        self.assertTrue(git(fresh, "symbolic-ref", "HEAD").strip().startswith("refs/heads/"))
+
+    def test_failure_leaves_no_bundle_and_the_manifest_says_so(self):
+        self.old_history()
+        day = "2026-10-14"
+        self.v.run("init")
+        (self.root / "system/backups").mkdir(parents=True, exist_ok=True)
+        shutil.copy(self.root / "system/tracker.db", self.root / f"system/backups/tracker-{day}.db")
+        code = ("backup.run_git = lambda *a, **k: __import__('subprocess').CompletedProcess(a, 1, b'', 'boom'); "
+                "import zipfile; p = backup.make_zip(sys.argv[1]); z = zipfile.ZipFile(p); "
+                "print(json.dumps({'names': z.namelist(), 'manifest': json.loads(z.read('manifest.json'))}))")
+        r = vault_py(self.root, code, day)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        out = json.loads(r.stdout.strip().splitlines()[-1])
+        self.assertNotIn("vault.bundle", out["names"])
+        self.assertIn("git bundle failed", out["manifest"]["git"])
+
+    def test_git_missing_gives_no_bundle(self):
+        self.old_history()
+        r = vault_py(self.root, "backup.shutil.which = lambda n: None; print(json.dumps(backup.make_bundle(sys.argv[1])))",
+                     str(self.work / "x.bundle"))
+        self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]), "git isn't installed")
+        self.assertFalse((self.work / "x.bundle").exists())
 
 
 if __name__ == "__main__":

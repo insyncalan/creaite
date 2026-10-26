@@ -1,0 +1,90 @@
+diff --git a/system/scripts/backup.py b/system/scripts/backup.py
+index 596afb5b..95a11ecf 100644
+--- a/system/scripts/backup.py
++++ b/system/scripts/backup.py
+@@ -249,21 +249,70 @@ def wanted_out(f):
+     return f.name == ".DS_Store" or f.name.endswith((".part", ".pyc")) or "__pycache__" in f.parts
+ 
+ 
++PRIVATE_PATHS = ("system/staging", "system/logs", "system/branding")   # never in the zip's git history (BL-288, BL-323)
++BUNDLE_NOTE = []                       # ["snapshot"] when the last bundle was the filtered snapshot (for the manifest)
++SNAPSHOT_NOTE = "git history: a snapshot of the latest commit (earlier history held private files)"
++
++
+ def make_bundle(dest):
+-    """The vault's git history as one closed file at `dest`; None when made, else why not (no history is not a failure)."""
++    """The vault's git history as one closed file at `dest`; None when made, else why not (no history is not a failure).
++    Fails closed: any doubt gives no bundle, never an unfiltered one. Never changes the vault's repository (read only).
++    If no commit ever held a private path the bundle is the whole history; otherwise it is one commit, a snapshot of HEAD
++    without the private paths, built in a temporary repository, so old commits that hold chats or vip.json are not copied."""
+     if not (paths.ROOT / ".git").exists():
+         return "this vault has no git history"
+     git = shutil.which("git")
+     if not git:
+         return "git isn't installed"
+-    r = subprocess.run([git, "-C", str(paths.ROOT), "bundle", "create", str(dest), "--all"], capture_output=True, text=True,
+-                       timeout=300)
+-    if r.returncode or not Path(dest).is_file():
+-        last = (r.stderr.strip().splitlines() or ["no output"])[-1]
+-        return f"git bundle failed: {last[:200]}"
++    try:
++        return bundle_filtered(git, Path(dest))
++    except (OSError, subprocess.SubprocessError) as e:
++        Path(dest).unlink(missing_ok=True)
++        return f"git bundle failed: {type(e).__name__}"
++
++
++def run_git(git, repo, *args, **kw):
++    """Run git in `repo`; the CompletedProcess."""
++    return subprocess.run([git, "-C", str(repo), *args], capture_output=True, timeout=300, **kw)
++
++
++def bundle_filtered(git, dest):
++    """The bundle at `dest` (whole history if clean, else a filtered snapshot); None when made, else why not."""
++    root = paths.ROOT
++    BUNDLE_NOTE.clear()
++    seen = run_git(git, root, "rev-list", "--all", "-n", "1", "--", *PRIVATE_PATHS, text=True)
++    if seen.returncode:
++        return "git bundle failed: couldn't check the history for private files"
++    if not seen.stdout.strip():                                    # clean history: the whole of it, as before
++        r = run_git(git, root, "bundle", "create", str(dest), "--all", text=True)
++        return None if not r.returncode and dest.is_file() else fail(dest, r)
++    branch = run_git(git, root, "symbolic-ref", "-q", "--short", "HEAD", text=True).stdout.strip()
++    if not branch or run_git(git, root, "rev-parse", "-q", "--verify", "HEAD").returncode:
++        return "git bundle failed: the history holds private files and has no branch to snapshot"
++    with tempfile.TemporaryDirectory() as work:
++        snap = Path(work) / "snap"
++        snap.mkdir()
++        arch = run_git(git, root, "archive", "--format=tar", "HEAD", "--", ".", *[f":(exclude){p}" for p in PRIVATE_PATHS])
++        if arch.returncode:
++            return "git bundle failed: couldn't read the latest commit"
++        untar = subprocess.run(["tar", "-xf", "-", "-C", str(snap)], input=arch.stdout, capture_output=True, timeout=300)
++        ident = ["-c", "user.name=creaite", "-c", "user.email=creaite@localhost", "-c", "commit.gpgsign=false"]
++        steps = [["init", "-q"], ["checkout", "-q", "-b", branch], ["add", "-A"],
++                 [*ident, "commit", "-q", "-m", SNAPSHOT_NOTE], ["bundle", "create", str(dest), "HEAD", branch]]
++        if untar.returncode or any(run_git(git, snap, *st).returncode for st in steps) or not dest.is_file():
++            dest.unlink(missing_ok=True)
++            return "git bundle failed: couldn't build the filtered snapshot"
++    BUNDLE_NOTE.append("snapshot")
+     return None
+ 
+ 
++def fail(dest, r):
++    """Remove a half-made bundle; the reason from git's last line."""
++    dest.unlink(missing_ok=True)
++    last = (r.stderr.strip().splitlines() or ["no output"])[-1]
++    return f"git bundle failed: {last[:200]}"
++
++
+ def version():
+     """The installed creaite version, or 0.0.0."""
+     return paths.VERSION_FILE.read_text(encoding="utf-8").strip() if paths.VERSION_FILE.exists() else "0.0.0"
+@@ -290,6 +339,8 @@ def make_zip(day, folder=None):
+                 files.append({"path": BUNDLE, "size": len(data), "sha256": sha(data)})
+             manifest = {"creaite_backup": 1, "day": str(day), "made": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                         "version": version(), "files": files, "git": "bundle" if why is None else why}
++            if why is None and BUNDLE_NOTE:
++                manifest["git_note"] = SNAPSHOT_NOTE
+             z.writestr(MANIFEST, json.dumps(manifest, indent=1) + "\n")
+         os.replace(tmp, dest)
+     except (OSError, sqlite3.Error, zipfile.BadZipFile, subprocess.SubprocessError, BackupError) as e:
