@@ -1100,6 +1100,13 @@ def _original_pieces(text, scrub):
     pieces to drop from the normalised pass: the pieces of a line (or a line) that the original pass dropped when none of its
     pieces drops on its own (a piece that does, 'Passcode: 8825', explains the original drop and the rest stays).
     None when the body has no extra break or is HTML."""
+def _own_value_drop(scrub, piece):
+    """A piece that drops on its own AND carries its own value ('Passcode: 8825'). A bare label ('Passcode:', 'Meeting ID') drops alone
+    too, but its value is in a sibling piece, so it explains nothing (Cap re-check 2, HIGH 1). Known gap, stated: a word-only value after
+    a break ('Passcode: 8825<NEL>zejumud') keeps the word."""
+    return not scrub.invite_text(piece).strip() and not _ends_with_label(_skeleton(piece)) and not _label_only(piece)
+
+
     mod = _blocks_module()
     if not any(b in text for b in _BREAKS) or (mod is not None and mod.looks_like_html(text)):
         return None
@@ -1113,7 +1120,7 @@ def _original_pieces(text, scrub):
             kept_o[_scrub_key(mod, line)] -= 1
             continue
         pieces = [x for x in _line_breaks(line).split("\n") if x.strip()]
-        if not any(not scrub.invite_text(x).strip() for x in pieces):       # no piece drops on its own: the original drop was the window's
+        if not any(_own_value_drop(scrub, x) for x in pieces):       # no piece drops on its own VALUE: the original drop was the window's
             drop.update(_scrub_key(mod, x) for x in pieces)
     return drop
 
