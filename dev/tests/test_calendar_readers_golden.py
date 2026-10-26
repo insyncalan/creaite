@@ -39,6 +39,35 @@ def row(**kw):
             "organiser": False, **kw}
 
 
+ODD_DAY = "2026-10-27"
+DIRTY = dict(title="Join https://zoom.us/j/1234567890 pwd=abc", where="Meeting ID 845 344 731 674",
+             attendees=[{"name": "PIN 4417", "email": "x@y.example"}], body="Passcode: 4417\nJoin https://teams.microsoft.com/l/meetup-join/abc")
+# Banner's odd-shapes calendar (#375 review): every shape a saved file can hold, read on 2.6.8 and 2.6.9
+ODD_ROWS = [
+    row(id="o1", start="09:00", end="10:00", title="ABC planning", sensitivity="normal", organiser_email="pat.doe@brightwater.example",
+        attendees=PEOPLE[:1]),
+    row(id="o2", all_day=True, title="Company day", sensitivity="normal"),
+    row(id="o3", start="10:00", end="11:00", title="Series", sensitivity="normal", recurrence="weekly", attendees=PEOPLE),
+    row(id="o4", start="11:00", end="12:00", title="Declined one", sensitivity="normal",
+        attendees=[{"name": "Sam Lee", "email": "sam@harbourco.example", "response": "declined"}]),
+    row(id="o5", start="12:00", end="12:30", title="Canceled: Old sync", sensitivity="normal"),
+    row(id="o6", start="13:00", end="14:00", title="T" * 600, sensitivity="normal"),
+    row(id="o7", start="14:00", end="15:00", title="No emails", sensitivity="normal", attendees=[{"name": "Kim"}, {"name": "Lou", "type": "optional"}]),
+    row(id="o8", start="15:00", end="16:00", title="Revisão do orçamento 預算", sensitivity="normal", where="Café Zürich",
+        attendees=[{"name": "José Núñez", "email": "jose@ext.example"}]),
+    row(id="o9", start="16:00", end="17:00", title="Private one", private=True, teams=True, attendees=PEOPLE),
+    row(id="o10", start="17:00", end="17:30", title="Sens private", sensitivity="private", attendees=PEOPLE),
+    row(id="o11", start="17:30", end="18:00", title="Bare conf", confidential=True, attendees=PEOPLE, body="Secret plan"),
+    {"id": "o12", "start": "18:00"},
+    row(id="o13", start="18:30", end="19:00", title="String attendees", sensitivity="normal", attendees="Sam Lee"),
+    row(id="o14", start="19:00", end="19:30", title="None in list", sensitivity="normal", attendees=[None, PEOPLE[0], "x"]),
+    row(**{"id": "o15", "start": "08:00", "end": "08:30", "sensitivity": "normal", "clean": 1, **DIRTY}),
+    row(**{"id": "o16", "start": "08:30", "end": "09:00", "sensitivity": "normal", "clean": 10 ** 30, **DIRTY}),
+    row(id="o17", start="07:00", end="07:30", title="Stamped bare conf", clean=1, confidential=True, attendees=PEOPLE, body="Secret plan"),
+    row(id="o18", start="07:30", end="08:00", title="Join https://zoom.us/j/1234567890", clean=1, private="yes", body="Passcode: 4417",
+        attendees="x"),
+    "not a row", ["a", "list"], None,
+]
 ROWS = {
     DAY: [
         row(id="r1", start="09:00", end="10:00", title="Weekly sync", where="Room 204", organiser="Pat Doe", teams=True,
@@ -50,11 +79,16 @@ ROWS = {
         row(id="rP", start="12:00", end="13:00", title="Busy", private=True, teams=True),
         row(id="rC", start="14:00", end="15:00", title="Board pay", sensitivity="confidential"),
     ],
+    ODD_DAY: ODD_ROWS,
+    "2026-10-22": [row(id="h1", start="08:00", end="09:00", title="Held past day", sensitivity="normal", attendees=PEOPLE[:1], body="Notes")],
+    "garbage": [row(id="bad1", title="Bad key")],
+    "2026-10-28": "not a list",
     EARLIER: [
         row(id="r4", start="10:00", end="11:00", title="Quay design", where="Teams", teams=True, sensitivity="normal",
             attendees=PEOPLE, body="Notes"),
     ],
 }
+IDS = "('r1', 'r2', 'rP', 'rC', 'r4', " + ", ".join(repr(r["id"]) for r in ODD_ROWS if isinstance(r, dict) and "id" in r) + ")"
 SETUP = "import sys, json, datetime; sys.path.insert(0, 'system/scripts')\nD = datetime.date.fromisoformat('" + DAY + "')\n"
 PROJ = "[{'code': 'ABC', 'name': 'Harbour Upgrade'}]"
 READERS = {
@@ -64,14 +98,16 @@ READERS = {
                                       "out = {e['id']: b.prep_match_ev(e['title'], e, " + PROJ + ", {}) for d in b.saved_calendar_days().values() for e in d}"),
     "build_dashboard.inbox_meetings": f"import build_dashboard as b\nout = b.inbox_meetings({{}}, {PROJ}, D)",
     "build_dashboard.fetched": "import build_dashboard as b\nout = b.calendar_days({}, datetime.datetime(2026, 10, 26, 9, 0)).get('fetched')",
-    "close_day.Lookup.meeting": "import close_day as c\nL = c.Lookup()\nout = {i: L.meeting(i) for i in ('r1', 'r2', 'rP', 'rC', 'r4')}",
+    "close_day.Lookup.meeting": "import close_day as c\nL = c.Lookup()\nout = {i: L.meeting(i) for i in " + IDS + "}",
     "transcripts.calendar_rows": "import transcripts as t\nout = t.calendar_rows()",
-    "drafts.calendar_event": "import drafts as d\nout = {i: d.calendar_event({'eid': i}) for i in ('r1', 'r2', 'rP', 'rC', 'r4')}",
+    "drafts.calendar_event": "import drafts as d\nout = {i: d.calendar_event({'eid': i}) for i in " + IDS + "}",
     "drafts.followup_facts": ("import drafts as d\n"
-                              "out = {i: d.followup_facts({'eid': i, 'files': []})['attendees'] for i in ('r1', 'r2', 'rP', 'rC', 'r4')}"),
+                              "out = {i: d.followup_facts({'eid': i, 'files': []})['attendees'] for i in " + IDS + "}"),
     "drafts._meeting_attendees": ("import drafts as d\n"
                                   "out = [d._meeting_attendees('" + DAY + "', 'Weekly sync'), d._meeting_attendees('" + EARLIER + "', 'Quay design'), "
                                   "d._meeting_attendees('" + DAY + "', 'Board pay')]"),
+    "prep_view.people_brief": ("import prep_view as v\n"
+                               "out = {k: v.brief('" + ODD_DAY + "|' + k + '|' + t)['people'] for k, t in (('09:00', 'ABC planning'), ('10:00', 'Series'), ('15:00', 'Revisão do orçamento 預算'))}"),
     "prep_page._event": ("import prep_page as p\n"
                          "out = {t: p._event('x|' + s + '|' + t, '" + DAY + "') for s, t in (('09:00', 'Weekly sync'), ('11:00', 'Stamped review'), "
                          "('12:00', 'Busy'), ('14:00', 'Board pay'))}"),
@@ -93,9 +129,7 @@ ALLOWED = {
     "drafts.calendar_event": {BODY: "filtered by the 2.6.9 filter", "registered": "unused",
                               "attachments": "the draft reader never reads them (agenda purpose)",
                               "organiser_email": "the draft reader never reads it (agenda purpose)"},
-    "prep_page._event": {BODY: "filtered by the 2.6.9 filter", "registered": "unused",
-                         "email": "prep_page reads title, start, end and where; the invite's people come from the Prep entry",
-                         "organiser_email": "not read by prep_page"},
+    "prep_page._event": {BODY: "filtered by the 2.6.9 filter", "registered": "unused"},
     "transcripts.calendar_rows": {BODY: "day purpose carries none", "attachments": "not read (id, all_day, end, teams, private, title)",
                                   "email": "not read", "registered": "not read", "organiser_email": "not read"},
 }
@@ -126,7 +160,7 @@ def run_all(v):
     out = {}
     for name, code in READERS.items():
         r = subprocess.run([sys.executable, "-c", SETUP + code + "\nprint(json.dumps(out, sort_keys=True, default=str))"], cwd=v.root,
-                           capture_output=True, text=True, env={**os.environ, "CREAITE_NO_LAUNCH": "1", "CREAITE_NOW": "2026-10-26T09:00:00"})
+                           capture_output=True, text=True, env={**os.environ, "CREAITE_NO_LAUNCH": "1", "CREAITE_NOW": "2026-10-26 09:00"})
         if r.returncode != 0:
             raise AssertionError(f"{name}: {r.stderr[-500:]}")
         out[name] = json.loads(r.stdout.strip().splitlines()[-1])

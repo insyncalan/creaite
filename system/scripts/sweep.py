@@ -771,10 +771,9 @@ def keep_held_past_days(days, start_day, today_day):
 
 
 def _stamped(row):
-    """A saved row ready to write: a stamped row as stored but limited to the saved keys, any other cleaned, filtered and stamped."""
-    if calendar_gateway.is_stamped(row):
-        return {k: row[k] for k in (*calendar_gateway.ROW_KEYS, "clean") if k in row}
-    return calendar_gateway.clean_row(row)
+    """A saved row ready to write: a trusted row (current stamp, well formed) as stored but limited to the saved keys, with its
+    sensitivity worked out first (calendar_gateway.keep_row); any other cleaned, filtered and stamped."""
+    return calendar_gateway.stamp_row(row)
 
 
 CAL_LOCK = calendar_gateway.LOCK            # the one lock file: calendar_gateway.lock takes the same flock

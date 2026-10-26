@@ -67,7 +67,7 @@ def latest():
 
 def _event(key, day):
     try:
-        days = calendar_gateway.read("prep_page").get("days") or {}
+        days = calendar_gateway.read("prep_panel").get("days") or {}
     except (OSError, ValueError):
         return None
     start, title = key.split("|")[-2:]
