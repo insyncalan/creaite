@@ -4,10 +4,41 @@ What changed for you in each release of creaite, newest first. Written in plain 
 
 ## creaite 2.6.10
 
-The headline: Shareable minutes now ask about any line that may describe a Sensitive item before they are shared.
+2.6.10 contains all of 2.6.9. The headline: each project can keep its folder in its own place, creaite can fetch your meeting transcripts as they appear, and shareable minutes now warn you before they carry a sensitive item.
 
-### Shareable minutes
-- **Lines about a Sensitive item are asked about before sharing.** A Shareable export or follow-up email first lists any line that may describe something kept out of the shareable version, under **Review these lines before sharing**. **Hold back with it** leaves the line out whenever its item is; **Keep** keeps it, and creaite asks again only if you change its words. A line held back says so in the minutes, and **Show in the shareable version** puts it back. Rows, section headings, the title and the meeting's details are checked too: a heading or the title can be given **Use a plain heading** instead. (#329)
+### Each project can have its own folder
+- **A folder per project.** In a project's settings you can give it its own folder, written as a full path or a path from the old shared parent, and creaite stores it with `~` for your home. A project without its own folder stays where it was: nothing moves unless you ask. (#385)
+- **The archive stays beside each project.** An archived project's folder is kept next to its own folder. (#385)
+- **creaite checks the folder first.** A folder that is not there, such as an OneDrive folder that is offline, is never made on your laptop by mistake; creaite says it is missing and leaves everything as it was. Two projects cannot share one folder, and a project's folder cannot sit inside another project's. (#385)
+- **Search, Files, backups, archiving and restoring follow the folder you set**, and ask creaite may read and change files in each project's own folder on the same terms as before. (#385)
+
+### Fetch transcripts as they appear
+- **A new setting, Fetch transcripts as they appear,** under Settings › Mail, Teams and Intake › Checking mail and Teams. It is off by default. When you switch it on, each mail and Teams check you run from the dashboard also fetches the transcript of every Teams meeting that has ended and puts it in Intake, so it is ready when you open the page. That covers a check you type, Check now and Close the day's catch-up; a scheduled check never fetches. It only reads: no AI runs, nothing is added to your project records, and you still press **Process** to make minutes. Confidential meetings are never fetched. When the check ends, creaite says how many it fetched, how many it held back and how many are left for you to load with **Process**. (#250)
+
+### Shareable minutes and sensitive items
+- **Lines about a Sensitive item are asked about before sharing.** A Shareable export or follow-up email first lists any line that may describe something kept out of the shareable version, under **Review these lines before sharing**. **Hold back with it** leaves the line out whenever its item is; **Keep** keeps it, and creaite asks again only if you change its words. (#329)
+- **A line held back says so in the minutes**, and **Show in the shareable version** puts it back. Rows, section headings, the title and the meeting's details are checked too: a heading or the title can be given **Use a plain heading** instead. (#329)
+
+### File paths on screen
+- **A project's Folder row shows its real OneDrive location.** (#374)
+- **Activity names the file and the project** for a change ask creaite made, with **Show in Finder** to reveal the file itself, or its folder if the file is gone. (#374)
+
+### Checks creaite runs on itself
+- **A mail and Teams check that did not run says so.** Today shows "Today's mail and Teams check didn't run" with a Check now button. Settings › Health shows "A mail and Teams check didn't run", and when creaite tried again, the time. It clears when a check completes. (#370)
+- **Smaller fixes behind the scenes.** An error on the page names where it came from. A tab left open while creaite restarts reloads once by itself. Settings › Health says when detailed logging has been on for more than a week. (#370)
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+- Look at a project's settings page once, to see its Folder row.
+
+### Good to know
+- **Fetching transcripts has limits.**
+  - A confidential meeting that was dropped from your calendar, while a normal meeting with the same title sits at the same times, can hold the normal one back. It is loaded when you press Process.
+  - A private all-day entry holds nothing back.
+  - When the clocks go back, a meeting in the repeated hour is held back rather than risk fetching a confidential one. Press Process.
+  - The form of the transcript links from Microsoft 365 is still to be checked on a real account; until then a link creaite does not recognise is left for Process.
+- **Project folders are new.** If you set a folder for a project, check that Files, Search and your next backup show it where you expect before you rely on it.
+- **Old backup copies keep what they held** (as in 2.6.9).
 
 ## creaite 2.6.9
 
