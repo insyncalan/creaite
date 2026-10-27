@@ -13,4 +13,4 @@ Taken from the flipped build with headless Chrome (CDP, fictional vault). activi
 
 ## Known limit (Banner's LOW on the reveal fix, logged, no change)
 
-A mapped project's archive slot is covered only for the `99 Archive` folder. Files in an older `_Archive` or `zz Archive` folder inside a mapped project are not offered Show in Finder. The button then does not appear; nothing else changes.
+A mapped project's archive slot is covered only for the `99 Archive` folder. An older `_Archive` or `zz Archive` folder inside a mapped project is not covered by that slot (Banner's LOW; not checked further, no change made).
