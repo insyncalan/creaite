@@ -1,5 +1,5 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index cf9a5f235..436a25f94 100644
+index cf9a5f235..40edd38ba 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -15,6 +15,7 @@ Commands (run from anywhere; every location comes from paths.py):
@@ -140,7 +140,7 @@ index cf9a5f235..436a25f94 100644
      broken = con.execute("PRAGMA foreign_key_check").fetchall()
      if broken:
          raise Invalid(f"the recode would leave {len(broken)} broken link(s) between items")
-@@ -5005,5 +5023,634 @@ def recode_barrier(work):
+@@ -5005,5 +5023,635 @@ def recode_barrier(work):
      return [(p, d)]
  
  
@@ -314,7 +314,7 @@ index cf9a5f235..436a25f94 100644
 +    for f in ("projects_add", "projects_remove"):
 +        for code in json_list(row.get(f)) if f in changed else ():
 +            if con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone() is None:
-+                raise Invalid(f"{f}: {code} isn't one of your projects")
++                raise Invalid(f"{f}: {code} isn't one of your projects: add the project first, or leave {code} out")
 +
 +
 +def _person_rules(con, table, row, changed):
@@ -682,7 +682,8 @@ index cf9a5f235..436a25f94 100644
 +            try:
 +                write_item(con, {"op": "new", "table": "people", "values": values}, apply_id, PEOPLE_VIA)
 +            except Invalid as e:
-+                raise Invalid(f"{values['name']}: {e}") from e
++                raise Invalid(f"{values['name']}: {e}. Change {values['name']}'s row in the people register, or add what is "
++                              "missing first, then run the move again.") from e
 +        text = register_export_text(con)
 +        kept = paths.rel(_keep_register(paths.BACKUPS, PEOPLE_BEFORE[:-3])) if paths.PEOPLE_REGISTER.is_file() else None
 +        rec = {"op": "people-register", "path": paths.rel(paths.PEOPLE_REGISTER),

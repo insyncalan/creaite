@@ -5,10 +5,21 @@ Three guarded patches, NOT applied on any branch. Apply them only after review a
 | Diff | File | sha256 (rev 2) |
 |---|---|---|
 | `schema-386.diff` (G-a) | `system/scripts/schema.sql` | `2a3aa690308cd5e7ca09c957c04934cd79eb69fc1b7855717046fb799e778739` |
-| `tracker-386.diff` (G-b) | `system/scripts/tracker.py` | `0ab907f63e9f6f80634f585d22c5ed7ad6dabe1e90a1a707c46b3004717a62b9` |
+| `tracker-386.diff` (G-b) | `system/scripts/tracker.py` | `7a295be7a5fb53e046cc96eb834f2462f92dcd39e3c04d07f340128008eb8c45` (rev 2b) |
 | `reach-386.diff` (G-b2, one line) | `system/scripts/reach.py` | `2bdd0a4e387fbe2fda8b1d9239ad4fcd8973f57644b73bca4ec64a97b65b0f9f` (unchanged) |
 
 Base: v2.6.9 release `0b637e926`. Chain: `GUARDED-386-s3.chain` (not pinned; `dev/tests/guarded_chain.py` is unchanged).
+
+## Rev 2b (27-10-2026): the label and project refusals say which, whose and how
+
+`tracker-386.diff` only: `0ab907f63e9f6f80634f585d22c5ed7ad6dabe1e90a1a707c46b3004717a62b9` (rev 2) → `7a295be7a5fb53e046cc96eb834f2462f92dcd39e3c04d07f340128008eb8c45` (rev 2b); schema and reach unchanged.
+
+- An unknown project code on a person: "projects_add: ZZZ isn't one of your projects: add the project first, or leave ZZZ out"
+  (an unknown label already said which and how: "unknown label 'Nonesuch' (labels: …); add it in Settings or ask creaite first").
+- In the move, every person the writer refuses is named, with how to fix it: "Kim Code: projects_add: ZZZ isn't … . Change Kim
+  Code's row in the people register, or add what is missing first, then run the move again." Nothing is written.
+- Failing tests first (commit `e3c61794a`, 2 failures against rev 2): `test_an_unknown_label_or_project_says_which_whose_and_how`
+  (the move) and `test_an_unknown_label_or_project_says_how_to_fix_it` (an explicit new person). 42 tests now.
 
 ## Rev 2 (27-10-2026), after Banner's independent review
 
@@ -44,8 +55,8 @@ What changed, finding by finding:
 - **MEDIUM 3, a pending old-style register write.** While any staged proposal (pending or approved, not applied or rejected) still
   writes the register (`regSave`, `propose.py people`), the move and its dry run refuse: "a change to the people register is still
   waiting in Review (<proposal file>). Apply or reject it first." So the move never makes such a write block every later apply.
-- **MEDIUM 4, gating.** `dev/tests/test_people_table_386.py` skips with no diff applied (`OK (skipped=38)`), fails for every partial
-  combination (`AllOrNone`, plus the tests themselves), and passes with all three. Markers: schema.sql's `-- People (#386)`,
+- **MEDIUM 4, gating.** `dev/tests/test_people_table_386.py` skips with no diff applied
+  (`OK (skipped=40)` since rev 2b), fails for every partial combination (`AllOrNone`, plus the tests themselves), and passes with all three. Markers: schema.sql's `-- People (#386)`,
   tracker.py's slice 3 banner, reach.py's migrate-people comment (so reach-386.diff needs no change).
 - **LOWs, all fixed:**
   - names compare by `fold()` (NFC, spaces collapsed, `casefold`), in Python, everywhere: rename and merge carry across the seven
@@ -125,10 +136,13 @@ never writes the private file, never strips the register's columns itself, and n
 1. **All three diffs together, as one commit.** Any one alone is broken: the schema alone is a table nothing writes; tracker alone
    writes, and `tracker.py read` reads, a table that isn't there; tracker without reach leaves `migrate-people` unclassified. They
    touch different files and apply cleanly alone and in any order (all six orders checked, and reversed cleanly).
-2. **Landing order before any live `migrate-people`:** slice 2 (the private file, with its explicit move), the ordinary half of
-   slice 3 (`propose.py people …` and the page's `regSave` stage people items instead of writing the register), and slice 1 with
+2. **The ordinary half ships with the diffs (hard condition).** The ordinary half of slice 3 (`propose.py people …` and the page's
+   `regSave` staging people items instead of writing the register) must land **in the same release as these diffs, and before any
+   live `migrate-people`**. The diffs must not ship without it: after the move every old-style register write is refused, and with
+   it the whole apply.
+3. **Landing order before any live `migrate-people`:** also slice 2 (the private file, with its explicit move) and slice 1 with
    Cap's `has_table()` fix ("the table has rows") and `strict` reads.
-3. **The move is explicit only.** `tracker.py migrate` and an update never run it. Alan starts it from a Health row, "Move people
+4. **The move is explicit only.** `tracker.py migrate` and an update never run it. Alan starts it from a Health row, "Move people
    into the tracker" (ordinary half), after the dry-run count; it takes a database backup first; one save, so Undo reverses it.
 
 ## Stated limits
@@ -140,17 +154,21 @@ never writes the private file, never strips the register's columns itself, and n
   other sections, tables and free notes, rows without a name, unknown labels or project codes. The template's guidance lines are
   replaced by the export's own note (they are the template's, not Alan's).
 - After the move, an old page that still stages a register write gets that write refused at apply (and with it that apply); the
-  ordinary half's `regSave` change closes this.
-- `fold` uses `casefold`; slice 2's `people_private.key` uses `lower` (they differ only on a few letters such as "ß").
-- Not tested on a real case-insensitive macOS disk: the case-folded path is tested as a path, the same on any disk.
+  ordinary half's `regSave` change closes this, which is why it ships in the same release (Apply order 2).
+- Name matching stays `casefold` (`fold`: NFC, spaces collapsed, casefold); Cap adopts it in slice 2's `people_private.key`
+  (it used `lower`; they differ only on a few letters such as "ß").
+- The Settings › Health wording in the move's refusal ("Move it to its private file first (Settings › Health)") follows Cap's final
+  slice 2 tip, where the explicit move lives; it is changed to match that tip's wording if it differs.
+- The case-folded register path (`People-Register.md`) is tested as a path only, not on a real case-insensitive disk. Alan can try
+  it on the Mac: stage a write to `projects/_portfolio/People-Register.md` after the move and check the apply refuses it.
 
 ## How verified
 
 Throwaway worktrees off the branch (its guarded files are 0b637e926's), never the branch itself:
 
 - `git apply --check` of each diff alone on `0b637e926`, all three in all six orders, then `git apply -R`: clean.
-- `dev/tests/test_people_table_386.py` (40 tests):
-  - none applied (the branch): OK, 38 skipped;
+- `dev/tests/test_people_table_386.py` (42 tests since rev 2b):
+  - none applied (the branch): OK, 40 skipped;
   - schema only: FAILED; tracker and reach only: FAILED; every other partial combination: FAILED;
   - all three: OK;
   - against rev 1 with all three applied: 29 failures (the failing-first run).

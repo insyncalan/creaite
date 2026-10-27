@@ -13,5 +13,8 @@
 
 ## How the move happens
 
+- Ships together: the change that makes Settings › People and propose.py save people as people items (not as register edits) is in
+  the same release as the people table, and lands before anyone moves people. The table never ships without it.
+
 - Only when Alan starts it, from Health ("Move people into the tracker"): it shows how many people would move first, takes a
   backup, and is one save that Undo reverses. An update never starts it.

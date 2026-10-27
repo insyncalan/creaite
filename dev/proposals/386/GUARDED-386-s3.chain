@@ -1,17 +1,19 @@
 # #386 slice 3 guarded chain (nothing is pinned: dev/tests/guarded_chain.py does not know it; a pin is added only on Alan's say).
 # Rev 2 (27-10-2026, after Banner's review): schema and tracker revised (hidden out of the record, a lossless move); reach unchanged.
+# Rev 2b (27-10-2026): tracker only, the label and project refusals say which, whose and how (0ab907f6... -> 7a295be7...).
 # One diff per line, in landing order. Base: the v2.6.9 release commit 0b637e926. All three land together, as one commit.
 # Guarded files only: system/scripts/schema.sql (counted with tracker), system/scripts/tracker.py, system/scripts/reach.py.
 #
-# Landing order: the diffs may land first (with the table empty nothing changes). Nothing runs a live migrate-people until slice 2
-# (the private follow file) and the ordinary half of slice 3 (propose.py people and the page's regSave staging people items) have
-# landed, and slice 1 has Cap's has_table() fix ("has rows"). migrate and update never run migrate-people by themselves: Alan starts
+# HARD CONDITION: the ordinary half of slice 3 (propose.py people and the page's regSave staging people items) lands in the SAME
+# release as these diffs and BEFORE any live migrate-people; the diffs never ship without it.
+# Landing order: with the table empty nothing changes. Nothing runs a live migrate-people until slice 2 (the private follow file)
+# and the ordinary half have landed, and slice 1 has Cap's has_table() fix ("has rows"). migrate and update never run migrate-people by themselves: Alan starts
 # it from Health ("Move people into the tracker"), after a dry-run count, with a backup first.
 #
 # G-a: the people table (sha256 2a3aa690308cd5e7ca09c957c04934cd79eb69fc1b7855717046fb799e778739)
 dev/proposals/386/schema-386.diff
-# G-b (sha256 0ab907f63e9f6f80634f585d22c5ed7ad6dabe1e90a1a707c46b3004717a62b9): people ops (no hide), rename and merge across the seven name columns, auto-add, the register export (no Follow or
-# Hidden), migrate-people (refuses what it can't carry)
+# G-b (sha256 7a295be7a5fb53e046cc96eb834f2462f92dcd39e3c04d07f340128008eb8c45): people ops (no hide), rename and merge across the seven name columns, auto-add,
+# the register export (no Follow or Hidden), migrate-people (refuses what it can't carry)
 dev/proposals/386/tracker-386.diff
 # G-b2 (sha256 2bdd0a4e387fbe2fda8b1d9239ad4fcd8973f57644b73bca4ec64a97b65b0f9f): tracker.py migrate-people classified as a record command (BL-267)
 dev/proposals/386/reach-386.diff
