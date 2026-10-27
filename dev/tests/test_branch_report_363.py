@@ -191,6 +191,19 @@ class Fixture(unittest.TestCase):
         self.assertEqual(rows["picked"]["suggest"], "keep")
         self.assertEqual(B._lists(["--markdown", "--worktree-list", "a", "--worktree-list", "b"]), ["a", "b"])
 
+    def test_a_bad_worktree_list_stops_with_a_plain_message(self):
+        """Stark's re-check (LOW): no traceback for a missing, folder or non-UTF-8 list, or --worktree-list with no FILE."""
+        bad = self.tmp / "latin1.txt"
+        bad.write_bytes(b"worktree /x\xe9\n")
+        for f in (str(self.tmp / "missing.txt"), str(self.tmp), str(bad)):
+            with self.assertRaises(SystemExit) as e:
+                B._saved_list(f)
+            self.assertIn("can't read it", str(e.exception.code), f)
+        for argv in (["--worktree-list"], ["--worktree-list", "--markdown"], ["--markdown", "--worktree-list"]):
+            with self.assertRaises(SystemExit) as e:
+                B._lists(argv)
+            self.assertIn("needs a FILE", str(e.exception.code), argv)
+
     def test_a_local_branch_with_commits_not_on_origin_is_kept(self):
         r = self.rows["ahead-local"]
         self.assertEqual((r["where"], r["local_ahead"]), ("local and remote", 1), r)

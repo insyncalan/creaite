@@ -83,11 +83,20 @@ def checked_out(lists=()):
     """{branch name: [worktree path, …]} for every worktree of this clone with a branch checked out, and of each saved
     `git worktree list --porcelain` in `lists` (another machine's clone; its paths are given as "<file>: <path>")."""
     found = {}
-    for label, text in [(None, None)] + [(f, open(f, encoding="utf-8").read()) for f in lists]:
+    for label, text in [(None, None)] + [(f, _saved_list(f)) for f in lists]:
         for w in worktree_entries(text):
             if w["branch"]:
                 found.setdefault(w["branch"], []).append(w["path"] if label is None else f"{label}: {w['path']}")
     return found
+
+
+def _saved_list(f):
+    """The text of a saved worktree list, or a plain stop (never a traceback) when it can't be read."""
+    try:
+        with open(f, encoding="utf-8") as fh:
+            return fh.read()
+    except (OSError, UnicodeDecodeError) as e:
+        sys.exit(f"--worktree-list {f}: can't read it ({e.__class__.__name__}). Save it with: git worktree list --porcelain > FILE")
 
 
 def facts(pr=None, lists=()):
@@ -103,7 +112,10 @@ def facts(pr=None, lists=()):
         git("read-tree", "origin/main", env={**os.environ, "GIT_INDEX_FILE": index})
         for b in names:
             last = out("log", "-1", "--format=%cs|%an|%s", b, "--").split("|", 2) + ["", ""]
-            ahead, behind = out("rev-list", "--left-right", "--count", f"{b}...origin/main", "--").split()
+            counts = out("rev-list", "--left-right", "--count", f"{b}...origin/main", "--").split()
+            if len(counts) != 2:                       # the branch went away while the report ran (a prune elsewhere)
+                continue
+            ahead, behind = counts
             base = out("merge-base", "origin/main", b)
             short = b.split("/", 1)[1] if b.startswith("origin/") else b
             where = refs[short][1]
@@ -250,8 +262,14 @@ def worktrees():
 
 
 def _lists(argv):
-    """The FILE after each --worktree-list."""
-    return [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "--worktree-list"]
+    """The FILE after each --worktree-list; a plain stop when one has no FILE (at the end, or another option in its place)."""
+    files = []
+    for i, a in enumerate(argv):
+        if a == "--worktree-list":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("--"):
+                sys.exit("--worktree-list needs a FILE after it: the output of `git worktree list --porcelain` saved on another machine")
+            files.append(argv[i + 1])
+    return files
 
 
 if __name__ == "__main__":
