@@ -131,6 +131,10 @@ class Links(LiveBrowserCase):
         def_ev = b.eval("document.querySelector('#projTbl tr[data-cock=\"DEF\"] .ev').innerHTML")
         self.assertNotIn("raid:urgentonly:DEF", def_ev)              # DEF has no urgent risk: plain text
         self.assertNotIn("Urgent risks", def_ev)                     # #341 item 4: the Projects page shows only the figures above zero
+        # #341 L-3: every figure at zero reads "Nothing flagged"; one above zero shows only itself (a project with no records, so all zeros)
+        self.assertEqual(b.eval("evidence({code:'ZZZ',slip:0},true)"), '<span class="ev sub">Nothing flagged</span>')
+        self.assertNotIn("Nothing flagged", def_ev)
+        self.assertNotIn("Nothing flagged", b.eval("evidence({code:'ZZZ',slip:0},false)"))     # the full table (not the Projects page) keeps its zeros
         b.click("#projTbl [data-cockjump='ABC|undated']")
         b.wait("VIEW==='cockpit' && COCK==='ABC' && !!document.getElementById('undatedCard')")
         b.eval("go('projects')")
