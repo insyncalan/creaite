@@ -10,6 +10,7 @@ import json
 import os
 import re
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[2]          # creaite/
 
@@ -135,7 +136,8 @@ LOCATION_DEFAULTS = {"projects_root": "", "portfolio": "_Portfolio", "skeleton":
                                  "notes": "08 Notes"},                                 # BL-301: Alan's notes, made on the first note
                      "never_index": ["99 Archive", "_Archive", "zz Archive", "_Templates", "99 System"],   # BL-112: 99 System: the backups;
                      # #252: the two old archive names are added, never removed, so a saved list from before still works
-                     "offsite_backup": "_Portfolio/99 System/creaite backups"}
+                     "offsite_backup": "_Portfolio/99 System/creaite backups",
+                     "project_paths": {}}       # #385: {register folder name: "~/…"}, a project's own folder elsewhere
 ARCHIVE = "99 Archive"             # #252 (Alan, 20-10-2026): archived projects (<projects root>/99 Archive/<folder>) and each
 #                                    engagement's own archive folder: one name, so it sorts last beside 99 System. Every new move
 #                                    goes here, nowhere else.
@@ -203,6 +205,265 @@ def portfolio_dir() -> Path:
     return projects_root() / str(locations().get("portfolio") or "_Portfolio") if external() else ROOT / "projects" / "_portfolio"
 
 
+# ===== #385: a project's own folder, anywhere in the home folder =====
+# locations.project_paths = {"<register folder name>": "~/…"}: that project's folder is there instead of <projects root>/<folder>.
+# Honoured only when locations.projects_root is set (external()); the portfolio and the offsite backup stay under the projects
+# root. Stored paths never change: projects/<folder>/… still names a mapped project's file, and resolve and rel map the first part
+# after projects/ to the mapped folder (the longest match first). A value is stored with ~ (or relative to the projects root) and
+# expanded on use. An archived mapped project is beside its own folder: <parent of the folder>/99 Archive/<folder>, stored as
+# projects/99 Archive/<folder>/… exactly as an archived project in the projects root is. A mapped folder that isn't there (an
+# unmounted drive, OneDrive not running) is never created: missing_project_paths lists it for Health.
+
+def _loc_project_roots(loc) -> dict:
+    """{folder name: real Path} from a `locations` value `loc`, failing closed (Cap's review of phase 1, MEDIUM 1): every entry
+    project_mapping_problem refuses is left out (a value above the home folder, a key named 99 Archive, a symlink …), so no
+    caller can take a bad one; the key is the register's own spelling. Archived projects' entries are included (resolve needs
+    them); project_roots is the registered ones. dropped_project_paths lists what was left out."""
+    return _loc_honoured(loc)[0]
+
+
+def _raw_name_ok(name) -> bool:
+    """A project_paths key that is well formed: a non-empty name with no slash, not . or .., no NUL byte."""
+    return (isinstance(name, str) and bool(name.strip()) and "/" not in name and "\\" not in name
+            and name not in (".", "..") and "\0" not in name)
+
+
+def _raw_value_ok(value) -> bool:
+    """A project_paths value that is well formed: non-empty text without a NUL byte (Cap's LOW 5: a NUL byte raises on every use)."""
+    return isinstance(value, str) and bool(value.strip()) and "\0" not in value
+
+
+def _loc_raw_roots(loc) -> dict:
+    """{folder name: Path} from `loc` as written, unchecked: {} when it has no projects_root, and only the well-formed entries
+    (a non-empty name without a slash, a non-empty text value). The path is expanded (~) and made absolute (a relative one is
+    below that projects root), never resolved through symlinks and never checked on disk. Only _loc_honoured reads this."""
+    loc = loc or {}
+    m = loc.get("project_paths")
+    if not str(loc.get("projects_root") or "").strip() or not isinstance(m, dict) or not m:
+        return {}
+    root = _loc_root(loc)
+    out = {}
+    for name, value in m.items():
+        if not _raw_name_ok(name) or not _raw_value_ok(value):
+            continue
+        p = Path(os.path.expanduser(value.strip()))
+        out[name] = p if p.is_absolute() else root / p
+    return out
+
+
+PROJECT_PATHS_SINCE = "2.6.10"  # #385: the first release that reads locations.project_paths; undoing an update to an older one
+#                                warns (cx-setup, Settings › Undo update): its mapped projects drop out of view (no data lost)
+_HONOURED = {}                 # #385: the checked map, by what it was checked against: (when, roots, dropped)
+HONOURED_SECONDS = 2.0         # checked again at least this often (a folder swapped for a symlink is dropped within it)
+_CHECKING = [False]            # a check that finds itself asked again (reach calling back) honours nothing meanwhile
+
+
+def _loc_honoured(loc):
+    """#385, fail closed on read (Cap's review, MEDIUM 2b): (roots, dropped) for `locations` value `loc`. roots is
+    _loc_raw_roots(loc) without every entry project_mapping_problem refuses (a hand-edited settings.json, or a folder that has
+    since become a symlink or moved inside another project's): such an entry is left out as if it weren't there, so nothing (reach,
+    the guard hook, resolve) takes it as a project's folder. dropped is [{folder, path, why}] for Health. Checked again at least
+    every HONOURED_SECONDS (a check takes milliseconds; resolve is called for every file)."""
+    loc = loc or {}
+    m = loc.get("project_paths")
+    if not str(loc.get("projects_root") or "").strip() or not isinstance(m, dict) or not m:
+        return {}, []
+    key = json.dumps([loc.get("projects_root"), loc.get("portfolio"), loc.get("never_index"), m, os.path.expanduser("~")],
+                     sort_keys=True, default=str)
+    hit, now = _HONOURED.get(key), time.monotonic()
+    if hit and now - hit[0] < HONOURED_SECONDS:
+        return hit[1], hit[2]
+    if _CHECKING[0]:
+        return {}, []
+    _CHECKING[0] = True
+    try:
+        raw, roots, dropped = _loc_raw_roots(loc), {}, []
+        for name, value in m.items():
+            why = project_mapping_problem(name, value, loc)
+            if why is None and name in raw:      # Cap's LOW 5: kept under the register's spelling (case, Unicode form)
+                roots[_register_spelling(name)] = raw[name]
+            else:
+                why = why or "it isn't a folder name with a path"
+                dropped.append({"folder": str(name), "path": value if isinstance(value, str) else "",
+                                "why": re.sub(r"^Not saved: ", "", why)})
+    finally:
+        _CHECKING[0] = False
+    if len(_HONOURED) > 16:
+        _HONOURED.clear()
+    _HONOURED[key] = (now, roots, dropped)
+    return roots, dropped
+
+
+def _register_spelling(name) -> str:
+    """The register's own spelling of folder name `name` (compared as macOS compares names), or `name` when it isn't there."""
+    f = _fold(name)
+    return next((v for v in register_folders().values() if _fold(v) == f), name)
+
+
+def _mapping() -> dict:
+    """#385: {folder name: real Path} of every honoured entry, archived projects' too: what resolve and rel map (an archived
+    project's stored paths still open, in its archive slot). Never what reach takes: that is project_roots."""
+    return _loc_honoured(locations())[0]
+
+
+def _registered(name) -> bool:
+    """Whether folder name `name` is a project in the register now (compared as macOS compares names)."""
+    f = _fold(name)
+    return any(_fold(v) == f for v in register_folders().values())
+
+
+def project_roots() -> dict:
+    """#385: {register folder name: real Path} for every project in the register mapped to its own folder (locations.project_paths),
+    whether or not the folder is there now (callers check; nothing is ever created here). {} without a projects_root, or with no
+    mapping. Fail closed: an entry project_mapping_problem refuses is never here (dropped_project_paths lists it), and nor is an
+    archived project's (Cap's LOW 1: it isn't in the register, its old place is gone, and its archive slot is never in ask
+    creaite's reach; resolve still maps its stored paths to the slot)."""
+    return {k: p for k, p in _mapping().items() if _registered(k)}
+
+
+def unreachable_own_folder(path):
+    """#385 (Cap's review, MEDIUM 2): the saved place (with ~) of the project folder of its own that `path` would be inside when
+    that folder isn't there now (OneDrive not running, a drive not connected), else None. A caller about to make folders for
+    `path` stops instead: creaite never creates a project's own folder."""
+    p = Path(os.path.abspath(str(path)))
+    saved = project_paths()
+    for k, r in project_roots().items():
+        if (p == r or r in p.parents) and not r.is_dir():
+            return saved.get(k) or str(r)
+    return None
+
+
+def dropped_project_paths() -> list:
+    """#385: [{folder, path, why}] for every locations.project_paths entry left out because it breaks the rules on saving."""
+    return list(_loc_honoured(locations())[1])
+
+
+def project_paths() -> dict:
+    """#385: locations.project_paths as saved ({folder name: the stored value, with ~}), only the entries project_roots honours."""
+    return _saved_values(project_roots())
+
+
+def _saved_values(roots) -> dict:
+    """{key of `roots`: the value saved for it}, the saved key matched as macOS compares names (it may be spelled otherwise)."""
+    m = locations().get("project_paths")
+    m = m if isinstance(m, dict) else {}
+    return {k: next((v for n, v in m.items() if _fold(n) == _fold(k)), "") for k in roots}
+
+
+def mapped_project_paths() -> dict:
+    """#385: as project_paths, archived projects' entries too (the settings entry is kept on archive: Health shows where each
+    archived project is)."""
+    return _saved_values(_mapping())
+
+
+def _mapped_name(name, roots=None):
+    """The mapping's own key for the folder name `name` (compared as macOS compares names), or None when it isn't mapped."""
+    roots = project_roots() if roots is None else roots
+    if not roots or not name:
+        return None
+    if name in roots:
+        return name
+    f = _fold(name)
+    return next((k for k in roots if _fold(k) == f), None)
+
+
+def archive_slot(name) -> Path:
+    """#385: where the mapped project `name` is archived to: <parent of its folder>/99 Archive/<name> (Alan, 26-10-2026: beside
+    the project, a rename on the same volume). None when `name` isn't mapped (its slot is <projects root>/99 Archive/<name>)."""
+    roots = _mapping()
+    k = _mapped_name(name, roots)
+    return roots[k].parent / ARCHIVE / k if k else None
+
+
+def _bases(roots=None) -> list:
+    """(real folder, stored prefix) for every place a stored path is built on when the projects are outside the vault: the
+    portfolio, each mapped project, each mapped project's archive slots (99 Archive and the old two), and the projects root; the
+    longest real path first, so a file is stored under the most specific one."""
+    roots = _mapping() if roots is None else roots
+    out = [(portfolio_dir(), LOGICAL_PORTFOLIO), (projects_root(), LOGICAL)]
+    for name, p in roots.items():
+        out.append((p, f"{LOGICAL}/{name}"))
+        out += [(p.parent / a / name, f"{LOGICAL}/{a}/{name}") for a in archive_names()]
+    return sorted(((_resolved(b), pre) for b, pre in out), key=lambda x: -len(x[0].parts))
+
+
+def base_of(path):
+    """#385: the base (resolved) a real path lies under, the longest match first: a mapped project's folder, the portfolio folder
+    or the projects root. An archive slot beside a mapped project is not a base (only tracker.py apply moves a folder there).
+    None when the path is under none of them, or the projects are in the vault."""
+    if not external():
+        return None
+    p = _resolved(path)
+    bases = [projects_root(), portfolio_dir(), *project_roots().values()]
+    for b in sorted((_resolved(b) for b in bases), key=lambda x: -len(x.parts)):
+        if p == b or b in p.parents:
+            return b
+    return None
+
+
+def parts_below_base(path):
+    """#385: (base, the path's parts below it) for base_of(path), or None: what tracker.safe_path and reach need to check the
+    skipped names (99 Archive, _Templates, 99 System) under every base, not only the projects root."""
+    b = base_of(path)
+    return None if b is None else (b, _resolved(path).parts[len(b.parts):])
+
+
+def missing_project_paths() -> list:
+    """#385: [{code, folder, path}] for every registered project mapped to a folder that isn't there (an unmounted drive, OneDrive
+    not running, a folder moved by hand); `path` is the stored value (with ~). Nothing is created. An archived project is not in the
+    register, so it is never listed."""
+    roots, saved = project_roots(), project_paths()
+    out = []
+    for code, name in sorted(register_folders().items()):
+        k = _mapped_name(name, roots)
+        if k and not roots[k].is_dir():
+            out.append({"code": code, "folder": k, "path": saved.get(k, "")})
+    return out
+
+
+def in_mapped_notes(c, name=None, archived=False) -> bool:
+    """#385: whether real or written path `c` is in a mapped project's notes folder by name (NOTES_SHAPES relative to the
+    project's own folder: <P>/<notes>, <P>/99 Archive/<notes>; archived: also the archive slot's <slot>/<notes> and
+    <slot>/99 Archive/<notes>). For tracker's copy guard (the projects root's shapes stay in notes_shape)."""
+    roots = _mapping()
+    if not roots:
+        return False
+    name = [_fold(x) for x in Path(name or folder_name("notes")).parts if x not in ("", ".")]
+    if not name:
+        return False
+    arch = _arch_names()
+    c = [_fold(x) for x in Path(os.path.normpath(os.path.abspath(str(c)))).parts]
+    for k, p in roots.items():
+        places = [p] + ([p.parent / a / k for a in archive_names()] if archived else [])
+        if any(_notes_below(c, b, name, arch) for b in places):
+            return True
+    return False
+
+
+def _notes_below(c, b, name, arch) -> bool:
+    """Whether folded parts `c` are below folder `b` (as written or real) in its notes folder `name` (folded parts), directly or
+    in one of its archive folders `arch`."""
+    for form in {os.path.normpath(os.path.abspath(b)), os.path.realpath(b)}:
+        bp = [_fold(x) for x in Path(form).parts]
+        if c[:len(bp)] != bp or len(c) == len(bp):
+            continue                              # not below this form of the folder: try the other
+        rest = c[len(bp):]
+        if rest[:len(name)] == name or (rest and rest[0] in arch and rest[1:1 + len(name)] == name):
+            return True
+    return False
+
+
+def mapped_notes_places(name, loc=None) -> list:
+    """#385: the folders that are a mapped project's notes for notes folder `name` (notes_places' shapes, relative to each mapped
+    folder and its archive slots), for the notes rename check."""
+    out = []
+    for k, p in _loc_project_roots(loc if loc is not None else locations()).items():
+        for b in [p] + [p.parent / a / k for a in archive_names()]:
+            out += [b / name] + [b / a / name for a in archive_names()]
+    return out
+# ===== end #385 (the mapping); its checks on save are project_paths_problem, below =====
+
+
 def _resolved(p) -> Path:
     """Path(p).resolve(), the same on every Python: CPython 3.9.25's realpath raises OSError (EINVAL, with the full path) when a link
     at the last part is swapped for a file between its lstat and its readlink, where later versions keep that part as it is. So
@@ -223,9 +484,11 @@ def rel(p: Path) -> str:
     root or the portfolio folder is stored under the logical prefix projects/ (BL-85)."""
     p = _resolved(p)
     if external():
-        for base, prefix in ((portfolio_dir(), LOGICAL_PORTFOLIO), (projects_root(), LOGICAL)):
+        roots = _mapping()
+        bases = _bases(roots) if roots else ((portfolio_dir().resolve(), LOGICAL_PORTFOLIO), (projects_root().resolve(), LOGICAL))
+        for base, prefix in bases:              # #385: a mapped project's folder (and its archive slot), the longest first
             try:
-                return (Path(prefix) / p.relative_to(base.resolve())).as_posix()
+                return (Path(prefix) / p.relative_to(base)).as_posix()
             except ValueError:
                 continue
     return p.relative_to(ROOT).as_posix()
@@ -259,9 +522,41 @@ def _resolve_raw(stored, archived=True) -> Path:
             p = portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/")
             return archived_file(portfolio_dir(), p.relative_to(portfolio_dir()).parts, p) if archived else p   # BL-03
         if s == LOGICAL or s.startswith(LOGICAL + "/"):
+            mapped = _resolve_mapped(s, archived)       # #385: a project in a folder of its own
+            if mapped is not None:
+                return mapped
             p = projects_root() / s[len(LOGICAL):].lstrip("/")
             return archived_path(p) if archived else p
     return archived_path(ROOT / s) if archived and (s == LOGICAL or s.startswith(LOGICAL + "/")) else ROOT / s
+
+
+def _resolve_mapped(s, archived=True):
+    """#385: the real path of stored path `s` (under projects/) when it names a mapped project: projects/<folder>/… is in the
+    folder's own place (or, archived, in its archive slot when the folder isn't there), and projects/<archive>/<folder>/… is in
+    that slot. None for anything else (resolved as before)."""
+    roots = _mapping()
+    if not roots:
+        return None
+    parts = s.split("/")[1:]
+    if not parts or not parts[0]:
+        return None
+    k = _mapped_name(parts[0], roots)
+    if k:
+        p = roots[k].joinpath(*parts[1:])
+        return _archived_mapped(k, roots[k], parts[1:], p) if archived else p
+    if is_archive_name(parts[0]) and len(parts) > 1:
+        k = _mapped_name(parts[1], roots)
+        if k:
+            return roots[k].parent.joinpath(parts[0], k, *parts[2:])
+    return None
+
+
+def _archived_mapped(name, root, rest, p):
+    """#385 (archived_path for a mapped project): p, a report or minutes in the project's own archive (BL-03) when the project is
+    in place, or its place in the archive slot beside the folder (99 Archive, then the old two) when the project is archived."""
+    if root.exists():
+        return archived_file(root, tuple(rest), p)
+    return next((d / name / Path(*rest) for d in archive_dirs(root.parent) if (d / name).is_dir()), p)
 
 
 # ===== BL-09: archived projects =====
@@ -292,9 +587,11 @@ def is_skipped(name) -> bool:
     return _fold(name) in {_fold(n) for n in skipped_names()}
 
 
-def archive_dir() -> Path:
-    """<projects root>/99 Archive: where a project is archived to (BL-09, #252). Reading looks in archive_dirs as well."""
-    return projects_root() / ARCHIVE
+def archive_dir(name=None) -> Path:
+    """<projects root>/99 Archive: where a project is archived to (BL-09, #252). Reading looks in archive_dirs as well. #385: for
+    a project folder `name` mapped to a folder of its own, the 99 Archive beside that folder (archive_slot is the folder in it)."""
+    slot = archive_slot(name) if name else None
+    return slot.parent if slot is not None else projects_root() / ARCHIVE
 
 
 def archive_dirs(base: Path) -> list:
@@ -356,6 +653,11 @@ def free_archive_path(base, sub: str, stem: str, ext: str = "") -> Path:
 def archived_path(p: Path) -> Path:
     """p, or its place in an archive folder when p is in an archived project's folder (that folder isn't in the projects root, but is
     in 99 Archive, or in _Archive or zz Archive until they are dropped). Anything else is returned as it is."""
+    for k, r in _mapping().items():              # #385: a mapped project's own folder, archived beside itself
+        try:
+            return _archived_mapped(k, r, Path(p).relative_to(r).parts, p)
+        except ValueError:
+            continue                              # not in this mapped project's folder: try the next one
     root = projects_root()
     try:
         parts = Path(p).relative_to(root).parts
@@ -398,8 +700,11 @@ rel_project, resolve_project = rel, resolve         # the names the brief uses
 
 
 def allowed_roots() -> list:
-    """Where creaite may read and write project files: the vault and, if set, the projects root."""
-    return [ROOT.resolve()] + ([projects_root().resolve()] if external() else [])
+    """Where creaite may read and write project files: the vault and, if set, the projects root and (#385) each project mapped to a
+    folder of its own (never its parent or its archive slot)."""
+    if not external():
+        return [ROOT.resolve()]
+    return [ROOT.resolve(), projects_root().resolve()] + [p.resolve() for p in project_roots().values()]
 
 
 def __getattr__(name):
@@ -457,6 +762,10 @@ def project_dir(code: str) -> Path:
     starts with the code, e.g. 'ABC' -> projects/ABC Example Programme."""
     root = projects_root()
     named = register_folders().get(code)
+    roots = project_roots()
+    k = _mapped_name(named, roots)
+    if k:
+        return roots[k]                            # #385: its own folder, there or not (never created here)
     if named and (root / named).is_dir():
         return root / named
     if external():
@@ -469,14 +778,25 @@ def project_dir(code: str) -> Path:
     return matches[0]
 
 
+def stored_folder(code: str, d=None) -> str:
+    """#385: the folder name a project's stored paths use (projects/<this>/…): for a project in a folder of its own, the register's
+    folder name (its real folder may be called anything); else the folder's own name. `d` is project_dir(code) when known."""
+    k = _mapped_name(register_folders().get(code), project_roots())
+    return k if k else (d if d is not None else project_dir(code)).name
+
+
 def project_folders() -> list:
     """[(code, folder)] for every project, the portfolio folder last as '_portfolio'. With an outside projects root only registered
-    projects (the folder holds other things); in the default layout, every folder under projects/."""
+    projects (the folder holds other things), each in its own mapped folder when it has one (#385); in the default layout, every
+    folder under projects/. A folder that isn't there is left out (a mapped one is listed by missing_project_paths)."""
     out = []
     if external():
+        roots = project_roots()
         for code, name in sorted(register_folders().items()):
-            if (projects_root() / name).is_dir():
-                out.append((code, projects_root() / name))
+            k = _mapped_name(name, roots)
+            d = roots[k] if k else projects_root() / name      # #385: a mapped one's own folder; one not there is in
+            if d.is_dir():                                       # missing_project_paths (Health), never left out unsaid
+                out.append((code, d))
     else:
         for d in sorted(x for x in projects_root().iterdir() if x.is_dir()):
             if d != portfolio_dir() and not is_skipped(d.name):          # BL-09: never 99 Archive (archived projects)
@@ -775,6 +1095,7 @@ def notes_rename_problem(old, new):
         bases = notes_places(root, a, old) + notes_places(root, a, new)
         pf = root / str((new or {}).get("portfolio") or "_Portfolio")
         bases += [pf / a, *(pf / n / a for n in archive_names()), ROOT / "projects" / "_portfolio" / a]
+        bases += mapped_notes_places(a, old) + mapped_notes_places(a, new)      # #385: a mapped project's own notes
         for d in dict.fromkeys(bases):
             if os.path.lexists(d) and _holds_files(d):
                 return f"Not saved: notes are still in “{a}” ({d.parent.name}): {why}, then change the setting."
@@ -814,7 +1135,212 @@ def locations_change_problem(old, new):
     clash = notes_folder_clash(nf if isinstance(nf, dict) else {}) if nf != of else []
     if clash:
         return f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of their own."
-    return skeleton_problem(old, new) or notes_rename_problem(old, new)
+    return skeleton_problem(old, new) or project_paths_problem(old, new) or notes_rename_problem(old, new)
+
+
+# ===== #385: checks on saving locations.project_paths =====
+def project_path_stored(value) -> str:
+    """#385: how a project's folder is stored: its real path (symlinks followed when it is there) written with ~ for the home
+    folder; a relative value (below the projects root) is kept as it is."""
+    v = str(value or "").strip().replace("\\", "/")
+    p = Path(os.path.expanduser(v))
+    if not v or not p.is_absolute():
+        return v.rstrip("/")
+    real = Path(os.path.realpath(p))
+    home = Path(os.path.realpath(os.path.expanduser("~")))
+    try:
+        return "~/" + real.relative_to(home).as_posix()
+    except ValueError:
+        return real.as_posix()
+
+
+def _below_or_same(a: str, b: str) -> bool:
+    """Whether folded real path `a` is `b` or inside it."""
+    return a == b or a.startswith(b.rstrip("/") + "/")
+
+
+def project_mapping_problem(name, value, loc) -> str:
+    """#385: why project folder `name` can't be mapped to `value` (as saved) in `locations` value `loc` (whose project_paths
+    holds every mapping, this one included), or None. Refused: no projects folder set; a name that isn't one folder; a path with
+    `..`, not written with ~ (or relative to the projects folder), outside the home folder or the home folder itself, inside the
+    creaite folder (or holding it), in ~/Library outside ~/Library/CloudStorage, in a hidden folder (~/.config …: Cap's Full
+    review, MEDIUM 1), on or holding a place creaite never touches, under (or named) 99 Archive, _Templates or 99 System, a
+    symlink, holding the projects folder, inside or holding the portfolio or another registered project's folder in the projects folder, or the same as, inside or holding another mapped project's
+    folder. A folder inside the projects folder under another name is fine (Jarvis, 26-10-2026: Alan's "either"). Names compare
+    as macOS compares them (case and Unicode form ignored)."""
+    loc = loc or {}
+    label = f"Not saved: the folder for “{name}”"
+    if not str(loc.get("projects_root") or "").strip():
+        return "Not saved: a project's own folder needs the projects folder set first (Settings › Folders and OneDrive)."
+    why = _mapping_name_problem(name, loc) or _mapping_shape_problem(value, label)
+    if why:
+        return why
+    root = _loc_root(loc)
+    real = _mapping_real(value.strip().replace("\\", "/"), root)
+    if real is None:
+        return f"{label} goes through a shortcut (a symlink): give its real location instead."
+    why = _mapping_place_problem(real, root)
+    if why:
+        return f"{label} {why}"
+    why = _inside_other_project(_fold(real), name, loc, root)        # Jarvis, 26-10-2026: elsewhere in the projects folder is fine
+    if why:
+        return f"{label} {why}"
+    why = _never_place(Path(real))
+    if why:
+        return f"{label} is a place creaite never touches ({why})."
+    below_home = Path(real).relative_to(os.path.realpath(os.path.expanduser("~"))).parts
+    hidden = next((x for x in below_home if x.startswith(".")), None)
+    if hidden:                                   # Cap's MEDIUM 1: ~/.config/git, ~/.ipython/…/startup run things on their own
+        return (f"{label} is in (or is) {hidden}, a hidden folder: those hold settings and things that run on their own, "
+                "never a project.")
+    parts = [_fold(x) for x in below_home]
+    if len(parts) == 1 or parts == ["library", "cloudstorage"]:      # Cap's LOW 4: its archive would be ~/99 Archive
+        return (f"{label} is directly in your home or Library folder: put it inside a folder there, since its archive goes "
+                "beside it (99 Archive in the same folder).")
+    return _mapping_overlap_problem(_fold(real), name, loc, root, label)
+
+
+def _mapping_name_problem(name, loc):
+    """#385: why `name` isn't a project folder name a mapping may have, or None."""
+    if not isinstance(name, str) or not name.strip() or "/" in name or "\\" in name or name in (".", "..") or "\0" in name \
+            or name.startswith((".", "_")) or is_skipped(name) \
+            or _fold(name) == _fold(str(loc.get("portfolio") or "_Portfolio")):
+        return f"Not saved: “{name}” isn't a project's folder name (one folder, as the project register names it)."
+    m = loc.get("project_paths") if isinstance(loc.get("project_paths"), dict) else {}
+    if sum(1 for k in m if isinstance(k, str) and _fold(k) == _fold(name)) > 1:     # Cap's LOW 4: macOS has one folder for both
+        return f"Not saved: “{name}” is in the list twice, spelled another way (case or accents): keep one entry."
+    return None
+
+
+def _mapping_shape_problem(value, label):
+    """#385: why the saved text `value` isn't written as a project's folder may be (empty, `..`, not with ~ or relative), or None."""
+    if not isinstance(value, str) or not value.strip():
+        return f"{label} is empty: remove the entry instead."
+    v = value.strip().replace("\\", "/")
+    if ".." in v.split("/"):
+        return f"{label} has “..” in it: give the folder itself."
+    if "\0" in v:                                   # Cap's LOW 5: a hand edit; never a path
+        return f"{label} has a character no folder name can have: give the folder itself."
+    if v.rstrip("/") == "~":
+        return f"{label} must be inside your home folder (and not the home folder itself)."
+    if v.startswith("/") or (len(v) > 1 and v[1] == ":") or (v.startswith("~") and not v.startswith("~/")):
+        return f"{label} must be written with ~ for your home folder (~/…), so it works on a new laptop."
+    return None
+
+
+def _mapping_real(v, root):
+    """#385: the real path of mapping value `v` (with ~, or relative to the projects folder `root`), or None when a part below
+    where it starts is a symlink (a link can be pointed somewhere else later)."""
+    start = Path(os.path.expanduser("~")) if v.startswith("~") else root
+    rest = Path(os.path.expanduser(v)).relative_to(start).parts if v.startswith("~") else Path(v).parts
+    here = start
+    for part in rest:
+        here = here / part
+        if os.path.islink(here):
+            return None
+    return os.path.realpath(here)
+
+
+def _mapping_place_problem(real, root):
+    """#385: why the real folder `real` is no place for a project (outside home, ~/Library outside CloudStorage, a skipped name,
+    the creaite folder, holding the projects folder `root`), as the end of a sentence, or None."""
+    home = os.path.realpath(os.path.expanduser("~"))
+    f = _fold(real)
+    if not f.startswith(_fold(home).rstrip("/") + "/"):
+        return "must be inside your home folder (and not the home folder itself)."
+    parts = [_fold(x) for x in Path(real).relative_to(home).parts]
+    if parts[0] == "library" and parts[1:2] != ["cloudstorage"]:
+        return "is in your Library folder: only ~/Library/CloudStorage (OneDrive) may hold a project."
+    hit = next((x for x in Path(real).relative_to(home).parts if is_skipped(x)), None)
+    if hit:
+        return f"is in (or is) {hit}, which creaite never reads or writes."
+    vault = _fold(os.path.realpath(ROOT))
+    if _below_or_same(f, vault) or _below_or_same(vault, f):
+        return "is inside the creaite folder, or holds it: a project lives outside creaite's own folder."
+    if _below_or_same(_fold(os.path.realpath(root)), f):
+        return "holds the projects folder: give the project's own folder."
+    return None
+
+
+def _mapping_overlap_problem(f, name, loc, root, label):
+    """#385: why folded real path `f` is the same as, inside or holding another mapped project's folder, or None."""
+    for other, ov in ((loc.get("project_paths") or {}).items() if isinstance(loc.get("project_paths"), dict) else []):
+        if other == name or _mapping_shape_problem(ov, ""):
+            continue                              # this one, or a malformed entry (refused on its own, never a place)
+        op = Path(os.path.expanduser(ov.strip()))
+        o = _fold(os.path.realpath(op if op.is_absolute() else root / op))
+        if not o.startswith(_fold(os.path.realpath(os.path.expanduser("~"))).rstrip("/") + "/"):
+            continue                              # outside the home folder: refused on its own, never a place to overlap
+        if o == f:
+            return f"{label} is the same folder as “{other}”'s: each project needs a folder of its own."
+        if _below_or_same(f, o) or _below_or_same(o, f):
+            return f"{label} is inside “{other}”'s folder, or holds it: each project needs a folder of its own."
+    return None
+
+
+def _inside_other_project(f, name, loc, root):
+    """#385: why folded real path `f` (the folder for `name`) is, is inside, or holds the portfolio folder or another registered
+    project's own folder in the projects folder `root` (one mapped elsewhere is checked by its own place), or None."""
+    pf = _fold(os.path.realpath(root / str(loc.get("portfolio") or "_Portfolio")))
+    if _below_or_same(f, pf) or _below_or_same(pf, f):
+        return "is inside the portfolio folder, or holds it: a project needs a folder of its own."
+    mapped = {k: None for k in (loc.get("project_paths") if isinstance(loc.get("project_paths"), dict) else {})}
+    for other in register_folders().values():
+        if _fold(other) == _fold(name) or _mapped_name(other, mapped):
+            continue                                  # this project, or one mapped elsewhere
+        o = _fold(os.path.realpath(root / other))
+        if _below_or_same(f, o) or _below_or_same(o, f):
+            return f"is inside {other}'s folder, or holds it: each project needs a folder of its own."
+    return None
+
+
+def _never_place(real: Path):
+    """#385: why the real folder `real` is, or holds, a place on reach's never list (secrets, the operating system, what runs
+    commands), or None. reach.py is read only here."""
+    try:
+        import reach
+    except ImportError:                           # a script run without the scripts folder on its path: the other checks hold
+        return None
+    for op in ("read", "create"):
+        why = reach.never_reason(real, op)
+        if why:
+            return why
+    home = reach.home()
+    f = _fold(real)
+    for base, pattern, _ops, reason in reach.NEVER:
+        if base != "home":
+            continue
+        lit = []
+        for x in pattern.split("/"):
+            if any(c in x for c in "*?["):
+                break
+            lit.append(x)
+        if lit and _below_or_same(_fold(home.joinpath(*lit)), f):
+            return reason
+    return None
+
+
+def project_paths_problem(old, new):
+    """#385: why `locations` value `new` can't replace `old` because of locations.project_paths (each entry checked by
+    project_mapping_problem, only when the map or the projects folder changes), or None."""
+    m = (new or {}).get("project_paths", {})
+    if m in ({}, None):
+        return None
+    if not isinstance(m, dict):
+        return "Not saved: locations.project_paths must be an object ({\"<project folder>\": \"~/…\"})."
+    old = old or {}
+    if all(new.get(k) == old.get(k) for k in ("project_paths", "projects_root", "portfolio")):
+        return None
+    was = old.get("project_paths") if isinstance(old.get("project_paths"), dict) else {}
+    for name, value in m.items():
+        why = project_mapping_problem(name, value, new)
+        if why:
+            return why
+        if was.get(name) != value and not _registered(name):    # Cap's LOW 6: only a project in the register gets a new place
+            return (f"Not saved: “{name}” isn't a project in the register: only a registered project (not an archived one) "
+                    "can be given a folder of its own.")
+    return None
+# ===== end #385 checks =====
 
 
 # ===== end BL-301 =====
@@ -986,6 +1512,11 @@ def tool_pattern(sub: str) -> str:
     sub = sub.lstrip("/")
     if not external():
         return f"projects/{sub}"
+    roots = project_roots()
+    head, _, rest = sub.partition("/")
+    k = _mapped_name(head, roots)
+    if k:                                            # #385: a mapped project's own folder, written with ~ like the setting
+        return _pattern_of(roots[k]) + (f"/{rest}" if rest else "")
     portfolio = str(locations().get("portfolio") or "_Portfolio")
     if sub == "_portfolio" or sub.startswith("_portfolio/"):
         sub = portfolio + sub[len("_portfolio"):]
@@ -995,6 +1526,29 @@ def tool_pattern(sub: str) -> str:
     if Path(root).is_absolute():
         return f"/{root}/{sub}"                      # Claude Code writes an absolute path as //abs/path
     return f"{root}/{sub}"
+
+
+def _pattern_of(p) -> str:
+    """#385: a real folder as a permission pattern's start: `~/…` below the home folder, else `//abs/…`."""
+    home = Path(os.path.expanduser("~"))
+    p = Path(os.path.normpath(str(p)))
+    for h in dict.fromkeys([home, home.resolve()]):
+        try:
+            return "~/" + p.relative_to(h).as_posix()
+        except ValueError:
+            continue                              # not below this form of the home folder: try the other
+    return "/" + p.as_posix()
+
+
+def tool_patterns(sub: str) -> list:
+    """#385: tool_pattern(sub), plus, for a pattern that applies inside every engagement (`**/99 Archive/**`, the never_index
+    ones), the same pattern under each mapped project's own folder, which is outside the projects root. Phase 3: the live
+    server's deny list uses this so a mapped project's 99 Archive is denied too."""
+    out = [tool_pattern(sub)]
+    s = sub.lstrip("/")
+    if external() and s.startswith("**/"):
+        out += [f"{_pattern_of(p)}/{s}" for p in project_roots().values()]
+    return out
 
 
 def never_index_patterns():

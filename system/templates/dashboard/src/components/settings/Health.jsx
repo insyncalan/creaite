@@ -15,6 +15,7 @@ import { useEffect, useState } from "preact/hooks";
 import { linkUrl } from "../../core/linkUrl.js";
 import { copied, fd } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
+import { fixCallAllowed } from "../../core/sweepDue.js";
 import { checkHealth, dismissProblem, healthResult, healthBusy, healthError, healthCardWaiting, markCardWaiting, restoreProblem }
   from "../../stores/settings.js";
 import { pendingEdit } from "../../ask.js";
@@ -27,7 +28,9 @@ export const CARD_WAITING = "On the approval card, waiting for you";
 
 /** Run one built fix through its fixed route: no body, no query string. @param {import("../../stores/settings.js").Fix} f */
 export async function runHealthFix(f) {
-  const r = await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
+  /* #370: Check now starts the catch-up through its own route, as Today's does; the server says whether it can start */
+  if (f.call && !fixCallAllowed(f.call)) { snack("That fix can't be run from here"); return false; }      /* page-side allow-list: only the catch-up route */
+  const r = f.call ? await api(f.call, f.body || {}) : await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
   /* a move waits on the approval card: nothing has changed yet, so it is never "Done" (BL-09, #94) */
   if (r.ok && r.card) { markCardWaiting(f.id || ""); snack(CARD_WAITING + ": nothing moves until you approve it."); }
   else snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));
@@ -218,6 +221,15 @@ export function Health() {
               <h3 class="hsub">Archiving</h3>
               <ul class="hsteps" id="healthArchiving" aria-label="Archiving">
                 {(res.archiving || []).map(a => <li>{a}</li>)}
+              </ul>
+            </>
+          )}
+          {(res.archived || []).length > 0 && (
+            <>
+              {/* #385 (Alan, 26-10-2026): every archived project in one place, with where its folder is now */}
+              <h3 class="hsub">Archived projects</h3>
+              <ul class="hsteps" id="healthArchived" aria-label="Archived projects">
+                {(res.archived || []).map(a => <li>{a}</li>)}
               </ul>
             </>
           )}

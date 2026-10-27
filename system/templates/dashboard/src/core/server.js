@@ -2,6 +2,8 @@
 /* core/server.js (BL-231 step 2b): vault access, the live server (`api`, `reloadData`, `applyNow`), proposals (`writeProposal`, `save`), the snackbar and undo, status, the pulse, the event stream and the debug log's error hook.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
+import { errorReport, rejectionReport } from "./pageErrors.js";   /* #370 */
+import { staleStreamAnswer, staleStore } from "./staleReload.js";   /* #370 */
 import { irLiveCounts, irModelBehind } from "../stores/intakeReview.js";   /* #232-C */
 import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
@@ -25,7 +27,7 @@ import { decidedWords, plainSay, savedCapped } from "./say.js";
 import { heldWords, rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
-import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
+import { mvEdDraw, mvSig, renderMilestones, staleShow } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, openProposal, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
@@ -315,16 +317,19 @@ async function saveStage(op){ let name;
   apply(op.what,()=>{},async()=>{ op.undoIt(); ovReapply(); try{ await vq(async()=>{ if(await shared.VW.exists("system/staging/"+name)) await shared.VW.remove("system/staging/"+name); else throw 0; }); }catch(e){ snack(viaServer()?"Already saved: undo it in Activity":"Already saved: use “undo last save” in Claude Code"); } },op.by,opIds(op)); return true; }   /* BL-149 */
 /* settings.json: backup, change, log line per key */
 export const SKEY={bgActions:"work.board.group.actions",bgRaid:"work.board.group.raid",bgDecisions:"work.board.group.decisions",boardClosedDays:"work.board.closed_days",flowWeeks:"dashboard.flow_weeks",undatedGrace:"dashboard.undated_grace_days",filesDocs:"dashboard.files_show_documents",showArchived:"dashboard.show_archived",railLabels:"dashboard.rail_labels",helpLine:"help.first_line",listCap:"dashboard.project_list_cap",me:"identity.name",short:"identity.short_forms",defPriority:"defaults.new_action_priority",defActionView:"defaults.actions_status_filter",defRaidView:"defaults.raid_status_filter",defDecisionView:"defaults.decisions_view",dueSoon:"review.due_soon_days",autoApply:"dashboard.auto_apply",theme:"dashboard.theme",palette:"dashboard.palette",motion:"dashboard.motion",remindersOn:"reminders.enabled",weeklyDay:"reminders.weekly_report_day",weeklyTime:"reminders.weekly_report_from",sweepDue:"sweep.due_from",lookback:"sweep.first_run_lookback_days",srcInbox:"sweep.sources.inbox",srcSent:"sweep.sources.sent_items",srcChats:"sweep.sources.teams_chats",srcChannels:"sweep.sources.teams_channels",srcCalendar:"sweep.sources.calendar",possible:"sweep.show_possible_matches",staleDays:"review.stale_after_days",rvAdvance:"review.auto_advance",dupOverlap:"review.duplicate_overlap",overdueDays:"health.at_risk_overdue_days",slipAtRisk:"health.at_risk_milestone_slip_weeks_max",slipOff:"health.off_track_milestone_slip_weeks_over",urgentOff:"health.off_track_urgent_risks_min",port:"live_mode.port",dailyBackup:"backups.daily",ownDomains:"identity.own_domains",catchupSweep:"day.catchup_sweep",catchupAfter:"day.catchup_after_minutes"};
-export async function writeSettings(changes){ let sp=null;
+/* #385: `changes` may also be a function of the settings as they are now (read inside the queue), giving {dotted key: value}: a map
+   setting (locations.project_paths) is changed from its current value, never from what the page last read. opts.problem, when
+   given, is told why it wasn't saved (the server's own sentence) instead of the snack. */
+export async function writeSettings(changes,opts={}){ let sp=null;
     if(shared.SETROW&&Date.now()-shared.SETROW.at<2000){ const box=document.querySelector(`#settingsBody [data-sec="${shared.SETROW.sec}"]`), r=box&&box.querySelectorAll(".srow,.igrow")[shared.SETROW.i];
       if(r){ $$("#settingsBody .mspin").forEach(x=>x.remove()); sp=document.createElement("span"); sp.className="mspin"; sp.setAttribute("role","status"); sp.setAttribute("aria-label","Saving");
         (r.classList.contains("srow")?r.lastElementChild:r).insertAdjacentElement(r.classList.contains("srow")?"afterbegin":"beforeend",sp); } }   /* BL-263: a spinner beside the setting while it is written */
   try{ const ok=await (async()=>{ if(!await needVault()) return false;
   try{ await vq(async()=>{ const path="system/config/settings.json", text=await shared.VW.read(path), js=JSON.parse(text), at=stampFull(), logs=[];
-    for(const [key,val] of Object.entries(changes)){ const parts=key.split("."); let o=js; parts.slice(0,-1).forEach(q=>{ if(typeof o[q]!=="object"||o[q]===null) o[q]={}; o=o[q]; }); const last=parts[parts.length-1];
+    for(const [key,val] of Object.entries(typeof changes==="function"?changes(js):changes)){ const parts=key.split("."); let o=js; parts.slice(0,-1).forEach(q=>{ if(typeof o[q]!=="object"||o[q]===null) o[q]={}; o=o[q]; }); const last=parts[parts.length-1];
       logs.push(JSON.stringify({at,key,old:o[last]===undefined?null:o[last],new:val})); o[last]=val; }
     await shared.VW.write(await freeBackup("system/backups/settings-",".json"),text); await shared.VW.write(path,JSON.stringify(js,null,2)+"\n"); await shared.VW.append("system/config/settings-log.jsonl",logs.join("\n")+"\n"); }); return true;
-  }catch(e){ snack("Settings not saved: "+e.message); return false; } })();
+  }catch(e){ if(opts.problem) opts.problem(String(e.message||"")); else snack("Settings not saved: "+e.message); return false; } })();
   if(ok) savedNow(); return ok; } finally{ if(sp) sp.remove(); } }
 /* a project's CLAUDE.md: Current state is a proposal (file change); the client-report rhythm is a setting */
 export const memPath=code=>`projects/${D.folders[code]}/CLAUDE.md`;
@@ -509,7 +514,8 @@ export function evOpen(){ if(!SERVED||EVS.ctl||document.hidden||evStale()) retur
   const ctl=new AbortController(); EVS.ctl=ctl; EVS.opened++;
   fetch("/api/events",{headers:{"X-Creaite-Token":D.token||""},signal:ctl.signal,cache:"no-store"}).then(res=>evRead(res,ctl))
     .catch(()=>null).finally(()=>evDown(ctl)); }
-export async function evRead(res,ctl){ if(!res.ok||!res.body) return;
+/* #370: a stale refusal (a tab left open across a restart) is handled by the fetch wrapper (milestones.js) for every /api call, this one included */
+export async function evRead(res,ctl){ if(staleStreamAnswer(res.status,res.ok,!!res.body,staleStore())!=="open") return;   /* #370: an opened stream clears the reload mark */
   EVS.up=true; EVS.wait=1000; const rd=res.body.getReader(), dec=new TextDecoder(); let buf="";
   for(;;){ const {value,done}=await rd.read(); if(done||ctl.signal.aborted) return; buf+=dec.decode(value,{stream:true});
     for(let i=buf.indexOf("\n\n"); i>=0; i=buf.indexOf("\n\n")){ const ch=buf.slice(0,i); buf=buf.slice(i+2); if(!ch.startsWith("data: ")) continue;
@@ -554,6 +560,7 @@ if(SERVED) evOpen();
    text, addresses and paths out), and Settings › Diagnostics shows the latest errors, opens the log folder, switches the
    level and copies a report to paste into a chat. A quiet link in the top bar appears only when there were errors today. */
 shared.DIAGSENT=0;
+/* #370: an error or a refused promise names its top stack frame (function and line, no path and no text) when it has one: core/pageErrors.js */
 export const diagHook=(message,source,line)=>{ if(!SERVED||shared.DIAGSENT>=50||/^(Uncaught )?ResizeObserver loop/.test(String(message||""))) return; shared.DIAGSENT++;   /* BL-283: a browser notice, not a fault */
   fetch("/api/log/error",{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},keepalive:true,
     body:JSON.stringify({message:String(message||"").slice(0,300),view:typeof shared.VIEW==="string"?shared.VIEW:"",source:String(source||"").slice(0,300),line:line||0})
@@ -569,8 +576,8 @@ export const diagLoad=onceFor(2000,async()=>{ if(!SERVED) return; const r=await 
 export const diagErr=e=>`<details class="diagerr"><summary><span class="x">${esc(fd(e.at.slice(0,10)))} ${esc(e.at.slice(11,16))}</span> · ${esc(e.area)} · ${esc(e.message)}</summary>${e.detail.length?`<pre class="diagtb">${esc(e.detail.join("\n"))}</pre>`:'<div class="sub">No traceback.</div>'}</details>`;
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0152's place) */
 export function bootDebugLog(){
-window.addEventListener("error",e=>diagHook(e.message,e.filename,e.lineno));
-window.addEventListener("unhandledrejection",e=>diagHook(e.reason&&e.reason.message?e.reason.message:e.reason,"promise",0));
+window.addEventListener("error",e=>{ const r=errorReport(e); diagHook(r.message,r.source,r.line); });
+window.addEventListener("unhandledrejection",e=>{ const r=rejectionReport(e); diagHook(r.message,r.source,r.line); });
 /* BL-255: its .diagerr rules are in style.css, so the page adds no <style> at run time and the policy can list the style hashes */
 }
 

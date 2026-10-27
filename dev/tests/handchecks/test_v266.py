@@ -64,7 +64,7 @@ class V266(unittest.TestCase):
     def test_c03_guides(self):
         for g in ("guide-first-day.html", "guide-how-to.html"):
             t = read(f"system/templates/{g}")
-            self.assertRegex(t, r"creaite 2\.6\.[6-9] ·")   # 2.6.6 or later (test_v267 pins 2.6.7)
+            self.assertRegex(t, r"creaite 2\.6\.([6-9]|1\d) ·")   # 2.6.6 or later (test_v267 pins 2.6.7)
             self.assertNotRegex(t, r"creaite 2\.6\.[0-5] ·")
 
     def test_c04_guarded_unchanged(self):
@@ -75,6 +75,8 @@ class V266(unittest.TestCase):
         landed = ["system/creaite-rules.md", "system/scripts/live_server.py"] if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 7) else []
         if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 8):   # 2.6.8 landed backup.py and client_leak.py as well
             landed = sorted(landed + ["system/scripts/backup.py", "system/scripts/client_leak.py"])
+        if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 10):  # the 2.6.10 chain (#385) adds three more
+            landed = sorted(landed + ["system/scripts/permissions.py", "system/scripts/reach.py", "system/scripts/tracker.py"])
         self.assertEqual(sorted(d), landed, f"guarded files changed since 2.6.4: {d}")
 
     def test_c05_341_structure(self):

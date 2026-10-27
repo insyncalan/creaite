@@ -43,7 +43,7 @@ export function moveRow(d) {
 const active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
 
 /** One keydown. Returns true when the key was taken. @param {KeyboardEvent} e @param {RowKeyApi} keyApi */
-export function rowKey(e, keyApi) {
+export function onRowKey(e, keyApi) {
   if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.isComposing || !e.key || e.key.length !== 1 || !active()) return false;
   const doc = keyApi.doc();
   if (!doc || doc.state !== "draft") return false;
@@ -80,9 +80,9 @@ export function rowKey(e, keyApi) {
 }
 
 let installed = false;
-/** Listen once for the keys, ahead of the page's own (capture), taking a key only when rowKey does. @param {RowKeyApi} keyApi */
+/** Listen once for the keys, ahead of the page's own (capture), taking a key only when onRowKey does. @param {RowKeyApi} keyApi */
 export function installRowKeys(keyApi) {
   if (installed) return;
   installed = true;
-  document.addEventListener("keydown", e => { if (rowKey(e, keyApi)) { e.preventDefault(); e.stopPropagation(); } }, true);
+  document.addEventListener("keydown", e => { if (onRowKey(e, keyApi)) { e.preventDefault(); e.stopPropagation(); } }, true);
 }

@@ -39,7 +39,8 @@
                            says so (`page_ignored: true`);
   POST /api/report/exported-view {kind: client, code, week_ending}: Show as exported for a client report, rendered by the server
                            from a preview snapshot (marked Preview, never written); the page never posts its own;
-  POST /api/report/reveal  {path}: Show in Finder for a saved file under projects/;
+  POST /api/report/reveal  {path}: Show in Finder for a file under projects/, inbox/ or
+                           system/staging/drafts/ (#374);
                            A client report is exported only once its internal week is approved and nothing would leak, and its
                            answer then carries `left_out`: the check of what is left out runs before every client export
 """
@@ -647,14 +648,36 @@ def _export_locked(handler, req, which, fmt, fn):
     return answer(handler, saved)
 
 
+REVEAL_OK = r"(projects|inbox|system/staging/drafts)/.+"      # #374: where Activity and Reports can show a file
+
+
+def _reveal_roots():
+    """The three stored places, each project mapped to its own folder (#385, paths.project_roots), and each mapped project's archive
+    slot (<parent>/99 Archive/<folder>, as the base allowed for any existing projects/ path): never a mapped folder's parent or the
+    rest of its 99 Archive. A link is judged by its real target against these."""
+    slots = [paths.archive_slot(n) for n in paths._mapping()]
+    return ([paths.resolve(r).resolve() for r in ("projects", "inbox", "system/staging/drafts")]
+            + [Path(r).resolve() for r in paths.project_roots().values()] + [s.resolve() for s in slots if s is not None])
+
+
 def reveal_route(handler, req):
-    """POST /api/report/reveal {path}: show a saved file in Finder (Show in Finder), or open the folder when the path is a folder.
-    Only a stored path under projects/. With CREAITE_NO_LAUNCH (the tests) nothing opens and `launched` is false."""
+    """POST /api/report/reveal {path}: show a file in Finder (select it in its folder), or open the folder when the path is one.
+    Only a stored path under projects/, inbox/ or system/staging/drafts/ (where Activity and Reports can show a file; never the rest
+    of system/, config, logs or backups), without "..", that exists. A symlink counts by where it really leads: one that points outside
+    those three places is refused. The checks all run before anything is launched; the launch is a list, never a shell, and the
+    target is absolute, so a name starting with "-" is never read as an option. With CREAITE_NO_LAUNCH (the tests) nothing opens
+    and `launched` is false."""
     import re
     rel = str(req.get("path") or "")
-    if not re.fullmatch(r"projects/.+", rel) or ".." in Path(rel).parts or not paths.resolve(rel).exists():
+    if not re.fullmatch(REVEAL_OK, rel) or ".." in Path(rel).parts or not paths.resolve(rel).exists():
         return refuse(handler, "That file or folder isn't there to show.")
     real = paths.resolve(rel)
+    try:
+        inside = any(real.resolve() == r or r in real.resolve().parents for r in _reveal_roots())
+    except (OSError, RuntimeError):
+        inside = False
+    if not inside:
+        return refuse(handler, "That file or folder isn't there to show.")
     if os.environ.get("CREAITE_NO_LAUNCH"):
         return answer(handler, {"ok": True, "launched": False, "path": str(real)})
     if sys.platform == "darwin":

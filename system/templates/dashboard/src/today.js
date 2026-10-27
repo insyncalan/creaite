@@ -19,6 +19,7 @@ import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
+import { sweepDueLine } from "./core/sweepDue.js";
 import { countLink, go, jumpLink, navBlocked, navOf, openWork } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { linkAnchor } from "./core/linkUrl.js";
@@ -197,6 +198,7 @@ export function renderToday(){
   mDots("today");
   renderSetup();   /* BL-155 */
   renderSweepDue();   /* #200 */
+  renderOwnFolders();   /* #385 */
   dcIcon(); } }   /* BL-205 */
 /* Today's day view: Alan's meetings (saved locally by cx-sweep from Outlook) as a line with a bump per meeting,
    a sun at the current time, and a headline naming the day's shape. Without a calendar the line is flat. */
@@ -471,9 +473,20 @@ export function renderSetup(){ let box=$("#setupList"); const on=setupShown();
 const SDKEY="creaite-sweepdue-dismissed"; let SDMEM=null;
 const sdLast=()=>String((D.sweep_due&&D.sweep_due.last)||"");
 function sweepDueDismissed(){ const d=SDMEM||store.get(SDKEY,null); return !!(d&&d.day===TODAY&&d.last===sdLast()); }
-export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept())&&!sweepDueDismissed(); }
-export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const on=sweepDueShown(); box.hidden=!on;
+/* #370: a check that didn't run today (the build's sweep_due.failed) shows one quiet line with Check now instead, which can't be
+   dismissed while it holds; it goes when a check completes (the build drops `failed`). Check now starts the catch-up route. */
+const sweepLine=()=>sweepDueLine(D.sweep_due,{dev:!!D.dev,setupBlocks:setupShown()&&!swept(),dismissed:sweepDueDismissed()});   /* core/sweepDue.js, tested under Node */
+export function sweepDueShown(){ return sweepLine()!==""; }
+/* #385: a project kept in a folder of its own that can't be reached now (OneDrive not running, a drive not connected), or whose
+   saved place breaks the rules and so isn't used: one plain line each, with the project's settings. creaite never creates the
+   folder; its files are where they were. */
+export function renderOwnFolders(){ const box=$("#ownFolders"); if(!box) return; const o=D.own_folders||{}, miss=o.missing||[], bad=(o.dropped||[]).filter(d=>d.code);
+  box.hidden=!miss.length&&!bad.length; if(box.hidden){ putHTML(box,html``); return; }
+  const link=c=>html`<a href="#project-settings=${c}">${pName(c)}</a>`;
+  putHTML(box,html`${miss.map(m=>html`<p><b>${link(m.code)}'s folder can't be reached</b> (${m.path}). Is OneDrive running and signed in, or the drive connected? Nothing is lost: creaite leaves it alone until it is back.</p>`)}${bad.map(d=>html`<p><b>${link(d.code)}'s own folder isn't used</b>: ${d.why} creaite treats it as if it were in the projects folder until its place is put right.</p>`)}`); }
+export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const line=sweepLine(), on=line!==""; box.hidden=!on;
   if(!on){ putHTML(box,html``); return; }
+  if(line==="failed"){ putHTML(box,html`<b>Today's mail and Teams check didn't run.</b> <button type="button" class="btn primary sd-run" id="sweepFailedRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span>`); return; }
   putHTML(box,html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last?`Last checked ${fd(String(D.sweep_due.last))}.`:"Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`); }
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; e.preventDefault();   /* #243 */
   const box=$("#sweepDue"), had=box&&box.contains(document.activeElement);
@@ -481,6 +494,10 @@ document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; 
   if(had||document.activeElement===document.body){ const v=$("#v-today"), nxt=v&&[...v.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex='-1'])")]
       .find(n=>!!(box.compareDocumentPosition(n)&Node.DOCUMENT_POSITION_FOLLOWING)&&n.offsetParent!==null);
     if(nxt) nxt.focus(); else if(v){ if(!v.hasAttribute("tabindex")) v.setAttribute("tabindex","-1"); v.focus(); } } });
+document.addEventListener("click",async e=>{ if(!e.target.closest("#sweepFailedRun")) return; e.preventDefault();   /* #370 */
+  if(!viaServer()){ snack("creaite isn't running"); return; }
+  if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; }
+  const r=await api("/api/day/catchup",{force:true}); snack(oneLine(r.message)||(r.ok?"Checking your mail and Teams":"The check couldn't start")); });
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepRun")) return; e.preventDefault();
   if(!viaServer()){ snack("creaite isn't running"); return; }
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; } openChat(); send("sweep"); });

@@ -305,7 +305,7 @@ class Page(LiveBrowserCase):
         b = self.b
         self.open("logos")
         kinds = lambda: b.eval("[...document.querySelectorAll('#psBody .pslogo[data-kind]')].map(x=>x.dataset.kind)")      # noqa: E731
-        self.assertEqual(kinds(), ["firm", "client", "partner"], "P13: no Partners line, no crash, the one old partner row")
+        self.wait_for(lambda: kinds() == ["firm", "client", "partner"], "P13: no Partners line, no crash, the one old partner row: " + str(kinds()))   # waits like the checks below: the page may still be drawing
         self.add_partners("Acme Labs", "Beta Works")
         self.open("logos")
         self.wait_for(lambda: kinds() == ["firm", "client", "partner:acme-labs", "partner:beta-works"], "a row for each partner")

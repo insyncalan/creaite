@@ -68,7 +68,7 @@ class V265(unittest.TestCase):
     def test_c03_guides(self):
         for g in ("guide-first-day.html", "guide-how-to.html"):
             t = read(f"system/templates/{g}")
-            self.assertRegex(t, r"creaite 2\.6\.[5-9] ·")   # 2.6.5 or a later 2.6 (test_v267 pins 2.6.7)
+            self.assertRegex(t, r"creaite 2\.6\.([5-9]|1\d) ·")   # 2.6.5 or a later 2.6 (test_v2610 pins 2.6.10)
             self.assertNotIn("2.6.4", t)
 
     def test_c04_guarded_unchanged(self):
@@ -77,6 +77,10 @@ class V265(unittest.TestCase):
         d = git("diff", "--name-only", "v2.6.4", "HEAD", "--", *GUARDED).stdout.split()
         # 2.6.7 landed the guarded chain (live_server.py) and the #347 rules text; those two files may differ, nothing else may
         landed = ["system/creaite-rules.md", "system/scripts/live_server.py"] if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 7) else []
+        if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 8):   # 2.6.8 landed backup.py and client_leak.py as well
+            landed = sorted(landed + ["system/scripts/backup.py", "system/scripts/client_leak.py"])
+        if tuple(map(int, read("VERSION").strip().split("."))) >= (2, 6, 10):  # the 2.6.10 chain (#385) adds three more
+            landed = sorted(landed + ["system/scripts/permissions.py", "system/scripts/reach.py", "system/scripts/tracker.py"])
         self.assertEqual(sorted(d), landed, f"guarded files changed since 2.6.4: {d}")
         old = [x for x in git("show", "v2.6.4:dev/proposals/GUARDED-2.6.4.chain").stdout.splitlines() if x and not x.startswith("#")]
         new = [x for x in read("dev/proposals/GUARDED-2.6.4.chain").splitlines() if x and not x.startswith("#")]

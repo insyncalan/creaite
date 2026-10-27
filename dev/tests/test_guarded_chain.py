@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import guarded_chain  # noqa: E402
-from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, SPEC4, SPEC5, SPEC6, SPEC7, SPEC8, chain_digest, guarded_touched  # noqa: E402
+from guarded_chain import GUARDED, HistoryMissing, SPEC1, SPEC2, SPEC3, SPEC4, SPEC5, SPEC6, SPEC7, SPEC8, SPEC9, SPEC10, chain_digest, guarded_touched  # noqa: E402
 
 TRK, UPD, REA = "system/scripts/tracker.py", "system/scripts/update.py", "system/scripts/reach.py"
 LIVE, LEAK, EDIT, GOLD = "system/scripts/live_server.py", "system/scripts/client_leak.py", "system/scripts/edit_ai.py", "dev/tests/snapshots/golden.txt"
@@ -95,7 +95,8 @@ class Repo:
     pin = "none"
 
     def touched(self, **kw):
-        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3", SPEC4[0]: "pin4", SPEC5[0]: "pin5", SPEC6[0]: "pin6", SPEC7[0]: "pin7", SPEC8[0]: "pin8"}[self.spec[0]]
+        key = {SPEC1[0]: "pin", SPEC2[0]: "pin2", SPEC3[0]: "pin3", SPEC4[0]: "pin4", SPEC5[0]: "pin5", SPEC6[0]: "pin6", SPEC7[0]: "pin7", SPEC8[0]: "pin8",
+               SPEC9[0]: "pin9", SPEC10[0]: "pin10"}[self.spec[0]]
         if "pin" in kw and key != "pin":
             kw[key] = kw.pop("pin")
         kw.setdefault(key, self.pin)
@@ -335,6 +336,175 @@ class Chains7And8(unittest.TestCase):
         _, p8 = self.build()
         first = run(self.r.d, "log", "--format=%H", "--fixed-strings", "--grep", SPEC7[0]).strip()
         self.assertEqual(guarded_touched(self.r.d, first, "HEAD", pin8=p8), [])
+
+
+class GuardedChain9(GuardedChain):
+    """The same cases for the 2.6.10 chain: its own marker, chain file and pin."""
+    SPEC = SPEC9
+
+
+class ShippedPin9(unittest.TestCase):
+    def test_the_shipped_pin_is_the_listed_chain(self):
+        repo = Path(__file__).resolve().parents[2]
+        listed = chain_digest(repo, "HEAD", SPEC9)
+        self.assertIsNotNone(listed, "the 2.6.10 list is missing or empty")
+        self.assertEqual(listed, guarded_chain.CHAIN9_SHA256)
+
+    def test_no_marker_prefixes_another(self):
+        """The 2.6.10 marker, the two 2.6.9 markers and a possible second 2.6.10 chain's marker: none starts with another."""
+        marks = [SPEC7[0], SPEC8[0], SPEC9[0], "Guarded 2.6.10 chain (370 slice 3):"]
+        for a in marks:
+            for b in marks:
+                if a != b:
+                    self.assertFalse(a.startswith(b), (a, b))
+
+    def test_base9_is_the_first_2610_base(self):
+        self.assertEqual(guarded_chain.BASE9, "026528d9bdd64ee0039096a5425c7e3500db6106")
+
+
+class Chains8And9(unittest.TestCase):
+    """A range holding the 2.6.9b chain commit on update.py and then the 2.6.10 chain commit on reach.py."""
+
+    def setUp(self):
+        self.r = Repo(SPEC8)
+        self.addCleanup(self.r._t.cleanup)
+
+    def build(self, mark9=True, extra=False):
+        r = self.r
+        r.chain()                                       # chain 8: tracker.py a/B/c, update.py u1/U2
+        pin8 = r.pin
+        r.commit(SPEC8[0] + " tracker and update")
+        r.write("dev/proposals/z/reach.diff", r.diff_of(REA, "r1\nR2\n"))
+        r.write(SPEC9[1], "dev/proposals/z/reach.diff\n")
+        r.commit("add the 2.6.10 chain files")
+        pin9 = chain_digest(r.d, "HEAD", SPEC9)
+        run(r.d, "apply", "dev/proposals/z/reach.diff")
+        if extra:
+            r.write(REA, (r.d / REA).read_text() + "extra\n")
+        r.commit(SPEC9[0] + " reach" if mark9 else "reach")
+        return pin8, pin9
+
+    def test_both_marked_pass(self):
+        p8, p9 = self.build()
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD", pin8=p8, pin9=p9), [])
+
+    def test_the_second_unmarked_fails(self):
+        p8, p9 = self.build(mark9=False)
+        self.assertIn(REA, guarded_touched(self.r.d, "base", "HEAD", pin8=p8, pin9=p9))
+
+    def test_the_second_with_an_extra_edit_fails(self):
+        p8, p9 = self.build(extra=True)
+        self.assertIn(REA, guarded_touched(self.r.d, "base", "HEAD", pin8=p8, pin9=p9))
+
+    def test_a_wrong_2610_pin_fails(self):
+        p8, _ = self.build()
+        self.assertIn(REA, guarded_touched(self.r.d, "base", "HEAD", pin8=p8, pin9="0" * 64))
+
+    def test_base_after_the_first_checks_the_second_alone(self):
+        _, p9 = self.build()
+        first = run(self.r.d, "log", "--format=%H", "--fixed-strings", "--grep", SPEC8[0]).strip()
+        self.assertEqual(guarded_touched(self.r.d, first, "HEAD", pin9=p9), [])
+
+
+class GuardedChain10(GuardedChain):
+    """The same cases for the second 2.6.10 chain (#370 slice 3): its own marker, chain file and pin."""
+    SPEC = SPEC10
+
+
+class ShippedPin10(unittest.TestCase):
+    def test_the_shipped_pin_is_the_listed_chain(self):
+        repo = Path(__file__).resolve().parents[2]
+        listed = chain_digest(repo, "HEAD", SPEC10)
+        self.assertIsNotNone(listed, "the second 2.6.10 list is missing or empty")
+        self.assertEqual(listed, guarded_chain.CHAIN10_SHA256)
+
+    def test_no_marker_prefixes_another(self):
+        """The two 2.6.9 markers and the two 2.6.10 markers: none starts with another."""
+        marks = [SPEC7[0], SPEC8[0], SPEC9[0], SPEC10[0]]
+        self.assertEqual(SPEC10[0], "Guarded 2.6.10 chain (370 slice 3):")
+        for a in marks:
+            for b in marks:
+                if a != b:
+                    self.assertFalse(a.startswith(b), (a, b))
+
+    def test_the_first_2610_marker_does_not_find_the_second_commit(self):
+        """Discovery is subject.startswith(marker): the 370 commit is the second chain's only, never the first's."""
+        subj = "Guarded 2.6.10 chain (370 slice 3): the run limits and refusal count, live_server.py only (rev 2)"
+        self.assertTrue(subj.startswith(SPEC10[0]))
+        self.assertFalse(any(subj.startswith(s[0]) for s in (SPEC1, SPEC2, SPEC3, SPEC4, SPEC5, SPEC6, SPEC7, SPEC8, SPEC9)))
+
+    def test_base_covers_both_2610_chains(self):
+        self.assertEqual(guarded_chain.BASE, guarded_chain.BASE9)   # the default range holds both 2.6.10 chains; BASE10 pins the second
+
+
+class Chains9And10(unittest.TestCase):
+    """A range holding the 2.6.10 chain commit on live_server.py and then the second 2.6.10 chain commit on the same file, as shipped."""
+
+    def setUp(self):
+        self.r = Repo(SPEC9)
+        self.addCleanup(self.r._t.cleanup)
+
+    def build(self, mark10=True, extra=False):
+        r = self.r
+        r.write("dev/proposals/y/live1.diff", r.diff_of(LIVE, "l1\nL2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n"))
+        r.write(SPEC9[1], "dev/proposals/y/live1.diff\n")
+        r.commit("add the 2.6.10 chain files")
+        pin9 = chain_digest(r.d, "HEAD", SPEC9)
+        run(r.d, "apply", "dev/proposals/y/live1.diff")
+        r.commit(SPEC9[0] + " live_server")
+        r.write("dev/proposals/z/live2.diff", r.diff_of(LIVE, "l1\nL2\nl3\nl4\nl5\nl6\nl7\nL8\nl9\n"))
+        r.write(SPEC10[1], "dev/proposals/z/live2.diff\n")
+        r.commit("add the second 2.6.10 chain files")
+        pin10 = chain_digest(r.d, "HEAD", SPEC10)
+        run(r.d, "apply", "dev/proposals/z/live2.diff")
+        if extra:
+            r.write(LIVE, (r.d / LIVE).read_text() + "extra\n")
+        r.commit(SPEC10[0] + " live_server" if mark10 else "live_server")
+        return pin9, pin10
+
+    def test_both_marked_pass(self):
+        p9, p10 = self.build()
+        self.assertEqual(guarded_touched(self.r.d, "base", "HEAD", pin9=p9, pin10=p10), [])
+
+    def test_the_second_unmarked_fails(self):
+        p9, p10 = self.build(mark10=False)
+        self.assertIn(LIVE, guarded_touched(self.r.d, "base", "HEAD", pin9=p9, pin10=p10))
+
+    def test_the_second_with_an_extra_edit_fails(self):
+        p9, p10 = self.build(extra=True)
+        self.assertIn(LIVE, guarded_touched(self.r.d, "base", "HEAD", pin9=p9, pin10=p10))
+
+    def test_a_wrong_second_pin_fails(self):
+        p9, _ = self.build()
+        self.assertIn(LIVE, guarded_touched(self.r.d, "base", "HEAD", pin9=p9, pin10="0" * 64))
+
+    def test_a_wrong_first_pin_fails(self):
+        _, p10 = self.build()
+        self.assertIn(LIVE, guarded_touched(self.r.d, "base", "HEAD", pin9="0" * 64, pin10=p10))
+
+    def test_base_after_the_first_checks_the_second_alone(self):
+        _, p10 = self.build()
+        first = run(self.r.d, "log", "--format=%H", "--fixed-strings", "--grep", SPEC9[0] + " live_server").strip()
+        self.assertEqual(guarded_touched(self.r.d, first, "HEAD", pin10=p10), [])
+
+
+class ShippedRange2610(unittest.TestCase):
+    """The real 2.6.10 range: from the 2.6.9 release (tag v2.6.9, db5adb2a) and from BASE9 both 2.6.10 chains, from BASE10 the second
+    alone (BASE, the default, is BASE9); every guarded change is a marked, pinned 2.6.10 chain."""
+
+    def test_the_release_range_passes(self):
+        repo = Path(__file__).resolve().parents[2]
+        for base in ("db5adb2ac15f1787ec4f9b4aa89399af59e68afc", guarded_chain.BASE9, guarded_chain.BASE10):
+            got = guarded_touched(repo, base, "HEAD", ci="")
+            if got is None:
+                self.skipTest("git history for the 2.6.10 range is not available")
+            self.assertEqual(got, [], base)
+
+    def test_the_default_range_passes(self):
+        got = guarded_touched(Path(__file__).resolve().parents[2], ci="")
+        if got is None:
+            self.skipTest("git history for the 2.6.10 range is not available")
+        self.assertEqual(got, [])
 
 
 class ShippedRange269(unittest.TestCase):

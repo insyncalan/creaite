@@ -10,7 +10,7 @@ import { signal } from "@preact/signals";
 import { A, DEC, P, R } from "../core/data.js";
 import { D } from "../core/page.js";
 import { go } from "../core/nav.js";
-import { liveLines, memPath, needVault, reloadData, save, setMemLine, snack, viaServer, vq } from "../core/server.js";
+import { liveLines, memPath, needVault, reloadData, save, setMemLine, snack, viaServer, vq, writeSettings } from "../core/server.js";
 import { shared } from "../core/state.js";
 import { PARTNERS_MAX, PARTNER_NAME_MAX, cleanPartnerName, partnerKey, partnerNameProblem } from "../core/partners.js";
 import { resolver } from "../settings.js";
@@ -74,6 +74,62 @@ export async function setProjectActive(code, active) {
 function markState(code, state) { const s = (D.project_states || []).find((/** @type {any} */ x) => x.code === code); if (s) s.state = state; }
 /** @param {string} code @returns {string} active, closed or archived */
 export function projectState(code) { const s = (D.project_states || []).find((/** @type {any} */ x) => x.code === code); return s ? s.state : "active"; }
+
+// ----- #385: the project's own folder (locations.project_paths, by its folder name)
+
+/** where the project's folder is, as the page shows it: {where, own, missing, dropped} from D.own_folders. `where` is the real
+    folder with ~ (projects outside creaite's folder) or "" (then projects/<folder> is shown, as before); `own` its saved
+    folder of its own, or "". @param {string} code */
+export function folderPlace(code) {
+  const o = /** @type {any} */ (D.own_folders || {});
+  return {
+    where: String((o.where || {})[code] || ""), own: String((o.paths || {})[code] || ""),
+    missing: (o.missing || []).some((/** @type {any} */ m) => m.code === code),
+    dropped: /** @type {any} */ ((o.dropped || []).find((/** @type {any} */ d) => d.code === code) || null),
+  };
+}
+/** Whether the projects are outside creaite's folder (a project can have a folder of its own only then). */
+export const ownFoldersOn = () => !!Object.keys(/** @type {any} */ ((D.own_folders || {}).where) || {}).length;
+
+/** How a typed place is saved: one line, \ as /, no / at the end (the server checks the rest: written with ~, inside the home
+    folder, not a shortcut, not inside another project's folder, …). @param {string} v */
+export const ownPathStored = v => String(v || "").trim().replace(/\\/g, "/").replace(/\/+$/, "");
+/** @param {string} v @returns {string} a plain-words problem found before asking the server, or "" */
+export function ownPathProblem(v) {
+  const t = ownPathStored(v);
+  if (/[\r\n]/.test(String(v || ""))) return "The folder's place is one line.";
+  if (!t) return "Type the folder's place, or use Back to the projects folder.";
+  if (!t.startsWith("~/")) return "Write it with ~ for your home folder, for example ~/Library/CloudStorage/OneDrive-Company/Client/Programme.";
+  if (t.split("/").includes("..")) return "Give the folder itself, without “..”.";
+  return "";
+}
+
+/** Give the project a folder of its own (`value`), or put it back in the projects folder (`value` ""), through the settings
+    save every setting uses (a backup, a line in settings-log.jsonl, and the server's own checks on locations: it refuses a
+    place that breaks the rules, with a plain sentence). Nothing is moved: Alan moves the folder himself first. The map is
+    changed from settings.json as it is now, so another project's entry (an archived one's too) is kept.
+    @param {string} code @param {string} value @returns {Promise<string>} "" when saved, otherwise the problem */
+export async function setOwnFolder(code, value, undoing = false) {
+  const name = (D.folders || {})[code], before = folderPlace(code).own;
+  if (!name) return "This project has no folder in the register yet.";
+  if (!viaServer()) return "Not saved: creaite needs to be running to check the folder.";
+  const v = ownPathStored(value);
+  if (value !== "") { const bad = ownPathProblem(value); if (bad) return bad; }
+  let why = "";
+  const ok = await writeSettings((/** @type {any} */ js) => {
+    const was = (js.locations && typeof js.locations.project_paths === "object" && js.locations.project_paths) || {};
+    const map = { ...was };
+    if (v) map[name] = v; else delete map[name];
+    return { "locations.project_paths": map };
+  }, { problem: m => { why = m.replace(/^Settings not saved: /, "") || "Not saved."; } });
+  if (!ok) return why || "Not saved.";
+  await reloadData(); psChanged();
+  if (undoing) { snack("Undone"); return ""; }
+  const label = (psProject(code) || {}).name || code;
+  snack(v ? `${label}: its own folder is saved` : `${label} is back in the projects folder`, async () => {
+    const bad = await setOwnFolder(code, before, true); if (bad) snack(bad); });
+  return "";
+}
 
 // ----- people
 

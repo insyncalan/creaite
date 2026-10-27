@@ -347,8 +347,8 @@ class CardPageTests(unittest.TestCase):
     def test_activity_shows_each_change_with_its_tier(self):
         self.assertEqual(self.r["activityHead"][:3], ["When", "Tier", "Change"])
         rows = {r[3].replace(" approved on the card", ""): r[:3] for r in self.r["activity"]}
-        self.assertEqual(rows.get("Changed .claude/settings.json"), ["high", "High-risk", "shield"], self.r["activity"])
-        self.assertEqual(rows.get("Created ~/Documents/plan.md"), ["sensitive", "Sensitive", "alert"], self.r["activity"])
+        self.assertEqual(rows.get("Changed settings"), ["high", "High-risk", "shield"], self.r["activity"])
+        self.assertEqual(rows.get("Created plan"), ["sensitive", "Sensitive", "alert"], self.r["activity"])
 
     def test_both_tiers_are_readable_and_distinct_in_every_theme(self):
         self.assertEqual(len(self.r["contrast"]), 2 * 2 * len(TEST_PALETTES))

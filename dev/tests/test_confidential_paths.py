@@ -75,6 +75,7 @@ class ConfidentialPaths(unittest.TestCase):
         src = Path(bd.__file__).read_text()
         self.assertIn('"p": ev_shown_p(ev)', src)
         self.assertIsNone(bd.ev_shown_p(EV))
+        self.assertIsNone(bd.ev_shown_p(dict(EV, p="DEF")))   # a saved project on a confidential entry is still hidden
         self.assertEqual(bd.ev_shown_p({**EV, "sensitivity": "normal", "p": "DEF"}), "DEF")
 
     def test_sensitivity_not_just_the_flag(self):

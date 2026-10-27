@@ -91,7 +91,7 @@ class V267(unittest.TestCase):
     def test_c07_version(self):
         self.assertGreaterEqual(tuple(map(int, read("VERSION").strip().split("."))), (2, 6, 7))   # 2.6.8 contains 2.6.7
         for g in ("guide-first-day.html", "guide-how-to.html"):
-            self.assertRegex(read(f"system/templates/{g}"), r"creaite 2\.6\.[7-9] ·")   # 2.6.7 or later (test_v268 pins 2.6.8)
+            self.assertRegex(read(f"system/templates/{g}"), r"creaite 2\.6\.([7-9]|1\d) ·")   # 2.6.7 or later (test_v2610 pins 2.6.10)
 
 
 if __name__ == "__main__":

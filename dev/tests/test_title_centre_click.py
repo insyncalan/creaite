@@ -56,16 +56,35 @@ class TitleCentre(LiveBrowserCase):
                     b.eval("closePanel(); document.activeElement&&document.activeElement.blur()")
                     sel = f'#workTbl tr[data-row="{rid}"] td.title'
                     at = b.eval("(s=>{ const c=document.querySelector(s).getBoundingClientRect(), e=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2); return e.tagName+'.'+e.className+' '+(e.textContent||'').slice(0,30); })(%r)" % sel)
-                    # HELD, a real product defect (#341's centre check at 1400 px compact; tracked for 2.6.10 with this check restored).
-                    # Held for a design decision (27-10): the cell is two lines and its centre is on the second (ID · project), so which
-                    # link is under it moves with the cell's width, which follows the day's dates (A.rowid on 26-10, the project link on
-                    # 27-10). Until #341's Work half is designed, the double-click goes on the title text, where a person aims.
-                    b.click(sel, count=2, exact=True, on_text=True)      # exact: the point must be on the cell itself, not on a link in it
+                    b.click(sel, count=2, exact=True)                    # exact: the point must be on the cell itself, not on a link in it
                     try:
                         b.wait("document.getElementById('panel').classList.contains('on')", 5)
                     except TimeoutError:
                         self.fail(f"no peek: {(width, dens, rid, at, b.eval('location.hash'))}")
                     self.assertEqual(b.eval("VIEW"), "work", (width, dens, rid))
+
+    def test_work_title_centre_is_never_a_link_whatever_the_title_length(self):
+        """#388: in compact density the ID and project link sit beside the title. With a short title they reached the middle of the
+        cell, so which row failed depended on the day's date strings (they set the column widths). Here each of the first rows gets
+        titles from 1 to 60 characters, in both densities at 1400 px: the middle of the cell is the cell or the title, never a link."""
+        b = self.b
+        b.resize(1400, 900)
+        b.wait("innerWidth===1400")
+        b.eval("go('work')")
+        b.wait("document.querySelectorAll('#workTbl tbody tr[data-row]').length>2")
+        hit = """(s=>{ const td=document.querySelector(s), c=td.getBoundingClientRect(), e=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2);
+                  return e&&e.closest('a,[role=link],button')?e.tagName+'.'+e.className:''; })(%r)"""
+        for dens in ("cmp", "cmf"):
+            b.click(f"#wdens [data-dens={dens}]")
+            ids = b.eval("[...document.querySelectorAll('#workTbl tbody tr[data-row]')].slice(0,4).map(r=>r.dataset.row)")
+            for rid in ids:
+                sel = f'#workTbl tr[data-row="{rid}"] td.title'
+                for n in (1, 4, 8, 12, 16, 20, 24, 30, 40, 60):
+                    b.eval("(s=>{ const td=document.querySelector(s), t=[...td.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim()).pop();"
+                           " t.textContent=%r; })(%r)" % (("Book the room " * 6)[:n].strip() or "B", sel))
+                    b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,120))))")   # the page places the ID on the next frame
+                    self.assertEqual(b.eval(hit % sel), "", (dens, rid, n))
+
 
 if __name__ == "__main__":
     unittest.main()

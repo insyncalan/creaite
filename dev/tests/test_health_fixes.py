@@ -58,15 +58,33 @@ class Catalogue(unittest.TestCase):
 
     def test_the_fixes_are_the_ones_alan_decided(self):
         self.assertEqual(set(health_fixes.FIXES), {"launcher", "rosetta", "icon", "m365", "offsite",
-                                                      "archive_reports", "sweep_lock"})   # BL-03; BL-328; #252: no old_archive fix
+                                                      "archive_reports", "sweep_lock", "sweep_failed"})   # BL-03; BL-328; #252: no old_archive fix; #370
         commands = {k: f.get("command") for k, f in health_fixes.FIXES.items()}
         self.assertEqual(commands, {"launcher": ("launch.py", "make-launcher", "--replace"),
                                     "rosetta": ("launch.py", "make-launcher", "--if-present"),
                                     "icon": ("launch.py", "refresh-icon"), "m365": None,
                                     "offsite": ("session.py", "backup"),
                                     "archive_reports": ("archive.py", "reports"),          # BL-03: the same
-                                    "sweep_lock": ("sweep.py", "unlock", "--if-idle")})    # BL-328: only a lock no sweep holds
+                                    "sweep_lock": ("sweep.py", "unlock", "--if-idle"),     # BL-328: only a lock no sweep holds
+                                    "sweep_failed": None})                                  # #370: the page's own call, no command
         self.assertEqual(health_fixes.FIXES["m365"]["url"], "https://claude.ai/settings/connectors")
+
+    def test_the_page_calls_exactly_one_route_with_a_fixed_body(self):
+        """#370: a fix that makes the page call a route is pinned by id; a future `call: "/api/apply"` fails here."""
+        calls = {k: f["call"] for k, f in health_fixes.FIXES.items() if "call" in f}
+        self.assertEqual(calls, {"sweep_failed": "/api/day/catchup"})
+        self.assertEqual(health_fixes.FIXES["sweep_failed"]["body"], {"force": True})
+        d = health_fixes.describe("sweep_failed")
+        self.assertEqual((d["call"], d["body"]), ("/api/day/catchup", {"force": True}))
+        for f in health_fixes.FIXES.values():
+            self.assertTrue("call" in f or "body" not in f)               # a body belongs only to a call
+
+    def test_run_fix_for_a_page_call_says_so_plainly_and_runs_nothing(self):
+        ran = []
+        r = health_fixes.run_fix("sweep_failed", lambda *a: ran.append(a) or (0, "ran"))
+        self.assertEqual(ran, [])
+        self.assertFalse(r["ok"])
+        self.assertIn("Check now", r["message"])
 
     def test_no_fix_runs_a_record_permission_or_microsoft_365_command(self):
         for fid, f in health_fixes.FIXES.items():
@@ -102,11 +120,12 @@ class Catalogue(unittest.TestCase):
         cat = health_fixes.catalogue()
         self.assertEqual(cat["checks"], {"launcher_vault": "launcher", "python_version": "rosetta", "offsite_backup": "offsite",
                                          "archive_reports": "archive_reports",                  # BL-03
-                                         "sweep_lock": "sweep_lock"})                           # BL-328
+                                         "sweep_lock": "sweep_lock",                            # BL-328
+                                         "sweep_failed": "sweep_failed"})                       # #370
         self.assertEqual(cat["standalone"], ["icon", "m365"])
         for d in cat["fixes"]:
             self.assertTrue(d["does"] and d["title"] and d["button"] and d["built"])
-            self.assertTrue(("url" in d) != ("command" in d))
+            self.assertEqual(sum(k in d for k in ("url", "command", "call")), 1)          # #370: or the page's own call
             if "command" in d:
                 self.assertTrue(d["command"].startswith("system/scripts/run "))
 

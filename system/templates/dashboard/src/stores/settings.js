@@ -23,13 +23,13 @@ import { api, writeSettings } from "../core/server.js";
      group_tabs?:Record<string, string|null>}} Catalogue */
 /** A problem's fix. A built one (health_fixes.py) also has its id, title, what it does, and its command or the page it opens.
     @typedef {{kind:string, button:string, would_run:string, waits_for:string, how:string, built:boolean, id?:string,
-     title?:string, does?:string, command?:string, url?:string}} Fix */
+     title?:string, does?:string, command?:string, url?:string, call?:string, body?:Record<string, any>}} Fix */
 /** A problem. `key` is its check id and a hash of its detail; `dismissable` is false for the engine's own integrity (#242),
     with `keep_why`; a dismissed one also has its `reason` and `date` (YYYY-MM-DD).
     @typedef {{id:string, title:string, check:string, severity:string, detail:string, fix:Fix, key:string, dismissable:boolean,
      keep_why:string, reason?:string, date?:string}} Problem */
 /** @typedef {{area:string, count:number, span:string, message:string}} Stopped */
-/** @typedef {{problems:Problem[], fine:number, fine_names:string[], stopped:Stopped[], checked:string, standalone?:Fix[], archiving?:string[], backups?:string[], dismissed?:Problem[]}} HealthResult */
+/** @typedef {{problems:Problem[], fine:number, fine_names:string[], stopped:Stopped[], checked:string, standalone?:Fix[], archiving?:string[], archived?:string[], backups?:string[], dismissed?:Problem[]}} HealthResult */
 
 /** @type {import("@preact/signals").Signal<Catalogue|null>} */
 export const catalogue = signal(null);

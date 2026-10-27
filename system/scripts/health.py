@@ -20,11 +20,12 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import health_fixes  # noqa: E402
+import log  # noqa: E402
 import paths  # noqa: E402
 
 DOCTOR = Path(__file__).resolve().parent / "doctor.py"
@@ -45,6 +46,8 @@ FIXES = {
     "setup": ("Open set-up", "the cx-setup skill", "runs set-up steps that change files", "Ask Claude to set creaite up"),
     "autostart": ("Turn it on", "nothing here: Settings › creaite and backups has the switch", "",
                   "Settings › creaite and backups › Start creaite when I sign in"),
+    "logging": ("Open Settings", "nothing here: Settings › Diagnostics has the switch", "",
+                "Settings › Diagnostics › Log level: set it back to Info"),
     "manual": ("How to fix", "nothing: a step only you can take", "", ""),
 }
 # doctor check id -> (plain words for the line, the fix kind)
@@ -58,6 +61,7 @@ PLAIN = {
     "writable": ("creaite can't write to its own folders", "manual"),
     "projects_root": ("The projects folder can't be reached", "manual"),
     "project_folders_present": ("Some project folders are missing", "manual"),
+    "project_paths_present": ("A project's own folder can't be reached", "manual"),      # #385
     "mapped_folders": ("Some folders creaite files into are missing or read-only", "manual"),
     "assistant_permissions": ("ask creaite's permissions are broader than creaite asks for", "permissions"),
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
@@ -77,10 +81,12 @@ PLAIN = {
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
     "sweep_lock": ("A mail and Teams check looks stuck", "manual"),   # BL-328: health_fixes builds its Release
+    "sweep_failed": ("A mail and Teams check didn't run", "manual"),   # #370: health_fixes builds its Check now
     "debug_log": ("Errors keep coming back", "manual"),
     "minutes_drafts": ("Minutes waiting in Review have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),
     "autostart": ("creaite won't start by itself after a restart", "autostart"),      # #300: a suggestion, dismissible
+    "detailed_logging": ("Detailed logging has been on for over a week", "logging"),   # #370: informs only, dismissible
     "version": ("The version file is wrong", "reinstall"),
     "rules_imported": ("Your Claude instructions don't include creaite's rules", "setup"),
     "scripts_use_paths": ("A creaite file doesn't take its folder locations from one place", "reinstall"),
@@ -159,6 +165,35 @@ def autostart_check():
             "detail": "creaite isn't set to start when you sign in, so after a restart it stays closed until you open it"}
 
 
+DETAILED_LOGGING_DAYS = 7
+
+
+def detailed_logging_check(settings=None, log_path=None, now=None):
+    """#370: a doctor-shaped warning while the log level has been "debug" for more than 7 days, else None. It informs only and
+    changes no setting. "Since when" is the last logged change of logging.level to debug (settings-log.jsonl); with no such
+    record, or an unreadable time, nothing is said (no guess)."""
+    try:
+        settings = paths.load_settings() if settings is None else settings
+        if str((settings.get("logging") or {}).get("level", "")).lower() != "debug":
+            return None
+        since = None
+        for line in Path(log_path or paths.SETTINGS_LOG).read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue                                   # a damaged line is skipped
+            if isinstance(e, dict) and e.get("key") == "logging.level":
+                since = datetime.strptime(str(e.get("at", ""))[:19].replace("T", " "), "%Y-%m-%d %H:%M:%S") \
+                    if str(e.get("new", "")).lower() == "debug" else None
+        if since is None or (now or log.now()) - since <= timedelta(days=DETAILED_LOGGING_DAYS):
+            return None
+    except (OSError, ValueError, TypeError, AttributeError):    # a suggestion never breaks Health
+        return None
+    return {"id": "detailed_logging", "name": "Log level", "status": "warn",
+            "detail": f"Detailed logging has been on since {since:%d-%m-%Y}. It makes the log files large and slow to read. "
+                      "Set the log level back to Info in Settings › Diagnostics."}
+
+
 def home_short(text):
     """The home folder written as ~, so a line reads as it does in Finder."""
     return str(text).replace(str(Path.home()), "~")
@@ -167,7 +202,8 @@ def home_short(text):
 def built_fix(fix_id, kind=""):
     """A built fix (health_fixes.describe), with the fields every fix has, so the page reads one shape."""
     d = health_fixes.describe(fix_id)
-    return {**d, "kind": kind or fix_id, "would_run": d.get("command") or d.get("url", ""), "waits_for": "", "how": d["does"]}
+    would_run = d.get("command") or d.get("url") or d.get("call", "")
+    return {**d, "kind": kind or fix_id, "would_run": would_run, "waits_for": "", "how": d["does"]}
 
 
 def fix_for(kind, problem_id=None, detail=""):
@@ -202,14 +238,57 @@ def problem(c):
             "dismissable": not keep, "keep_why": KEEP_WHY if keep else ""}
 
 
+def archived_projects():
+    """#385 (Alan, 26-10-2026: archived projects are listed in one place): [{code, name, where, own, there}] for every archived
+    project, where its folder is now: in the projects folder's 99 Archive, or (a project in a folder of its own) in the 99 Archive
+    beside that folder, which its settings entry, kept on archive, still names. Read only; [] when the record can't be read."""
+    import sqlite3
+    try:
+        import tracker
+        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    except (ImportError, sqlite3.Error):
+        return []
+    out = []
+    try:
+        for code, name in con.execute("SELECT code, name FROM main.projects WHERE archived = 1 ORDER BY code").fetchall():
+            last = tracker.last_archive(con, code) or {}
+            to = str(((last.get("folder") or {}).get("to")) or "")
+            if not to:
+                out.append({"code": code, "name": name, "where": "", "own": False, "there": False})
+                continue
+            stored = paths.follow_stored(to)
+            real = paths.resolve(stored, archived=False)
+            folder = str((last.get("folder") or {}).get("from") or "").split("/", 1)[-1]
+            out.append({"code": code, "name": name, "where": home_short(real), "own": paths.archive_slot(folder) is not None,
+                        "there": real.is_dir()})
+    except sqlite3.Error:
+        return out
+    finally:
+        con.close()
+    return out
+
+
+def archived_lines(rows=None):
+    """#385: archived_projects as Health's lines, in plain words."""
+    rows = archived_projects() if rows is None else rows
+    out = []
+    for r in rows:
+        if not r["where"]:
+            out.append(f"{r['name']}: where it was archived to isn't in the history")
+            continue
+        out.append(f"{r['name']}: {r['where']}" + (" (beside its own folder)" if r["own"] else "")
+                   + ("" if r["there"] else ". It isn't there now: was it moved by hand, or is OneDrive not running?"))
+    return out
+
+
 def health(result=None, dismissed=None):
     """{problems, dismissed, fine, fine_names, stopped, checked}: doctor's warnings and failures in plain words, each with its
     fix; the rest counted. `result` is a doctor --json result (the tests pass one), else doctor runs now; `dismissed` is a
     health.dismissed list (the tests pass one), else settings.json's (#242)."""
     result = doctor_checks() if result is None else result
     problems, fine = [], []
-    extra = autostart_check()
-    for c in [*(result.get("checks") or []), *([extra] if extra else [])]:
+    extra = [c for c in (autostart_check(), detailed_logging_check()) if c]
+    for c in [*(result.get("checks") or []), *extra]:
         if c.get("status") == "pass":
             fine.append(c.get("name", ""))
             continue
@@ -221,6 +300,6 @@ def health(result=None, dismissed=None):
     backups = [f"{c.get('name', '')}: {home_short(c.get('detail', ''))}" for c in result.get("checks") or []   # BL-323
                if c.get("id") in BACKUP_LINES and c.get("status") == "pass"]
     return {"problems": problems, "dismissed": gone, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(),
-            "archiving": archiving, "backups": backups,
+            "archiving": archiving, "backups": backups, "archived": archived_lines(),
             "standalone": [built_fix(f) for f in health_fixes.STANDALONE],
             "read_only": bool(result.get("read_only")), "checked": datetime.now().strftime("%Y-%m-%d %H:%M")}

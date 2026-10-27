@@ -15,7 +15,7 @@ import { renderToday } from "./today.js";
 shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.list("creaite-files-open"));
 /* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
 export const farch=()=>D.files_archived||[];
-export const FNAME=Object.assign({_portfolio:"projects/_portfolio",inbox:"inbox"},D.folders);
+export const FNAME=Object.assign({_portfolio:"Portfolio",inbox:"Intake"},D.folders);
 const EMPTY={archived:"Nothing has been archived.",latest:"No reports yet.",week:"No meetings this week."};
 export function renderFiles(){ const cnt=f=>FILES.filter(f).length; const pr=(b)=>b?"true":"false";
   const h=[html`<button data-p="All" data-f="All" aria-pressed="${pr(shared.FSEL.p==="All")}">All files<span class="n">${FILES.length}</span></button><button class="l1" data-p="inbox" data-f="All" aria-pressed="${pr(shared.FSEL.p==="inbox")}">Intake<span class="n">${cnt(x=>x.p==="inbox")}</span></button><button class="l1" data-p="_portfolio" data-f="All" aria-pressed="${pr(shared.FSEL.p==="_portfolio")}"><span title="${FNAME._portfolio}">Portfolio</span><span class="n">${cnt(x=>x.p==="_portfolio")}</span></button>`];

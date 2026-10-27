@@ -222,16 +222,18 @@ function wkLine(td,x){ const q=wkRects(td,null,x); if(!q.length) return null;
     tq=txt?wkRects(txt).filter(c=>c.top<end.bottom-1&&c.bottom>end.top+1):[];
   return {right:Math.max(...on.map(c=>c.right)),bottom:tq.length?tq[tq.length-1].bottom:null,mid:(Math.min(...on.map(c=>c.top))+Math.max(...on.map(c=>c.bottom)))/2}; }
 const WKX=["--wkx","--wky"];
+const WKMID=12;   /* #388: the ID and project link start at least this far right of the title cell's middle, so a click there is the cell (the peek) */
 export function wkPlace(){ WKPQ=0; const w=$("#workWrap"); if(!w) return; wkWatch();
   const xs=$$("#workTbl tbody tr[data-row] > td.title > .x");
   xs.forEach(x=>{ if(x.classList.contains("xup")){ x.classList.remove("xup"); WKX.forEach(v=>x.style.removeProperty(v)); x.style.clipPath=""; } });
   if(!w.classList.contains("cmp")||!w.offsetParent) return;
   const fit=xs.map(x=>{ const td=x.parentElement, l=wkLine(td,x), id=x.querySelector(".rowid"); if(!l||!id) return null;
-    const cs=getComputedStyle(td), room=td.getBoundingClientRect().right-(parseFloat(cs.paddingRight)||0)-(parseFloat(cs.borderRightWidth)||0)-(l.right+10),
+    const cs=getComputedStyle(td), tr=td.getBoundingClientRect(), start=Math.max(l.right+10,(tr.left+tr.right)/2+WKMID),   /* #388: never under the cell's middle */
+      room=tr.right-(parseFloat(cs.paddingRight)||0)-(parseFloat(cs.borderRightWidth)||0)-start,
       left=x.getBoundingClientRect().left, all=wkRects(x), full=all.length?Math.max(...all.map(c=>c.right))-left:0,
       stops=[full,...[...x.querySelectorAll(":scope > .pcode, :scope > .rowid")].map(e=>e.getBoundingClientRect().right-left).sort((p,q)=>q-p)],
       keep=stops.find(v=>v>0&&v<=room+0.5);
-    return keep==null?null:{dx:l.right+10-left,clip:keep<full-0.5?x.getBoundingClientRect().width-keep:0}; });
+    return keep==null?null:{dx:start-left,clip:keep<full-0.5?x.getBoundingClientRect().width-keep:0}; });
   xs.forEach((x,i)=>{ const f=fit[i]; if(!f) return; x.classList.add("xup"); x.style.setProperty("--wkx",f.dx.toFixed(2)+"px"); if(f.clip) x.style.clipPath=`inset(-40px ${f.clip.toFixed(2)}px -40px -8px)`; });
   const dy=xs.map((x,i)=>{ if(!fit[i]) return 0; const l=wkLine(x.parentElement,x), t=[...x.querySelector(".rowid").childNodes].find(n=>n.nodeType===3), q=t?wkRects(t):[];
     if(!l||!q.length) return 0; return l.bottom!=null?l.bottom-q[0].bottom:l.mid-(q[0].top+q[0].bottom)/2; });

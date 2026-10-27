@@ -247,7 +247,7 @@ class Page(LiveBrowserCase):
     def test_it_fits_its_box_at_900_and_1400_with_every_column_on(self):
         for w in (1400, 900):
             b = self.people(w)
-            fit = b.eval("(()=>{const c=document.querySelector('#peopleTbl'),t=c.querySelector('table'),h=[...t.querySelectorAll('th')].find(x=>x.dataset.col==='late');return [t.scrollWidth<=c.clientWidth+4, h.getBoundingClientRect().right<=c.getBoundingClientRect().right+1, document.scrollingElement.scrollWidth<=innerWidth]})()")
+            fit = b.eval("(()=>{const c=document.querySelector('#peopleTbl'),t=c.querySelector('table'),h=[...t.querySelectorAll('th')].find(x=>x.dataset.col==='late');return [t.scrollWidth<=c.clientWidth, h.getBoundingClientRect().right<=c.getBoundingClientRect().right+1, document.scrollingElement.scrollWidth<=innerWidth]})()")
             self.assertEqual(fit, [True, True, True], w)
             # the Projects column keeps room for whole words (about 9 letters); its heading is not broken mid-word
             pj = b.eval("(()=>{const h=document.querySelector('#peopleTbl th[data-col=proj]');return [h.getBoundingClientRect().width, h.getBoundingClientRect().height]})()")
@@ -260,6 +260,18 @@ class Page(LiveBrowserCase):
             self.assertEqual(heads, 2, w)
             self.assertEqual(b.eval("(()=>{const ids=[...document.querySelectorAll('[id]')].map(e=>e.id);return ids.length-new Set(ids).size})()"), 0)
             self.assertEqual(b.errors, [])
+
+    def test_it_fits_its_box_at_900_in_arial(self):
+        """#343 b: with the web fonts missing (Arial everywhere) the table still fits its box at 900 px."""
+        b = self.people(900)
+        b.eval("(()=>{const s=document.createElement('style');s.id='arialOnly';s.textContent='*{font-family:Arial,sans-serif !important}';document.head.appendChild(s)})()")
+        b.pump(0.4)
+        over = b.eval("(()=>{const c=document.querySelector('#peopleTbl'),t=c.querySelector('table'),h=[...t.querySelectorAll('th')].find(x=>x.dataset.col==='late');return [t.scrollWidth-c.clientWidth, h.getBoundingClientRect().right-c.getBoundingClientRect().right, document.scrollingElement.scrollWidth-innerWidth]})()")
+        self.assertTrue(b.eval("getComputedStyle(document.querySelector('#peopleTbl td')).fontFamily").startswith("Arial"))
+        self.assertLessEqual(over[0], 0, over)             # the table is no wider than its box (measured: 0 px over)
+        self.assertLessEqual(over[1], 0, over)             # the last heading ends inside the box
+        self.assertLessEqual(over[2], 0, over)             # and the page does not scroll sideways
+        self.assertEqual(b.errors, [])
 
     def test_the_register_and_settings_are_never_written(self):
         b = self.people()

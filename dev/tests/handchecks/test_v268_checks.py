@@ -111,6 +111,11 @@ class V268(unittest.TestCase):
         d = git("diff", "--name-only", mb, "HEAD", "--", *GUARDED).stdout.split()
         # the three files the chain changes may differ from origin/main only by the chain (test_c04_chain checks their bytes)
         d = [f for f in d if f not in CHAIN_FILES or not (REPO / CHAIN).exists()]
+        later = REPO / "dev/proposals/GUARDED-2.6.10.chain"   # from 2.6.10, the files its chain changes are checked by test_v2610 c15
+        if vkey(version()) >= (2, 6, 10) and later.exists():
+            listed = [REPO / s.strip() for s in later.read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")]
+            moved = {f for p in listed for f in re.findall(r"^\+\+\+ b/(\S+)", p.read_text(encoding="utf-8"), re.M)}
+            d = [f for f in d if f not in moved]
         self.assertEqual(d, [], f"guarded files changed since origin/main: {d} (they must travel as diffs under dev/proposals)")
 
     def test_c04_chain(self):

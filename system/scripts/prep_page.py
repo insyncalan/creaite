@@ -840,6 +840,9 @@ def save(ctx, page):
     creaite didn't write (or one changed since): that gets a numbered name. creaite's own unchanged page is replaced, with a
     backup."""
     target, replaces = place(ctx)
+    gone = paths.unreachable_own_folder(target)          # #385: never create a project's own folder that isn't there
+    if gone:
+        raise ValueError(f"The project's folder ({gone}) can't be reached, so the page isn't saved. Is OneDrive running?")
     target.parent.mkdir(parents=True, exist_ok=True)
     if replaces:
         FILE_BACKUPS.mkdir(parents=True, exist_ok=True)
@@ -866,6 +869,9 @@ def save_agenda(key, draft, attendees=False):
     if ctx.get("error"):
         raise ValueError(ctx["error"])
     folder = paths.folder("_portfolio" if ctx["project"] == "_portfolio" else ctx["project"], "agendas")
+    gone = paths.unreachable_own_folder(folder)          # #385: never create a project's own folder that isn't there
+    if gone:
+        raise ValueError(f"The project's folder ({gone}) can't be reached, so the agenda isn't saved. Is OneDrive running?")
     folder.mkdir(parents=True, exist_ok=True)
     stem = f"{ctx['day']} Agenda - {safe_name(ctx['meeting']['title'])}"
     target, n = folder / f"{stem}.md", 2

@@ -23,12 +23,18 @@ import paths  # noqa: E402
 
 DEFAULTS_FILE = paths.TEMPLATES / "settings-defaults.json"
 SKIP = ("_about", "note")                 # descriptions, not settings
-MAP_KEYS = ("prep.series",)               # a dict that is one setting (a map Alan fills), not a group of settings
+MAP_KEYS = ("prep.series", "locations.project_paths")               # a dict that is one setting (a map Alan fills), not a group of settings
 UNORDERED = ("work.weekend_days", "dashboard.week_ahead_priorities", "identity.short_forms", "identity.own_domains",
              "locations.never_index", "reminders.dismissed_forever", "dashboard.rail.hidden")   # order means nothing
 RETIRE_AFTER_DAYS = 30                    # a setting never changed in a log this old is a candidate to retire (counts only)
 LOCK = threading.Lock()                   # one settings save at a time from the server
 
+FETCH_HELP = (                                            # #250: the brief's wording, also the setting's reason
+    "Off: creaite fetches a transcript when you press Process. On: a mail and Teams check you ask for, and Close the day, also fetch the "
+    "transcripts of meetings that have ended, so they are ready when you open Intake. "
+    "The scheduled morning check and the check at the start of a session do not fetch. "
+    "It only reads: no extra AI run and nothing is added to your project records. "
+    "Confidential meetings are never fetched.")
 ESSENTIALS, ADVANCED, DEVELOPER = "essentials", "advanced", "developer"
 # The Essentials, as rows (BL-320, from the accepted mockup): (section, label, one line, keys). A row may cover several keys
 # (what the sweep reads is five switches; AI drafts is every kind). A key in a row is an Essential; every other key is Advanced.
@@ -96,7 +102,7 @@ FIXED = ("excel.export", "live_mode.required", "live_mode.port", "assistant.enab
          "locations.folders.transcripts", "locations.folders.minutes", "locations.folders.weekly_reports",
          "locations.folders.client_reports", "locations.folders.adhoc_documents", "locations.folders.images",
          "locations.folders.steerco", "locations.folders.agendas", "locations.folders.notes", "locations.never_index",
-         "locations.offsite_backup")
+         "locations.offsite_backup", "locations.project_paths")
 FIXED_WHY = {
     "excel.export": "a description of how the export runs, not a choice",
     "live_mode.required": "the dashboard needs creaite running (IT-approved); not a choice",
@@ -106,6 +112,8 @@ FIXED_WHY = {
     "people.hidden": "an old list; set-up moves it into the people register",
     "workstreams.added": "an old list; set-up moves it into the workstreams table",
     "workstreams.hidden": "an old list; set-up moves it into the workstreams table",
+    "locations.project_paths": "each project's own folder is set in that project's settings; emptying the list would lose "
+                               "where the projects are",
 }
 CATALOGUE = {
     # ── Sweep
@@ -130,6 +138,9 @@ CATALOGUE = {
                                      "Missing a source is worse than one more suggestion; ignore rules handle the noise."),
     "sweep.sources.calendar": ("Your day", "Check reads: calendar", "The week's meetings, for Today, Intake and prep.",
                                "Today's day view and meeting prep need it."),
+    "sweep.fetch_transcripts": ("Checking mail and Teams", "Fetch transcripts as they appear",       # #250
+                                "It only reads: no extra AI run and nothing is added to your project records. "
+                                "Confidential meetings are never fetched.", FETCH_HELP),
     "sweep.show_possible_matches": ("Checking mail and Teams", "Show possible matches",
                                     "Messages that may belong to a project are shown in Review to place, not dropped.",
                                     "A weak match you can place is better than a message silently lost."),
@@ -438,6 +449,11 @@ CATALOGUE = {
                               "files are never project content."),
     "locations.offsite_backup": ("Folders and OneDrive", "OneDrive backup copy folder", "Where the daily backup's closed copy goes.",
                                  "Inside _Portfolio's 99 System, which creaite keeps for its own files."),
+    "locations.project_paths": ("Folders and OneDrive", "Projects in a folder of their own",
+                                "Projects kept elsewhere in your home folder (another OneDrive library, say). Set in each project's "
+                                "settings.",
+                                "Empty: every project is in the projects folder. An archived project keeps its entry, so "
+                                "restoring finds it."),
     # ── Help, AI drafts, logging, close the day
     "help.start_seen": ("Help", "Show the first-run help again",                          # v2.6 (#246): a quiet button
                         "Whether Help › Start here has been shown once; the button sets it back, so it opens again.",

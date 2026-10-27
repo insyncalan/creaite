@@ -1334,12 +1334,13 @@ def followup_facts(req):
     p = minutes_file(req.get("files"))
     # v2.6.0: this email goes to the meeting's attendees, so its summary is only ever the Distributed version's: from a minutes
     # record (distributed_of), never from an Internal Word, Markdown or text file, which may hold what is not for distribution.
-    summary, rec = "", _distributed_record(req.get("files"))
-    if rec is not None and not confidential:
+    summary, (rec, waiting) = "", _distributed_record(req.get("files"))
+    if rec is not None and not confidential and not waiting:
         import minutes_record
         text = minutes_record._followup_text(rec, "summary")
         summary = "" if secret(text) else short(text, 1500)
     note = ("Confidential: the summary is left out." if confidential else "" if summary else
+            SUMMARY_WAITS if waiting else
             "The minutes have no summary paragraph yet." if rec is not None else
             "The minutes aren't a creaite record, so their summary is left out (it could be internal)." if p else
             "No minutes yet, so no summary.")
@@ -1347,16 +1348,24 @@ def followup_facts(req):
             "minutes": paths.rel(p) if p else None, "confidential": confidential}
 
 
+SUMMARY_WAITS = ("A line in the minutes' summary may describe something kept out of the shareable version, so the summary is "
+                 "left out. Answer it in the minutes (Export, then Draft the follow-up email) to include it.")
+
+
 def _distributed_record(files):
-    """The Distributed version of the first minutes record among `files` (a filed one or a draft), or None."""
+    """(the Distributed version of the first minutes record among `files` (a filed one or a draft), or None; whether a line of its
+    summary still waits to be answered: #329, minutes_record.describing_lines, so the summary is left out until it is)."""
     import minutes_record
     for f in files or []:
         try:
             _, doc = minutes_record.record_at(f)
-            return minutes_record.distributed_of(doc)
+            doc = minutes_record.tracked_of(doc)
+            held = minutes_record.withheld(doc)
+            waiting = any(x["key"].startswith("summary:") for x in minutes_record.describing_lines(doc, held))
+            return minutes_record.distributed_of(doc, held), waiting
         except (minutes_record.RecordError, OSError, ValueError, KeyError, TypeError):  # not a minutes record: try the next file
             continue
-    return None
+    return None, False
 
 
 @kind("polish", "email")

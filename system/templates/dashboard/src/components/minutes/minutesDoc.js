@@ -8,7 +8,9 @@
      a figure the transcript doesn't say, an item your project record's checks refused;
    - distributedOf(doc): the distributed version (BL-338 point 13) as the page shows it: the internal record without the lines
      and rows marked Internal only (`layout.internal_only`) and without withheld items (Sensitive, partner-only or labelled to
-     exclude: the item's own flags and the route's `withheld`, from its labels). minutes_record.distributed_of makes the same
+     exclude: the item's own flags and the route's `withheld`, from its labels), and (#329) without a line held back with a held
+     item (`layout.carried`, rows too, while any item it matched is held; one whose item has gone too) and with a plain heading or
+     title where Alan chose one (`layout.plain`). minutes_record.distributed_of makes the same
      record on the server for /api/minutes/export with version "distributed"; this is the view's preview of it. */
 import { deadlineOf, deadlineDay } from "./DeadlinePopover.jsx";
 import { fd } from "../../core/page.js";
@@ -21,6 +23,10 @@ import { fd } from "../../core/page.js";
     last?: string, kind: string, n?: number, turn?: number, words?: string, actions: {id: string, label: string}[]}} Check */
 
 const FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
+/** The usual name of each minutes section (minutes_record.HEADINGS): a plain heading when the section has no default of its own. */
+const MN_HEADINGS = /** @type {Record<string, string>} */ ({ header: "Meeting", summary: "Executive Summary", updates: "Updates", decisions: "Decisions",
+  raid: "Risks, Issues, Assumptions & Dependencies", actions: "Actions", open_questions: "Open Questions / Escalations",
+  not_covered: "Not covered in this meeting", source: "Source" });
 const unbold = (/** @type {string} */ s) => s.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
 
 /** A section's Markdown as lines. @param {string} text @returns {Line[]} */
@@ -80,18 +86,71 @@ export function toggleInternal(doc, section, what) {
     @param {SheetDoc} doc @param {string} ref @param {Record<string, string>} [held] the route's `withheld` */
 export const heldBack = (doc, ref, held) => (held && held[ref]) || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
 
+/** #329: a prose line's key in layout.carried and layout.reviewed: its section and its words (minutes_record.line_key).
+    @param {string} section @param {string} text */
+export const lineKey = (section, text) => `${section}:${text}`;
+/** layout.carried: {line or row key: the row refs of the held items it is held back with (one ref, a string, in an older record)}.
+    @param {SheetDoc} doc @returns {Record<string, string|string[]>} */
+export const carriedOf = doc => { const c = /** @type {any} */ (doc.layout || {}).carried; return c && typeof c === "object" && !Array.isArray(c) ? c : {}; };
+/** A carried value as a list of refs (minutes_record._refs). @param {any} v @returns {string[]} */
+export const carriedRefs = v => typeof v === "string" ? [v] : Array.isArray(v) ? v.filter(x => typeof x === "string") : [];
+/** A table row's key in layout.carried and layout.reviewed (minutes_record.row_key): "row:@<n>", else "row:<its ref>"; "" for none.
+    @param {any} r */
+export const rowKey = r => !r || typeof r !== "object" ? "" : Number.isInteger(r.n) ? `row:@${r.n}` : (r.ref || r.was) ? `row:${r.ref || r.was}` : "";
+/** layout.plain: the headings ("heading:<section id>") and the title ("title") shown plain. @param {SheetDoc} doc @returns {Set<string>} */
+export const plainOf = doc => { const p = /** @type {any} */ (doc.layout || {}).plain; return new Set(p && typeof p === "object" && !Array.isArray(p) ? Object.keys(p).filter(k => typeof p[k] === "string") : []); };
+/** The heading creaite gives a section of its type (minutes_record.plain_heading). @param {any} s */
+export const plainHeading = s => String(s.default_heading || "").trim() || MN_HEADINGS[String(s.id || "")] || "";
+/** The plain title: "Meeting, DD-MM-YYYY" (minutes_record.plain_title). @param {SheetDoc} doc */
+export const plainTitle = doc => { const d = String(/** @type {any} */ (doc).date || ""); return /^\d{4}-\d\d-\d\d$/.test(d) ? `Meeting, ${d.slice(8, 10)}-${d.slice(5, 7)}-${d.slice(0, 4)}` : "Meeting"; };
+/** The record's own key for a carried line's item, or null when it has gone (minutes_record._carried_item): the ref while the record
+    holds it, an ID it holds an item by, the item a draft's "@3" became on approval, or the line kept in the minutes only it was.
+    @param {SheetDoc} doc @param {string} ref @returns {string|null} */
+export function carriedItem(doc, ref) {
+  const all = /** @type {Record<string, any>} */ (doc.items || {}), r = String(ref || "");
+  if (all[r] && typeof all[r] === "object") return r;
+  for (const [k, it] of Object.entries(all)) if (it && typeof it === "object" && r && (it.id === r || `@${it.n}` === r)) return k;
+  for (const s of doc.sections || []) for (const x of /** @type {any[]} */ (s.rows || [])) if (x && x.kept_line && x.was === r) return r;
+  return null;
+}
+/** Whether the shareable version leaves a line or row out (its key) because it is held back with items one of which is held, or
+    gone (fail closed). @param {SheetDoc} doc @param {string} key @param {Record<string, string>} [held] */
+export function carriedKeyOut(doc, key, held) {
+  return carriedRefs(carriedOf(doc)[key]).some(ref => { const k = carriedItem(doc, ref); return k == null || !!heldBack(doc, k, held) || !!(held && held[ref]); });
+}
+/** The same for a prose line. @param {SheetDoc} doc @param {string} section @param {string} text @param {Record<string, string>} [held] */
+export const carriedOut = (doc, section, text, held) => carriedKeyOut(doc, lineKey(section, text), held);
+/** A held item in a few words, for "held back with …". @param {SheetDoc} doc @param {string} ref */
+export function itemName(doc, ref) {
+  const k = carriedItem(doc, ref) || ref, it = /** @type {any} */ ((doc.items || {})[k]) || {}, v = { ...(it.values || {}), ...(it.changes || {}) };
+  let name = String(v.description || v.decision || v.title || "");
+  for (const s of doc.sections || []) for (const r of /** @type {any[]} */ (s.rows || []))
+    if (!name && r && (r.ref === k || r.was === k)) name = String(Object.values(r.cells || {}).find(c => c && !/^(Risk|Issue|Assumption|Dependency)$/.test(String(c))) || "");
+  name = name || String(ref);
+  return name.length > 80 ? `${name.slice(0, 79).trim()}…` : name;
+}
+
 /** The distributed version as the page shows it. @param {SheetDoc} doc @param {Record<string, string>} [held] @returns {SheetDoc} */
 export function distributedOf(doc, held) {
-  const sections = doc.sections.map(s => {
+  const plain = plainOf(doc);
+  const out = (/** @type {any} */ s) => /** @param {string} t */ t => isInternal(doc, s.id, { text: t }) || carriedOut(doc, s.id, t, held);
+  const sections = doc.sections.map(s0 => {
+    const s = plain.has(`heading:${s0.id}`) ? { ...s0, heading: plainHeading(s0) } : s0;
     if (s.type === "table") {
-      const keptRows = (s.rows || []).filter(r => !(r.ref && (heldBack(doc, r.ref, held) || isInternal(doc, s.id, { ref: r.ref, n: /** @type {any} */ (r).n }))));
+      const keptRows = (s.rows || []).filter(r => { const x = /** @type {any} */ (r), id = x.ref || x.was;
+        return !((id && heldBack(doc, id, held)) || (x.kept_line && !x.was) || (x.ref && isInternal(doc, s.id, { ref: x.ref, n: x.n })) || carriedKeyOut(doc, rowKey(x), held)); });
       return { ...s, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
     }
-    if (s.type === "header" || !s.text) return s;
-    const kept = mdLines(s.text).filter(l => !isInternal(doc, s.id, { text: l.text }));
-    return { ...s, text: mdUnlines(kept) || "None recorded." };
+    if (s.type === "header") return s;
+    const gone = out(s), d = /** @type {any} */ (s).data;
+    const topics = d && Array.isArray(d.topics) ? { data: { ...d, topics: d.topics.filter((/** @type {any} */ t) => t && typeof t === "object").map((/** @type {any} */ t) => ({
+      ...t, heading: gone(unbold(String(t.heading || ""))) ? "" : t.heading,
+      lines: (t.lines || []).filter((/** @type {any} */ x) => !(x && typeof x === "object" && gone(unbold(String(x.text || ""))))) })) } } : {};
+    if (!s.text) return { ...s, ...topics };
+    const kept = mdLines(s.text).filter(l => !gone(l.text));
+    return { ...s, ...topics, text: mdUnlines(kept) || "None recorded." };
   });
-  return { ...doc, audience: "distributed", sections };
+  return { ...doc, ...(plain.has("title") ? { title: plainTitle(doc) } : {}), audience: "distributed", sections };
 }
 
 /** What the distributed version leaves out, in words, for the check before export. @param {SheetDoc} doc @param {Record<string, string>} [held] */
@@ -103,7 +162,7 @@ export function leftOut(doc, held) {
       if (why) out.push(`${s.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
       else if (r.ref && isInternal(doc, s.id, { ref: r.ref, n: /** @type {any} */ (r).n })) out.push(`${s.heading}: ${Object.values(r.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
     }
-    if (s.type !== "table" && s.type !== "header") for (const l of mdLines(s.text || "")) if (isInternal(doc, s.id, { text: l.text })) out.push(`${s.heading}: ${l.text.slice(0, 80)}`);
+    if (s.type !== "table" && s.type !== "header") for (const l of mdLines(s.text || "")) if (isInternal(doc, s.id, { text: l.text }) || carriedOut(doc, s.id, l.text, held)) out.push(`${s.heading}: ${l.text.slice(0, 80)}`);
   }
   return out;
 }

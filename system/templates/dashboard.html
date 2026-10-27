@@ -4166,6 +4166,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
 /* #200: Today's "Sweep due since 07:00" banner: calm (warn tint), under the day band; #243: a quiet x at its right edge */
 .sweepdue{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
 .sweepdue[hidden]{display:none}
+.ownfolders{margin:-8px -24px 16px;padding:8px 24px;background:var(--warn-soft);color:var(--ink);font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
+.ownfolders[hidden]{display:none} .ownfolders p{margin:0} .ownfolders p+p{margin-top:4px}
 .sweepdue .sd-off{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-run{display:none}
 body:has(#liveAlert.on) .sweepdue .sd-off{display:inline}
@@ -4447,6 +4449,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
         </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270; #284: no ? button here, the ? key opens Help -->
         <div class="sweepdue" id="sweepDue" role="status" hidden></div><!-- #200: Sweep due since 07:00, with Run sweep -->
+        <div class="ownfolders" id="ownFolders" role="status" hidden></div><!-- #385: a project's own folder that can't be reached -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
           <section class="tsec" id="dnSec" aria-labelledby="hDn" hidden><h2 class="th" id="hDn">Decisions needed <span class="cnt" id="nDn"></span></h2><ol class="bl" id="dnList"></ol><div class="moreline" id="dnMore"></div></section><!-- BL-210 -->
@@ -4752,6 +4755,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     FF: () => FF,
     FIELD: () => FIELD,
     FILES: () => FILES,
+    FINDER_OPEN_OK: () => FINDER_OPEN_OK,
+    FINDER_REVEAL: () => FINDER_REVEAL,
     FL: () => FL,
     FLABEL: () => FLABEL,
     FLN: () => FLN,
@@ -5137,11 +5142,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     acPick: () => acPick,
     acUpdate: () => acUpdate,
     achgBtn: () => achgBtn,
+    achgFile: () => achgFile,
     achgHm: () => achgHm,
     achgIsSession: () => achgIsSession,
     achgRestore: () => achgRestore,
     achgSessionText: () => achgSessionText,
+    achgShowBtn: () => achgShowBtn,
     achgTier: () => achgTier,
+    achgWhere: () => achgWhere,
     actBarProps: () => actBarProps,
     actConfirm: () => actConfirm,
     actFCount: () => actFCount,
@@ -5963,6 +5971,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     fillThumbs: () => fillThumbs,
     filterBarOpen: () => filterBarOpen,
     filterChrome: () => filterChrome,
+    finderCanShow: () => finderCanShow,
+    finderRequest: () => finderRequest,
     firstHelp: () => firstHelp,
     firstLineClear: () => firstLineClear,
     fitFilterBar: () => fitFilterBar,
@@ -5976,6 +5986,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     fmSet: () => fmSet,
+    folderPlace: () => folderPlace,
     forgetRenamed: () => forgetRenamed,
     formProject: () => formProject,
     fpName: () => fpName,
@@ -6680,7 +6691,10 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     ovKey: () => ovKey,
     ovReapply: () => ovReapply,
     overdue: () => overdue,
+    ownFoldersOn: () => ownFoldersOn,
     ownHeld: () => ownHeld,
+    ownPathProblem: () => ownPathProblem,
+    ownPathStored: () => ownPathStored,
     ownedBy: () => ownedBy,
     ownerFinal: () => ownerFinal,
     ownerMatches: () => ownerMatches,
@@ -7060,6 +7074,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     renderLayoutBar: () => renderLayoutBar,
     renderMilestones: () => renderMilestones,
     renderNotes: () => renderNotes,
+    renderOwnFolders: () => renderOwnFolders,
     renderPeople: () => renderPeople,
     renderPerson: () => renderPerson,
     renderPrep: () => renderPrep,
@@ -7239,6 +7254,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     setNotes: () => setNotes,
     setOf: () => setOf,
     setOpen: () => setOpen,
+    setOwnFolder: () => setOwnFolder,
     setPTab: () => setPTab,
     setPalette: () => setPalette,
     setPlay: () => setPlay,
@@ -7387,6 +7403,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     undatedRecount: () => undatedRecount,
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
+    undoOwnFoldersWarning: () => undoOwnFoldersWarning,
     undoWords: () => undoWords,
     unescHtml: () => unescHtml,
     uniq: () => uniq,
@@ -8538,6 +8555,86 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   function bootThemeButton() {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeIcon);
     themeIcon();
+  }
+
+  // core/pageErrors.js
+  function topFrame(stack) {
+    if (typeof stack !== "string") return null;
+    let lines2 = stack.split("\n");
+    const first = lines2.findIndex((l6) => /^\s+at\s/.test(l6));
+    if (first > 0) lines2 = lines2.slice(first);
+    else if (first < 0 && /^[\w$.]*(Error|Exception)(:|\s|$)/.test(lines2[0])) return null;
+    for (const ln2 of lines2.slice(0, 40)) {
+      const t47 = ln2.trim();
+      let m5 = /^at\s+(?:async\s+)?(?:new\s+)?([^\s(]+)\s+\(.*?:(\d+):\d+\)$/.exec(t47);
+      if (!m5) m5 = /^at\s+()\S*?:(\d+):\d+$/.exec(t47);
+      if (!m5) m5 = /^([^@\s]*)@.*?:(\d+):\d+$/.exec(t47);
+      if (!m5) continue;
+      const name = String(m5[1] || "").split(/[./]/).pop().replace(/[^\w$]/g, "").slice(0, 60), line = Number(m5[2]);
+      if (!Number.isFinite(line) || line < 0 || line > 9999999) continue;
+      return { source: name || "anonymous", line };
+    }
+    return null;
+  }
+  function errorFrame(err) {
+    return err && typeof err === "object" ? topFrame(err.stack) : null;
+  }
+  function withFrame(err, source, line) {
+    const f5 = errorFrame(err);
+    return f5 ? { source: f5.source, line: f5.line } : { source, line };
+  }
+  function errorReport(e4) {
+    const f5 = withFrame(e4 && e4.error, e4 && e4.filename, e4 && e4.lineno);
+    return { message: e4 && e4.message, source: f5.source, line: f5.line };
+  }
+  function rejectionReport(e4) {
+    const r4 = e4 && e4.reason, f5 = withFrame(r4, "promise", 0);
+    return { message: r4 && r4.message ? r4.message : r4, source: f5.source, line: f5.line };
+  }
+
+  // core/staleReload.js
+  var STALE_RELOAD_KEY = "creaite.staleReload";
+  function read(mem) {
+    try {
+      return !!mem && mem.getItem(STALE_RELOAD_KEY) === "1";
+    } catch (e4) {
+      return false;
+    }
+  }
+  function staleMarkClear(mem) {
+    try {
+      if (mem) mem.removeItem(STALE_RELOAD_KEY);
+    } catch (e4) {
+      return;
+    }
+  }
+  function staleEventsAct(code, body2, mem, reload) {
+    if (code !== 403 || !body2 || body2.stale !== true) return "none";
+    if (read(mem)) return "banner";
+    try {
+      if (!mem) return "banner";
+      mem.setItem(STALE_RELOAD_KEY, "1");
+    } catch (e4) {
+      return "banner";
+    }
+    reload();
+    return "reload";
+  }
+  function staleStore() {
+    try {
+      return window.sessionStorage;
+    } catch (e4) {
+      return null;
+    }
+  }
+  function staleApiAct(url, code, body2, mem, reload) {
+    return String(url || "").includes("/api/") ? staleEventsAct(code, body2, mem, reload) : "none";
+  }
+  function staleStreamAnswer(code, ok2, hasBody, mem) {
+    if (code === 403) return "refused";
+    if (!ok2 || !hasBody) return "skip";
+    staleMarkClear(mem);
+    return "open";
   }
 
   // ../../vendor/preact/preact/dist/preact.module.js
@@ -10417,15 +10514,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         setOpen2(v5);
       }
     );
-    const close = (how) => {
+    const close2 = (how) => {
       back2.current = how === "esc";
       if (KB_OPEN === fold) KB_OPEN = null;
       if (back2.current) btn.current?.focus({ preventScroll: true });
       show(false);
       if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
-    const closeRef = A2(close);
-    closeRef.current = close;
+    const closeRef = A2(close2);
+    closeRef.current = close2;
     const fold = A2(() => {
       if (!isOpen.current) return;
       const at2 = document.activeElement, inside = !at2 || at2 === document.body || at2 === btn.current || !!box.current?.contains(at2);
@@ -10478,7 +10575,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     }, [open2]);
     const pick = (it2) => {
       if (it2.disabled) return;
-      if (it2.checked === void 0 || it2.radio) close("pick");
+      if (it2.checked === void 0 || it2.radio) close2("pick");
       onPick(it2.id);
     };
     const onBtnKey = (e4) => {
@@ -10525,7 +10622,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
               return;
             }
             byPointer.current = false;
-            if (open2) close("pick");
+            if (open2) close2("pick");
             else {
               claimKb();
               show(true);
@@ -10545,7 +10642,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           id: menuId,
           cls: `${left ? "left " : ""}${menuCls || ""}`,
           anchor: btn.current,
-          onClose: close,
+          onClose: close2,
           boxRef: box,
           autoFocus: !byPointer.current,
           children: /* @__PURE__ */ u4(MenuItems, { items: items2, onPick: pick })
@@ -28504,7 +28601,7 @@ ${s5}`;
     []
   );
   function noteEscape() {
-    for (const close of noteEscLayers) if (close()) return true;
+    for (const close2 of noteEscLayers) if (close2()) return true;
     return false;
   }
   function focusBack() {
@@ -29571,7 +29668,7 @@ ${s5}`;
       };
     }, [noteEl]);
     const rows2 = fuRows.value, state = fuState.value, ticked = fuTicked.value.length, saving = fuSaving.value;
-    const close = () => {
+    const close2 = () => {
       if (onClose) onClose();
     };
     const summary = state === "ready" ? [
@@ -29590,7 +29687,7 @@ ${s5}`;
         onKeyDown: (e4) => {
           if (e4.key === "Escape" && !fuOpen.value && state !== "busy") {
             e4.preventDefault();
-            close();
+            close2();
           }
         },
         children: [
@@ -29599,7 +29696,7 @@ ${s5}`;
               /* @__PURE__ */ u4(Icon, { name: "spark" }),
               " Found in this note"
             ] }),
-            /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close Find updates", onClick: close, cls: "fu-x" }),
+            /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close Find updates", onClick: close2, cls: "fu-x" }),
             summary && /* @__PURE__ */ u4("span", { class: "sub fu-sum", children: summary })
           ] }),
           /* @__PURE__ */ u4("div", { class: "vh", role: "status", "aria-live": "polite", children: state === "busy" ? "Finding updates in the note" : summary || fuMsg.value }),
@@ -29618,7 +29715,7 @@ ${s5}`;
             ] }),
             /* @__PURE__ */ u4("div", { class: "fu-acts", children: [
               /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", onClick: () => fuConfirm(), children: "Send to Claude" }),
-              /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: close, children: "Not now" })
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: close2, children: "Not now" })
             ] })
           ] }),
           ["none", "error", "done"].includes(state) && /* @__PURE__ */ u4("div", { class: "fu-msg", children: [
@@ -29926,11 +30023,11 @@ ${s5}`;
       /** @type {"box" | "btn"} */
       "box"
     );
-    const t47 = text.trim(), read = t47 ? readDate(t47) : null, bad = !!t47 && !read;
-    const chosen = read || date;
+    const t47 = text.trim(), read2 = t47 ? readDate(t47) : null, bad = !!t47 && !read2;
+    const chosen = read2 || date;
     h2(() => {
-      if (read) setView(read.slice(0, 7));
-    }, [read]);
+      if (read2) setView(read2.slice(0, 7));
+    }, [read2]);
     const back2 = (toBox) => {
       const el2 = !toBox && via.current === "btn" ? btn.current : inp.current;
       if (!el2 || document.activeElement === el2) return;
@@ -30030,7 +30127,7 @@ ${s5}`;
                 e4.preventDefault();
                 e4.stopPropagation();
                 if (!t47) commit("");
-                else if (read) commit(read);
+                else if (read2) commit(read2);
                 else setOpen2(true);
               } else if (e4.key === "Escape" && open2) {
                 e4.preventDefault();
@@ -30096,9 +30193,9 @@ ${s5}`;
             }
           },
           children: [
-            /* @__PURE__ */ u4("div", { class: `typed${bad ? " bad" : ""}`, id: "noteDateRead", role: "status", "aria-live": "polite", children: !t47 ? "Type a date or words like last monday." : read ? /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("div", { class: `typed${bad ? " bad" : ""}`, id: "noteDateRead", role: "status", "aria-live": "polite", children: !t47 ? "Type a date or words like last monday." : read2 ? /* @__PURE__ */ u4(S2, { children: [
               "Reads as ",
-              /* @__PURE__ */ u4("b", { children: sayDate(read) }),
+              /* @__PURE__ */ u4("b", { children: sayDate(read2) }),
               " · Enter to use"
             ] }) : "Not a date I can read. Try 12-10-2026 or last monday." }),
             /* @__PURE__ */ u4("div", { class: "mh", children: [
@@ -31446,7 +31543,7 @@ ${s5}`;
         if (opened) dom.setAttribute("aria-expanded", "false");
       }
     };
-    const close = () => {
+    const close2 = () => {
       if (!st2) return;
       st2 = null;
       draw2();
@@ -31458,16 +31555,16 @@ ${s5}`;
       const a5 = slashAt(editor);
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
-        return close();
+        return close2();
       }
       if (!st2 && !mayOpen) return;
-      if (st2 && st2.from !== a5.from && !mayOpen) return close();
+      if (st2 && st2.from !== a5.from && !mayOpen) return close2();
       if (a5.q.endsWith(" ")) {
         const base = a5.q.trim().toLowerCase();
-        if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close();
+        if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close2();
       }
       const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
-      if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
+      if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close2();
       const fresh = !st2 || st2.from !== a5.from;
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
       if (fresh) moved2 = false;
@@ -31476,7 +31573,7 @@ ${s5}`;
     const choose = (r4) => {
       const s5 = st2;
       if (!s5) return;
-      close();
+      close2();
       const c5 = editor.chain().focus().setMeta(r4.host || r4.hook ? OWN_HEAD : OWN_STEP, true).deleteRange({ from: s5.from, to: s5.to });
       if (r4.host) {
         c5.run();
@@ -31517,7 +31614,7 @@ ${s5}`;
           e4.preventDefault();
           e4.stopPropagation();
           choose(row2);
-        } else close();
+        } else close2();
       } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
         e4.preventDefault();
         e4.stopPropagation();
@@ -31525,11 +31622,11 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         dismissed = st2.from;
-        close();
+        close2();
       }
     };
     const blur = () => setTimeout(() => {
-      if (!el2.contains(document.activeElement)) close();
+      if (!el2.contains(document.activeElement)) close2();
     }, 120);
     const comp = () => {
       typedSlash = true;
@@ -31758,7 +31855,7 @@ ${s5}`;
         if (opened) dom.setAttribute("aria-expanded", "false");
       }
     };
-    const close = () => {
+    const close2 = () => {
       chosen = false;
       if (!st2) return;
       st2 = null;
@@ -31771,12 +31868,12 @@ ${s5}`;
       const a5 = hashAt(editor);
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
-        return close();
+        return close2();
       }
       if (!st2 && !mayOpen) return;
-      if (st2 && st2.from !== a5.from && !mayOpen) return close();
+      if (st2 && st2.from !== a5.from && !mayOpen) return close2();
       const opts = itemOptions(code(), a5.q);
-      if (!opts.length) return close();
+      if (!opts.length) return close2();
       if (cmd) chosen = true;
       st2 = { ...a5, opts, i: st2 && st2.from === a5.from ? Math.min(st2.i, opts.length - 1) : 0 };
       draw2();
@@ -31784,7 +31881,7 @@ ${s5}`;
     const choose = (o5) => {
       const s5 = st2;
       if (!s5) return;
-      close();
+      close2();
       editor.chain().focus().setMeta(OWN_STEP, true).deleteRange({ from: s5.from, to: s5.to }).insertContent(itemContent(o5.id)).run();
     };
     const keys = (e4) => {
@@ -31799,7 +31896,7 @@ ${s5}`;
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
         const id2 = chosen ? st2.opts[st2.i].id : itemByQuery(code(), st2.q), o5 = id2 && st2.opts.find((x5) => x5.id === id2);
         if (!o5) {
-          close();
+          close2();
           return;
         }
         e4.preventDefault();
@@ -31812,11 +31909,11 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         dismissed = st2.from;
-        close();
+        close2();
       }
     };
     const blur = () => setTimeout(() => {
-      if (!el2.contains(document.activeElement)) close();
+      if (!el2.contains(document.activeElement)) close2();
     }, 150);
     const comp = () => {
       typed2 = true;
@@ -32558,7 +32655,7 @@ ${s5}`;
   function NoteSide({ code, onOpen, onOpenItem }) {
     const cur = noteCur.value;
     if (!(noteFind.value && cur)) return /* @__PURE__ */ u4("div", { class: "nside", id: "noteSide", children: /* @__PURE__ */ u4(NoteContext, { code, onOpen, onOpenItem }) });
-    const close = () => {
+    const close2 = () => {
       fuPath.value = "";
       noteMarks.value = { markers: {}, hover: 0 };
       noteFind.value = false;
@@ -32574,7 +32671,7 @@ ${s5}`;
       {
         path: cur.path,
         p: noteFindP.value || void 0,
-        onClose: close,
+        onClose: close2,
         onMarks: (markers, hover) => {
           noteMarks.value = { markers, hover };
         }
@@ -34075,7 +34172,7 @@ system/scripts/run launch.py agent ${what}`;
   );
   function LeftOutDialog({ client, onExport }) {
     const open2 = crDialog.value, c5 = crCheck.value, lo2 = c5 && c5.left_out;
-    const close = () => {
+    const close2 = () => {
       crDialog.value = false;
     };
     const lines2 = [];
@@ -34127,7 +34224,7 @@ system/scripts/run launch.py agent ${what}`;
       ] }, "health"));
     }
     const blocked2 = !lo2 || !lo2.ready || lo2.findings.length > 0;
-    return /* @__PURE__ */ u4(Dialog, { open: open2, onClose: close, labelledBy: "crLeftH", id: "crLeftDlg", class: "crdlg", focus: "[data-crdcancel]", children: [
+    return /* @__PURE__ */ u4(Dialog, { open: open2, onClose: close2, labelledBy: "crLeftH", id: "crLeftDlg", class: "crdlg", focus: "[data-crdcancel]", children: [
       /* @__PURE__ */ u4("h2", { id: "crLeftH", children: [
         "Left out of ",
         client || "the client",
@@ -34143,7 +34240,7 @@ system/scripts/run launch.py agent ${what}`;
         /* @__PURE__ */ u4("p", { class: "sub", children: lo2.facts_week ? `Facts come from the internal report approved for week ending ${fd(lo2.facts_week)}.` : "The internal report isn't approved yet." })
       ] }),
       /* @__PURE__ */ u4("div", { class: "crdacts", children: [
-        /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crdcancel": true, onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crdcancel": true, onClick: close2, children: "Cancel" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crexport": "html", disabled: blocked2, onClick: () => onExport("html"), children: "HTML" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crexport": "docx", disabled: blocked2, onClick: () => onExport("docx"), children: "Word" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-crexport": "pdf", disabled: blocked2, onClick: () => onExport("pdf"), children: "PDF" })
@@ -34945,7 +35042,7 @@ system/scripts/run launch.py agent ${what}`;
       const d5 = draftRef.current;
       if (d5 && d5.d) draftStat(d5.feature, "rejected");
     }, []);
-    async function read(t47, pk2) {
+    async function read2(t47, pk2) {
       const n4 = ++seq2.current;
       if (!t47.trim()) {
         setReply(null);
@@ -34998,7 +35095,7 @@ system/scripts/run launch.py agent ${what}`;
         return;
       }
       timer2.current = /** @type {any} */
-      setTimeout(() => read(t47, picks), SP_DEBOUNCE);
+      setTimeout(() => read2(t47, picks), SP_DEBOUNCE);
     }
     function again(t47, pk2) {
       setText(t47);
@@ -35006,7 +35103,7 @@ system/scripts/run launch.py agent ${what}`;
       setDone(null);
       setShown(true);
       clearTimeout(timer2.current);
-      read(t47, pk2);
+      read2(t47, pk2);
       input.current?.focus();
     }
     async function make(r5, note) {
@@ -35014,7 +35111,7 @@ system/scripts/run launch.py agent ${what}`;
       let rr2 = r5;
       if (note && note.trim()) {
         const t210 = `${text.trim().replace(/[.,;]+$/, "")}, add an update: ${note.trim()}`;
-        const n4 = await read(t210, picks);
+        const n4 = await read2(t210, picks);
         if (!n4 || !n4.stage) {
           setShown(true);
           return;
@@ -35119,7 +35216,7 @@ system/scripts/run launch.py agent ${what}`;
       }
       const t47 = text.trim();
       if (!t47) return;
-      const r5 = await read(t47, picks);
+      const r5 = await read2(t47, picks);
       setShown(true);
       if (!r5 || !r5.ok || r5.refused || r5.choices) return;
       const task = r5.task;
@@ -40508,6 +40605,7 @@ system/scripts/run launch.py agent ${what}`;
     return { right: Math.max(...on2.map((c5) => c5.right)), bottom: tq.length ? tq[tq.length - 1].bottom : null, mid: (Math.min(...on2.map((c5) => c5.top)) + Math.max(...on2.map((c5) => c5.bottom))) / 2 };
   }
   var WKX = ["--wkx", "--wky"];
+  var WKMID = 12;
   function wkPlace() {
     WKPQ = 0;
     const w6 = $("#workWrap");
@@ -40525,8 +40623,8 @@ system/scripts/run launch.py agent ${what}`;
     const fit = xs2.map((x5) => {
       const td2 = x5.parentElement, l6 = wkLine(td2, x5), id2 = x5.querySelector(".rowid");
       if (!l6 || !id2) return null;
-      const cs2 = getComputedStyle(td2), room = td2.getBoundingClientRect().right - (parseFloat(cs2.paddingRight) || 0) - (parseFloat(cs2.borderRightWidth) || 0) - (l6.right + 10), left = x5.getBoundingClientRect().left, all = wkRects(x5), full = all.length ? Math.max(...all.map((c5) => c5.right)) - left : 0, stops = [full, ...[...x5.querySelectorAll(":scope > .pcode, :scope > .rowid")].map((e4) => e4.getBoundingClientRect().right - left).sort((p6, q5) => q5 - p6)], keep2 = stops.find((v5) => v5 > 0 && v5 <= room + 0.5);
-      return keep2 == null ? null : { dx: l6.right + 10 - left, clip: keep2 < full - 0.5 ? x5.getBoundingClientRect().width - keep2 : 0 };
+      const cs2 = getComputedStyle(td2), tr2 = td2.getBoundingClientRect(), start = Math.max(l6.right + 10, (tr2.left + tr2.right) / 2 + WKMID), room = tr2.right - (parseFloat(cs2.paddingRight) || 0) - (parseFloat(cs2.borderRightWidth) || 0) - start, left = x5.getBoundingClientRect().left, all = wkRects(x5), full = all.length ? Math.max(...all.map((c5) => c5.right)) - left : 0, stops = [full, ...[...x5.querySelectorAll(":scope > .pcode, :scope > .rowid")].map((e4) => e4.getBoundingClientRect().right - left).sort((p6, q5) => q5 - p6)], keep2 = stops.find((v5) => v5 > 0 && v5 <= room + 0.5);
+      return keep2 == null ? null : { dx: start - left, clip: keep2 < full - 0.5 ? x5.getBoundingClientRect().width - keep2 : 0 };
     });
     xs2.forEach((x5, i5) => {
       const f5 = fit[i5];
@@ -44276,9 +44374,9 @@ system/scripts/run launch.py agent ${what}`;
     }), []);
     h2(() => j3(() => {
       void railView.value;
-      if (isOpen.current) close(false);
+      if (isOpen.current) close2(false);
     }), []);
-    const close = (focusBack2) => {
+    const close2 = (focusBack2) => {
       if (menuGroup.current === btn.current) menuGroup.close();
       railMoreOpen.value = false;
       if (focusBack2) btn.current?.focus();
@@ -44290,7 +44388,7 @@ system/scripts/run launch.py agent ${what}`;
       setAt({ left: `${rail.right + 4}px`, bottom: `${Math.max(8, innerHeight - r4.bottom)}px` });
     }, [open2, mode]);
     const go3 = (id2) => {
-      close(false);
+      close2(false);
       onGo(id2);
     };
     const n4 = healthCount.value, first = healthFirst.value;
@@ -44300,7 +44398,7 @@ system/scripts/run launch.py agent ${what}`;
       badge
     ] });
     const health2 = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHealth", onClick: () => {
-      close(false);
+      close2(false);
       onHealth();
     }, children: [
       /* @__PURE__ */ u4(RailIcon, { name: "pulse" }),
@@ -44309,7 +44407,7 @@ system/scripts/run launch.py agent ${what}`;
       /* @__PURE__ */ u4("span", { class: "vh", children: n4 ? `: ${probs(n4)}` : "" })
     ] }, "health");
     const help = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHelp", onClick: () => {
-      close(false);
+      close2(false);
       onHelp();
     }, children: [
       /* @__PURE__ */ u4(RailIcon, { name: "help" }),
@@ -44368,7 +44466,7 @@ system/scripts/run launch.py agent ${what}`;
           anchor: btn.current,
           boxRef: box,
           autoFocus: !ptr,
-          onClose: (how) => close(how === "esc"),
+          onClose: (how) => close2(how === "esc"),
           children: [
             /* @__PURE__ */ u4("div", { class: "avhead", role: "presentation", children: [
               circle(null),
@@ -44390,7 +44488,7 @@ system/scripts/run launch.py agent ${what}`;
                 id: "railCustBtn",
                 "aria-haspopup": "dialog",
                 onClick: () => {
-                  close(false);
+                  close2(false);
                   onCustomise(btn.current);
                 },
                 children: [
@@ -45079,8 +45177,8 @@ system/scripts/run launch.py agent ${what}`;
     p6.appendChild(host2);
     hint.hidden = !!SNK.at && SNK.at.where === "ms";
     flashPaint();
-    const bar = p6.querySelector(".mv-pkbar"), close = bar && bar.querySelector('[data-mvpk="close"]');
-    if (bar && close && !bar.querySelector("#mvSneakBtn")) addHTML(close, "beforebegin", raw(sparkBtn("mvSneakBtn", "mv-ib")));
+    const bar = p6.querySelector(".mv-pkbar"), close2 = bar && bar.querySelector('[data-mvpk="close"]');
+    if (bar && close2 && !bar.querySelector("#mvSneakBtn")) addHTML(close2, "beforebegin", raw(sparkBtn("mvSneakBtn", "mv-ib")));
     const b5 = $("#mvSneakBtn");
     if (b5) b5.setAttribute("aria-pressed", String(!!SNK.at && SNK.at.where === "ms"));
     if (SNK.at && SNK.at.where === "ms" && SNK.at.id !== shared.MV.peek) sneakClose(false);
@@ -45393,7 +45491,11 @@ system/scripts/run launch.py agent ${what}`;
         try {
           if (r4.status === 403 && String(typeof u5 === "string" ? u5 : u5 && u5.url || "").includes("/api/")) {
             const j5 = await r4.clone().json().catch(() => null);
-            if (j5 && j5.stale) staleShow(j5.message);
+            if (j5 && j5.stale) {
+              const a5 = staleApiAct(String(typeof u5 === "string" ? u5 : u5 && u5.url || ""), r4.status, j5, staleStore(), () => location.reload());
+              if (a5 === "banner") staleShow(j5.message);
+              else if (a5 === "reload") shared.STALE = true;
+            }
           }
         } catch (e4) {
         }
@@ -46992,7 +47094,7 @@ system/scripts/run launch.py agent ${what}`;
         if (depth < 5) run(a5, b5, m5.bold || bold, m5.italic || italic, m5.strike || strike, depth + 1);
         else out.push([s5.slice(a5, b5), bold, italic, strike, false]);
       };
-      const close = (kind, start) => {
+      const close2 = (kind, start) => {
         if (kind in failed && start >= failed[kind]) return -1;
         let q5 = -1;
         if (kind === "**" || kind === "~~" || kind === "***") {
@@ -47033,7 +47135,7 @@ system/scripts/run launch.py agent ${what}`;
           }
         } else if (c5 === "*") {
           if (s5.startsWith("***", p6)) {
-            const q5 = close("***", p6 + 4);
+            const q5 = close2("***", p6 + 4);
             if (q5 > 0) {
               span(p6 + 3, q5, { bold: true, italic: true });
               i5 = q5 + 3;
@@ -47041,7 +47143,7 @@ system/scripts/run launch.py agent ${what}`;
             }
           }
           if (s5.startsWith("**", p6)) {
-            const q5 = close("**", p6 + 3);
+            const q5 = close2("**", p6 + 3);
             if (q5 > 0) {
               span(p6 + 2, q5, { bold: true });
               i5 = q5 + 2;
@@ -47052,7 +47154,7 @@ system/scripts/run launch.py agent ${what}`;
             continue;
           }
           if ((p6 === 0 || !(isWord(s5[p6 - 1]) || s5[p6 - 1] === "*")) && p6 + 1 < hi2 && !isSpace(s5[p6 + 1]) && s5[p6 + 1] !== "*") {
-            const q5 = close("*", p6 + 2);
+            const q5 = close2("*", p6 + 2);
             if (q5 > 0) {
               span(p6 + 1, q5, { italic: true });
               i5 = q5 + 1;
@@ -47061,7 +47163,7 @@ system/scripts/run launch.py agent ${what}`;
           }
         } else if (c5 === "_") {
           if ((p6 === 0 || !isWord(s5[p6 - 1])) && p6 + 1 < hi2 && !isSpace(s5[p6 + 1])) {
-            const q5 = close("_", p6 + 2);
+            const q5 = close2("_", p6 + 2);
             if (q5 > 0) {
               span(p6 + 1, q5, { italic: true });
               i5 = q5 + 1;
@@ -47069,7 +47171,7 @@ system/scripts/run launch.py agent ${what}`;
             }
           }
         } else if (c5 === "~" && s5.startsWith("~~", p6)) {
-          const q5 = close("~~", p6 + 3);
+          const q5 = close2("~~", p6 + 3);
           if (q5 > 0) {
             span(p6 + 2, q5, { strike: true });
             i5 = q5 + 2;
@@ -48044,7 +48146,7 @@ system/scripts/run launch.py agent ${what}`;
     ...(a5.notes || []).map((n4) => String(n4.note || "")).filter(Boolean),
     ...(a5.sentences || []).filter((x5) => x5.unsourced && String(x5.text || "").trim()).map((x5) => `No source: “${String(x5.text).trim()}”`)
   ];
-  function Redraft({ rd: rd2, s: s5, readOnly, close, onUse, onOpen, known: known2 }) {
+  function Redraft({ rd: rd2, s: s5, readOnly, close: close2, onUse, onOpen, known: known2 }) {
     if (rd2.status === "running") return /* @__PURE__ */ u4("div", { class: "sheet-redraft", role: "status", children: [
       "Drafting ",
       s5.heading,
@@ -48052,11 +48154,11 @@ system/scripts/run launch.py agent ${what}`;
     ] });
     if (rd2.status === "stale") return /* @__PURE__ */ u4("div", { class: "sheet-redraft", role: "alert", children: [
       rd2.why === "words" ? "You've changed this section since; the suggestion was made from the earlier words." : "This suggestion was made from an earlier version.",
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close2, children: "Close" })
     ] });
     if (rd2.status === "failed") return /* @__PURE__ */ u4("div", { class: "sheet-redraft", role: "alert", children: [
       rd2.message,
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close2, children: "Close" })
     ] });
     const a5 = rd2.answer || {};
     const hl2 = !!a5.health;
@@ -49292,7 +49394,7 @@ system/scripts/run launch.py agent ${what}`;
       /** @type {Element|null} */
       null
     );
-    const close = () => {
+    const close2 = () => {
       if (CLOSE_PICKER.get(mine.current) === me2.current) CLOSE_PICKER.delete(mine.current);
       setOpen2(false);
       setList(null);
@@ -49301,8 +49403,8 @@ system/scripts/run launch.py agent ${what}`;
       setMsg("");
       setTimeout(() => btn.current?.focus(), 0);
     };
-    const closeNow = A2(close);
-    closeNow.current = close;
+    const closeNow = A2(close2);
+    closeNow.current = close2;
     h2(() => {
       if (open2 && search.current) search.current.focus();
     }, [open2]);
@@ -49336,7 +49438,7 @@ system/scripts/run launch.py agent ${what}`;
         },
         picked.length === 1 ? "Item added from your project record" : "Items added from your project record"
       );
-      close();
+      close2();
     };
     const toggle = (ref) => setSel(sel.includes(ref) ? sel.filter((x5) => x5 !== ref) : [...sel, ref]);
     return /* @__PURE__ */ u4("div", { class: "rs-pick", children: [
@@ -49344,7 +49446,7 @@ system/scripts/run launch.py agent ${what}`;
       open2 ? /* @__PURE__ */ u4("div", { class: "rs-picker", role: "group", "aria-label": `Add to ${s5.heading} from your project record`, onKeyDown: (e4) => {
         if (e4.key === "Escape") {
           e4.stopPropagation();
-          close();
+          close2();
         }
       }, children: [
         /* @__PURE__ */ u4("input", { type: "search", class: "rs-pick-search", ref: search, "aria-label": "Search your project record", placeholder: "Search", value: q5, onInput: (e4) => setQ(
@@ -49364,7 +49466,7 @@ system/scripts/run launch.py agent ${what}`;
         ] }),
         /* @__PURE__ */ u4("div", { class: "rs-pick-foot", children: [
           /* @__PURE__ */ u4("span", { class: "sub", children: sel.length ? `${sel.length} ticked` : "Tick the items to include. Your project record is not changed." }),
-          /* @__PURE__ */ u4("button", { type: "button", class: "btn sm rs-pick-cancel", onClick: close, children: "Cancel" }),
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn sm rs-pick-cancel", onClick: close2, children: "Cancel" }),
           /* @__PURE__ */ u4("button", { type: "button", class: "btn sm primary rs-pick-add", disabled: !sel.length, onClick: add, children: "Add to the report" })
         ] })
       ] }) : null
@@ -49873,10 +49975,10 @@ system/scripts/run launch.py agent ${what}`;
   // components/report/MatchHeldDialog.jsx
   function MatchHeldDialog() {
     const h5 = crHeld.value;
-    const close = () => {
+    const close2 = () => {
       crHeld.value = null;
     };
-    return /* @__PURE__ */ u4(Dialog, { open: !!h5, onClose: close, labelledBy: "crHeldH", id: "crHeldDlg", class: "crdlg", focus: "[data-crheldok]", children: [
+    return /* @__PURE__ */ u4(Dialog, { open: !!h5, onClose: close2, labelledBy: "crHeldH", id: "crHeldDlg", class: "crdlg", focus: "[data-crheldok]", children: [
       /* @__PURE__ */ u4("h2", { id: "crHeldH", children: "Match internal held some sections back" }),
       h5 ? /* @__PURE__ */ u4("div", { "data-crheld": true, children: [
         h5.message ? /* @__PURE__ */ u4("p", { class: "crbad", role: "alert", "data-crheldmsg": true, children: h5.message }) : null,
@@ -49900,7 +50002,7 @@ system/scripts/run launch.py agent ${what}`;
           "."
         ] }) : /* @__PURE__ */ u4("p", { class: "sub", children: "Nothing was copied; the client report is as it was." })
       ] }) : null,
-      /* @__PURE__ */ u4("div", { class: "crdacts", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-crheldok": true, onClick: close, children: "OK" }) })
+      /* @__PURE__ */ u4("div", { class: "crdacts", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-crheldok": true, onClick: close2, children: "OK" }) })
     ] });
   }
 
@@ -50627,7 +50729,7 @@ system/scripts/run launch.py agent ${what}`;
       /** @type {HTMLButtonElement|null} */
       null
     );
-    const close = (how) => {
+    const close2 = (how) => {
       setOpen2(false);
       if (how === "esc" && btn.current) btn.current.focus({ preventScroll: true });
     };
@@ -50662,7 +50764,7 @@ system/scripts/run launch.py agent ${what}`;
           ]
         }
       ),
-      open2 ? /* @__PURE__ */ u4(MenuPanel, { label: "Weeks", bare: true, cls: "wkpop", anchor: btn.current, onClose: close, children: [
+      open2 ? /* @__PURE__ */ u4(MenuPanel, { label: "Weeks", bare: true, cls: "wkpop", anchor: btn.current, onClose: close2, children: [
         /* @__PURE__ */ u4("h4", { children: "Weeks" }),
         rows2.map((r4) => /* @__PURE__ */ u4(
           "button",
@@ -51808,13 +51910,13 @@ system/scripts/run launch.py agent ${what}`;
     const listId = `${id2}-list`, q5 = typed2 && field.current ? field.current.value.trim() : "";
     const L3 = open2 ? options(q5, typed2) : [];
     const ai2 = Math.min(act, Math.max(0, L3.length - 1));
-    const close = () => {
+    const close2 = () => {
       setOpen2(false);
-      if (OPEN && OPEN.close === close) OPEN = null;
+      if (OPEN && OPEN.close === close2) OPEN = null;
     };
     const show = () => {
-      if (OPEN && OPEN.close !== close) OPEN.close();
-      OPEN = { close };
+      if (OPEN && OPEN.close !== close2) OPEN.close();
+      OPEN = { close: close2 };
       setOpen2(true);
     };
     h2(() => {
@@ -51826,13 +51928,13 @@ system/scripts/run launch.py agent ${what}`;
         if (!box.current?.contains(
           /** @type {Node} */
           e4.target
-        )) close();
+        )) close2();
       };
       document.addEventListener("mousedown", away, true);
       return () => document.removeEventListener("mousedown", away, true);
     }, [open2]);
     const pick = async (o5) => {
-      close();
+      close2();
       const r4 = await onPick(o5);
       if (r4 !== false && field.current) field.current.value = o5.fill ?? o5.label;
     };
@@ -51851,12 +51953,12 @@ system/scripts/run launch.py agent ${what}`;
       } else if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
-        if (open2) close();
+        if (open2) close2();
         else if (field.current) {
           field.current.value = "";
           onInput && onInput("");
         }
-      } else if (e4.key === "Tab") close();
+      } else if (e4.key === "Tab") close2();
     };
     return /* @__PURE__ */ u4("div", { class: `combo${open2 ? " open" : ""}`, ref: box, children: [
       /* @__PURE__ */ u4(
@@ -51944,7 +52046,7 @@ system/scripts/run launch.py agent ${what}`;
   shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
   var FOPEN = new Set(store.list("creaite-files-open"));
   var farch = () => D.files_archived || [];
-  var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
+  var FNAME = Object.assign({ _portfolio: "Portfolio", inbox: "Intake" }, D.folders);
   var EMPTY = { archived: "Nothing has been archived.", latest: "No reports yet.", week: "No meetings this week." };
   function renderFiles() {
     const cnt = (f5) => FILES.filter(f5).length;
@@ -53093,6 +53195,67 @@ system/scripts/run launch.py agent ${what}`;
     const s5 = (D.project_states || []).find((x5) => x5.code === code);
     return s5 ? s5.state : "active";
   }
+  function folderPlace(code) {
+    const o5 = (
+      /** @type {any} */
+      D.own_folders || {}
+    );
+    return {
+      where: String((o5.where || {})[code] || ""),
+      own: String((o5.paths || {})[code] || ""),
+      missing: (o5.missing || []).some((m5) => m5.code === code),
+      dropped: (
+        /** @type {any} */
+        (o5.dropped || []).find((d5) => d5.code === code) || null
+      )
+    };
+  }
+  var ownFoldersOn = () => !!Object.keys(
+    /** @type {any} */
+    (D.own_folders || {}).where || {}
+  ).length;
+  var ownPathStored = (v5) => String(v5 || "").trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  function ownPathProblem(v5) {
+    const t47 = ownPathStored(v5);
+    if (/[\r\n]/.test(String(v5 || ""))) return "The folder's place is one line.";
+    if (!t47) return "Type the folder's place, or use Back to the projects folder.";
+    if (!t47.startsWith("~/")) return "Write it with ~ for your home folder, for example ~/Library/CloudStorage/OneDrive-Company/Client/Programme.";
+    if (t47.split("/").includes("..")) return "Give the folder itself, without “..”.";
+    return "";
+  }
+  async function setOwnFolder(code, value, undoing = false) {
+    const name = (D.folders || {})[code], before = folderPlace(code).own;
+    if (!name) return "This project has no folder in the register yet.";
+    if (!viaServer()) return "Not saved: creaite needs to be running to check the folder.";
+    const v5 = ownPathStored(value);
+    if (value !== "") {
+      const bad = ownPathProblem(value);
+      if (bad) return bad;
+    }
+    let why = "";
+    const ok2 = await writeSettings((js2) => {
+      const was = js2.locations && typeof js2.locations.project_paths === "object" && js2.locations.project_paths || {};
+      const map = { ...was };
+      if (v5) map[name] = v5;
+      else delete map[name];
+      return { "locations.project_paths": map };
+    }, { problem: (m5) => {
+      why = m5.replace(/^Settings not saved: /, "") || "Not saved.";
+    } });
+    if (!ok2) return why || "Not saved.";
+    await reloadData();
+    psChanged();
+    if (undoing) {
+      snack("Undone");
+      return "";
+    }
+    const label = (psProject(code) || {}).name || code;
+    snack(v5 ? `${label}: its own folder is saved` : `${label} is back in the projects folder`, async () => {
+      const bad = await setOwnFolder(code, before, true);
+      if (bad) snack(bad);
+    });
+    return "";
+  }
   function projectPeople(code) {
     const rs2 = resolver(), names = /* @__PURE__ */ new Set();
     const add = (n4) => {
@@ -54008,7 +54171,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   shared.CURED = null;
   var CUR_PROPS = {
-    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)).replace(/<(\/?)h([345])>/g, (m5, close, n4) => "<" + close + "h" + (n4 - HEAD_SHIFT) + ">"),
+    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)).replace(/<(\/?)h([345])>/g, (m5, close2, n4) => "<" + close2 + "h" + (n4 - HEAD_SHIFT) + ">"),
     /* #122: stored ### #### ##### are the editor's Heading 1 to 3 */
     handlePaste: (view, e4) => {
       const pics = [...e4.clipboardData && e4.clipboardData.files || []].filter((f5) => /^image\//.test(f5.type));
@@ -54633,7 +54796,7 @@ ${pre}**Current state title:** ${title}`);
       const nodes = [];
       while (tw2.nextNode()) nodes.push(tw2.currentNode);
       let pieces = [];
-      const close = (ids) => {
+      const close2 = (ids) => {
         const text = pieces.map((t47) => t47.nodeValue).join("").replace(/\s+/g, " ").trim();
         if (text && (ids || (text.match(/[A-Za-z]{2,}/g) || []).length >= 3)) {
           n4++;
@@ -54662,12 +54825,12 @@ ${pre}**Current state title:** ${title}`);
             t47.nodeValue = before;
             pieces.push(t47);
           } else t47.remove();
-          close(m5[1].match(/F\d+/g) || []);
+          close2(m5[1].match(/F\d+/g) || []);
           t47 = nt2;
         }
         if (t47 && (t47.nodeValue.trim() || pieces.length)) pieces.push(t47);
       }
-      close(null);
+      close2(null);
     }
     return out;
   }
@@ -56629,6 +56792,16 @@ ${pre}**Current state title:** ${title}`);
     R(/* @__PURE__ */ u4(WeekAhead, { ...props }), host2);
   }
 
+  // core/sweepDue.js
+  var FIX_CALLS = ["/api/day/catchup"];
+  var fixCallAllowed = (call) => typeof call === "string" && FIX_CALLS.includes(call);
+  function sweepDueLine(sd2, ctx) {
+    const c5 = ctx || {};
+    if (!(sd2 && sd2.due) || c5.dev || c5.setupBlocks) return "";
+    if (sd2.failed) return "failed";
+    return c5.dismissed ? "" : "due";
+  }
+
   // stores/today.js
   var selDay = y3("");
 
@@ -56877,6 +57050,7 @@ ${pre}**Current state title:** ${title}`);
       mDots("today");
       renderSetup();
       renderSweepDue();
+      renderOwnFolders();
       dcIcon();
     }
   }
@@ -57511,17 +57685,33 @@ ${pre}**Current state title:** ${title}`);
     const d5 = SDMEM || store.get(SDKEY, null);
     return !!(d5 && d5.day === TODAY && d5.last === sdLast());
   }
+  var sweepLine = () => sweepDueLine(D.sweep_due, { dev: !!D.dev, setupBlocks: setupShown() && !swept(), dismissed: sweepDueDismissed() });
   function sweepDueShown() {
-    const sd2 = D.sweep_due;
-    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && !sweepDueDismissed();
+    return sweepLine() !== "";
+  }
+  function renderOwnFolders() {
+    const box = $("#ownFolders");
+    if (!box) return;
+    const o5 = D.own_folders || {}, miss = o5.missing || [], bad = (o5.dropped || []).filter((d5) => d5.code);
+    box.hidden = !miss.length && !bad.length;
+    if (box.hidden) {
+      putHTML(box, html``);
+      return;
+    }
+    const link = (c5) => html`<a href="#project-settings=${c5}">${pName(c5)}</a>`;
+    putHTML(box, html`${miss.map((m5) => html`<p><b>${link(m5.code)}'s folder can't be reached</b> (${m5.path}). Is OneDrive running and signed in, or the drive connected? Nothing is lost: creaite leaves it alone until it is back.</p>`)}${bad.map((d5) => html`<p><b>${link(d5.code)}'s own folder isn't used</b>: ${d5.why} creaite treats it as if it were in the projects folder until its place is put right.</p>`)}`);
   }
   function renderSweepDue() {
     const box = $("#sweepDue");
     if (!box) return;
-    const on2 = sweepDueShown();
+    const line = sweepLine(), on2 = line !== "";
     box.hidden = !on2;
     if (!on2) {
       putHTML(box, html``);
+      return;
+    }
+    if (line === "failed") {
+      putHTML(box, html`<b>Today's mail and Teams check didn't run.</b> <button type="button" class="btn primary sd-run" id="sweepFailedRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span>`);
       return;
     }
     putHTML(box, html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last ? `Last checked ${fd(String(D.sweep_due.last))}.` : "Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`);
@@ -57541,6 +57731,20 @@ ${pre}**Current state title:** ${title}`);
         v5.focus();
       }
     }
+  });
+  document.addEventListener("click", async (e4) => {
+    if (!e4.target.closest("#sweepFailedRun")) return;
+    e4.preventDefault();
+    if (!viaServer()) {
+      snack("creaite isn't running");
+      return;
+    }
+    if (shared.BUSY) {
+      snack("ask creaite is busy; try again when it's finished");
+      return;
+    }
+    const r4 = await api("/api/day/catchup", { force: true });
+    snack(oneLine(r4.message) || (r4.ok ? "Checking your mail and Teams" : "The check couldn't start"));
   });
   document.addEventListener("click", (e4) => {
     if (!e4.target.closest("#sweepRun")) return;
@@ -59023,7 +59227,11 @@ ${pre}**Current state title:** ${title}`);
   };
   var CARD_WAITING = "On the approval card, waiting for you";
   async function runHealthFix(f5) {
-    const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
+    if (f5.call && !fixCallAllowed(f5.call)) {
+      snack("That fix can't be run from here");
+      return false;
+    }
+    const r4 = f5.call ? await api(f5.call, f5.body || {}) : await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
     if (r4.ok && r4.card) {
       markCardWaiting(f5.id || "");
       snack(CARD_WAITING + ": nothing moves until you approve it.");
@@ -59310,6 +59518,10 @@ ${pre}**Current state title:** ${title}`);
         (res.archiving || []).length > 0 && /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h3", { class: "hsub", children: "Archiving" }),
           /* @__PURE__ */ u4("ul", { class: "hsteps", id: "healthArchiving", "aria-label": "Archiving", children: (res.archiving || []).map((a5) => /* @__PURE__ */ u4("li", { children: a5 })) })
+        ] }),
+        (res.archived || []).length > 0 && /* @__PURE__ */ u4(S2, { children: [
+          /* @__PURE__ */ u4("h3", { class: "hsub", children: "Archived projects" }),
+          /* @__PURE__ */ u4("ul", { class: "hsteps", id: "healthArchived", "aria-label": "Archived projects", children: (res.archived || []).map((a5) => /* @__PURE__ */ u4("li", { children: a5 })) })
         ] }),
         alone.length > 0 && /* @__PURE__ */ u4(S2, { children: [
           /* @__PURE__ */ u4("h3", { class: "hsub", children: "If you need them" }),
@@ -60143,7 +60355,7 @@ ${pre}**Current state title:** ${title}`);
     }
     const src = r4.releases && (!r4.downloads || vnum(r4.releases.version) >= vnum(r4.downloads.version)) ? "releases" : r4.downloads ? "downloads" : null;
     const z4 = src && r4[src], newer = !!z4 && vnum(z4.version) > vnum(r4.installed);
-    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `creaite ${esc(z4.version)} is ready to install` : "Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
+    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `creaite ${esc(z4.version)} is ready to install` : "Download the new creaite from GitHub; creaite finds it in Downloads"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, `<button class="btn" id="updUndo" data-to="${esc(r4.last.from)}">Undo update</button>`, fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
     const b5 = (id2) => document.getElementById(id2);
     if (b5("updReview")) b5("updReview").onclick = () => updReview(src, false);
     if (b5("updFile")) b5("updFile").onclick = () => b5("updPick").click();
@@ -60208,11 +60420,20 @@ ${pre}**Current state title:** ${title}`);
       snack(res.ok ? `creaite ${p6.to} installed; restart creaite` : "The update didn't install");
     };
   }
+  function undoOwnFoldersWarning(to2) {
+    const o5 = D.own_folders || {}, since = o5.since || "";
+    const live = Object.keys(o5.paths || {}).map((c5) => pName(c5)), arch = (o5.archived || []).map(String);
+    if (!since || !to2 || vnum(to2) >= vnum(since) || !live.length && !arch.length) return "";
+    const all = [...live, ...arch.map((n4) => `${n4} (archived)`)];
+    return `creaite ${to2} doesn't know about projects kept in a folder of their own, so ${all.join(", ")} will drop out of view until you update again. Nothing is lost: their folders and files stay where they are.`;
+  }
   async function updUndo(btn, keep2) {
     if (!btn.dataset.armed) {
       btn.dataset.armed = "1";
       btn.textContent = "Confirm undo";
       btn.classList.add("danger");
+      const w6 = undoOwnFoldersWarning(btn.dataset.to || "");
+      if (w6) updOut(`<p class="sub hbad" role="alert" id="updOwnWarn" style="margin:8px 0 0">${esc(w6)}</p>`);
       return;
     }
     btn.disabled = true;
@@ -61260,7 +61481,12 @@ ${pre}**Current state title:** ${title}`);
       ok2 = await vq(async () => {
         const path = "system/staging/" + d5.name;
         if (!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d5.name) || !await shared.VW.exists(path)) return false;
-        const data = JSON.parse(await shared.VW.read(path));
+        let data;
+        try {
+          data = JSON.parse(await shared.VW.read(path));
+        } catch (e4) {
+          return false;
+        }
         if ((data.items || []).some(
           /** @param {any} i */
           (i5) => i5.applied || i5.decision !== "pending"
@@ -64453,7 +64679,12 @@ ${d5.text}`);
         ok2 = await vq(async () => {
           const path = "system/staging/" + s5.name;
           if (!/-dashboard(-\d+)?\.json$/.test(s5.name) || !await shared.VW.exists(path)) return false;
-          const data = JSON.parse(await shared.VW.read(path));
+          let data;
+          try {
+            data = JSON.parse(await shared.VW.read(path));
+          } catch (e4) {
+            return false;
+          }
           if (data.source_run !== "dashboard" || (data.items || []).some((i5) => i5.applied)) return false;
           await shared.VW.remove(path);
           return true;
@@ -66289,8 +66520,12 @@ ${d5.text}`);
     deShow(`Follow-up: ${m5.title}`);
     if (viaServer()) deFollowFacts(shared.DE, m5);
   }
-  async function openMinutesFollowup(path, version) {
+  async function openMinutesFollowup(path, version, onReview) {
     const r4 = await api("/api/minutes/followup", { path, version });
+    if (r4 && !r4.ok && Array.isArray(r4.review) && r4.review.length && onReview) {
+      onReview(r4.review);
+      return;
+    }
     if (!r4 || !r4.ok) {
       snack(oneLine(r4 && r4.message || "") || "Couldn't read the minutes for the email");
       return;
@@ -69134,7 +69369,7 @@ ${d5.text}`);
         document.querySelector("#uRevSaw")?.focus()
       ), 0);
     };
-    const close = () => {
+    const close2 = () => {
       setOpen2(false);
       focusAdd();
     };
@@ -69159,7 +69394,7 @@ ${d5.text}`);
       } else if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
-        close();
+        close2();
       }
     };
     const val2 = (e4) => (
@@ -69192,7 +69427,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4("span", {}),
         /* @__PURE__ */ u4("div", { class: "urevact", children: [
           /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "uRevSave", disabled: busy2, onClick: save2, children: busy2 ? "Saving…" : "Save note" }),
-          /* @__PURE__ */ u4("button", { type: "button", class: "btn", disabled: busy2, onClick: close, children: "Cancel" }),
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn", disabled: busy2, onClick: close2, children: "Cancel" }),
           /* @__PURE__ */ u4("span", { class: "sub", id: "uRevMsg", role: "status", children: msg })
         ] })
       ] }) : null,
@@ -70872,7 +71107,8 @@ ${d5.text}`);
   }
   var PsProblem = ({ msg, id: id2 }) => msg ? /* @__PURE__ */ u4("span", { class: "psmsg", role: "alert", id: id2, children: msg }) : null;
   function General({ code }) {
-    const p6 = psProject(code), [err, setErr] = d2(""), folder = (D.folders || {})[code];
+    psTick.value;
+    const p6 = psProject(code), [err, setErr] = d2(""), folder = (D.folders || {})[code], place2 = folderPlace(code);
     const state = projectState(code);
     return /* @__PURE__ */ u4("div", { class: "card", "data-pscard": true, "data-cat": "general", children: [
       /* @__PURE__ */ u4("h2", { children: "Project" }),
@@ -70958,11 +71194,74 @@ ${d5.text}`);
           ]
         }
       ) }),
-      /* @__PURE__ */ u4(PsRow, { label: "Folder", help: "Where its minutes, transcripts and reports live.", kw: "files location", children: [
-        /* @__PURE__ */ u4("span", { class: "sub", id: "psFolder", children: folder ? `projects/${folder}` : "No folder yet" }),
-        /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOpenFolder", disabled: !folder, onClick: () => openPath(`projects/${folder}`), children: "Open folder" })
-      ] })
+      /* @__PURE__ */ u4(PsRow, { label: "Folder", help: "Where its minutes, transcripts and reports live.", kw: "files location onedrive", children: [
+        /* @__PURE__ */ u4("span", { class: "sub", id: "psFolder", children: !folder ? "No folder yet" : place2.where || `projects/${folder}` }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOpenFolder", disabled: !folder || place2.missing, onClick: () => openPath(`projects/${folder}`), children: "Open folder" })
+      ] }),
+      folder && ownFoldersOn() ? /* @__PURE__ */ u4(OwnFolder, { code, archived: state === "archived" }) : null
     ] });
+  }
+  function OwnFolder({ code, archived }) {
+    psTick.value;
+    const place2 = folderPlace(code), [err, setErr] = d2(""), [busy2, setBusy] = d2(false);
+    const box = A2(
+      /** @type {HTMLInputElement|null} */
+      null
+    );
+    const run = async (v5) => {
+      if (v5 !== "") {
+        const bad2 = ownPathProblem(v5);
+        if (bad2) {
+          setErr(bad2);
+          return;
+        }
+      }
+      setBusy(true);
+      const bad = await setOwnFolder(code, v5);
+      setBusy(false);
+      setErr(bad);
+    };
+    const state = place2.dropped ? `Not used: ${place2.dropped.why}` : place2.missing ? "Can't be reached now: is OneDrive running, or the drive connected? Nothing is lost." : "";
+    return /* @__PURE__ */ u4(
+      PsRow,
+      {
+        label: "Its own folder",
+        kw: "own folder location onedrive library move elsewhere project_paths",
+        id: "psOwnL",
+        help: archived ? "An archived project keeps its place here, so restoring it finds its folder." : "For a project kept somewhere else in your home folder (another OneDrive library, say). Move the folder there yourself first, then give its place, written with ~. Empty: it is in the projects folder.",
+        children: [
+          /* @__PURE__ */ u4(
+            "input",
+            {
+              type: "text",
+              id: "psOwn",
+              size: 34,
+              "aria-label": "Its own folder",
+              "aria-describedby": "psOwnErr psOwnState",
+              defaultValue: place2.own,
+              placeholder: "~/Library/CloudStorage/…",
+              disabled: archived || busy2 || !viaServer(),
+              ref: box,
+              onInput: () => err && setErr(""),
+              onKeyDown: (e4) => {
+                if (e4.key === "Enter") {
+                  e4.preventDefault();
+                  run(
+                    /** @type {HTMLInputElement} */
+                    e4.target.value
+                  );
+                }
+              }
+            },
+            place2.own
+          ),
+          /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOwnSave", disabled: archived || busy2 || !viaServer(), onClick: () => run(box.current ? box.current.value : ""), children: "Save" }),
+          place2.own ? /* @__PURE__ */ u4("button", { type: "button", class: "mini", id: "psOwnClear", disabled: archived || busy2 || !viaServer(), onClick: () => run(""), children: "Back to the projects folder" }) : null,
+          /* @__PURE__ */ u4(PsProblem, { msg: err, id: "psOwnErr" }),
+          state ? /* @__PURE__ */ u4("span", { class: "sub", id: "psOwnState", role: "status", children: state }) : null
+        ]
+      }
+    );
   }
   function PartnerRow({ code, name, i: i5 }) {
     const [edit, setEdit] = d2(false), [err, setErr] = d2("");
@@ -71420,8 +71719,8 @@ ${d5.text}`);
     closeClientReport();
     const fresh = psCode.peek() !== code || !psMounted;
     psCode.value = code;
-    const read = partners.peek();
-    if (read.code !== code || !read.loaded) loadPartners(code);
+    const read2 = partners.peek();
+    if (read2.code !== code || !read2.loaded) loadPartners(code);
     readClientLogos(code);
     if (!psMounted) {
       R(/* @__PURE__ */ u4(ProjectSettings, {}), el2);
@@ -71436,11 +71735,11 @@ ${d5.text}`);
     return { name: parts.pop() || p6, folder: parts.slice(-2).join(" › ") };
   };
   function ApprovePopup({ problems, checks = [], files = [], transcripts = 0, busy: busy2, onApprove }) {
-    const close = () => {
+    const close2 = () => {
       approveOpen.value = false;
     };
     const one = problems.length === 1, filed2 = files.map(filedAt)[0];
-    return /* @__PURE__ */ u4(Dialog, { open: approveOpen.value && problems.length !== 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u4("div", { class: "mnap", children: [
+    return /* @__PURE__ */ u4(Dialog, { open: approveOpen.value && problems.length !== 0, onClose: close2, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u4("div", { class: "mnap", children: [
       /* @__PURE__ */ u4("h2", { id: "mnApproveH", children: "Approve the minutes" }),
       /* @__PURE__ */ u4("p", { class: "sub", children: [
         "Before these minutes are approved, ",
@@ -71469,9 +71768,9 @@ ${d5.text}`);
         /* @__PURE__ */ u4("ul", { children: checks.map((c5) => /* @__PURE__ */ u4("li", { children: c5.note }, c5.id)) })
       ] }) : null,
       /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
-        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnApproveBack", onClick: close, children: "Go back" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnApproveBack", onClick: close2, children: "Go back" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: () => {
-          close();
+          close2();
           onApprove();
         }, children: "Approve anyway" })
       ] })
@@ -72000,6 +72299,20 @@ ${d5.text}`);
 
   // components/minutes/minutesDoc.js
   var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
+  var MN_HEADINGS = (
+    /** @type {Record<string, string>} */
+    {
+      header: "Meeting",
+      summary: "Executive Summary",
+      updates: "Updates",
+      decisions: "Decisions",
+      raid: "Risks, Issues, Assumptions & Dependencies",
+      actions: "Actions",
+      open_questions: "Open Questions / Escalations",
+      not_covered: "Not covered in this meeting",
+      source: "Source"
+    }
+  );
   var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
   function mdLines(text) {
     const out = [];
@@ -72046,20 +72359,100 @@ ${d5.text}`);
     return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
   }
   var heldBack = (doc, ref, held) => held && held[ref] || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
+  var lineKey = (section, text) => `${section}:${text}`;
+  var carriedOf = (doc) => {
+    const c5 = (
+      /** @type {any} */
+      (doc.layout || {}).carried
+    );
+    return c5 && typeof c5 === "object" && !Array.isArray(c5) ? c5 : {};
+  };
+  var carriedRefs = (v5) => typeof v5 === "string" ? [v5] : Array.isArray(v5) ? v5.filter((x5) => typeof x5 === "string") : [];
+  var rowKey = (r4) => !r4 || typeof r4 !== "object" ? "" : Number.isInteger(r4.n) ? `row:@${r4.n}` : r4.ref || r4.was ? `row:${r4.ref || r4.was}` : "";
+  var plainOf = (doc) => {
+    const p6 = (
+      /** @type {any} */
+      (doc.layout || {}).plain
+    );
+    return new Set(p6 && typeof p6 === "object" && !Array.isArray(p6) ? Object.keys(p6).filter((k5) => typeof p6[k5] === "string") : []);
+  };
+  var plainHeading = (s5) => String(s5.default_heading || "").trim() || MN_HEADINGS[String(s5.id || "")] || "";
+  var plainTitle = (doc) => {
+    const d5 = String(
+      /** @type {any} */
+      doc.date || ""
+    );
+    return /^\d{4}-\d\d-\d\d$/.test(d5) ? `Meeting, ${d5.slice(8, 10)}-${d5.slice(5, 7)}-${d5.slice(0, 4)}` : "Meeting";
+  };
+  function carriedItem(doc, ref) {
+    const all = (
+      /** @type {Record<string, any>} */
+      doc.items || {}
+    ), r4 = String(ref || "");
+    if (all[r4] && typeof all[r4] === "object") return r4;
+    for (const [k5, it2] of Object.entries(all)) if (it2 && typeof it2 === "object" && r4 && (it2.id === r4 || `@${it2.n}` === r4)) return k5;
+    for (const s5 of doc.sections || []) for (
+      const x5 of
+      /** @type {any[]} */
+      s5.rows || []
+    ) if (x5 && x5.kept_line && x5.was === r4) return r4;
+    return null;
+  }
+  function carriedKeyOut(doc, key2, held) {
+    return carriedRefs(carriedOf(doc)[key2]).some((ref) => {
+      const k5 = carriedItem(doc, ref);
+      return k5 == null || !!heldBack(doc, k5, held) || !!(held && held[ref]);
+    });
+  }
+  var carriedOut = (doc, section, text, held) => carriedKeyOut(doc, lineKey(section, text), held);
+  function itemName(doc, ref) {
+    const k5 = carriedItem(doc, ref) || ref, it2 = (
+      /** @type {any} */
+      (doc.items || {})[k5] || {}
+    ), v5 = { ...it2.values || {}, ...it2.changes || {} };
+    let name = String(v5.description || v5.decision || v5.title || "");
+    for (const s5 of doc.sections || []) for (
+      const r4 of
+      /** @type {any[]} */
+      s5.rows || []
+    )
+      if (!name && r4 && (r4.ref === k5 || r4.was === k5)) name = String(Object.values(r4.cells || {}).find((c5) => c5 && !/^(Risk|Issue|Assumption|Dependency)$/.test(String(c5))) || "");
+    name = name || String(ref);
+    return name.length > 80 ? `${name.slice(0, 79).trim()}…` : name;
+  }
   function distributedOf(doc, held) {
-    const sections = doc.sections.map((s5) => {
+    const plain = plainOf(doc);
+    const out = (s5) => (
+      /** @param {string} t */
+      (t47) => isInternal(doc, s5.id, { text: t47 }) || carriedOut(doc, s5.id, t47, held)
+    );
+    const sections = doc.sections.map((s02) => {
+      const s5 = plain.has(`heading:${s02.id}`) ? { ...s02, heading: plainHeading(s02) } : s02;
       if (s5.type === "table") {
-        const keptRows = (s5.rows || []).filter((r4) => !(r4.ref && (heldBack(doc, r4.ref, held) || isInternal(doc, s5.id, { ref: r4.ref, n: (
-          /** @type {any} */
-          r4.n
-        ) }))));
+        const keptRows = (s5.rows || []).filter((r4) => {
+          const x5 = (
+            /** @type {any} */
+            r4
+          ), id2 = x5.ref || x5.was;
+          return !(id2 && heldBack(doc, id2, held) || x5.kept_line && !x5.was || x5.ref && isInternal(doc, s5.id, { ref: x5.ref, n: x5.n }) || carriedKeyOut(doc, rowKey(x5), held));
+        });
         return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
       }
-      if (s5.type === "header" || !s5.text) return s5;
-      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
-      return { ...s5, text: mdUnlines(kept) || "None recorded." };
+      if (s5.type === "header") return s5;
+      const gone = out(s5), d5 = (
+        /** @type {any} */
+        s5.data
+      );
+      const topics = d5 && Array.isArray(d5.topics) ? { data: { ...d5, topics: d5.topics.filter((t47) => t47 && typeof t47 === "object").map((t47) => ({
+        ...t47,
+        heading: gone(unbold(String(t47.heading || ""))) ? "" : t47.heading,
+        lines: (t47.lines || []).filter((x5) => !(x5 && typeof x5 === "object" && gone(unbold(String(x5.text || "")))))
+      })) } } : {};
+      if (!s5.text) return { ...s5, ...topics };
+      const kept = mdLines(s5.text).filter((l6) => !gone(l6.text));
+      return { ...s5, ...topics, text: mdUnlines(kept) || "None recorded." };
     });
-    return { ...doc, audience: "distributed", sections };
+    return { ...doc, ...plain.has("title") ? { title: plainTitle(doc) } : {}, audience: "distributed", sections };
   }
   function leftOut(doc, held) {
     const out = [];
@@ -72073,7 +72466,7 @@ ${d5.text}`);
         ) })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
       }
       if (s5.type !== "table" && s5.type !== "header") {
-        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
+        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text }) || carriedOut(doc, s5.id, l6.text, held)) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
       }
     }
     return out;
@@ -72237,6 +72630,8 @@ ${d5.text}`);
     ), tag = live ? lineTag(line, tags) : null;
     const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
     const Tag2 = li2 ? "li" : "p";
+    const key2 = lineKey(s5.id, line.text), refs = m5 && !ctx.exported ? carriedRefs(carriedOf(m5.doc)[key2]) : [];
+    const held = refs.length ? refs.join(" ") : "";
     return /* @__PURE__ */ u4(Tag2, { class: "mnline", "data-line": i5, children: [
       line.flag ? /* @__PURE__ */ u4("b", { class: "mnflag", children: line.flag }) : null,
       line.flag ? " " : null,
@@ -72244,7 +72639,18 @@ ${d5.text}`);
         if (!/** @type {HTMLElement} */
         e4.target.closest("button")) onEdit();
       }, children: /* @__PURE__ */ u4(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u4("span", { children: line.text }),
-      tag ? /* @__PURE__ */ u4(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null
+      tag ? /* @__PURE__ */ u4(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null,
+      held && m5 ? /* @__PURE__ */ u4("span", { class: "mnheldw", "data-held-with": held, children: [
+        " ",
+        /* @__PURE__ */ u4("span", { class: "tag", children: [
+          "held back with ",
+          refs.map((r4) => itemName(m5.doc, r4)).join("; ")
+        ] }),
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", onClick: () => {
+          m5.change({ op: "shareable", answers: [{ key: key2, answer: "release" }] });
+        }, children: "Show in the shareable version" })
+      ] }) : null
     ] });
   }
   function blocks(ls2) {
@@ -72382,7 +72788,7 @@ ${d5.text}`);
     });
   }
   var active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
-  function rowKey(e4, keyApi) {
+  function onRowKey(e4, keyApi) {
     if (e4.metaKey || e4.ctrlKey || e4.altKey || e4.shiftKey || e4.isComposing || !e4.key || e4.key.length !== 1 || !active()) return false;
     const doc = keyApi.doc();
     if (!doc || doc.state !== "draft") return false;
@@ -72430,7 +72836,7 @@ ${d5.text}`);
     if (installed) return;
     installed = true;
     document.addEventListener("keydown", (e4) => {
-      if (rowKey(e4, keyApi)) {
+      if (onRowKey(e4, keyApi)) {
         e4.preventDefault();
         e4.stopPropagation();
       }
@@ -72814,16 +73220,105 @@ ${d5.text}`);
     }) });
   }
 
+  // components/minutes/ShareReview.jsx
+  var ANSWERS = (
+    /** @type {Record<string, [string, string][]>} */
+    {
+      line: [["hold", "Hold back with it"], ["keep", "Keep"]],
+      row: [["hold", "Hold back with it"], ["keep", "Keep"]],
+      heading: [["plain", "Use a plain heading"], ["keep", "Keep"]],
+      title: [["plain", "Use a plain title"], ["keep", "Keep"]],
+      header: [["keep", "Keep"]]
+    }
+  );
+  var WHAT = (
+    /** @type {Record<string, string>} */
+    { row: "A row", heading: "A heading", title: "The title", header: "The meeting's details" }
+  );
+  var shareAsk = (
+    /** @type {import("@preact/signals").Signal<{lines: ReviewLine[], answers: Record<string, string>, again: () => void, error: string}|null>} */
+    y3(null)
+  );
+  function askShare(lines2, again) {
+    shareAsk.value = { lines: lines2 || [], answers: {}, again, error: "" };
+  }
+  var close = () => {
+    shareAsk.value = null;
+  };
+  function answer(key2, what) {
+    const a5 = shareAsk.value;
+    if (a5) shareAsk.value = { ...a5, answers: { ...a5.answers, [key2]: what }, error: "" };
+  }
+  async function exportAgain() {
+    const a5 = shareAsk.value;
+    if (!a5) return;
+    const answers = a5.lines.map((l6) => ({ key: l6.key, ref: l6.ref, refs: l6.refs || [l6.ref], answer: a5.answers[l6.key] }));
+    const r4 = await changeMinutes({ op: "shareable", answers });
+    if (!r4.ok) {
+      shareAsk.value = { ...a5, error: r4.message || "Your answers weren't saved." };
+      return;
+    }
+    close();
+    a5.again();
+  }
+  function ShareReview() {
+    const a5 = shareAsk.value, done = !!a5 && a5.lines.every((l6) => a5.answers[l6.key]);
+    return /* @__PURE__ */ u4(Dialog, { open: !!a5, onClose: close, labelledBy: "mnShareH", id: "mnShare", class: "mnapprove", focus: "#mnShareHold0", children: a5 ? /* @__PURE__ */ u4("div", { class: "mnap", children: [
+      /* @__PURE__ */ u4("h2", { id: "mnShareH", children: "Review these lines before sharing" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "These lines may describe something kept out of the shareable version." }),
+      /* @__PURE__ */ u4("ul", { class: "mnap-l", children: a5.lines.map((l6, i5) => /* @__PURE__ */ u4("li", { "data-share-key": l6.key, style: "display:block", children: [
+        /* @__PURE__ */ u4("div", { children: l6.text }),
+        /* @__PURE__ */ u4("div", { class: "sub", children: [
+          WHAT[l6.kind || ""] ? `${WHAT[l6.kind || ""]}. ` : "",
+          "May describe: ",
+          l6.item
+        ] }),
+        l6.kind === "header" ? /* @__PURE__ */ u4("div", { class: "sub", children: "This can't be held back: change it in the minutes before sharing if it shouldn't go out." }) : null,
+        /* @__PURE__ */ u4("div", { role: "group", "aria-label": `For the line: ${l6.text.slice(0, 60)}`, style: "display:flex;gap:6px;margin-top:6px", children: (ANSWERS[l6.kind || "line"] || ANSWERS.line).map(([what, label], j5) => /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "btn sm",
+            id: j5 ? void 0 : `mnShareHold${i5}`,
+            "data-share": what,
+            "aria-pressed": a5.answers[l6.key] === what ? "true" : "false",
+            onClick: () => answer(l6.key, what),
+            children: label
+          },
+          what
+        )) })
+      ] }, l6.key)) }),
+      a5.error ? /* @__PURE__ */ u4("p", { class: "sub", role: "alert", style: "color:var(--bad, #b00020)", children: a5.error }) : null,
+      /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnShareNo", onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "btn primary",
+            id: "mnShareGo",
+            disabled: !done,
+            "data-tip": done ? void 0 : "Answer each line first",
+            onClick: () => {
+              exportAgain();
+            },
+            children: "Export again"
+          }
+        )
+      ] })
+    ] }) : null });
+  }
+
   // components/minutes/MinutesView.jsx
   var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
   var mnExports = (draft) => {
     const hold = draft ? "Approve the minutes first" : void 0;
     return [
       { head: "Shareable: for sending" },
-      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      // The email's summary is free text from the Shareable version (minutes_record.py followup_facts), so it has the same #329 gap as the Updates text.
+      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+      // #329: a line that may describe a Sensitive item is asked about first (minutes_record.describing_lines), for the email too.
       { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent", tip: draft ? "Draft: check before sending" : void 0 },
       { id: "sep", sep: true },
       { head: "Internal: colleagues only" },
@@ -72859,7 +73354,9 @@ ${d5.text}`);
     if (!await mnSaveFirst()) return;
     const v5 = minutesView.value;
     if (id2 === "followup") {
-      openMinutesFollowup(v5 && v5.path, "distributed");
+      openMinutesFollowup(v5 && v5.path, "distributed", (ls2) => askShare(ls2, () => {
+        exportAs(id2);
+      }));
       return;
     }
     if (id2 === "followup-internal") {
@@ -72868,6 +73365,12 @@ ${d5.text}`);
     }
     const [fmt, ver] = id2.split(":");
     const r4 = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
+    if (!r4.ok && Array.isArray(r4.review) && r4.review.length) {
+      askShare(r4.review, () => {
+        exportAs(id2);
+      });
+      return;
+    }
     snack(r4.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").replace(/^Distributed minutes/, "Shareable minutes").split("\n")[0]);
   }
   async function readAgain() {
@@ -73244,7 +73747,8 @@ ${d5.text}`);
           busy: approving.value,
           onApprove: () => approveNow(true)
         }
-      )
+      ),
+      /* @__PURE__ */ u4(ShareReview, {})
     ] });
   }
   var mnMounted = false;
@@ -74107,6 +74611,20 @@ ${d5.text}`);
     window.setInterval(helpScreenSync, 300);
   }
 
+  // core/finderReveal.js
+  var FINDER_REVEAL = true;
+  var FINDER_OPEN_OK = /^(projects|inbox|system\/staging\/drafts)\/.+$/;
+  var safe = (p6) => FINDER_OPEN_OK.test(p6) && !p6.split("/").includes("..");
+  function finderRequest(path, reveal = FINDER_REVEAL) {
+    const p6 = String(path || "");
+    if (reveal) return safe(p6) ? { path: p6, reveal: true } : null;
+    const parent = p6.split("/").slice(0, -1).join("/");
+    return safe(parent) ? { path: parent } : null;
+  }
+  function finderCanShow(c5) {
+    return !(c5.op === "delete" && !c5.undone || c5.op === "create" && c5.undone);
+  }
+
   // core/mailCheck.js
   var MC_MARKER = "Sweeping (stages proposals only)";
   var PLACE_NAMES = { mail: "Outlook mail", teams: "Teams", calendar: "calendar" };
@@ -74764,7 +75282,7 @@ ${d5.text}`);
         }
       };
     };
-    const close = async () => {
+    const close2 = async () => {
       if (busy2) return;
       if (!viaServer()) {
         snack("Closing the day needs creaite to be running");
@@ -74903,7 +75421,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4("footer", { class: "cdfoot", children: [
           /* @__PURE__ */ u4("span", { class: "left", children: sweeping ? "The check only suggests; closing now closes when it finishes." : `${step2 + 1} of 4` }),
           step2 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-cdback": "1", onClick: () => move(-1), children: "Back" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-dcnot": "1", onClick: notYet, children: "Not yet" }),
-          step2 < 3 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
+          step2 < 3 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close2, children: day.closed ? "Close it again" : "Close the day" })
         ] })
       ] })
     ] }) });
@@ -75374,9 +75892,29 @@ ${d5.text}`);
     snack(oneLine(r4.message || `Restored to ${at2}`));
     return true;
   }
+  function achgWhere(path) {
+    const p6 = String(path || ""), parts = p6.split("/"), name = parts[parts.length - 1].replace(/\.[A-Za-z0-9]{1,5}$/, "") || parts[parts.length - 1];
+    let project2 = "";
+    if (parts[0] === "projects" && parts.length > 2) {
+      if (parts[1] === "_portfolio") project2 = "Portfolio";
+      else project2 = Object.keys(D.folders || {}).filter((k5) => D.folders[k5] === parts[1]).map(pName)[0] || "";
+    } else if (parts[0] === "inbox") project2 = "Intake";
+    else if (p6.startsWith("system/staging/drafts/")) project2 = "Drafts";
+    return { name, project: project2, req: finderRequest(p6) };
+  }
+  function achgFile(path) {
+    const w6 = achgWhere(path);
+    return html`<b>${w6.name}</b>${w6.project ? html` <span class="sub">in ${w6.project}</span>` : ""}`;
+  }
+  function achgShowBtn(c5) {
+    if (!finderCanShow(c5)) return "";
+    const w6 = achgWhere(c5.to || c5.path);
+    if (!w6.req) return "";
+    return html`<button class="mini" data-achgshow="${JSON.stringify(w6.req)}" aria-label="Show ${w6.name} in Finder">Show in Finder</button> `;
+  }
   function askChangesHtml(rows2) {
     if (!rows2.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td>${achgIsSession(c5) ? html`Notes <code>${c5.path}</code> <span class="sub" data-achgsess>${achgSessionText(c5)}</span>` : html`${ACHG_OP[c5.op] || c5.op} <code>${c5.path}</code>`}${c5.to ? html` → <code>${c5.to}</code>` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right">${achgBtn(c5)}</td></tr>`)}</tbody></table>`;
+    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td style="overflow-wrap:anywhere">${achgIsSession(c5) ? html`Notes ${achgFile(c5.path)} <span class="sub" data-achgsess>${achgSessionText(c5)}</span>` : html`${ACHG_OP[c5.op] || c5.op} ${achgFile(c5.path)}`}${c5.to ? html` → ${achgFile(c5.to)}` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right;white-space:nowrap">${achgShowBtn(c5)}${achgBtn(c5)}</td></tr>`)}</tbody></table>`;
   }
   var ACHGFIRST = true;
   async function renderAskChanges() {
@@ -75388,6 +75926,12 @@ ${d5.text}`);
       putHTML(box, html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`);
       $("#actTbl").after(box);
       box.addEventListener("click", async (e4) => {
+        const sh2 = e4.target.closest("[data-achgshow]");
+        if (sh2) {
+          const q5 = JSON.parse(sh2.dataset.achgshow), r5 = q5.reveal ? await api("/api/report/reveal", { path: q5.path }) : await api("/api/open", q5);
+          if (!r5 || !r5.ok) snack(q5.reveal ? "That file isn't there any more." : "That folder isn't there any more.");
+          return;
+        }
         const rs2 = e4.target.closest("[data-achgrestore]"), ok2 = e4.target.closest("[data-achgrestoreyes]"), no2 = e4.target.closest("[data-achgrestoreno]");
         if (rs2) {
           const td2 = rs2.parentElement, noteName = rs2.dataset.path.split("/").pop().replace(/\.md$/, ""), q5 = document.createElement("span");
@@ -79846,7 +80390,7 @@ ${d5.text}`);
       /** @type {HTMLDivElement | null} */
       null
     );
-    const close = (back2) => {
+    const close2 = (back2) => {
       const was = irAside.value;
       irAside.value = null;
       if (back2 && was && was.anchor && was.anchor.isConnected) was.anchor.focus({ preventScroll: true });
@@ -79866,10 +80410,10 @@ ${d5.text}`);
     const m5 = irModel().meetings.find((x5) => x5.id === a5.id);
     if (!m5) return null;
     const pick = (reason) => {
-      close(false);
+      close2(false);
       irNotNeeded(m5, reason);
     };
-    return /* @__PURE__ */ u4(MenuPanel, { bare: true, cls: "rvreason rjmenu", id: "irAside", label: "Not needed because", boxRef: box, anchor: a5.anchor, onClose: (how) => close(how === "esc"), onKey: (e4) => {
+    return /* @__PURE__ */ u4(MenuPanel, { bare: true, cls: "rvreason rjmenu", id: "irAside", label: "Not needed because", boxRef: box, anchor: a5.anchor, onClose: (how) => close2(how === "esc"), onKey: (e4) => {
       if (/^[1-4]$/.test(e4.key) && !e4.metaKey && !e4.ctrlKey && !e4.altKey) {
         e4.preventDefault();
         e4.stopPropagation();
@@ -81200,7 +81744,7 @@ ${d5.text}`);
     return true;
   }
   var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", railLabels: "dashboard.rail_labels", helpLine: "help.first_line", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
-  async function writeSettings(changes) {
+  async function writeSettings(changes, opts = {}) {
     let sp2 = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {
       const box = document.querySelector(`#settingsBody [data-sec="${shared.SETROW.sec}"]`), r4 = box && box.querySelectorAll(".srow,.igrow")[shared.SETROW.i];
@@ -81219,7 +81763,7 @@ ${d5.text}`);
         try {
           await vq(async () => {
             const path = "system/config/settings.json", text = await shared.VW.read(path), js2 = JSON.parse(text), at2 = stampFull(), logs = [];
-            for (const [key2, val2] of Object.entries(changes)) {
+            for (const [key2, val2] of Object.entries(typeof changes === "function" ? changes(js2) : changes)) {
               const parts = key2.split(".");
               let o5 = js2;
               parts.slice(0, -1).forEach((q5) => {
@@ -81236,7 +81780,8 @@ ${d5.text}`);
           });
           return true;
         } catch (e4) {
-          snack("Settings not saved: " + e4.message);
+          if (opts.problem) opts.problem(String(e4.message || ""));
+          else snack("Settings not saved: " + e4.message);
           return false;
         }
       })();
@@ -81662,7 +82207,7 @@ ${d5.text}`);
     fetch("/api/events", { headers: { "X-Creaite-Token": D.token || "" }, signal: ctl.signal, cache: "no-store" }).then((res) => evRead(res, ctl)).catch(() => null).finally(() => evDown(ctl));
   }
   async function evRead(res, ctl) {
-    if (!res.ok || !res.body) return;
+    if (staleStreamAnswer(res.status, res.ok, !!res.body, staleStore()) !== "open") return;
     EVS.up = true;
     EVS.wait = 1e3;
     const rd2 = res.body.getReader(), dec = new TextDecoder();
@@ -81813,8 +82358,14 @@ ${d5.text}`);
   });
   var diagErr = (e4) => `<details class="diagerr"><summary><span class="x">${esc(fd(e4.at.slice(0, 10)))} ${esc(e4.at.slice(11, 16))}</span> · ${esc(e4.area)} · ${esc(e4.message)}</summary>${e4.detail.length ? `<pre class="diagtb">${esc(e4.detail.join("\n"))}</pre>` : '<div class="sub">No traceback.</div>'}</details>`;
   function bootDebugLog() {
-    window.addEventListener("error", (e4) => diagHook(e4.message, e4.filename, e4.lineno));
-    window.addEventListener("unhandledrejection", (e4) => diagHook(e4.reason && e4.reason.message ? e4.reason.message : e4.reason, "promise", 0));
+    window.addEventListener("error", (e4) => {
+      const r4 = errorReport(e4);
+      diagHook(r4.message, r4.source, r4.line);
+    });
+    window.addEventListener("unhandledrejection", (e4) => {
+      const r4 = rejectionReport(e4);
+      diagHook(r4.message, r4.source, r4.line);
+    });
   }
   var serverSeams = { api: (v5) => {
     api = v5;
@@ -82094,6 +82645,8 @@ Next: `;
         "FF",
         "FIELD",
         "FILES",
+        "FINDER_REVEAL",
+        "FIX_CALLS",
         "FOPEN",
         "FX",
         "FilterBar",
@@ -82140,6 +82693,7 @@ Next: `;
         "OWN",
         "Overdue",
         "P",
+        "PAGE_KEYS",
         "PARTNERS_MAX",
         "PARTNER_NAME_MAX",
         "PD_COLS",
@@ -82168,6 +82722,7 @@ Next: `;
         "RAIL_ITEMS",
         "RB",
         "RBMARK",
+        "REASONS",
         "REC",
         "REGD",
         "REMINDERS",
@@ -82187,6 +82742,7 @@ Next: `;
         "SKEY",
         "SNAP",
         "SORT",
+        "STALE_RELOAD_KEY",
         "STALE_ROW_MSG",
         "START_CMD",
         "STATUSES",
@@ -82386,6 +82942,7 @@ Next: `;
         "dispPropsMarkup",
         "dispReset",
         "dispSelect",
+        "distributedOf",
         "dnBlock",
         "dnHtml",
         "dnList",
@@ -82415,10 +82972,13 @@ Next: `;
         "editProposal",
         "emailKey",
         "errBanner",
+        "errorFrame",
+        "errorReport",
         "esc",
         "evClose",
         "evOn",
         "evOpen",
+        "evRead",
         "evRoot",
         "evidence",
         "fd",
@@ -82427,8 +82987,11 @@ Next: `;
         "filedNote",
         "filingAsk",
         "filingError",
+        "finderCanShow",
+        "finderRequest",
         "firstHelp",
         "fitFilterBar",
+        "fixCallAllowed",
         "flip",
         "flowCard",
         "forgetRenamed",
@@ -82468,6 +83031,7 @@ Next: `;
         "helpNorm",
         "helpPanelOpen",
         "helpScreenSync",
+        "hhmm",
         "hideSnack",
         "histClose",
         "hit",
@@ -82633,6 +83197,7 @@ Next: `;
         "mdChat",
         "mdHtml",
         "mdInline",
+        "mdLines",
         "meNames",
         "meetingOfFile",
         "meetingRoute",
@@ -82863,6 +83428,7 @@ Next: `;
         "regAddPerson",
         "regSetHidden",
         "rejectedAgainWords",
+        "rejectionReport",
         "rel",
         "reloadData",
         "remMenu",
@@ -82897,6 +83463,7 @@ Next: `;
         "rjMenu",
         "rkText",
         "row",
+        "rowKey",
         "rowKeys",
         "rows",
         "rtOK",
@@ -82965,6 +83532,12 @@ Next: `;
         "splitPanes",
         "srcHTML",
         "srcParse",
+        "staleApiAct",
+        "staleEventsAct",
+        "staleMarkClear",
+        "staleShow",
+        "staleStore",
+        "staleStreamAnswer",
         "stampMsg",
         "startCurEdit",
         "status",
@@ -82975,6 +83548,7 @@ Next: `;
         "store",
         "subOf",
         "sw",
+        "sweepDueLine",
         "swept",
         "syncView",
         "synthDay",
@@ -82985,6 +83559,7 @@ Next: `;
         "tipHide",
         "tl",
         "toIso",
+        "topFrame",
         "trackApprove",
         "trackCounts",
         "trackOf",
@@ -82998,10 +83573,12 @@ Next: `;
         "typing",
         "undatedCard",
         "undoApply",
+        "undoOwnFoldersWarning",
         "undoWords",
         "unescHtml",
         "updReview",
         "updSave",
+        "updUndo",
         "uploadClientLogo",
         "uploadInboxFile",
         "validate",
@@ -83017,6 +83594,7 @@ Next: `;
         "weeklyHref",
         "wflag",
         "who",
+        "withFrame",
         "within",
         "wkMarksHtml",
         "workChanged",

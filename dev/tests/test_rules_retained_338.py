@@ -44,7 +44,12 @@ RULES_339 = REPO / "dev/proposals/339/creaite-rules.diff"
 MARK_339 = 'a typed "refresh calendar" starts the small calendar run'
 INSERT_339 = '**#339:** a typed "refresh calendar" starts the small calendar run, as the Calendar import button does (its own tools and two input files, no chat, no session, mode `calendar`; its closure is kept in the day\'s "Runs creaite started"), and a sweep run reads the vault and the projects folder, not the home folder.'
 AT_339 = "is a plain chat (BL-309). Every change goes through"
-STATE = {"347": False, "339": False}         # whether the tree holds each patch's wording (set by states(); fixture() reads it)
+# #250 (v2.6.10): dev/proposals/250/creaite-rules-250.diff adds one bullet (the sweep's transcript fetch) before the Assistant bullet.
+# Handled like 347 and 339: stripped before the 338 state is worked out, put back on both sides.
+RULES_250 = REPO / "dev/proposals/250/creaite-rules-250.diff"
+MARK_250 = "**Transcripts fetched by a sweep (#250):**"
+AT_250 = '- **Assistant ("ask creaite"'
+STATE = {"347": False, "339": False, "250": False}         # whether the tree holds each patch's wording (set by states(); fixture() reads it)
 
 
 def with_339(text):
@@ -55,14 +60,32 @@ def without_339(text):
     return text.replace(" " + INSERT_339, "", 1)
 
 
+def insert_250():
+    """The one bullet the 250 diff adds (its only added line); "" if the diff is not in the tree."""
+    if not RULES_250.exists():
+        return ""
+    return next((x[1:] for x in RULES_250.read_text(encoding="utf-8").splitlines() if x.startswith("+") and not x.startswith("+++")), "")
+
+
+def with_250(text):
+    bullet = insert_250()
+    return text if not bullet or bullet in text else text.replace(AT_250, bullet + "\n" + AT_250, 1)
+
+
+def without_250(text):
+    bullet = insert_250()
+    return text.replace(bullet + "\n", "", 1) if bullet else text
+
+
 def strip(text):
-    """The rules as the 338 diffs were cut: without the 347 and the 339 wording."""
-    return without_339(without_347(text))
+    """The rules as the 338 diffs were cut: without the 347, 339 and 250 wording."""
+    return without_250(without_339(without_347(text)))
 
 
 def restore(text):
     """`text` with back the wording of the patches the tree holds."""
     text = with_347(text) if STATE["347"] else text
+    text = with_250(text) if STATE["250"] else text
     return with_339(text) if STATE["339"] else text
 
 
@@ -445,8 +468,8 @@ def git_apply(text, diff, reverse=False):
 def states():
     """(original, slim) for the tree's state, whichever way round the tree is."""
     tree = RULES.read_text(encoding="utf-8")
-    STATE["347"], STATE["339"] = MARK_347 in tree, MARK_339 in tree
-    if STATE["347"] or STATE["339"]:
+    STATE["347"], STATE["339"], STATE["250"] = MARK_347 in tree, MARK_339 in tree, MARK_250 in tree
+    if STATE["347"] or STATE["339"] or STATE["250"]:
         orig, slim = _states(strip(tree))          # work out the 338 state on the wording the 338 diffs were cut on
         return restore(orig), restore(slim)
     return _states(tree)
@@ -594,7 +617,9 @@ class RetainedRules(unittest.TestCase):
                 self.assertIn(new, self.slim)
 
     def test_the_rules_are_at_least_half_smaller(self):
-        self.assertLessEqual(len(self.slim.encode()), 0.5 * len(self.orig.encode()), "the slimmed rules must be at most half the size")
+        # the #250 bullet is one addition to both states, outside what 338 slims (the margin is a few bytes), so it is left out of the sizes
+        self.assertLessEqual(len(without_250(self.slim).encode()), 0.5 * len(without_250(self.orig).encode()),
+                             "the slimmed rules must be at most half the size")
 
     def test_the_rules_point_to_the_reference_and_it_says_it_never_loosens_them(self):
         self.assertIn(REF_PATH, self.slim)

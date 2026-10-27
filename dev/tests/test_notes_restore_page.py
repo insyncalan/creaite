@@ -25,7 +25,7 @@ SPY = """(()=>{ window.__req=[]; window.__failUndo=false; const f=window.fetch.b
     if(window.__failUndo&&url.includes('/api/changes/undo')) return Promise.resolve(new Response(JSON.stringify({ok:false,message:'Not restored: the file has changed since.'}),{status:200,headers:{'Content-Type':'application/json'}}));
     return f(u,o); }; return true; })()"""
 NO_TIMER = """(()=>{ const st=window.setTimeout.bind(window); window.setTimeout=(fn,ms,...a)=>(ms===2000&&String(fn).includes('noteFlush'))?0:st(fn,ms,...a); return true; })()"""
-ROW = "[...document.querySelectorAll('#achgTbl tr[data-achg]')].find(r=>r.querySelector('code').textContent.endsWith('/%s.md'))"
+ROW = "[...document.querySelectorAll('#achgTbl tr[data-achg]')].find(r=>r.children[2].querySelector('b').textContent==='%s')"
 
 
 class RestorePage(LiveBrowserCase):
@@ -55,11 +55,11 @@ class RestorePage(LiveBrowserCase):
         b.wait("!!document.querySelector('#achgTbl tr[data-achg]')", 10)
 
     def rows(self):
-        return self.b.eval("[...document.querySelectorAll('#achgTbl tr[data-achg]')].map(r=>({path:r.querySelector('code').textContent,"
-                           "text:r.children[2].textContent.trim(),btn:[...r.querySelectorAll('button')].map(x=>x.textContent.trim())}))")
+        return self.b.eval("[...document.querySelectorAll('#achgTbl tr[data-achg]')].map(r=>({path:r.children[2].querySelector('b').textContent,"
+                           "text:r.children[2].textContent.trim(),btn:[...r.querySelectorAll('button')].map(x=>x.textContent.trim()).filter(t=>t!=='Show in Finder')}))")
 
     def row_of(self, title):
-        return next(r for r in self.rows() if r["path"].endswith(f"/{title}.md"))
+        return next(r for r in self.rows() if r["path"] == title)
 
     def times(self, title):
         r = self.b.eval("api('/api/changes/list',{})")
@@ -174,7 +174,7 @@ class RestorePage(LiveBrowserCase):
                 {"id": 901, "at": "2026-10-17 10:05:00", "op": "edit", "path": "projects/ABC Example/notes/Old.md", "why": "test", "tier": "ordinary"}]
         b.eval("(()=>{ putHTML(document.getElementById('achgTbl'), askChangesHtml(" + json.dumps(rows) + ")); return true; })()")
         texts = b.eval("[...document.querySelectorAll('#achgTbl tr[data-achg]')].map(r=>[...r.querySelectorAll('button')].map(x=>x.textContent.trim()))")
-        self.assertEqual(texts, [["Undo"], ["Undo"]])
+        self.assertEqual(texts, [["Show in Finder", "Undo"], ["Show in Finder", "Undo"]])   # #374: the folder button comes first
 
 
 if __name__ == "__main__":

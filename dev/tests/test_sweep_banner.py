@@ -45,7 +45,8 @@ class SweepDue(DueCase):
         self.assertIn("Mail and Teams not checked yet today", b.eval("document.getElementById('sweepDue').textContent"))
         self.assertEqual(b.eval("document.getElementById('sweepDue').getAttribute('role')"), "status")
         self.assertEqual(b.eval("document.getElementById('sweepRun').textContent"), "Check now")
-        self.assertEqual(b.eval("document.getElementById('sweepDue').nextElementSibling.id"), "tBrief")      # between the day band and the sections
+        # between the day band and the sections; #385's hidden own-folder status line (#ownFolders) may sit between the banner and the brief
+        self.assertEqual(b.eval("(()=>{let e=document.getElementById('sweepDue').nextElementSibling; if(e&&e.id==='ownFolders') e=e.nextElementSibling; return e&&e.id;})()"), "tBrief")
         self.assertTrue(b.eval("!!document.querySelector('#v-today > .dayband ~ #sweepDue')"))
         self.assertEqual(b.eval("document.getElementById('sweepX').getAttribute('aria-label')"), "Dismiss until the next check is due")   # #243
 

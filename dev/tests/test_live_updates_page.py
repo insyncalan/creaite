@@ -137,7 +137,8 @@ class StalePageStops(LiveBrowserCase):
         self.b.reload("typeof go==='function' && LIVE && typeof EVS==='object' && EVS.up")
 
     def test_no_more_api_calls_once_stale(self):
-        self.b.eval("evClose(); D.token='a-token-from-before-a-restart'; pulseCheck(); 1")   # as after a restart
+        self.b.eval("sessionStorage.setItem('creaite.staleReload','1'); "                    # the one reload is spent (#370)
+                    "evClose(); D.token='a-token-from-before-a-restart'; pulseCheck(); 1")   # as after a restart
         self.b.wait("!document.getElementById('staleAlert').hidden", timeout=10)
         self.b.eval("FETCHED={}; 1")
         self.b.eval("evOpen(); pulseCheck(); vipPoll(); 1")

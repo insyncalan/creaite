@@ -25,6 +25,11 @@ RAIL_W = "Math.round(document.querySelector('.rail').getBoundingClientRect().wid
 class IconSizeBase(LiveBrowserCase):
     width, height = 1400, 900
 
+    def setUp(self):
+        super().setUp()
+        self.b.resize(self.width, self.height)      # the page exactly this size: headless Chrome's page can be shorter than its window
+                                                    # (Chrome for Testing 156 on Linux: 200 px), and the dialog checks below measure it
+
     @classmethod
     def server_env(cls):
         return {"CREAITE_NOW": "2026-10-16 09:00"}

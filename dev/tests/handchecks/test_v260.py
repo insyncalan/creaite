@@ -984,8 +984,9 @@ class People248(V260Case):
 # ══ #250 fetch transcripts ═══════════════════════════════════════════════════════════════════════════════════════════════════════
 
 FT = "v26-fetch-transcripts"
-FTH = ("Off: creaite fetches a transcript when you press Process. On: each sweep fetches the transcripts of meetings that have ended, so they "
-       "are ready when you open Intake. It only reads: no AI runs and nothing is written to the tracker. Confidential meetings are never fetched.")
+FTH_FULL = ('Off: creaite fetches a transcript when you press Process. On: a mail and Teams check you ask for, and Close the day, also fetch the transcripts of meetings that have ended, so they are ready when you open Intake. The scheduled morning check and the check at the start of a session do not fetch. It only reads: no extra AI run and nothing is added to your project records. Confidential meetings are never fetched.')
+FTH = ("It only reads: no extra AI run and nothing is added to your project records. Confidential meetings are never fetched. "
+       "Default: off. " + FTH_FULL)           # what the row shows: its one-liner, the default, then the full help (the catalogue's reason)
 
 
 class Fetch250(V260Case):
@@ -994,7 +995,7 @@ class Fetch250(V260Case):
     @needs("250")
     def test_c58_off_by_default(self):
         """58. Settings › Sweep and Intake has "Fetch transcripts as they appear" (sweep.fetch_transcripts), off by default, with the
-        brief's help text."""
+        brief's help text under the name (after the one-liner and the default)."""
         self.assertIn(dig(self.vault_json("system/config/settings.json"), "sweep.fetch_transcripts"), (None, False))
         self.assertIs(dig(self.vault_json("system/templates/settings-defaults.json"), "sweep.fetch_transcripts"), False)
         b = self.b
@@ -1116,6 +1117,8 @@ class Fetch250Review(V260Case):
         cal_p = f.v.root / "system/staging/calendar.json"
         cal = json.loads(cal_p.read_text())
         row = next(e for e in cal["days"][tf.DAY] if e.get("id") == "ev-1")
+        row.pop("sensitivity", None)                    # the harness saves "normal"; the check is about a row with no sensitivity at all
+        cal_p.write_text(json.dumps(cal), encoding="utf-8")
         self.assertNotIn("sensitivity", row, "premise: the saved calendar says nothing about its sensitivity")
         ev = tf.event()
         ev["sensitivity"] = "confidential"

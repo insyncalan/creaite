@@ -265,11 +265,36 @@ def project_folders_present():
             if not paths.folder(code, kind).is_dir() and f"{code}: {paths.folder_name(kind)}" not in missing:    # (client reports share Weekly)
                 missing.append(f"{code}: {paths.folder_name(kind)}")
     registered = set(paths.register_folders())
-    gone = sorted(c for c in registered if not (paths.projects_root() / paths.register_folders()[c]).is_dir())
+    own = {m["code"] for m in paths.missing_project_paths()}          # #385: said by "Project folders of their own"
+    gone = sorted(c for c in registered if c not in own and not paths.project_dir(c).is_dir())
     if gone:
         missing += [f"{c}: the folder {paths.register_folders()[c]!r} isn't there" for c in gone]
     return (None, "missing: " + "; ".join(missing[:8]) + (f" (+{len(missing) - 8} more)" if len(missing) > 8 else "")
             + ". Create them, or correct locations.folders.") if missing else (True, "every registered project has its mapped folders")
+
+
+def project_paths_present():
+    """#385: every project given a folder of its own (locations.project_paths) can be reached now. One that can't (a drive not
+    connected, OneDrive not running, the folder moved) is listed by name, never created: its files are where they were."""
+    dropped = paths.dropped_project_paths() if paths.external() else []
+    if not paths.external() or (not paths.project_roots() and not dropped):
+        return True, "every project is in the projects folder"
+    gone, said = paths.missing_project_paths(), []
+    if dropped:          # fail closed on read (#385): an entry that breaks the rules is not used at all, and said here
+        said.append("not used, because it breaks the rules for a project's own folder: "
+                    + "; ".join(f"{d['folder']} ({d['path'] or 'no path'}): {d['why']}" for d in dropped[:4])
+                    + (f" (+{len(dropped) - 4} more)" if len(dropped) > 4 else "")
+                    + ". Until it is put right creaite treats that project as if it were in the projects folder; correct or "
+                      "remove the entry in the project's settings")
+    if gone:
+        names = [f"{m['folder']} ({m['path']})" for m in gone]
+        said.append("can't be reached: " + "; ".join(names[:6]) + (f" (+{len(names) - 6} more)" if len(names) > 6 else "")
+                    + ". Is OneDrive running and signed in, or the drive connected? Nothing is lost: creaite leaves the folder "
+                      "alone until it is back. If it has moved, save its new place in the project's settings")
+    if said:
+        return None, ". ".join(said) + "."
+    n = len(paths.project_roots())
+    return True, f"{n} project{'s' if n != 1 else ''} in a folder of {'their' if n != 1 else 'its'} own, all reachable"
 
 
 def mapped_folders():
@@ -316,6 +341,40 @@ def other_connector_rules():
     return found
 
 
+def project_dir_forms():
+    """#385: every form a permission file may name a project's own folder by (locations.project_paths, honoured entries only):
+    the saved value (with ~) and its full path. Exactly these are as narrow as creaite asks for; a parent of one is not."""
+    out = []
+    for name, value in paths.project_paths().items():
+        out += [str(value).rstrip("/"), str(paths.project_roots()[name]).rstrip("/")]
+    return [x for x in dict.fromkeys(out) if x]
+
+
+def outside_projects(spec, own_dirs):
+    """Whether an Edit or Write rule's absolute or ~ pattern is outside the projects folder and every project's own folder."""
+    root = str(paths.locations().get("projects_root") or "").strip().rstrip("/")
+    inside = [r for r in [root, *own_dirs] if r]
+    return not any(spec.startswith(r + "/") or spec.startswith("//" + r.lstrip("/") + "/") for r in inside)
+
+
+def projects_unreadable(permissions, root, dirs):
+    """#385: (None, what Claude Code can't read from a Terminal session yet) for the projects folder and each project's own
+    folder; None when all can be read."""
+    unread = [root] if paths.external() and root not in dirs else []
+    own = [str(v).rstrip("/") for k, v in paths.project_paths().items()       # #385: each project's own folder, by either form
+           if str(v).rstrip("/") not in dirs and str(paths.project_roots()[k]).rstrip("/") not in dirs]
+    if unread or own:
+        cmd = "python3 system/scripts/permissions.py projects-root --why \"read the project documents\""
+        if hasattr(permissions, "project_dirs") or not own:             # the command adds every folder (the #385 permissions diff)
+            return None, (f"Claude Code can't read {', '.join(unread + own)} from a Terminal session yet: {cmd} adds "
+                          f"{'them' if len(unread + own) > 1 else 'it'} (the dashboard's ask creaite doesn't need it)")
+        said = [f"Claude Code can't read {root} from a Terminal session yet: {cmd} adds it"] if unread else []
+        said.append(f"a project's own folder ({', '.join(own)}) can't be read from a Terminal session yet, and this version of "
+                    "creaite can't add it for you; a later update lets the same command add it")
+        return None, "; ".join(said) + " (the dashboard's ask creaite doesn't need it)"
+    return None
+
+
 def assistant_permissions():
     """BL-93, BL-96: flag a rule in .claude/settings.json broader than creaite's own (F3: and a connector or acting built-in
     allowed in settings.local.json or ~/.claude/settings.json), and a missing projects-root folder."""
@@ -328,6 +387,7 @@ def assistant_permissions():
                       "python3 system/scripts/permissions.py recover puts them back (the live server also does this when it starts)")
     broad = []
     import permissions
+    own_dirs = project_dir_forms()            # #385: each project's own folder, as a rule or additionalDirectories names it
     for rule in perms.get("allow") or []:
         why = permissions.connector_problem(rule)    # Sprint 4b: reading is allowed, actions are not; F3: no other connector
         if why is not None:                          # or built-in that acts outside the laptop
@@ -339,9 +399,8 @@ def assistant_permissions():
         if tool in ("Bash", "Edit", "Write", "WebFetch", "WebSearch") and (spec is None or spec.strip() in ("*", "**", "/**", "//**", "~/**", "~", "/")):
             broad.append(rule)
         elif tool in ("Edit", "Write") and spec and (spec.startswith(("//", "~")) or Path(spec).is_absolute()):
-            root = str(paths.locations().get("projects_root") or "").strip().rstrip("/")
-            if not (root and spec.startswith(root + "/")) and not spec.startswith(("//" + root.lstrip("/") + "/")):
-                broad.append(f"{rule} (outside the vault and the projects folder)")
+            if outside_projects(spec, own_dirs):
+                broad.append(f"{rule} (outside the vault and the projects folders)")
         elif tool == "Bash" and spec and not permissions.runs_one_script(spec):          # BL-237: or through the wrapper
             broad.append(f"{rule} (not a creaite script)")
         if tool in ("Bash", "Edit", "Write") and permissions.rule_refusal(rule) and not any(rule in b for b in broad):   # BL-141
@@ -351,15 +410,15 @@ def assistant_permissions():
     broad += other_connector_rules()
     root = str(paths.locations().get("projects_root") or "").strip().rstrip("/")
     dirs = [str(d).rstrip("/") for d in perms.get("additionalDirectories") or []]
-    wide = [d for d in dirs if d != root and d not in ("", ".")]
+    wide = [d for d in dirs if d != root and d not in ("", ".") and d not in own_dirs]     # #385: exactly a mapped folder is fine
     if wide:
         broad.append("additionalDirectories " + ", ".join(wide) + (" (wider than the projects folder)" if root else " (the projects are in the vault: none is needed)"))
     if broad:
         return None, ("broader than creaite asks for: " + "; ".join(broad[:5]) + (f" (+{len(broad) - 5} more)" if len(broad) > 5 else "")
                       + ". Review them with python3 system/scripts/permissions.py list; undo the ones creaite added with permissions.py undo.")
-    if paths.external() and root not in dirs:
-        return None, (f"Claude Code can't read {root} from a Terminal session yet: python3 system/scripts/permissions.py projects-root "
-                      "--why \"read the project documents\" adds it (the dashboard's ask creaite doesn't need it)")
+    unreadable = projects_unreadable(permissions, root, dirs)
+    if unreadable:
+        return unreadable
     return True, "the assistant's rules are as narrow as creaite sets them" + (", with the projects folder readable" if paths.external() else "")
 
 
@@ -557,7 +616,7 @@ def scripts_use_paths():
     for s in (paths.ROOT / "system" / "scripts").glob("*.py"):
         if s.name == "paths.py" or s.name in PURE_MODULES:
             continue
-        if not re.search(r"^import paths\b", s.read_text(encoding="utf-8"), re.M):
+        if not re.search(r"^\s*import paths\b", s.read_text(encoding="utf-8"), re.M):
             bad.append(s.name)
     return not bad, ("not importing paths: " + ", ".join(bad)) if bad else "every script imports paths"
 
@@ -598,6 +657,17 @@ def sweep_lock():
     held_by = f" by run {info['run']}" if info.get("run") else ""
     return None, (f"a sweep lock is held{held_by} since {since} with no sweep running: the next sweep replaces it, or "
                   f"Release it (system/scripts/run sweep.py unlock --if-idle)")
+
+
+# ===== #370: a mail and Teams check that didn't run =====
+def sweep_failed():
+    """A check that failed today (sweep.py fail) and none has run since: a warning, with Check now. Words as Alan approved them."""
+    import sweep
+    f = sweep.failed_today()
+    if not f:
+        return True, "no missed check today"
+    retry = f" It tried again at {f['retry_at'][11:16]}." if f["retry_at"] else ""
+    return None, "creaite couldn't reach Microsoft 365 when it started." + retry
 
 
 # ===== BL-323: the weekly restore check and the last Tidy up, from backup.py's state (read only) =====
@@ -785,6 +855,7 @@ def run_checks():
     check("Write access", writable)
     check("Projects folder reachable", projects_root)
     check("Projects folders present", project_folders_present)
+    check("Project folders of their own", project_paths_present)      # #385
     check("Mapped folders can be filed into", mapped_folders)
     check("Notes have a folder of their own", notes_folder_own)       # #124
     check("Assistant permissions", assistant_permissions)
@@ -803,6 +874,7 @@ def run_checks():
     check("Backup restore check", backup_check)            # BL-323
     check("Tidy up of old backups", tidy_up)               # BL-323
     check("Sweep lock", sweep_lock)                           # BL-328
+    check("Missed mail and Teams check", sweep_failed)       # #370
     check("Debug log", debug_log)
     check("Staged minutes have their Word draft", minutes_drafts)   # BL-260
     check("ask creaite's refused commands", refused_commands)     # BL-252 (fix-small-17)
