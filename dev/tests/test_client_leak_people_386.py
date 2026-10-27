@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import Vault, action  # noqa: E402
+from test_reports import CLIENT_MSG  # noqa: E402  (a complete client message, so the action really is client-visible)
 
 REGISTER = "projects/_portfolio/people-register.md"
 REG = ("# People register\n\n## People\n\n| Full name | Email | Aliases | Organisation | Role | Hidden | Labels |\n"
@@ -71,7 +72,7 @@ class Base(unittest.TestCase):
         """Jane Doe owns a client-visible open action; Omar Ali owns only an open one a client report can't show."""
         p = self.v.root / "system" / "staging" / "proposed-c386.json"
         p.write_text(json.dumps({"created": "2026-10-04T09:00:00", "source_run": "cx-edit", "files": [], "items": [
-            action(1, owner="Jane Doe", description="Confirm the UAT window", client_visible=1),
+            action(1, owner="Jane Doe", description="Confirm the UAT window", client_visible=1, client_message=CLIENT_MSG),
             action(2, owner="Omar Ali", description="Chase the vendor")]}), encoding="utf-8")
         self.v.run("apply")
 
@@ -90,6 +91,7 @@ class ClientLeak(Base):
         self.owners()
         self.people(("Omar Ali", ["Ozzy"]))
         client, internal = self.py("c, i = client_leak.people(con, 'ABC'); print(json.dumps([sorted(c), sorted(i)]))")
+        self.assertEqual(client, ["Jane", "Jane Doe"], "the client side is really there (Cap's LOW 2 on 9dab8c88)")
         self.assertIn("Ozzy", internal)
         self.assertNotIn("Ozzy", client)
         found = self.py("print(json.dumps(client_leak.name_findings(con, 'ABC', 'Ozzy will chase the vendor.')))")
@@ -104,6 +106,16 @@ class ClientLeak(Base):
     def test_a_broken_people_table_fails_closed(self):
         self.people(("Omar Ali", "[oops]"))
         r = self.py("client_leak.register_aliases(con)", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("RegisterUnreadable", r.stderr)
+
+
+class FailsClosedOnTheConnection(Base):
+    """Cap's LOW 1 on 9dab8c88: a connection that can't be read must raise, never fall back to the register alone (a
+    has_table()-style 'error means no table' read would fail open here)."""
+
+    def test_a_closed_connection_fails_closed(self):
+        r = self.py("con.close()\nclient_leak.register_aliases(con)", ok=False)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("RegisterUnreadable", r.stderr)
 
