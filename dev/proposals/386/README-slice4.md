@@ -48,12 +48,12 @@ before the return, so slice 1's docstring edit to `people_names` merges without 
 - **:5848, `field_person`:** resolves through `propose.people_pool`/`resolve_person`, which slice 1 moves onto `people.py`
   (ordinary). Its behaviour moves with slice 1, not here.
 
-## G-e (`update.py` :773): not built, open for Jarvis
+## G-e (`update.py` :773): not built, decided (Jarvis, 27-10-2026): `update.py` stays unchanged, the starting register stays
 
 Taking the register out of `STARTING_FILES` would make every new vault fail closed in the client names check: `register_aliases`
 raises on a missing register, and slice 3's export writes the file only once the table holds anyone (`people_live`), which a new
 vault's empty table never does until someone is added. It would need G-c to accept "no file" with an empty table, which can't be
-told apart from an older vault whose register went missing (today's fail-closed case). Recommendation: keep the starting file (the
+told apart from an older vault whose register went missing (today's fail-closed case). Decision: keep the starting file (the
 template is an empty People table; the first export replaces it and keeps the template aside as `people-register.before-386.md`).
 The template's `Follow` column is slice 2's to drop (ordinary). `locations.py` :142 likewise stays.
 
