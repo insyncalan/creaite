@@ -25,6 +25,7 @@ import test_minutes_approve as ma  # noqa: E402
 UAT, DATA = "Book the UAT environment", "Test data isn't anonymised"
 CHECK = "        blocked += track_problems(p, data)"
 ROWED = "    allowed = minutes_record.track_rowed(minutes_record.creaite_doc.read(draft), data)"
+TICKED = "    ticked = minutes_record.track_ticked(doc, data, project)"
 
 
 class ApplyStop(ma.Base):
@@ -125,14 +126,28 @@ class RowlessPromise(ma.Base):
         self.assertEqual(self.promise_decision(), "pending")
         self.assertEqual(r["waiting"], [2], r)
 
-    def test_review_py_approve_on_the_minutes_never_registers_the_promise(self):
+    def approve_meeting_row(self):
         rows = json.loads(self.v.run("list", "--json", script="review.py").stdout)
         n = next(r["n"] for r in rows if r["file"] == self.name and r["ref"] == "meeting")
         self.v.run("approve", str(n), script="review.py")
-        self.v.run("apply", ok=False)
+        self.v.run("apply")                                    # succeeds: the ticked action applies, the promise waits
+
+    def test_review_py_approve_on_the_minutes_never_registers_the_promise(self):
+        """This path never reaches approve_minutes (so track_rowed): review.py's track_minutes approves only the items
+        minutes_record.track_ticked finds a ticked row for, and a promise has none."""
+        self.approve_meeting_row()
         self.assertIn("Draft the cutover runbook", [a["description"] for a in self.v.rows("actions")], "control: the ticked row")
         self.assertNotIn("Send the vendor's rate card", self.promises())
         self.assertEqual(self.promise_decision(), "pending")
+
+    def test_mutant_track_minutes_ticking_every_item_registers_the_promise(self):
+        """Proof the review.py test sees the leak: track_minutes made to tick every item (this vault's own review.py only)."""
+        script = self.v.root / "system/scripts/review.py"
+        text = script.read_text(encoding="utf-8")
+        self.assertEqual(text.count(TICKED), 1, "track_minutes' ticked rows moved: update TICKED")
+        script.write_text(text.replace(TICKED, "    ticked = [i.get('n') for i in data.get('items') or []]", 1), encoding="utf-8")
+        self.approve_meeting_row()
+        self.assertIn("Send the vendor's rate card", self.promises(), "without track_ticked review.py approves the promise too")
 
     def test_mutant_without_the_row_check_the_promise_is_registered(self):
         """Proof the tests above see the leak: take track_rowed out of this vault's own review.py (never the repo's)."""
