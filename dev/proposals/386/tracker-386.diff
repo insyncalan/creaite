@@ -1,5 +1,5 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index cf9a5f235..f1911aee8 100644
+index cf9a5f235..40edd38ba 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -15,6 +15,7 @@ Commands (run from anywhere; every location comes from paths.py):
@@ -79,7 +79,7 @@ index cf9a5f235..f1911aee8 100644
      row = fetch(con, table, key)
      for f in cols:
          if row[f] is not None and not (f == "archived" and not row[f]):     # BL-09: a new row is never archived; not logged
-@@ -1650,15 +1656,21 @@ def check_file_op(fop, blk):
+@@ -1650,15 +1656,22 @@ def check_file_op(fop, blk):
      elif op == "mkdir":
          safe_path(fop.get("path"), "mkdir")
      elif op == "write":
@@ -94,8 +94,9 @@ index cf9a5f235..f1911aee8 100644
  
  
 +def check_write(fop):
-+    """A write's path and text; #386: never the people register once it is made from the tracker (it would be overwritten)."""
-+    if safe_path(fop.get("path"), "write") == paths.PEOPLE_REGISTER.resolve() and register_is_made():
++    """A write's path and text; #386: never the people register once it is made from the tracker (it would be overwritten), in
++    any case or Unicode form of its name."""
++    if is_people_register(safe_path(fop.get("path"), "write")) and register_is_made():
 +        raise Invalid("write: the people register is now made from your project record: change people in Settings › People")
 +    if not isinstance(fop.get("content"), str):
 +        raise Invalid("write: content must be text")
@@ -104,7 +105,7 @@ index cf9a5f235..f1911aee8 100644
  def check_write_base(fop, written):
      """Dry run of run_file_ops' write rule, so a stale write stops the apply before anything is backed up or changed,
      naming the proposal. Writes earlier in the same apply count: a chain of edits to one file, each based on the last, passes."""
-@@ -3380,6 +3392,7 @@ def after_apply():
+@@ -3380,6 +3393,7 @@ def after_apply():
      re-export Excel (each only once it exists), every step timed in the debug log (BL-327). Run by the live server
      (CREAITE_AFTER_APPLY=background), the slow steps are left to its background worker, marked as owed, so the save answers
      as soon as the tracker is written and the dashboard data rebuilt."""
@@ -112,7 +113,7 @@ index cf9a5f235..f1911aee8 100644
      if os.environ.get(AFTER_ENV) == "background":
          try:
              paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
-@@ -4664,6 +4677,8 @@ def main(argv):
+@@ -4664,6 +4678,8 @@ def main(argv):
          return cmd_undo_changes(args)          # BL-164 (sprint-rail)
      if cmd == "migrate":
          return cmd_migrate()
@@ -121,7 +122,7 @@ index cf9a5f235..f1911aee8 100644
      if cmd == "index":
          return cmd_index()
      if cmd == "query":
-@@ -4694,7 +4709,8 @@ RECODE_LINKS = {"actions": ("milestone",), "raid": ("milestone",), "decisions":
+@@ -4694,7 +4710,8 @@ RECODE_LINKS = {"actions": ("milestone",), "raid": ("milestone",), "decisions":
                  "links": ("from_item", "to_item"), "item_labels": ("item_id",)}                    # of any project (rewritten in every row)
  RECODE_KEYED = {"links": 2, "item_labels": 1}       # change_log keys made of IDs joined by "|": links "from|to|kind", item_labels "item|label"
  RECODE_ID_FIELDS = ("id", "milestone", "replaces", "from_item", "to_item", "item_id")     # change_log fields whose values are item IDs
@@ -131,7 +132,7 @@ index cf9a5f235..f1911aee8 100644
  RECODE_LOOKS_LIKE = re.compile(r"^(id|code|project|source|replaces|milestone)$|_id$|_item$|^(from|to)(_|$)")
  
  
-@@ -4819,6 +4835,7 @@ def rewrite_project(con, old, new, name=None, folder=None, fingerprints=None):
+@@ -4819,6 +4836,7 @@ def rewrite_project(con, old, new, name=None, folder=None, fingerprints=None):
      counts["history"] = _recode_history(con, old, new, fingerprints)
      _recode_events(con, old, new)                          # #241 D: the events follow their change_log rows
      _recode_search(con, old, new)
@@ -139,29 +140,46 @@ index cf9a5f235..f1911aee8 100644
      broken = con.execute("PRAGMA foreign_key_check").fetchall()
      if broken:
          raise Invalid(f"the recode would leave {len(broken)} broken link(s) between items")
-@@ -5005,5 +5022,456 @@ def recode_barrier(work):
+@@ -5005,5 +5023,635 @@ def recode_barrier(work):
      return [(p, d)]
  
  
 +# ===== #386 slice 3: the people table and its one writer =====
-+# Item ops on table "people" (schema.sql): "new" (or "add") with `values`, "update" with `changes`, "rename" (`changes`: {"name"}),
-+# "hide" and "merge" (`id` into `into`). A person's key is their row id. Every write is logged in change_log, so undo reverses
-+# it. A rename or merge carries the name across all seven name columns in the same apply; a name an apply writes into one of them
-+# that is no one's name or alias is added as a person with needs_details 1. Once the table holds anyone, the register file is made
-+# from it after every apply and undo (export_people). Who Alan follows is never in the table or the export (BL-288).
++# Item ops on table "people" (schema.sql): "new" (or "add") with `values`, "update" with `changes`, "rename" (`changes`: {"name"})
++# and "merge" (`id` into `into`). A person's key is their row id. Every write is logged in change_log, so undo reverses it. A
++# rename or merge carries the name across all seven name columns in the same apply; a name an apply writes into one of them that is
++# no one's name or alias is added as a person with needs_details 1. Once the table holds anyone, the register file is made from it
++# after every apply and undo (export_people). Who Alan follows and who is hidden are never in the table, its change_log rows or the
++# export (BL-288; Jarvis, 27-10-2026): both stay in slice 2's private file, system/staging/people-private.json.
 +AUTO_KEY = ("people",)                       # tables whose key is the rowid SQLite gives
 +PERSON_COLUMNS = (("actions", "owner"), ("raid", "owner"), ("decisions", "made_by"), ("promises", "promised_by"),
 +                  ("promises", "promised_to"), ("milestones", "owner"), ("workstreams", "lead"))
 +PERSON_LISTS = ("aliases", "labels", "projects_add", "projects_remove")
-+PERSON_FLAGS = ("is_group", "hidden", "needs_details")
++PERSON_FLAGS = ("is_group", "needs_details")
++PERSON_TEXT = ("organisation", "role")       # one register cell each: no bar, no line break
 +NOT_A_PERSON = ("", "tbc", "tbd", "unknown", "n/a", "none")
 +PEOPLE_VIA = "migrate-people"
 +PEOPLE_STATE = "people-export.json"          # in system/staging/: the sha256 of the register creaite last wrote; the last hand edit
 +PEOPLE_BEFORE = "people-register.before-386.md"     # in system/backups/: the register as it was before the first export
-+EXPORT_COLUMNS = ("Full name", "Email", "Aliases", "Organisation", "Role", "Hidden", "Labels", "Group", "Projects", "Left projects")
++# The export's columns; the move carries exactly these from the register. client_leak reads the file's Aliases cell by its
++# position (the third): keep "Aliases" third.
++EXPORT_COLUMNS = ("Full name", "Email", "Aliases", "Organisation", "Role", "Labels", "Group", "Projects", "Left projects")
++PRIVATE_COLUMNS = ("Follow", "VIP", "Hidden")       # slice 2's: moved into its private file by its own move, never into the record
++REGISTER_HEADINGS = ("# People register", "## People", "Notes:")
++REGISTER_GUIDE = ("Keep this file at `projects/_portfolio/people-register.md`", "- **Full name:**", "- **Email:**",
++                  "- **Aliases:**", "- **Organisation and Role:**", "- **Hidden:**", "- **Follow:**", "- **VIP:**",
++                  "- **Labels (BL-94):**", "- Use no `|` characters inside a cell.")   # the template's lines: the export's note replaces them
++YES, NO = ("yes", "y", "true", "1"), ("", "no", "n", "false", "0", "-")
++SEPARATOR = re.compile(r"\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?")
 +EXPORT_NOTE = ("Made by creaite from your project record: edit people in Settings › People, or with cx-edit. creaite writes "
 +               "this file again after every save; a change made here by hand is kept aside in system/backups/files/ and replaced.")
 +EMAIL_RE = re.compile(r"[^@\s,;|]+@[^@\s,;|]+")
++
++
++def fold(text):
++    """A name as compared: NFC, spaces collapsed, case-folded, so "ÉLODIE", "élodie" and a decomposed "élodie" are one name."""
++    import unicodedata
++    return " ".join(unicodedata.normalize("NFC", str(text or "")).split()).casefold()
 +
 +
 +def people_table_exists(con):
@@ -183,6 +201,11 @@ index cf9a5f235..f1911aee8 100644
 +        return people_live(con)
 +
 +
++def is_people_register(p):
++    """Whether a resolved path is the people register, whatever its case or Unicode form (macOS's disk ignores both)."""
++    return _folded(p) == _folded(paths.PEOPLE_REGISTER.resolve())
++
++
 +def json_list(v, field="list"):
 +    """A JSON list of text (or a Python list) as a clean list: trimmed, no blanks, each once whatever its case."""
 +    if v is None or v == "":
@@ -196,10 +219,16 @@ index cf9a5f235..f1911aee8 100644
 +        raise Invalid(f"{field} must be a list of text")
 +    out, seen = [], set()
 +    for x in (x.strip() for x in v):
-+        if x and x.casefold() not in seen:
-+            seen.add(x.casefold())
++        if x and fold(x) not in seen:
++            seen.add(fold(x))
 +            out.append(x)
 +    return out
++
++
++def broken_cell(text):
++    """True when `text` holds a bar or a line break (any control, line or paragraph separator): it can't be one register cell."""
++    import unicodedata
++    return "|" in text or any(unicodedata.category(c) in ("Cc", "Zl", "Zp") for c in text)
 +
 +
 +def name_problem(name):
@@ -208,7 +237,7 @@ index cf9a5f235..f1911aee8 100644
 +        return "a person needs a name"
 +    if len(name) > 200:
 +        return "a name is at most 200 characters"
-+    if "|" in name or any(ord(c) < 32 for c in name):
++    if broken_cell(name):
 +        return "a name can't hold a bar or a line break"
 +    return None
 +
@@ -248,33 +277,56 @@ index cf9a5f235..f1911aee8 100644
 +    row["needs_details"] = details_missing(row)
 +
 +
++def _person_cells(row):
++    """A person's email is addresses, and their organisation and role each fit one register cell."""
++    for f in PERSON_TEXT:
++        if broken_cell(str(row.get(f) or "")):
++            raise Invalid(f"{f} can't hold a bar or a line break")
++    for e in re.split(r"[,;]", str(row.get("email") or "")):
++        if e.strip() and not EMAIL_RE.fullmatch(e.strip()):
++            raise Invalid(f"{e.strip()!r} isn't an email address")
++
++
 +def _person_fields(row):
-+    """A person's name, email and lists each keep their own rules; returns the name and the aliases."""
++    """A person's name, email, organisation, role and lists each keep their own rules; returns the name and the aliases."""
 +    name = str(row.get("name") or "").strip()
 +    why = name_problem(name)
 +    if why:
 +        raise Invalid(why)
-+    for e in re.split(r"[,;]", str(row.get("email") or "")):
-+        if e.strip() and not EMAIL_RE.fullmatch(e.strip()):
-+            raise Invalid(f"{e.strip()!r} isn't an email address")
++    _person_cells(row)
 +    for f in PERSON_LISTS:
 +        for x in json_list(row.get(f), f):
 +            if name_problem(x) or "," in x:
 +                raise Invalid(f"{f}: {x!r} can't hold a comma, a bar or a line break")
 +            if f.startswith("projects") and not re.fullmatch(CODE_RE, x):
 +                raise Invalid(f"{f}: {x!r} isn't a project code")
-+    return name, json_list(row.get("aliases"))
++    aliases = json_list(row.get("aliases"))
++    placeholder = next((x for x in [name] + aliases if fold(x) in NOT_A_PERSON), None)
++    if placeholder:
++        raise Invalid(f"“{placeholder}” isn't a person's name: leave the owner for later instead")
++    return name, aliases
++
++
++def _person_known_values(con, row, changed):
++    """The labels and project codes being written name a label and a project you have (as the item writer's labels do)."""
++    if "labels" in changed:
++        canonical_labels(con, json_list(row.get("labels")))
++    for f in ("projects_add", "projects_remove"):
++        for code in json_list(row.get(f)) if f in changed else ():
++            if con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone() is None:
++                raise Invalid(f"{f}: {code} isn't one of your projects: add the project first, or leave {code} out")
 +
 +
 +def _person_rules(con, table, row, changed):
 +    """A person's fields, and no name or alias shared with anyone else (never guessed between two people)."""
 +    name, aliases = _person_fields(row)
++    _person_known_values(con, row, changed)
 +    mine = [name] + aliases
-+    if any(a.casefold() == name.casefold() for a in aliases):
++    if any(fold(a) == fold(name) for a in aliases):
 +        raise Invalid(f"{name} can't be their own alias")
 +    for other, o_aliases in con.execute("SELECT name, aliases FROM people WHERE id IS NOT ?", (row.get("id"),)).fetchall():
-+        theirs = {x.casefold() for x in [other] + json_list(o_aliases)}
-+        hit = next((x for x in mine if x.casefold() in theirs), None)
++        theirs = {fold(x) for x in [other] + json_list(o_aliases)}
++        hit = next((x for x in mine if fold(x) in theirs), None)
 +        if hit:
 +            raise Invalid(f"“{hit}” is already {other}'s name or alias: merge the two people, or use another name")
 +
@@ -286,9 +338,13 @@ index cf9a5f235..f1911aee8 100644
 +
 +
 +def carry_person_name(con, old, new, apply_id, via):
-+    """Every item naming `old` (any case, in any of the seven name columns) names `new` instead, each change logged."""
++    """Every item naming `old` (in any case or Unicode form, in any of the seven name columns) names `new` instead, each change
++    logged. Matched in Python (fold), not by SQLite's NOCASE, which folds only A to Z."""
++    want = fold(old)
 +    for t, c in PERSON_COLUMNS:
-+        for r in con.execute(f"SELECT id, {c}, updated_at FROM {t} WHERE trim({c}) = ? COLLATE NOCASE", (old,)).fetchall():
++        for r in con.execute(f"SELECT id, {c}, updated_at FROM {t} WHERE {c} IS NOT NULL").fetchall():
++            if r[1] == new or fold(r[1]) != want:
++                continue
 +            at = now()
 +            con.execute(f"UPDATE {t} SET {c} = ?, updated_at = ? WHERE id = ?", (new, at, r[0]))
 +            log(con, apply_id, t, r[0], c, r[1], new, "update", via)
@@ -320,10 +376,6 @@ index cf9a5f235..f1911aee8 100644
 +    return write_item(con, {**item, "op": "update"}, apply_id, via)
 +
 +
-+def _hide_person(con, item, apply_id, via):
-+    return write_item(con, {**item, "op": "update", "changes": {"hidden": 1}}, apply_id, via)
-+
-+
 +def _merge_person(con, item, apply_id, via):
 +    """`id` goes into `into`: their name and aliases become aliases of `into`, their email, organisation and role fill its gaps,
 +    their lists join its lists, their row goes and every item naming them names `into`. One undo puts all of it back."""
@@ -332,8 +384,7 @@ index cf9a5f235..f1911aee8 100644
 +    if src["id"] == dest["id"]:
 +        raise Invalid("a person can't be merged into themselves")
 +    changes = {f: src[f] for f in ("email", "organisation", "role") if not str(dest[f] or "").strip() and str(src[f] or "").strip()}
-+    aliases = [a for a in json_list(dest["aliases"]) + [src["name"]] + json_list(src["aliases"])
-+               if a.casefold() != dest["name"].casefold()]
++    aliases = [a for a in json_list(dest["aliases"]) + [src["name"]] + json_list(src["aliases"]) if fold(a) != fold(dest["name"])]
 +    joined = {"aliases": aliases, **{f: json_list(dest[f]) + json_list(src[f]) for f in PERSON_LISTS[1:]}}
 +    changes.update({f: xs for f, xs in joined.items() if json_list(xs) != json_list(dest[f])})
 +    delete_row(con, "people", str(src["id"]), src, apply_id, via)
@@ -342,15 +393,15 @@ index cf9a5f235..f1911aee8 100644
 +    return str(dest["id"])
 +
 +
-+PEOPLE_OPS = {"add": _add_person, "rename": _rename_person, "hide": _hide_person, "merge": _merge_person}
++PEOPLE_OPS = {"add": _add_person, "rename": _rename_person, "merge": _merge_person}     # no "hide": hidden is slice 2's
 +
 +
 +def person_names(con):
-+    """{name or alias, case-folded: the person's name}."""
++    """{name or alias, folded: the person's name}."""
 +    out = {}
 +    for name, aliases in con.execute("SELECT name, aliases FROM people ORDER BY id"):
 +        for x in [name] + json_list(aliases):
-+            out.setdefault(x.casefold(), name)
++            out.setdefault(fold(x), name)
 +    return out
 +
 +
@@ -364,10 +415,10 @@ index cf9a5f235..f1911aee8 100644
 +    known = person_names(con) if row is not None else {}
 +    for c in cols if row is not None else ():
 +        name = str(row[c] or "").strip()
-+        if name.casefold() in NOT_A_PERSON or name.casefold() in known or name_problem(name):
++        if fold(name) in NOT_A_PERSON or fold(name) in known or name_problem(name):
 +            continue
 +        write_item(con, {"op": "new", "table": "people", "values": {"name": name}}, apply_id, via)
-+        known[name.casefold()] = name
++        known[fold(name)] = name
 +    return key
 +
 +
@@ -387,11 +438,12 @@ index cf9a5f235..f1911aee8 100644
 +
 +
 +def register_export_text(con):
-+    """The people register as creaite writes it: a note, then one People table the existing readers parse. No Follow column."""
++    """The people register as creaite writes it: a note, then one People table the existing readers parse. No Follow or Hidden
++    column: both are slice 2's private file's."""
 +    rows = [join_cells(EXPORT_COLUMNS), "|" + "|".join("-" * (len(c) + 2) for c in EXPORT_COLUMNS) + "|"]
 +    for p in con.execute("SELECT * FROM people ORDER BY name COLLATE NOCASE, id"):
 +        rows.append(join_cells([p["name"], p["email"], ", ".join(json_list(p["aliases"])), p["organisation"], p["role"],
-+                                "yes" if p["hidden"] else "", ", ".join(json_list(p["labels"])), "yes" if p["is_group"] else "",
++                                ", ".join(json_list(p["labels"])), "yes" if p["is_group"] else "",
 +                                ", ".join(json_list(p["projects_add"])), ", ".join(json_list(p["projects_remove"]))]))
 +    return "\n".join(["# People register", "", EXPORT_NOTE, "", "## People", "", *rows]) + "\n"
 +
@@ -404,14 +456,24 @@ index cf9a5f235..f1911aee8 100644
 +def _people_state():
 +    try:
 +        return json.loads((paths.STAGING / PEOPLE_STATE).read_text(encoding="utf-8"))
-+    except (OSError, ValueError):
++    except (OSError, ValueError):            # no export yet (or a damaged state file): nothing to compare a hand edit with
 +        return {}
 +
 +
-+def export_people(con, keep=False):
++def _keep_register(folder, stem):
++    """A copy of the register as it is now, in `folder` under a free name; its stored path."""
++    folder.mkdir(parents=True, exist_ok=True)
++    kept = paths.free_path(folder, stem, ".md")
++    shutil.copy2(paths.PEOPLE_REGISTER, kept)
++    return kept
++
++
++def export_people(con, first=False):
 +    """Write the register from the people table, when it holds anyone. A register changed since creaite last wrote it (a hand
-+    edit) is kept aside first (the very first time, or with `keep`: system/backups/people-register.before-386.md) and a hand edit
-+    is recorded for Health. Returns None when there is nothing to export, else {"path", "hash", "written", "kept", "hand_edit"}."""
++    edit) is kept aside first (system/backups/files/), and recorded for Health; with no earlier export it is kept as
++    system/backups/people-register.before-386.md. `first`: the move's own export, which kept the old register itself (so a move
++    run again after an Undo is never a hand edit). Returns None when there is nothing to export, else
++    {"path", "hash", "written", "kept", "hand_edit"}."""
 +    if not people_live(con):
 +        return None
 +    text = register_export_text(con)
@@ -419,13 +481,10 @@ index cf9a5f235..f1911aee8 100644
 +    cur = p.read_bytes() if p.is_file() else None
 +    changed = cur != text.encode("utf-8")
 +    kept, hand = None, False
-+    if cur is not None and changed and (keep or hashlib.sha256(cur).hexdigest() != state.get("sha256")):
-+        hand = bool(state.get("sha256")) and hashlib.sha256(cur).hexdigest() != state.get("sha256")
-+        folder = paths.BACKUPS / "files" if hand else paths.BACKUPS
-+        folder.mkdir(parents=True, exist_ok=True)
-+        kept = paths.free_path(folder, f"people-register-hand-edit-{datetime.now():%Y-%m-%d-%H%M%S}", ".md") if hand \
-+            else paths.free_path(folder, PEOPLE_BEFORE[:-3], ".md")
-+        kept.write_bytes(cur)
++    if cur is not None and changed and not first and hashlib.sha256(cur).hexdigest() != state.get("sha256"):
++        hand = bool(state.get("sha256"))
++        kept = _keep_register(paths.BACKUPS / "files", f"people-register-hand-edit-{datetime.now():%Y-%m-%d-%H%M%S}") if hand \
++            else _keep_register(paths.BACKUPS, PEOPLE_BEFORE[:-3])
 +        if hand:
 +            state["hand_edit"] = {"at": now(), "kept": paths.rel(kept)}
 +            print(f"Note: the people register was edited by hand; that copy is kept as {paths.rel(kept)} and the register is made "
@@ -454,12 +513,16 @@ index cf9a5f235..f1911aee8 100644
 +
 +
 +def _reverse_people_register(rec, report):
-+    """Undo of migrate-people: the register file as it was before the first export."""
++    """Undo of migrate-people: the register file as it was before the move (the copy the move kept)."""
 +    p = paths.resolve(rec["path"])
-+    if p.exists() and file_hash(p) != rec["hash"]:
++    kept = paths.resolve(rec["kept"]) if rec.get("kept") else None
++    now_hash = file_hash(p)
++    if kept is not None and now_hash == file_hash(kept):
++        return                                   # the export never landed: the old register is still there
++    if now_hash is not None and now_hash != rec["hash"]:
 +        report.append(f"skipped {rec['path']}: changed since")
-+    elif rec.get("kept"):
-+        shutil.copy2(paths.resolve(rec["kept"]), p)
++    elif kept is not None:
++        shutil.copy2(kept, p)
 +    else:
 +        p.unlink(missing_ok=True)
 +
@@ -468,23 +531,93 @@ index cf9a5f235..f1911aee8 100644
 +
 +
 +# ---------- migrate-people: the register file becomes the table, once ----------
-+def _register_people():
-+    """The register's rows in propose's parser shape, or [] when there is no register."""
-+    if not paths.PEOPLE_REGISTER.is_file():
-+        return []
-+    import propose                               # lazily: propose imports tracker
-+    return propose.people_parse(paths.PEOPLE_REGISTER.read_text(encoding="utf-8"))
-+
-+
-+def _follow_left(rows):
-+    """True when the register still holds who is followed (a Follow or VIP value) and the private file hasn't taken it."""
-+    marked = [r for r in rows if str((r.get("extra") or {}).get("Follow") or (r.get("extra") or {}).get("VIP") or "").strip().lower()
-+              not in ("", "no", "n", "false", "0", "-")]
++def private_moved():
++    """Whether slice 2's one-time move of who is followed and hidden has run: people_private.moved() (its file says when, or its
++    tombstone does). Read the same way here while people_private.py isn't installed."""
++    try:
++        import people_private
++    except ImportError:
++        people_private = None
++    if people_private is not None:
++        return bool(people_private.moved())
 +    try:
 +        moved = json.loads((paths.STAGING / "people-private.json").read_text(encoding="utf-8")).get("moved")
-+    except (OSError, ValueError, AttributeError):
++    except (OSError, ValueError, AttributeError):     # no private file, or not one: not moved (unless the tombstone says so)
 +        moved = None
-+    return bool(marked) and not moved
++    return bool(moved) or (paths.STAGING / "people-private.json.moved").is_file()
++
++
++PRIVATE_LEFT = "private"
++
++
++def _row_loss(cols, cells, moved):
++    """What the move couldn't carry from one People row (reasons without names)."""
++    why = []
++    if len(cells) > len(cols) and any(cells[len(cols):]):
++        why.append("a row has more cells than the header")
++    row = dict(zip(cols, cells + [""] * len(cols)))
++    if not row.get("Full name", "").strip() and any(cells):
++        why.append("a row has no full name")
++    for c, v in ((c, v.strip()) for c, v in row.items() if v.strip()):
++        if c == "Group" and fold(v) not in YES + NO:
++            why.append("a Group value isn't yes or blank")
++        elif c in PRIVATE_COLUMNS and fold(v) not in NO and not moved:
++            why.append(PRIVATE_LEFT)
++        elif c not in EXPORT_COLUMNS and c not in PRIVATE_COLUMNS:
++            why.append(f"its {c or 'unnamed'} column has values")
++    return why
++
++
++def register_loss(text, moved):
++    """What the move couldn't carry from the register text, as reasons without names ([] when it carries everything). It carries
++    the People table's rows in the export's columns; the Follow, VIP and Hidden columns are slice 2's (empty, or already moved into
++    its private file: `moved`, then their values are its); the template's guidance lines are replaced by the export's note.
++    Anything else (another column with values, another section or table, a free note, a row with no name or longer than the
++    header, a table without the line under its header) is never dropped: the move refuses instead."""
++    import propose
++    lines = text.splitlines()
++    found = propose.people_table(lines)
++    why, table_at = [], set()
++    if found:
++        head, rows_at = found
++        table_at = {head, head + 1, *rows_at}
++        cols = propose.split_row(lines[head])
++        if "Full name" not in cols or len(set(cols)) != len(cols):
++            why.append("its People table has no Full name column, or two columns with one name")
++        if head + 1 >= len(lines) or not SEPARATOR.fullmatch(lines[head + 1].strip()):
++            why.append("its People table has no line under the header")
++        for i in rows_at:                        # a row with anything in it and no name is refused, so rows never become no one
++            why += _row_loss(cols, propose.split_row(lines[i]), moved)
++    for i, line in enumerate(lines):
++        s = line.strip()
++        if i not in table_at and s and s not in REGISTER_HEADINGS and not s.startswith(REGISTER_GUIDE):
++            why.append("it has text outside the People table (a note, another section or another table)")
++            break
++    return list(dict.fromkeys(why))
++
++
++def pending_register_write():
++    """The file name of a staged proposal that still writes the people register (an old-style edit from the page or propose.py,
++    not yet applied or rejected), or None: after the move that write would stop every full apply."""
++    for p in sorted(paths.STAGING.glob("proposed-*.json")):
++        try:
++            data = json.loads(p.read_text(encoding="utf-8"))
++        except (OSError, ValueError):            # an unreadable proposal can't be applied either: it writes nothing
++            continue
++        for blk, field in blocks(data) if isinstance(data, dict) else ():
++            if blk.get("applied") or blk.get(field) == "rejected":
++                continue
++            for fop in blk.get("file_ops") or []:
++                if isinstance(fop, dict) and fop.get("op") == "write" and _writes_register(fop.get("path")):
++                    return p.name
++    return None
++
++
++def _writes_register(rel):
++    try:
++        return bool(rel) and is_people_register(paths.resolve(rel).resolve())
++    except (OSError, ValueError, RuntimeError):     # a path that can't be resolved can't be the register
++        return False
 +
 +
 +def register_problems(rows):
@@ -492,7 +625,7 @@ index cf9a5f235..f1911aee8 100644
 +    rows_of = {}
 +    for i, r in enumerate(rows):
 +        for x in [r["name"]] + list(r.get("aliases") or []):
-+            rows_of.setdefault(x.casefold(), (x, set()))[1].add(i)
++            rows_of.setdefault(fold(x), (x, set()))[1].add(i)
 +    return [f"“{x}” is the name or alias of {len(at)} rows" for x, at in rows_of.values() if len(at) > 1]
 +
 +
@@ -500,7 +633,7 @@ index cf9a5f235..f1911aee8 100644
 +    x = r.get("extra") or {}
 +    split = lambda v: [c.strip() for c in str(v or "").split(",") if c.strip()]   # noqa: E731
 +    return {"name": r["name"], "email": r.get("email") or None, "aliases": r.get("aliases") or [], "organisation": r.get("org") or None,
-+            "role": r.get("role") or None, "hidden": 1 if r.get("hidden") else 0, "labels": r.get("labels") or [],
++            "role": r.get("role") or None, "is_group": 1 if fold(x.get("Group")) in YES else 0, "labels": r.get("labels") or [],
 +            "projects_add": split(x.get("Projects")), "projects_remove": split(x.get("Left projects"))}
 +
 +
@@ -509,81 +642,128 @@ index cf9a5f235..f1911aee8 100644
 +    out = {}
 +    for t, c in PERSON_COLUMNS:
 +        for (v,) in con.execute(f"SELECT trim({c}) FROM {t} WHERE trim(COALESCE({c}, '')) <> '' ORDER BY id"):
-+            if v.casefold() not in NOT_A_PERSON and not name_problem(v):
-+                out.setdefault(v.casefold(), v)
++            if fold(v) not in NOT_A_PERSON and not name_problem(v):
++                out.setdefault(fold(v), v)
 +    ident = str((paths.load_settings().get("identity") or {}).get("name") or "").strip()
 +    if ident and not name_problem(ident):
-+        out.setdefault(ident.casefold(), ident)       # Alan is in the export (Alan, 27-10-2026)
++        out.setdefault(fold(ident), ident)       # Alan is in the export (Alan, 27-10-2026)
 +    return list(out.values())
 +
 +
-+def _migration_refusal(rows):
-+    """Why the register can't be moved as it is (an ambiguity, or who is followed still only in it), or None."""
++def _migration_refusal(text, rows):
++    """Why the register can't be moved as it is, or None: a register edit still waiting in Review, who is followed or hidden still
++    only in the register, something the move can't carry, or an ambiguity."""
++    pending = pending_register_write()
++    if pending:
++        return (f"People not moved: a change to the people register is still waiting in Review ({pending}). Apply or reject it "
++                "first, then move people.")
++    loss = register_loss(text, private_moved()) if text is not None else []
++    if PRIVATE_LEFT in loss:
++        return ("People not moved: who you follow or hide is still only in the register. Move it to its private file first "
++                "(Settings › Health), so it isn't lost.")
++    if loss:
++        return "\n  ".join(["People not moved: the register holds something the move can't carry, and creaite never drops "
++                            "anything. Change it in the register first, then move people:", *loss])
 +    problems = register_problems(rows)
 +    if problems:
 +        return "\n  ".join(["People not moved: the register is ambiguous, and creaite never guesses. Fix these in Settings › People "
 +                            "first:", *problems])
-+    if rows and _follow_left(rows):
-+        return ("People not moved: who you follow is still only in the register. Start a new session first, which moves who you "
-+                "follow to its private file, so it isn't lost.")
 +    return None
 +
 +
 +def _write_migration(con, rows, extra):
-+    """The register's rows and the names from items as people, in one apply; its apply_id, or None (nothing written)."""
-+    con.execute("BEGIN IMMEDIATE")
++    """The register's rows and the names from items as people, in one apply, with the register's own record (the copy kept, the
++    export's hash) written before the COMMIT, so Undo puts the old register back even if the export then fails. Its apply_id, or
++    None (nothing written)."""
 +    try:
++        con.execute("BEGIN IMMEDIATE")
 +        apply_id = con.execute("INSERT INTO applies (at, proposals, file_ops) VALUES (?, ?, ?)", (now(), "[]", "[]")).lastrowid
 +        for values in [_person_from_row(r) for r in rows] + [{"name": n} for n in extra]:
 +            try:
 +                write_item(con, {"op": "new", "table": "people", "values": values}, apply_id, PEOPLE_VIA)
 +            except Invalid as e:
-+                raise Invalid(f"{values['name']}: {e}") from e
++                raise Invalid(f"{values['name']}: {e}. Change {values['name']}'s row in the people register, or add what is "
++                              "missing first, then run the move again.") from e
++        text = register_export_text(con)
++        kept = paths.rel(_keep_register(paths.BACKUPS, PEOPLE_BEFORE[:-3])) if paths.PEOPLE_REGISTER.is_file() else None
++        rec = {"op": "people-register", "path": paths.rel(paths.PEOPLE_REGISTER),
++               "hash": hashlib.sha256(text.encode("utf-8")).hexdigest(), "kept": kept}
++        con.execute("UPDATE applies SET file_ops = ? WHERE apply_id = ?", (json.dumps([rec]), apply_id))
 +        con.execute("COMMIT")
 +        return apply_id
-+    except (Invalid, sqlite3.Error) as e:
-+        con.execute("ROLLBACK")
++    except (Invalid, sqlite3.Error, OSError) as e:
++        if con.in_transaction:
++            con.execute("ROLLBACK")
 +        print(f"People not moved; nothing was written. {e}")
 +        return None
 +
 +
-+def _export_migration(con, apply_id):
-+    """The first export after the move, recorded on its apply so an undo puts the old register back."""
-+    out = export_people(con, keep=True)
-+    if out and out["written"]:
-+        con.execute("UPDATE applies SET file_ops = ? WHERE apply_id = ?",
-+                    (json.dumps([{"op": "people-register", "path": out["path"], "hash": out["hash"], "kept": out["kept"]}]),
-+                     apply_id))
-+    return out
-+
-+
 +def cmd_migrate_people(args):
-+    """Move the people register into the people table as one apply: every row with every column (Projects and Left projects
-+    become projects_add and projects_remove), then each name on an item, and Alan, that is no one's name or alias
-+    (needs_details 1). Then the register is made from the table. Stops, changing nothing, on an ambiguity or while who is
-+    followed is still only in the register. Run again it only adds new names from items. --dry-run prints counts only."""
-+    dry = "--dry-run" in args
-+    con = connect()
-+    if not people_table_exists(con):
-+        print("There is no people table yet: bring the record up to date first (say \"repair creaite\").")
++    """Move the people register into the people table as one apply: every row in the export's columns (Projects and Left projects
++    become projects_add and projects_remove, Group is_group), then each name on an item, and Alan, that is no one's name or alias
++    (needs_details 1). Then the register is made from the table. Stops, changing nothing, while a register edit waits in Review,
++    while who is followed or hidden is still only in the register, on anything it can't carry, and on an ambiguity. Run again it
++    only adds new names from items. --dry-run prints counts only, and writes nothing."""
++    try:
++        return _migrate_people("--dry-run" in args)
++    except sqlite3.OperationalError as e:
++        busy = "locked" in str(e) or "busy" in str(e)
++        print("People not moved; nothing was written. " + ("The record is busy (another save is running): try again in a minute."
++                                                            if busy else f"The record can't be read ({type(e).__name__})."))
 +        return 1
-+    rows = [] if people_live(con) else _register_people()
-+    why = _migration_refusal(rows)
-+    if why:
-+        print(why)
-+        return 1
-+    known = {x.casefold() for r in rows for x in [r["name"]] + list(r.get("aliases") or [])} | set(person_names(con))
-+    extra = [n for n in item_people_names(con) if n.casefold() not in known]
-+    if dry or not (rows or extra):
-+        print(f"People to move: {len(rows)} from the register, {len(extra)} from items (needs details)."
-+              + (" Nothing written." if dry else " Nothing to do."))
-+        return 0
-+    backup = backup_db("migrate-people")
-+    apply_id = _write_migration(con, rows, extra)
-+    if apply_id is None:
-+        return 1
-+    out = _export_migration(con, apply_id)
-+    con.close()
++
++
++def _register_now(con):
++    """(text, why) of the register before the move: its text (None when there is none, or once the table is in use) and why it
++    can't be read, or None."""
++    if people_live(con) or not paths.PEOPLE_REGISTER.is_file():
++        return None, None
++    try:
++        return paths.PEOPLE_REGISTER.read_text(encoding="utf-8"), None
++    except (OSError, ValueError):
++        return None, "People not moved; nothing was written. The people register can't be read."
++
++
++def _first_export(con):
++    """The move's own export, right after its COMMIT; a failure is noted (the next save writes it, and Undo still works)."""
++    try:
++        return export_people(con, first=True)
++    except OSError as e:
++        debuglog.exception("tracker", "migrate-people: the first export failed")
++        print(f"Note: the people register wasn't written yet ({type(e).__name__}); it is written at your next save, and "
++              "Undo still puts the old one back.")
++        return None
++
++
++def _to_move(con):
++    """(the register's rows, the names from items that are no one's, why the move can't run or None)."""
++    text, why = _register_now(con)
++    import propose                               # lazily: propose imports tracker
++    rows = propose.people_parse(text) if text else []
++    why = why or (None if people_live(con) else _migration_refusal(text, rows))
++    known = {fold(x) for r in rows for x in [r["name"]] + list(r.get("aliases") or [])} | set(person_names(con))
++    return rows, [n for n in item_people_names(con) if fold(n) not in known], why
++
++
++def _migrate_people(dry):
++    from contextlib import closing
++    with closing(connect()) as con:
++        if not people_table_exists(con):
++            print("There is no people table yet: bring the record up to date first (say \"repair creaite\").")
++            return 1
++        rows, extra, why = _to_move(con)
++        if why:
++            print(why)
++            return 1
++        if dry or not (rows or extra):
++            print(f"People to move: {len(rows)} from the register, {len(extra)} from items (needs details)."
++                  + (" Nothing written." if dry else " Nothing to do."))
++            return 0
++        backup = backup_db("migrate-people")
++        apply_id = _write_migration(con, rows, extra)
++        if apply_id is None:
++            return 1
++        out = _first_export(con)
 +    debuglog.info("tracker", f"migrate-people: apply {apply_id}, {len(rows)} from the register, {len(extra)} from items; "
 +                             f"backup {paths.rel(backup)}")
 +    print(f"People moved (save {apply_id}): {len(rows)} from the register, {len(extra)} from items (needs details). "
