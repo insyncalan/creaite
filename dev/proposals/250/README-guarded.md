@@ -1,6 +1,8 @@
 # #250 guarded diffs G3 and G4 (2.6.10)
 
-G3 is at **revision 2** (sha256 `920b91643838b92529ef19f8163c8b4c41095e7c986832fe98ce0ca0d098ed85`): `answered` also needs the stream's `result` event (not `is_error`) and a non-empty final answer, in the helper `Run._answered(proc, final)`. Revision 1 (`fb93369c...`) let an exit 0 with no answer write.
+G3 is at **revision 3** (sha256 `1082cb3f0a787884fbfe4d81302075821787f2a674c2b91504b1d9d35398960c`): Alan's "fetch B" (27-10-2026). `Run.FETCH_RUNS = ("typed", "catchup")` is the named list; `_start` takes `fetch_as`, given only at the two typed-sweep starts (the panel's and a queued one, `fetch_as="typed"`) and at `start_catchup` (`fetch_as="catchup"`, Close the day's catch-up); `_fetch_for(kind, sweep, fetch_as)` fetches only for a name on the list on its own run ("typed" with `sweep is True`, "catchup" with kind "sweep"). Any other run, a scheduled or a new kind of sweep among them, never fetches. The scheduled 07:00 task runs cx-sweep in the desktop app, not through the live server, so it never reached this code anyway; the list makes a future server-started sweep fetch-free by default. Revision 2 (`920b9164…`) fetched for any sweep run.
+
+Revision 2's change, kept: `answered` also needs the stream's `result` event (not `is_error`) and a non-empty final answer, in the helper `Run._answered(proc, final)`. Revision 1 (`fb93369c...`) let an exit 0 with no answer write.
 
 Patch files only; nothing guarded is edited in a commit. Chain: `dev/proposals/GUARDED-2.6.10.chain` (not pinned, no marked commit). Order: G1, G2, G3, G4.
 Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on branch `v269-g12`.
@@ -14,7 +16,8 @@ Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on
 
 ## G3: what it does (all inside `class Run`, one block `# ===== #250 ... end #250 =====`, plus four one-line hooks)
 
-- `_start`: `self.fetch = self._fetch_for(kind, sweep)`. `_fetch_for` returns `transcripts.SweepFetch()` for a sweep run (`kind == "sweep"`) that is interactive only (rev 3: a typed sweep, or Close the day's catch-up; never the session-start catch-up in Claude Code or the scheduled run; Alan, 27-10-2026) when `transcripts.fetch_on()` (setting exactly true); else `None`. A construction fault gives `None` (logged by name).
+- `_start`: `self.fetch = self._fetch_for(kind, sweep)`. `_fetch_for` returns `transcripts.SweepFetch()` for a sweep run (`kind == "sweep"`, the catch-up and
+  Close the day, or a typed sweep) when `transcripts.fetch_on()` (setting exactly true); else `None`. A construction fault gives `None` (logged by name).
 - `_on_tool_result`: `self._fetch_observe(part)`. The helper hands `observe(name, input, text, is_error)` only the `read_resource` results (the tool name is
   `transcripts.FETCH_TOOLS[1]`, exact), the text being the server's own copy; a fault is logged by name and the reader goes on.
 - `read()`: after the closure steps and `_finish_job`, before `_done()`: `self._fetch_finish(proc, final)`. `answered` (`Run._answered`, rev 2) = not stopped, not timed out, not failed,
@@ -23,7 +26,11 @@ Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on
 - No new tool, no `--add-dir`, no allow rule, `KIND_TOOLS` unchanged, no `sweep.py done`, no `sweep-fetched.json`; counts only in the line.
 - Complexity: `_on_tool_result` gains no branch; `check.py` clean (the long-line count stays at the limit).
 
-## G4: the rules bullet (revision 2, sha256 `42a90418a4045f3ad2d71cfd93340fc9bfda74c7d338f30c92772f1f873b52f4`; revision 1 was `8552df1bfa8d8166fbc4dcc1998a20b80f18ea680e3c2cb80de4881f8712f7be`)
+## G4: the rules bullet (revision 3, sha256 `5afc1f06b5444e47725c26a82960498b1f8bbfc67b3d1f71fe89bc5dcd234983`; 885 bytes)
+
+Revision 3 (Alan, 27-10-2026, and Cap's 07:04 notes): only an interactive sweep fetches (a typed sweep, Close the day's catch-up), "unattended runs never fetch a transcript (Alan, 27-10-2026)" (six words, so `test_rules_retained_338` finds the never clause in the rules themselves); into `inbox/` "without a card"; sentence 3 is Cap's (held back if the saved calendar or the event as read says anything but normal, if a confidential meeting, or a private one with times, overlaps it, or if its time can't be matched); staging's `transcripts.json` lists "event IDs, status, transcript reference, times, counts". Still left out of both sides of the half-size check, so the margin is unchanged.
+
+### Revision 2 (sha256 `42a90418a4045f3ad2d71cfd93340fc9bfda74c7d338f30c92772f1f873b52f4`; revision 1 was `8552df1bfa8d8166fbc4dcc1998a20b80f18ea680e3c2cb80de4881f8712f7be`)
 
 One bullet, "Transcripts fetched by a sweep (#250)", before the Assistant bullet, 625 bytes (revision 1: 1,099). Revision 2 matches the code (Cap's review):
 off by default (exactly true); the live server writes the transcripts a sweep run **read** into `inbox/`, only once the run has answered; held back unless the saved
