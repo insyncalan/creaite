@@ -28,3 +28,12 @@ A piece of text is asked about when it names a held item's ID or row ref (any ca
 - A Sensitive item removed from the minutes: lines held back with it stay out (fail closed), but nothing asks about lines that
   described it.
 - Hand-written saves (a record edited on disk) can set `layout.carried`, `layout.reviewed` or `layout.plain` directly.
+
+## Stated rule: when a kept answer is asked again (Jarvis, 27-10-2026)
+
+- A **Keep** stores the hash of the words and the held items the text matched when it was kept (`kept_value`: `<hash>|<refs>`,
+  hashes and refs only). The text is asked again when its words change, or when it matches a held item that isn't among those
+  refs: a newly Sensitive item it describes. A Keep was a judgement about the items held then, not about later ones.
+- When a matched item **stops** being held (it is no longer Sensitive), the Keep stays valid and nothing is asked: that can't
+  leak, since less is held back than when Alan answered.
+- A Keep from before this rule (the hash alone) names no items, so it is asked again once.
