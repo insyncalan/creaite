@@ -5,6 +5,7 @@ the committed dev/design-system/gallery.html, so dropping any of them fails. Two
 Run: python3 dev/tests/test_design_system_snapshots_344.py   (the Chrome part needs Google Chrome; two tool runs, about 30 seconds)
 """
 import importlib.util
+import os
 import re
 import subprocess
 import sys
@@ -131,6 +132,15 @@ class SnapshotTool(unittest.TestCase):
         for n in names:
             self.assertEqual((a / n).read_bytes(), (b / n).read_bytes(), n)
         self.assertNotIn("creaite-test-", self.gallery)
+
+    def test_the_clock_is_pinned(self):
+        """Under the tool's pinned clock (CREAITE_NOW, default 09:00) the page's own time and the sample stamps show that time."""
+        hhmm = (os.environ.get("CREAITE_NOW") or "YYYY-MM-DD 09:00")[11:16]
+        today = (self.out / "pages" / "today.html").read_text() + (self.out / "pages" / "activity.html").read_text()
+        self.assertIn("Updated " + hhmm + ".", today)
+        stamps = re.findall(r"10-10-2026 (\d{2}:\d{2})", today)
+        self.assertTrue(stamps)
+        self.assertEqual(set(stamps), {hhmm})
 
     def test_no_review_page(self):
         self.assertFalse((self.out / "pages" / "review.html").exists())

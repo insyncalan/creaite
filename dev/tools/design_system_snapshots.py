@@ -13,6 +13,7 @@ Uses the UI audit's throwaway vault and headless Chrome (cdp.py); development on
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -77,7 +78,7 @@ def main():
     os.environ.setdefault("CREAITE_NOW", date.today().isoformat() + " 09:00")
     import proc_guard
     import ui_audit
-    from test_dashboard import page_clock_js
+    from test_dashboard import STAMP_DAY, page_clock_js
     from cdp import Browser
     (out / "pages").mkdir(parents=True, exist_ok=True)
     (out / "shots").mkdir(parents=True, exist_ok=True)
@@ -94,12 +95,15 @@ def main():
             + ". Alt+D toggles dark. Copy this file to start a mockup; see ../README.md.")
     v, proc, base = ui_audit.start_server()
     roots = sorted({str(v.root), str(Path(v.root).resolve())}, key=len, reverse=True)
+    shown_day = "-".join(reversed(STAMP_DAY.split("-")))           # the sample applies' day, as the page shows it
+    stamp = re.compile(re.escape(shown_day) + r" \d{2}:\d{2}\b")
 
     def scrub(html):
-        """The throwaway vault's path (in the alert's restart command) becomes a placeholder, so two runs write the same bytes."""
+        """Two runs write the same bytes: the throwaway vault's path (the alert's restart command) becomes a placeholder, and the
+        sample applies' stamps (STAMP_DAY with the real time of day, as tracker.now() keeps it) take the pinned clock's time."""
         for r in roots:
             html = html.replace(r, "/path/to/vault")
-        return html
+        return stamp.sub(shown_day + " " + os.environ["CREAITE_NOW"][11:16], html)
     try:
         b = Browser(1400, 1000)
         try:
