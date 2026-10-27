@@ -13,6 +13,9 @@
 
 ## How the move happens
 
+- Until the move, people can't be added or changed one by one in the project record: a save that tries is held in Review with
+  "run the move first", and nothing is written, so the people register is never replaced before the move.
+
 - Ships together: the change that makes Settings › People and propose.py save people as people items (not as register edits) is in
   the same release as the people table, and lands before anyone moves people. The table never ships without it.
 

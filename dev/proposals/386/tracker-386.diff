@@ -1,5 +1,5 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index cf9a5f235..40edd38ba 100644
+index cf9a5f235..0670ee767 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -15,6 +15,7 @@ Commands (run from anywhere; every location comes from paths.py):
@@ -35,7 +35,7 @@ index cf9a5f235..40edd38ba 100644
          return archive_project(con, item, apply_id, via)       # BL-09
      if op == AGE_OP:
          return archive_item(con, item, apply_id, via)          # BL-10
-+    if table == "people" and op in PEOPLE_OPS:
++    if table == "people" and people_op(con, op, via):
 +        return PEOPLE_OPS[op](con, item, apply_id, via)        # #386
      refuse_archived_field(item)
      if op not in ("new", "update", "cancel"):
@@ -140,7 +140,7 @@ index cf9a5f235..40edd38ba 100644
      broken = con.execute("PRAGMA foreign_key_check").fetchall()
      if broken:
          raise Invalid(f"the recode would leave {len(broken)} broken link(s) between items")
-@@ -5005,5 +5023,635 @@ def recode_barrier(work):
+@@ -5005,5 +5023,646 @@ def recode_barrier(work):
      return [(p, d)]
  
  
@@ -159,6 +159,8 @@ index cf9a5f235..40edd38ba 100644
 +PERSON_TEXT = ("organisation", "role")       # one register cell each: no bar, no line break
 +NOT_A_PERSON = ("", "tbc", "tbd", "unknown", "n/a", "none")
 +PEOPLE_VIA = "migrate-people"
++EMPTY_PEOPLE = ("people aren't kept in your project record yet: run the move first (Settings › Health, \"Move people into the "
++                "tracker\", or tracker.py migrate-people --dry-run to see what moves). Nothing was written.")
 +PEOPLE_STATE = "people-export.json"          # in system/staging/: the sha256 of the register creaite last wrote; the last hand edit
 +PEOPLE_BEFORE = "people-register.before-386.md"     # in system/backups/: the register as it was before the first export
 +# The export's columns; the move carries exactly these from the register. client_leak reads the file's Aliases cell by its
@@ -394,6 +396,15 @@ index cf9a5f235..40edd38ba 100644
 +
 +
 +PEOPLE_OPS = {"add": _add_person, "rename": _rename_person, "merge": _merge_person}     # no "hide": hidden is slice 2's
++
++
++def people_op(con, op, via):
++    """Whether a people op is one of PEOPLE_OPS. Rev 2c (Banner's re-check): every people op is refused while the table is empty,
++    but the move's own (via migrate-people): its export would otherwise replace the register, and what the move guards (who is
++    followed or hidden, what it can't carry) with a table of one."""
++    if via != PEOPLE_VIA and not people_live(con):
++        raise Invalid(EMPTY_PEOPLE)
++    return op in PEOPLE_OPS
 +
 +
 +def person_names(con):

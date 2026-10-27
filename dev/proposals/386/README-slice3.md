@@ -5,10 +5,29 @@ Three guarded patches, NOT applied on any branch. Apply them only after review a
 | Diff | File | sha256 (rev 2) |
 |---|---|---|
 | `schema-386.diff` (G-a) | `system/scripts/schema.sql` | `2a3aa690308cd5e7ca09c957c04934cd79eb69fc1b7855717046fb799e778739` |
-| `tracker-386.diff` (G-b) | `system/scripts/tracker.py` | `7a295be7a5fb53e046cc96eb834f2462f92dcd39e3c04d07f340128008eb8c45` (rev 2b) |
+| `tracker-386.diff` (G-b) | `system/scripts/tracker.py` | `575022c3a85a9124838c2c2ec58a2b393c8cc9bbac27a1ed67769dd2d754b28f` (rev 2c) |
 | `reach-386.diff` (G-b2, one line) | `system/scripts/reach.py` | `2bdd0a4e387fbe2fda8b1d9239ad4fcd8973f57644b73bca4ec64a97b65b0f9f` (unchanged) |
 
 Base: v2.6.9 release `0b637e926`. Chain: `GUARDED-386-s3.chain` (not pinned; `dev/tests/guarded_chain.py` is unchanged).
+
+## Rev 2c (27-10-2026): no people op before the move (Banner's re-check, HIGH)
+
+`tracker-386.diff` only: `7a295be7a5fb53e046cc96eb834f2462f92dcd39e3c04d07f340128008eb8c45` (rev 2b) → `575022c3a85a9124838c2c2ec58a2b393c8cc9bbac27a1ed67769dd2d754b28f` (rev 2c); schema and reach unchanged.
+
+- **The finding:** one people `new` op (any people op) applied while the table was empty filled it with one row, and the export
+  after that apply replaced the register (Follow, Hidden and everything the move refuses to drop) with that one row, beyond Undo
+  or the move. Under the hard condition (the ordinary half stages people items) that would be the first People-page save.
+- **The fix:** while the people table is empty, every people op (`new`, `add`, `update`, `rename`, `merge`, `cancel`, and any other)
+  is held in Review, nothing written: "people aren't kept in your project record yet: run the move first (Settings › Health,
+  "Move people into the tracker", or tracker.py migrate-people --dry-run to see what moves). Nothing was written." Only the move's
+  own writes (via `migrate-people`) fill an empty table (`people_op`, called from `write_item`).
+- **Auto-add is covered already:** a name on an item adds a person only once the table holds anyone (`add_named_people` checks
+  `people_live`); `test_an_unknown_owner_adds_no_one_before_the_move` pins it, the register's bytes unchanged.
+- **Failing tests first** (commit `1564d224e`, 2 failures against rev 2b): `EmptyTable.test_no_people_op_before_the_move` (Banner's
+  case: REG with Follow and Hidden, seven people ops, every one held, the table empty, the project files byte for byte, and the
+  move still refusing) and `..._without_a_register`. Writer's tests now run after a move. 46 tests.
+- **Mutants for the guard, 3 run, 3 killed:** the guard off; "no table" instead of "an empty table"; the move's own writes refused too.
+- **The ordinary half** must stage people items only after the move, or show the refusal (it is held, never lost).
 
 ## Rev 2b (27-10-2026): the label and project refusals say which, whose and how
 
@@ -56,7 +75,7 @@ What changed, finding by finding:
   writes the register (`regSave`, `propose.py people`), the move and its dry run refuse: "a change to the people register is still
   waiting in Review (<proposal file>). Apply or reject it first." So the move never makes such a write block every later apply.
 - **MEDIUM 4, gating.** `dev/tests/test_people_table_386.py` skips with no diff applied
-  (`OK (skipped=40)` since rev 2b), fails for every partial combination (`AllOrNone`, plus the tests themselves), and passes with all three. Markers: schema.sql's `-- People (#386)`,
+  (`OK (skipped=44)` since rev 2c), fails for every partial combination (`AllOrNone`, plus the tests themselves), and passes with all three. Markers: schema.sql's `-- People (#386)`,
   tracker.py's slice 3 banner, reach.py's migrate-people comment (so reach-386.diff needs no change).
 - **LOWs, all fixed:**
   - names compare by `fold()` (NFC, spaces collapsed, `casefold`), in Python, everywhere: rename and merge carry across the seven
@@ -167,8 +186,8 @@ never writes the private file, never strips the register's columns itself, and n
 Throwaway worktrees off the branch (its guarded files are 0b637e926's), never the branch itself:
 
 - `git apply --check` of each diff alone on `0b637e926`, all three in all six orders, then `git apply -R`: clean.
-- `dev/tests/test_people_table_386.py` (42 tests since rev 2b):
-  - none applied (the branch): OK, 40 skipped;
+- `dev/tests/test_people_table_386.py` (46 tests since rev 2c):
+  - none applied (the branch): OK, 44 skipped;
   - schema only: FAILED; tracker and reach only: FAILED; every other partial combination: FAILED;
   - all three: OK;
   - against rev 1 with all three applied: 29 failures (the failing-first run).
