@@ -597,6 +597,21 @@ class VaultReview(Base):
         self.assertTrue(f["ok"], f)
         self.assertIn(PROBE, [i["t"] for i in f["items"]])
 
+    def test_a_keep_is_asked_again_at_export_when_a_newly_sensitive_item_matches_it(self):
+        """Jarvis's ruling on Cap's re-check MEDIUM, through the real export: everything kept, then the action is flagged Sensitive
+        too; the title shares its words, so the export warns again (and lists the title) instead of sharing it."""
+        self.assertTrue(self.approve()["ok"])
+        answers = [{"key": x["key"], "answer": "keep"} for x in self.export()["review"]]
+        self.assertTrue(self.answer(answers, self.filed)["ok"])
+        self.assertTrue(self.export()["ok"], "kept against the risk alone: shared")
+        self.assertTrue(self.js("import creaite_doc, paths\n"
+                                f"p = paths.resolve({self.filed!r}); d = creaite_doc.read({self.filed!r})\n"
+                                "next(i for r, i in d['items'].items() if i.get('table') == 'actions')['flags'] = ['sensitive']\n"
+                                "p.write_text(creaite_doc.dumps(d), encoding='utf-8')\nprint(json.dumps(True))"))
+        r = self.export()
+        self.assertFalse(r["ok"], "a newly held item matches what was kept: asked again")
+        self.assertIn("title", {x["key"] for x in r["review"]}, r["review"])
+
     def test_a_draft_holds_the_row_in_its_layout_and_the_email_leaves_it_out(self):
         r = self.email(self.draft)
         row = next(x for x in r["review"] if x["kind"] == "row")
