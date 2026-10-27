@@ -7,11 +7,11 @@
 # landed, and slice 1 has Cap's has_table() fix ("has rows"). migrate and update never run migrate-people by themselves: Alan starts
 # it from Health ("Move people into the tracker"), after a dry-run count, with a backup first.
 #
-# G-a: the people table
+# G-a: the people table (sha256 60c4c3e9318fb7c8a946d0d47867b640fb373002052afa1d4db1c41cdee75e85)
 dev/proposals/386/schema-386.diff
-# G-b: people ops, rename and merge across the seven name columns, auto-add, the register export, migrate-people
+# G-b (sha256 70fc4eacb895b3558779c2ed9f41fcc7862ca4bc6788498b3b33a9dff57affec): people ops, rename and merge across the seven name columns, auto-add, the register export, migrate-people
 dev/proposals/386/tracker-386.diff
-# G-b2: tracker.py migrate-people classified as a record command (BL-267)
+# G-b2 (sha256 2bdd0a4e387fbe2fda8b1d9239ad4fcd8973f57644b73bca4ec64a97b65b0f9f): tracker.py migrate-people classified as a record command (BL-267)
 dev/proposals/386/reach-386.diff
 #
 # Not guarded (ordinary commits on the branch): dev/tests/test_people_table_386.py, dev/tests/test_writer_pinned.py,
