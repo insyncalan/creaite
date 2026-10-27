@@ -188,6 +188,8 @@ class Gaps(IntakeBase):
         self.assertEqual(b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"] .irright').textContent"), "ready")
         b.eval(f"document.querySelector('[data-irv=two] tr[data-irm=\"{rid}\"]').click()")
         b.wait(f"document.querySelector('[data-irdet]').dataset.irdet==={json.dumps(rid)}")
+        cur = "[...document.querySelectorAll('[data-irv=two] tr[aria-current]')].map(r=>r.dataset.irm+'='+r.getAttribute('aria-current'))"
+        self.assertEqual(b.eval(cur), [f"{rid}=true"])                  # #341 M5: the chosen row, and only it, is aria-current="true"
         self.assertEqual(b.eval("document.querySelector('[data-irdet] .ictrack').dataset.irtrack"), "arrived")
         self.assertEqual(b.eval("[...document.querySelectorAll('[data-irdet] .ictrack i')].map(i=>i.className)"), ["now", "", ""])
         self.assertEqual(b.eval("document.querySelector('[data-irdet] .ictrack').textContent"), "ArrivedDraftedApproved")
