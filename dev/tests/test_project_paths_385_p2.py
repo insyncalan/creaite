@@ -496,7 +496,7 @@ class RecodeMapped(MappedCase):
     """propose.py recode on a project in a folder of its own: the code and name change, the register's folder name never does
     (it is what locations.project_paths is keyed by, and a recode never writes settings, BL-141)."""
 
-    GUARD = "    if own and folder and paths._fold(folder) != paths._fold(old_folder):\n"
+    GUARD = "    if own and folder and unicodedata.normalize(\"NFC\", folder) != unicodedata.normalize(\"NFC\", old_folder):   # Cap: a case twin too\n"
 
     def staged(self):
         return sorted(p.name for p in (self.v.root / "system/staging").glob("proposed-*.json"))
@@ -509,6 +509,20 @@ class RecodeMapped(MappedCase):
         self.assertIn("in a folder of its own (" + OWN + ")", out)
         self.assertIn("run it again without --folder", out)
         self.assertEqual(self.staged(), before)
+
+    def test_a_case_twin_folder_name_is_refused_too(self):
+        """Cap's MEDIUM (27-10-2026): the same folder name in another letter case is still a change of the register's folder name
+        (the key of locations.project_paths and the start of every stored path), so it is refused like any other new name."""
+        before = self.staged()
+        for twin in (ABC.lower(), ABC.upper(), ABC.swapcase()):
+            r = self.v.run("recode", "ABC", "XPL", "--folder", twin, script="propose.py", ok=False)
+            self.assertNotEqual(r.returncode, 0, twin)
+            self.assertIn("in a folder of its own", r.stdout + r.stderr, twin)
+        self.assertEqual(self.staged(), before)
+
+    def test_the_same_folder_name_exactly_is_no_change_and_allowed(self):
+        out = self.v.run("recode", "ABC", "XPL", "--name", "Example Plus", "--folder", ABC, script="propose.py").stdout
+        self.assertNotIn("in a folder of its own", out)
 
     def test_mutant_without_the_refusal_the_message_misleads(self):
         script = self.v.root / "system/scripts/propose.py"

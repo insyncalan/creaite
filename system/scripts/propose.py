@@ -52,6 +52,7 @@ import os
 import re
 import shutil
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -1543,7 +1544,7 @@ def main_recode(args):
 
 def _recode_keeps_own_folder(own, old_name, old_folder, folder):
     """#385: refuse --folder for a project in a folder of its own (the register's folder name keys locations.project_paths)."""
-    if own and folder and paths._fold(folder) != paths._fold(old_folder):
+    if own and folder and unicodedata.normalize("NFC", folder) != unicodedata.normalize("NFC", old_folder):   # Cap: a case twin too
         # #385: the register's folder name is what locations.project_paths is keyed by, and every stored path starts with it; a
         # recode never writes settings (BL-141), so changing that name here would leave the project's own folder behind
         sys.exit(f"{old_name} is in a folder of its own ({paths.project_paths().get(own, '')}), which creaite knows by the register's "
