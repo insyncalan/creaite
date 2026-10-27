@@ -181,6 +181,16 @@ never writes the private file, never strips the register's columns itself, and n
 - The case-folded register path (`People-Register.md`) is tested as a path only, not on a real case-insensitive disk. Alan can try
   it on the Mac: stage a write to `projects/_portfolio/People-Register.md` after the move and check the apply refuses it.
 
+## Known non-blocking points (Banner's re-check lists; logged, not changed in rev 2c)
+
+- MEDIUM, for slice 1 or slice 2: after the move, `people.py` still reads a `hidden` column that no longer exists.
+- A refused write still takes a database backup, although the message says nothing was written.
+- A stray `people-register.before-386.md` copy can be left after a forced kill.
+- The template's guidance lines are matched by their start, so text Alan adds after one is dropped without a refusal.
+- A merge or an update can leave one project code in both `projects_add` and `projects_remove`.
+- A follow or hidden refusal is reported first and hides every other reason the move would refuse.
+- The held-field message points to `propose.py fields people`, which does not exist yet.
+
 ## How verified
 
 Throwaway worktrees off the branch (its guarded files are 0b637e926's), never the branch itself:
