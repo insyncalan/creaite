@@ -20,7 +20,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,6 +45,8 @@ FIXES = {
     "setup": ("Open set-up", "the cx-setup skill", "runs set-up steps that change files", "Ask Claude to set creaite up"),
     "autostart": ("Turn it on", "nothing here: Settings › creaite and backups has the switch", "",
                   "Settings › creaite and backups › Start creaite when I sign in"),
+    "logging": ("Open Settings", "nothing here: Settings › Diagnostics has the switch", "",
+                "Settings › Diagnostics › Log level: set it back to Info"),
     "manual": ("How to fix", "nothing: a step only you can take", "", ""),
 }
 # doctor check id -> (plain words for the line, the fix kind)
@@ -83,6 +85,7 @@ PLAIN = {
     "minutes_drafts": ("Minutes waiting in Review have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),
     "autostart": ("creaite won't start by itself after a restart", "autostart"),      # #300: a suggestion, dismissible
+    "detailed_logging": ("Detailed logging has been on for over a week", "logging"),   # #370: informs only, dismissible
     "version": ("The version file is wrong", "reinstall"),
     "rules_imported": ("Your Claude instructions don't include creaite's rules", "setup"),
     "scripts_use_paths": ("A creaite file doesn't take its folder locations from one place", "reinstall"),
@@ -159,6 +162,35 @@ def autostart_check():
         return None
     return {"id": "autostart", "name": "Start when you sign in", "status": "warn",
             "detail": "creaite isn't set to start when you sign in, so after a restart it stays closed until you open it"}
+
+
+DETAILED_LOGGING_DAYS = 7
+
+
+def detailed_logging_check(settings=None, log_path=None, now=None):
+    """#370: a doctor-shaped warning while the log level has been "debug" for more than 7 days, else None. It informs only and
+    changes no setting. "Since when" is the last logged change of logging.level to debug (settings-log.jsonl); with no such
+    record, or an unreadable time, nothing is said (no guess)."""
+    try:
+        settings = paths.load_settings() if settings is None else settings
+        if str((settings.get("logging") or {}).get("level", "")).lower() != "debug":
+            return None
+        since = None
+        for line in Path(log_path or paths.SETTINGS_LOG).read_text(encoding="utf-8").splitlines():
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue                                   # a damaged line is skipped
+            if isinstance(e, dict) and e.get("key") == "logging.level":
+                since = datetime.strptime(str(e.get("at", ""))[:19].replace("T", " "), "%Y-%m-%d %H:%M:%S") \
+                    if str(e.get("new", "")).lower() == "debug" else None
+        if since is None or (now or datetime.now()) - since <= timedelta(days=DETAILED_LOGGING_DAYS):
+            return None
+    except (OSError, ValueError, TypeError, AttributeError):    # a suggestion never breaks Health
+        return None
+    return {"id": "detailed_logging", "name": "Log level", "status": "warn",
+            "detail": f"Detailed logging has been on since {since:%d-%m-%Y}. It makes the log files large and slow to read. "
+                      "Set the log level back to Info in Settings › Diagnostics."}
 
 
 def home_short(text):
@@ -254,8 +286,8 @@ def health(result=None, dismissed=None):
     health.dismissed list (the tests pass one), else settings.json's (#242)."""
     result = doctor_checks() if result is None else result
     problems, fine = [], []
-    extra = autostart_check()
-    for c in [*(result.get("checks") or []), *([extra] if extra else [])]:
+    extra = [c for c in (autostart_check(), detailed_logging_check()) if c]
+    for c in [*(result.get("checks") or []), *extra]:
         if c.get("status") == "pass":
             fine.append(c.get("name", ""))
             continue
