@@ -221,6 +221,11 @@ class Bar117(LiveBrowserCase):
         self.b.eval(f"{MOUNT}({json.dumps(place)},{json.dumps(md)},{top},{left})")
         self.b.wait("!!document.querySelector('#aiEd.ProseMirror')")
 
+    def foot(self, gap):
+        """A `top` `gap` px above the bottom of the page as it really is: headless Chrome's page can be shorter than the window
+        it was asked for (Chrome for Testing 156 on Linux: 200 px), so a fixed top could put the editor below the foot."""
+        return self.b.eval("innerHeight") - gap
+
     def select_all(self, spark=True, bar=True):
         b = self.b
         b.click("#aiEd")
@@ -604,7 +609,7 @@ class Bar117(LiveBrowserCase):
         self.assertLessEqual(abs(r["spark"]["t"] - r["selTop"]), 14, "level with the selection's first line")
         # near the bottom of the window the bar flips above the selection
         b.eval(CLEAN)
-        self.mount("notes", NOTE, top=700, left=140 if width > 1000 else 60)
+        self.mount("notes", NOTE, top=self.foot(200), left=140 if width > 1000 else 60)      # 700 on a 900 px page
         self.select_all()
         r = self.rects()
         self.assertEqual(r["side"], "above")
@@ -631,13 +636,16 @@ class Bar117(LiveBrowserCase):
 
     def test_a_hover_menu_near_the_foot_of_the_window_opens_upward(self):
         b = self.b
-        self.mount("notes", NOTE, top=640)
+        self.mount("notes", NOTE, top=self.foot(260))                                              # 640 on a 900 px page
         self.select_all()
         b.click(f'{LAYER} .aibar .aifmt button[aria-haspopup]')
         b.wait(f"document.querySelector('{LAYER} [role=menu]')")
-        r = b.eval(f"(()=>{{ const m=document.querySelector('{LAYER} [role=menu]').getBoundingClientRect(); return {{t:m.top,b:m.bottom,vh:innerHeight}}; }})()")
+        r = b.eval(f"(()=>{{ const m=document.querySelector('{LAYER} [role=menu]').getBoundingClientRect(),"
+                   f" k=document.querySelector('{LAYER} .aibar .aifmt button[aria-haspopup]').getBoundingClientRect();"
+                   f" return {{t:m.top,b:m.bottom,vh:innerHeight,k:k.top}}; }})()")
         self.assertGreaterEqual(r["t"], 0)
         self.assertLessEqual(r["b"], r["vh"])
+        self.assertLessEqual(r["b"], r["k"] + 1, "it opens upward: above its button")
         b.key("Escape")
 
     def test_pointing_at_a_group_opens_it_and_leaving_folds_it(self):
