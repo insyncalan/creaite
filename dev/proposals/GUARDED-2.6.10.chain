@@ -1,4 +1,4 @@
-# The guarded chain for 2.6.10. NOT pinned: dev/tests/guarded_chain.py does not know this chain, and it has no marked commit yet. A pin is added only on Alan's say. One diff per line, in landing order.
+# The guarded chain for 2.6.10 (nothing is pinned by this file alone: the pin is in dev/tests/guarded_chain.py, added after the marked commit "Guarded 2.6.10 chain: ..."). One diff per line, in landing order.
 # Base: the 2.6.9 candidate (v269-release 0b637e926, whose guarded files are those of bd3322f3), whose live_server.py and backup.py already carry the 2.6.9 chain (G1 #382, G2 #371, bundle). git apply --check is clean for the four #385 diffs on that base, alone and in all 24 orders.
 # Approved by Alan on 27-10-2026 ("AM: approve the #385 diffs", recorded on #385). The bytes are frozen: any change needs Alan again.
 # All four use phase 2's paths.py API (project_roots, _mapping, archive_slot, parts_below_base, in_mapped_notes, tool_patterns, project_paths_problem, project_mapping_problem, _loc_project_roots), which the ordinary commits carry.
@@ -16,7 +16,8 @@ dev/proposals/250/live_server-250.diff
 # #250 G4 revision 3 (sha256 5afc1f06b5444e47725c26a82960498b1f8bbfc67b3d1f71fe89bc5dcd234983; approved 27-10-2026): system/creaite-rules.md: the "Transcripts fetched by a sweep (#250)" bullet matched to the code (only an interactive sweep fetches, no card, held-back conditions, the gap, what staging keeps). test_rules_retained_338 passes with it only with v2610-main's version of that test (it knows the 250 bullet): that test change is an ordinary part of #250 still to land.
 dev/proposals/250/creaite-rules-250.diff
 # Order: the six apply clean in all 720 orders on 0b637e926 (the released 2.6.9 candidate). Landing order as listed: tracker, reach, permissions, live_server (#385), then G3, then G4.
-# Pending approval (placeholder, not a file yet):
-# PENDING #370 slice 3 (guarded diff): pending approval
+# #370 slice 3 (dev/proposals/370/live_server-370s3.diff) is NOT in this chain: it and G3 each add a line straight after
+# `def _on_tool_result(self, part):`, so it does not apply on top of G3 (nor G3 on top of it). It may follow as a second 2.6.10 chain with
+# its own list, marked commit ("Guarded 2.6.10 chain (370 slice 3): ...") and pin, if Alan approves a revision rebased on this chain.
 #
 # Not guarded (ordinary commits): system/scripts/paths.py (project_paths mapping and its checks), doctor.py, health.py, build_dashboard.py, minutes.py, prep_page.py, propose.py, settings_catalogue.py, settings-defaults.json, the dashboard sources and dashboard.html, cx-edit and cx-setup skills, dev/tests/test_project_paths_385*.py, dev/proposals/385/README.md
