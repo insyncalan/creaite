@@ -1,0 +1,13 @@
+# The second guarded chain for 2.6.10 (#370 slice 3): one diff, applied AFTER everything in GUARDED-2.6.10.chain. Nothing is pinned by this file alone:
+# the pin is in dev/tests/guarded_chain.py, added after the marked commit "Guarded 2.6.10 chain (370 slice 3): ...".
+# Guarded file: system/scripts/live_server.py only.
+# Approved by Alan on 27-10-2026 ("AM: approve the #370 rev 2", recorded on #370). The bytes are frozen: any change needs Alan again.
+#
+# #370 slice 3 rev 2 (sha256 4c56677a60ccd2ac932d837fd470f77bc6c919949bcfca51fd4cb1ba187cc1cf): the run limits and the refusal count in live_server.py.
+# It replaces the earlier approved diff dev/proposals/370/live_server-370s3.diff (sha256 b4d4c7a5193e0fedf6c1adf3dc03034369e24beb551c535a4024b3bbdf9bc867,
+# on branch v2610-370s3, not in this repository's chain): the same added and removed lines, byte for byte; only context lines and hunk headers differ
+# (hunk 3 gains G3's `self._fetch_observe(part)` as context). It applies only after #250 G3, so only after the six diffs of GUARDED-2.6.10.chain.
+# live_server.py after it: sha256 f8a51e7dc786223111c1a3e8d731110a090ac4db3d1e90ed1ed5ed83aedd1664 (from a44484992997a7672cece05d22a07ef5d14cebf8c750e32d6f6c132507864ef7).
+dev/proposals/370/live_server-370s3-rev2.diff
+#
+# Not guarded (ordinary commits): dev/proposals/370/README-s3-rev2.md
