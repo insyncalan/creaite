@@ -81,7 +81,7 @@ class Selecting(LiveBrowserCase):
         a, c, _ = self.ids()
         b.click(f'#workTbl tr[data-row="{a}"] a.rowid')
         self.opened()
-        b.click(f'#workTbl tr[data-row="{c}"] td.title')   # BL-176: the peek covers the list's right; the title is clear of it
+        b.click(f'#workTbl tr[data-row="{c}"] td.title', on_text=True)   # BL-176: the title, clear of the peek (and of the ID line)
         # BL-198 (sprint-review-work): with the peek open, a single click shows the clicked row in it
         b.wait(f"CUR&&CUR.id==={c!r}")
         self.assertEqual(self.hl(), [c])
@@ -114,7 +114,7 @@ class Selecting(LiveBrowserCase):
         a, c, _ = self.ids()
         b.click(f'#workTbl tr[data-row="{a}"] a.rowid')
         self.opened()
-        b.click(f'#workTbl tr[data-row="{c}"] td.title', modifiers=META)   # BL-176: the title, clear of the peek
+        b.click(f'#workTbl tr[data-row="{c}"] td.title', modifiers=META, on_text=True)   # BL-176: the title, clear of the peek
         self.assertEqual(sorted(self.hl()), sorted([a, c]))
         self.assertFalse(self.panel_on())
 
