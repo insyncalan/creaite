@@ -75,6 +75,14 @@ class Fixture(unittest.TestCase):
         commit(o, "r.txt", "inner recent\n")
         run(o, "checkout", "-q", "-b", "holder-recent")
         commit(o, "q.txt", "holder recent\n", when=NEW)
+        # a merge-only branch carrying unique content (an "evil merge": both parents in main, a file of its own)
+        run(o, "checkout", "-q", "main")
+        (o / "evil.txt").write_text("only in the merge\n", encoding="utf-8")
+        run(o, "add", "--", "evil.txt")
+        tree = run(o, "write-tree")
+        run(o, "reset", "-q", "--hard", "HEAD")
+        merge = run(o, "commit-tree", tree, "-p", "main", "-p", "main~1", "-m", "merge with content of its own")
+        run(o, "branch", "merge-only", merge)
         # same-tip twins, and unique old work
         run(o, "checkout", "-q", "-b", "twin-a", "main")
         commit(o, "t.txt", "twin\n")
@@ -126,6 +134,13 @@ class Fixture(unittest.TestCase):
         self.assertEqual((a["same_tip_as"], b["same_tip_as"]), (["twin-b"], ["twin-a"]))
         self.assertEqual((a["suggest"], b["suggest"]), ("owner decides", "owner decides"))
         self.assertIn("the same commit as twin-b", a["why"])
+
+    def test_a_merge_only_branch_with_its_own_content_is_never_delete(self):
+        """Stark's re-check: git cherry ignores merge commits (count 0), so only the whole-diff check may clear such a branch."""
+        r = self.rows["merge-only"]
+        self.assertEqual((r["commits_not_in_main"], r["merges"], r["change_already_in_main"]), (0, 1, False), r)
+        self.assertNotEqual(r["suggest"], "delete", r)
+        self.assertNotEqual(r["suggest"], "delete if kept", r)
 
     def test_unique_old_work_is_the_owners_call(self):
         self.assertEqual(self.suggest("unique-old"), "owner decides")

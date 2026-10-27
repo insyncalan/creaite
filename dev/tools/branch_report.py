@@ -11,7 +11,7 @@ Run, from a clone of insyncalan/creaite:
 
 Run `git fetch --prune origin` first so the remote branches are current. Only remote branches (origin/*) are reported: a local
 branch with no origin counterpart isn't. `git cherry` compares single-parent commits; a merge commit on a branch is never counted
-as "in main" by it (the whole-diff check below still sees what it brought in).
+as "in main" by it, so a branch with a merge commit of its own is "in main" only by the whole-diff check (Stark's re-check).
 """
 import datetime
 import json
@@ -75,6 +75,7 @@ def facts(pr=None):
             rows.append({"branch": short, "last": last[0], "author": last[1], "subject": last[2][:90],
                          "ahead": int(ahead), "behind": int(behind),
                          "commits_not_in_main": sum(1 for c in out("cherry", "origin/main", b).splitlines() if c.startswith("+")),
+                         "merges": len(out("rev-list", "--merges", f"origin/main..{b}", "--").splitlines()),
                          "change_already_in_main": in_main(base, b, index),
                          "files": len(out("diff", "--name-only", base, b, "--").splitlines()),
                          "held_by": sorted(m.split("/", 1)[1] for m in names if m != b and tips[m] != tips[b]
@@ -86,9 +87,10 @@ def facts(pr=None):
 
 def _own_class(r, today):
     """(class, why) from the branch alone: in main, an open PR, a live line, recent, or the owner's call."""
-    if r["commits_not_in_main"] == 0 or r["change_already_in_main"]:
-        return "delete", "its change is already in main" + (" (every commit's patch is there)" if r["commits_not_in_main"] == 0
-                                                           else " (main holds the whole diff)")
+    if r["change_already_in_main"]:
+        return "delete", "its change is already in main (main holds the whole diff)"
+    if r["commits_not_in_main"] == 0 and not r.get("merges"):         # git cherry can't see a merge commit's own content
+        return "delete", "its change is already in main (every commit's patch is there)"
     if any("OPEN" in p for p in r["prs"]):
         return "keep", "open PR " + ", ".join(r["prs"])
     if r["branch"].startswith(ACTIVE):

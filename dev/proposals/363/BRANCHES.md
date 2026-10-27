@@ -1,8 +1,8 @@
 # #363: unmerged branches of insyncalan/creaite, classified (read-only)
 
-Made 27-10-2026 from `origin/main` a62fbb0a: **108 remote branches not merged into main**. The issue's 282 was counted before later clean-ups. Nothing was deleted, pushed or changed. Regenerate with `python3 dev/tools/branch_report.py --markdown` (read-only; `git fetch --prune origin` first). The JSON form is the default output.
+Made 27-10-2026 from `origin/main` a62fbb0a: **111 remote branches not merged into main**. The issue's 282 was counted before later clean-ups. Nothing was deleted, pushed or changed. Regenerate with `python3 dev/tools/branch_report.py --markdown` (read-only; `git fetch --prune origin` first). The JSON form is the default output.
 
-**Summary:** delete 6 · delete only if the branch holding its commits is kept 4 · owner decides 19 · keep 79.
+**Summary:** delete 6 · delete only if the branch holding its commits is kept 4 · owner decides 19 · keep 82.
 
 ## How each branch was judged (`branch_report.classify`, tested in `dev/tests/test_branch_report_363.py`)
 
@@ -16,15 +16,15 @@ Made 27-10-2026 from `origin/main` a62fbb0a: **108 remote branches not merged in
 
 **Limits:**
 - Only remote branches (origin/*) are reported; a local branch with no origin counterpart isn't.
-- `git cherry` compares single-parent commits, so a merge commit on a branch is never counted "in main" by it. The whole-diff check still sees what it brought in.
+- `git cherry` ignores merge commits, so a branch with a merge commit of its own counts as "in main" **only by the whole-diff check**, never by a zero cherry count (Stark's re-check; tested with a merge-only branch carrying content of its own). None of today's delete branches has a merge.
 - The whole-diff check reads "not in main" when main has since changed the same lines. So it never wrongly suggests a delete, but it may miss some that could go.
 
 | Suggest | Branch | Last commit | Author | Ahead/behind main | Commits not in main | Files | PR | Why |
 |---|---|---|---|---|---|---|---|---|
 | delete | `dev-ci-free-plan` | 25-10-2026 | januscollab | 1/190 | 0 | 6 |  | its change is already in main (every commit's patch is there) |
 | delete | `v261-line3` | 23-10-2026 | januscollab | 6/565 | 0 | 12 |  | its change is already in main (every commit's patch is there) |
-| delete | `v262-line` | 24-10-2026 | januscollab | 4/481 | 0 | 4 |  | its change is already in main (every commit's patch is there) |
-| delete | `v266-341fix` | 25-10-2026 | januscollab | 1/240 | 0 | 1 |  | its change is already in main (every commit's patch is there) |
+| delete | `v262-line` | 24-10-2026 | januscollab | 4/481 | 0 | 4 |  | its change is already in main (main holds the whole diff) |
+| delete | `v266-341fix` | 25-10-2026 | januscollab | 1/240 | 0 | 1 |  | its change is already in main (main holds the whole diff) |
 | delete | `v266-358prop` | 25-10-2026 | januscollab | 1/233 | 0 | 1 |  | its change is already in main (every commit's patch is there) |
 | delete | `v267-chain` | 25-10-2026 | januscollab | 7/167 | 0 | 19 |  | its change is already in main (every commit's patch is there) |
 | delete if kept | `cdp-resize-waits` | 15-10-2026 | januscollab | 2/2799 | 2 | 5 |  | every commit is also in main-batch: delete this one only if that one is kept |
@@ -76,10 +76,13 @@ Made 27-10-2026 from `origin/main` a62fbb0a: **108 remote branches not merged in
 | keep | `team-cap-v265-sheet` | 25-10-2026 | insyncalan | 2/299 | 2 | 4 |  | a live release line or team branch |
 | keep | `team-cap-v266-sheet` | 25-10-2026 | insyncalan | 3/267 | 3 | 3 |  | a live release line or team branch |
 | keep | `team-cap-wip-email-153-fix5` | 25-10-2026 | insyncalan | 2/2010 | 1 | 8 |  | a live release line or team branch |
+| keep | `v2610-344` | 27-10-2026 | januscollab | 1/0 | 1 | 3 |  | a live release line or team branch |
+| keep | `v2610-366` | 27-10-2026 | januscollab | 2/0 | 2 | 2 |  | a live release line or team branch |
 | keep | `v2610-366-plan` | 26-10-2026 | januscollab | 1/0 | 1 | 1 |  | a live release line or team branch |
 | keep | `v2610-370-plan` | 26-10-2026 | januscollab | 3/0 | 3 | 1 |  | a live release line or team branch |
 | keep | `v2610-370s3` | 27-10-2026 | januscollab | 115/0 | 90 | 148 |  | a live release line or team branch |
-| keep | `v2610-386s3` | 27-10-2026 | januscollab | 122/0 | 97 | 160 |  | a live release line or team branch |
+| keep | `v2610-386s3` | 27-10-2026 | januscollab | 123/0 | 98 | 161 |  | a live release line or team branch |
+| keep | `v2610-386s4b` | 27-10-2026 | januscollab | 125/0 | 99 | 165 |  | a live release line or team branch |
 | keep | `v2610-a` | 26-10-2026 | januscollab | 3/0 | 2 | 10 |  | a live release line or team branch |
 | keep | `v2610-audit` | 26-10-2026 | januscollab | 13/0 | 11 | 40 |  | a live release line or team branch |
 | keep | `v2610-b` | 26-10-2026 | januscollab | 1/0 | 1 | 4 |  | a live release line or team branch |
