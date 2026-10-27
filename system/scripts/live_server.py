@@ -2631,6 +2631,23 @@ def run_prompt(kind, confirmed):
     return CONFIRMED_PROMPT.format(title=confirmed) if confirmed else ASK_PROMPT
 
 
+# ===== #370 slice 3 (B2): a run creaite starts says what today is and which commands it may run =====
+RUN_LIMITS_370 = ("sweep", "process", "calendar", "reextract", "check", "load")       # the kinds that get the paragraph
+
+
+def run_limits(kind):
+    """#370 B2: today's date and the kind's own script commands (derived from KIND_TOOLS, nothing new allowed), so the model
+    doesn't reach for grep, date or tail. Filled in at run start; '' for any other kind."""
+    if kind not in RUN_LIMITS_370:
+        return ""
+    head = "Bash(python3 system/scripts/"
+    cmds = [re.sub(r" \*$", " …", r[len(head):-1]) for r in KIND_TOOLS.get(kind, []) if r.startswith(head) and r not in READ_TOOLS]
+    return (f" Today is {build_dashboard.clock():%Y-%m-%d} (YYYY-MM-DD). "
+            + (f"Besides the read commands, run only: {'; '.join(cmds)}. " if cmds else "You have no shell. ")
+            + "Do not run grep, tail or date, and never read a file that neither the message nor your own skill's read list names.")
+# ===== end #370 =====
+
+
 def guard_mode(kind, confirmed):
     """The guard hook's mode for a guarded run: "sweep" for Close the day's catch-up (BL-295), else confirmed or ask."""
     if kind in ("process", "calendar", "reextract"):     # #264 Process; #265 the calendar refresh; #283 Read again; never confirmed
@@ -2810,7 +2827,7 @@ class Run:
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
         deny = held_deny(deny, held, guarded)                   # and, in mode "held", no file writes at all
-        prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
+        prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed) + run_limits(kind)       # #370 B2
         self.images = list(images)
         carry, mark, resume, resumed = fresh_plan(fresh, sweep, kind, session, chat)      # #327 B
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images) + carry
@@ -3003,8 +3020,14 @@ class Run:
             return True
         return False
 
+    def _count_refusal(self, part):
+        """#370 B1: the guard hook's refusal comes back as an error result; count them (never their text)."""
+        if part.get("is_error") and "creaite refused this" in vault_transcripts.result_text(part.get("content")):
+            self.refusals = getattr(self, "refusals", 0) + 1
+
     def _on_tool_result(self, part):
         self._fetch_observe(part)                                       # #250: the fetch sees the result (queues, writes nothing)
+        self._count_refusal(part)                                        # #370 B1
         if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
             self.job_observe(part)   # BL-228 (sprint-debt-safety)
         # ===== BL-248 (sprint-portability): a creaite script that failed before it started is creaite's fault =====
@@ -3226,6 +3249,8 @@ class Run:
     # ===== end BL-326 =====
 
     def _done(self):
+        if globals().get("debuglog") is not None:                         # #370 B1: counts only
+            debuglog.info("run", f"{self.id} {self.kind} refusals: {getattr(self, 'refusals', 0)}")
         self._usage_record()                              # #197: one counts-only line, however the run ended
         release_sweep_lock([self.id], "timed out" if getattr(self, "timed_out", False) else "stopped" if self.stop
                            else "ended")                  # BL-328: however the run ended (finished, stopped, refused, failed)
@@ -4026,6 +4051,15 @@ class LocalServer(ThreadingHTTPServer):
     socket.getfqdn(host), which on some Macs (GitHub's macOS runner) stalls in gethostbyaddr for 30 s or more
     before the server answers anything. The server only ever listens on 127.0.0.1 and nothing reads server_name,
     so the name is set without a lookup."""
+
+    def handle_error(self, request, client_address):
+        """#370 D3: a page that left mid-request (CLIENT_LEFT) is one info line, never a traceback; anything else as before."""
+        e = sys.exc_info()[1]
+        if isinstance(e, CLIENT_LEFT):
+            if debuglog is not None:
+                debuglog.info("server", f"client left: {type(e).__name__}")
+            return None
+        return super().handle_error(request, client_address)
 
     def server_bind(self):
         """Bind as TCPServer does, then name the server after its own address instead of looking the name up."""
@@ -6378,10 +6412,30 @@ SETUP_ROUTES.update(AUTOSTART_ROUTES)
 HEALTH_DOCTOR = ["doctor.py", "--read-only", "--json"]
 
 
+CATALOGUE_FAILS = []          # #370 D1: when the catalogue last failed to read (monotonic seconds), the last 60 s only
+
+
+def catalogue_lasting(e):
+    """#370 D1: whether a failed catalogue read is a lasting fault: a corrupt file (ValueError) or the third failure in 60 s."""
+    now = time.monotonic()
+    CATALOGUE_FAILS[:] = [t for t in CATALOGUE_FAILS if now - t < 60] + [now]
+    return isinstance(e, ValueError) or len(CATALOGUE_FAILS) >= 3
+
+
 def settings_catalogue_route(handler, req):
     """POST /api/settings/catalogue: every setting with its group, tier, default, reason, value and whether it is changed."""
     import settings_catalogue
-    return handler.send(200, dict(settings_catalogue.catalogue(), ok=True))
+    try:
+        body = settings_catalogue.catalogue()
+    except (OSError, ValueError) as e:                    # #370 D1: a race is a 503 to retry; a lasting fault is a plain 500
+        if catalogue_lasting(e):
+            debuglog.error("settings", f"catalogue can't be read: {type(e).__name__}")
+            return handler.send(500, {"ok": False, "message": "Settings can't be read. See Settings > Health."})
+        debuglog.warn("settings", f"catalogue not ready: {type(e).__name__}")
+        return handler.send(503, {"ok": False, "retry": True, "message": "Settings are being saved. Try again in a moment."},
+                            extra={"Retry-After": "1"})
+    CATALOGUE_FAILS.clear()
+    return handler.send(200, dict(body, ok=True))
 
 
 def settings_reset_route(handler, req):
