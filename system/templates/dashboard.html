@@ -4755,6 +4755,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     FF: () => FF,
     FIELD: () => FIELD,
     FILES: () => FILES,
+    FINDER_OPEN_OK: () => FINDER_OPEN_OK,
+    FINDER_REVEAL: () => FINDER_REVEAL,
     FL: () => FL,
     FLABEL: () => FLABEL,
     FLN: () => FLN,
@@ -5140,11 +5142,14 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     acPick: () => acPick,
     acUpdate: () => acUpdate,
     achgBtn: () => achgBtn,
+    achgFile: () => achgFile,
     achgHm: () => achgHm,
     achgIsSession: () => achgIsSession,
     achgRestore: () => achgRestore,
     achgSessionText: () => achgSessionText,
+    achgShowBtn: () => achgShowBtn,
     achgTier: () => achgTier,
+    achgWhere: () => achgWhere,
     actBarProps: () => actBarProps,
     actConfirm: () => actConfirm,
     actFCount: () => actFCount,
@@ -5966,6 +5971,8 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     fillThumbs: () => fillThumbs,
     filterBarOpen: () => filterBarOpen,
     filterChrome: () => filterChrome,
+    finderCanShow: () => finderCanShow,
+    finderRequest: () => finderRequest,
     firstHelp: () => firstHelp,
     firstLineClear: () => firstLineClear,
     fitFilterBar: () => fitFilterBar,
@@ -52038,7 +52045,7 @@ system/scripts/run launch.py agent ${what}`;
   shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
   var FOPEN = new Set(store.list("creaite-files-open"));
   var farch = () => D.files_archived || [];
-  var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
+  var FNAME = Object.assign({ _portfolio: "Portfolio", inbox: "Intake" }, D.folders);
   var EMPTY = { archived: "Nothing has been archived.", latest: "No reports yet.", week: "No meetings this week." };
   function renderFiles() {
     const cnt = (f5) => FILES.filter(f5).length;
@@ -74603,6 +74610,20 @@ ${d5.text}`);
     window.setInterval(helpScreenSync, 300);
   }
 
+  // core/finderReveal.js
+  var FINDER_REVEAL = false;
+  var FINDER_OPEN_OK = /^(projects|inbox|system\/staging\/drafts)\/.+$/;
+  var safe = (p6) => FINDER_OPEN_OK.test(p6) && !p6.split("/").includes("..");
+  function finderRequest(path, reveal = FINDER_REVEAL) {
+    const p6 = String(path || "");
+    if (reveal) return safe(p6) ? { path: p6, reveal: true } : null;
+    const parent = p6.split("/").slice(0, -1).join("/");
+    return safe(parent) ? { path: parent } : null;
+  }
+  function finderCanShow(c5) {
+    return !(c5.op === "delete" && !c5.undone || c5.op === "create" && c5.undone);
+  }
+
   // core/mailCheck.js
   var MC_MARKER = "Sweeping (stages proposals only)";
   var PLACE_NAMES = { mail: "Outlook mail", teams: "Teams", calendar: "calendar" };
@@ -75870,9 +75891,29 @@ ${d5.text}`);
     snack(oneLine(r4.message || `Restored to ${at2}`));
     return true;
   }
+  function achgWhere(path) {
+    const p6 = String(path || ""), parts = p6.split("/"), name = parts[parts.length - 1].replace(/\.[A-Za-z0-9]{1,5}$/, "") || parts[parts.length - 1];
+    let project2 = "";
+    if (parts[0] === "projects" && parts.length > 2) {
+      if (parts[1] === "_portfolio") project2 = "Portfolio";
+      else project2 = Object.keys(D.folders || {}).filter((k5) => D.folders[k5] === parts[1]).map(pName)[0] || "";
+    } else if (parts[0] === "inbox") project2 = "Intake";
+    else if (p6.startsWith("system/staging/drafts/")) project2 = "Drafts";
+    return { name, project: project2, req: finderRequest(p6) };
+  }
+  function achgFile(path) {
+    const w6 = achgWhere(path);
+    return html`<b>${w6.name}</b>${w6.project ? html` <span class="sub">in ${w6.project}</span>` : ""}`;
+  }
+  function achgShowBtn(c5) {
+    if (!finderCanShow(c5)) return "";
+    const w6 = achgWhere(c5.to || c5.path);
+    if (!w6.req) return "";
+    return html`<button class="mini" data-achgshow="${JSON.stringify(w6.req)}" aria-label="Show ${w6.name} in Finder">Show in Finder</button> `;
+  }
   function askChangesHtml(rows2) {
     if (!rows2.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td>${achgIsSession(c5) ? html`Notes <code>${c5.path}</code> <span class="sub" data-achgsess>${achgSessionText(c5)}</span>` : html`${ACHG_OP[c5.op] || c5.op} <code>${c5.path}</code>`}${c5.to ? html` → <code>${c5.to}</code>` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right">${achgBtn(c5)}</td></tr>`)}</tbody></table>`;
+    return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows2.map((c5) => html`<tr data-achg="${c5.id}" data-tier="${c5.tier || ""}"><td style="white-space:nowrap">${fd(c5.at.slice(0, 10))} ${c5.at.slice(11, 16)}</td><td style="white-space:nowrap">${achgTier(c5.tier)}</td><td style="overflow-wrap:anywhere">${achgIsSession(c5) ? html`Notes ${achgFile(c5.path)} <span class="sub" data-achgsess>${achgSessionText(c5)}</span>` : html`${ACHG_OP[c5.op] || c5.op} ${achgFile(c5.path)}`}${c5.to ? html` → ${achgFile(c5.to)}` : ""}${c5.approved ? html` <span class="tag">approved on the card</span>` : ""}</td><td>${c5.why || ""}</td><td style="text-align:right;white-space:nowrap">${achgShowBtn(c5)}${achgBtn(c5)}</td></tr>`)}</tbody></table>`;
   }
   var ACHGFIRST = true;
   async function renderAskChanges() {
@@ -75884,6 +75925,12 @@ ${d5.text}`);
       putHTML(box, html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`);
       $("#actTbl").after(box);
       box.addEventListener("click", async (e4) => {
+        const sh2 = e4.target.closest("[data-achgshow]");
+        if (sh2) {
+          const q5 = JSON.parse(sh2.dataset.achgshow), r5 = q5.reveal ? await api("/api/report/reveal", { path: q5.path }) : await api("/api/open", q5);
+          if (!r5 || !r5.ok) snack(q5.reveal ? "That file isn't there any more." : "That folder isn't there any more.");
+          return;
+        }
         const rs2 = e4.target.closest("[data-achgrestore]"), ok2 = e4.target.closest("[data-achgrestoreyes]"), no2 = e4.target.closest("[data-achgrestoreno]");
         if (rs2) {
           const td2 = rs2.parentElement, noteName = rs2.dataset.path.split("/").pop().replace(/\.md$/, ""), q5 = document.createElement("span");
@@ -82597,6 +82644,7 @@ Next: `;
         "FF",
         "FIELD",
         "FILES",
+        "FINDER_REVEAL",
         "FIX_CALLS",
         "FOPEN",
         "FX",
@@ -82938,6 +82986,8 @@ Next: `;
         "filedNote",
         "filingAsk",
         "filingError",
+        "finderCanShow",
+        "finderRequest",
         "firstHelp",
         "fitFilterBar",
         "fixCallAllowed",

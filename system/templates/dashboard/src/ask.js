@@ -22,6 +22,7 @@ import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, now
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { linkAnchor, unescHtml } from "./core/linkUrl.js";
 import { shared } from "./core/state.js";
+import { finderRequest, finderCanShow } from "./core/finderReveal.js";
 import { MC_MARKER, mcBadge, mcEnd, mcFound, mcIsAsk, mcIsRun, mcLine, mcNew, mcNormalise, mcPlaces, mcStep, mcStepText } from "./core/mailCheck.js";   /* #358 */
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
@@ -204,12 +205,28 @@ export async function achgRestore(id,path,at){
   if(!r||!r.ok){ snack(oneLine((r&&r.message)||"Not restored. The note is as it was.")); return false; }
   if(open) await openNote(path,true);
   snack(oneLine(r.message||`Restored to ${at}`)); return true; }
+/* #374 (1c): a changed file is shown by its plain name and its project, never its stored path; Show in Finder reveals the file
+   (selects it in its folder) through /api/report/reveal, or opens its parent folder through /api/open while that switch is off (core/finderReveal.js, which
+   mirrors the server's OPEN_OK rule so the button is only offered where the server would act); a file that has gone is answered
+   with a plain message. */
+export function achgWhere(path){ const p=String(path||""), parts=p.split("/"), name=parts[parts.length-1].replace(/\.[A-Za-z0-9]{1,5}$/,"")||parts[parts.length-1];
+  let project="";
+  if(parts[0]==="projects"&&parts.length>2){ if(parts[1]==="_portfolio") project="Portfolio";
+    else project=Object.keys(D.folders||{}).filter(k=>D.folders[k]===parts[1]).map(pName)[0]||""; }
+  else if(parts[0]==="inbox") project="Intake";
+  else if(p.startsWith("system/staging/drafts/")) project="Drafts";
+  return { name, project, req:finderRequest(p) }; }
+export function achgFile(path){ const w=achgWhere(path); return html`<b>${w.name}</b>${w.project?html` <span class="sub">in ${w.project}</span>`:""}`; }
+export function achgShowBtn(c){ if(!finderCanShow(c)) return ""; const w=achgWhere(c.to||c.path); if(!w.req) return "";
+  return html`<button class="mini" data-achgshow="${JSON.stringify(w.req)}" aria-label="Show ${w.name} in Finder">Show in Finder</button> `; }
 export function askChangesHtml(rows){ if(!rows.length) return html`<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>`;
-  return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows.map(c=>html`<tr data-achg="${c.id}" data-tier="${c.tier||""}"><td style="white-space:nowrap">${fd(c.at.slice(0,10))} ${c.at.slice(11,16)}</td><td style="white-space:nowrap">${achgTier(c.tier)}</td><td>${achgIsSession(c)?html`Notes <code>${c.path}</code> <span class="sub" data-achgsess>${achgSessionText(c)}</span>`:html`${ACHG_OP[c.op]||c.op} <code>${c.path}</code>`}${c.to?html` → <code>${c.to}</code>`:""}${c.approved?html` <span class="tag">approved on the card</span>`:""}</td><td>${c.why||""}</td><td style="text-align:right">${achgBtn(c)}</td></tr>`)}</tbody></table>`; }
+  return html`<table><thead><tr><th>When</th><th>Tier</th><th>Change</th><th>Why</th><th></th></tr></thead><tbody>${rows.map(c=>html`<tr data-achg="${c.id}" data-tier="${c.tier||""}"><td style="white-space:nowrap">${fd(c.at.slice(0,10))} ${c.at.slice(11,16)}</td><td style="white-space:nowrap">${achgTier(c.tier)}</td><td style="overflow-wrap:anywhere">${achgIsSession(c)?html`Notes ${achgFile(c.path)} <span class="sub" data-achgsess>${achgSessionText(c)}</span>`:html`${ACHG_OP[c.op]||c.op} ${achgFile(c.path)}`}${c.to?html` → ${achgFile(c.to)}`:""}${c.approved?html` <span class="tag">approved on the card</span>`:""}</td><td>${c.why||""}</td><td style="text-align:right;white-space:nowrap">${achgShowBtn(c)}${achgBtn(c)}</td></tr>`)}</tbody></table>`; }
 export let ACHGFIRST=true;   /* the What ask creaite changed list (BL-141): rows rise in the first time, a row just undone flashes */
 export async function renderAskChanges(){ const loading=shared.LOADING, was=new Set($$("#achgTbl tr[data-achg]").filter(t=>!t.querySelector("[data-achgundo]")).map(t=>t.dataset.achg));
   let box=$("#achg"); if(!box){ box=document.createElement("div"); box.id="achg"; putHTML(box,html`<h2 style="margin:22px 0 4px">What ask creaite changed</h2><p class="sub" style="margin:0 0 10px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p><div class="tbl" id="achgTbl"></div>`); $("#actTbl").after(box);
     box.addEventListener("click",async e=>{
+      const sh=e.target.closest("[data-achgshow]");
+      if(sh){ const q=JSON.parse(sh.dataset.achgshow), r=q.reveal?await api("/api/report/reveal",{path:q.path}):await api("/api/open",q); if(!r||!r.ok) snack(q.reveal?"That file isn't there any more.":"That folder isn't there any more."); return; }
       const rs=e.target.closest("[data-achgrestore]"), ok=e.target.closest("[data-achgrestoreyes]"), no=e.target.closest("[data-achgrestoreno]");
       if(rs){ const td=rs.parentElement, noteName=rs.dataset.path.split("/").pop().replace(/\.md$/,""), q=document.createElement("span"); q.dataset.achgq="1"; rs.hidden=true;
         putHTML(q,html`<span class="sub" data-achgask>Take “${noteName}” back to how it was at ${rs.dataset.at}?</span> <button class="mini" data-achgrestoreyes="${rs.dataset.achgrestore}" data-path="${rs.dataset.path}" data-at="${rs.dataset.at}">Restore ${rs.dataset.at}</button> <button class="mini" data-achgrestoreno>Keep</button>`); td.append(q); return; }
