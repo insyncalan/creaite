@@ -16,6 +16,7 @@ import sqlite3
 import sys
 import time
 import unicodedata
+from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -2935,17 +2936,35 @@ def _inbox_transcript(eid, checked, loaded):
             "loaded": loaded.get(eid) if eid else None}
 
 
-def _inbox_row(day, ev, projects, remembered, drafts, checked, loaded):
-    """One Calendar import row for a saved calendar entry (see inbox_meetings)."""
+def _inbox_done(day, title, eid, same_title, others=()):
+    """When a calendar meeting was processed: under its own key (calendar:<event id>), else (#389) from a file, recorded by day
+    and title, when it is the only meeting that day with that title; never someone else's minutes (`others`, #232 E1). None
+    without an event ID (it can't be picked)."""
     import minutes                                   # meeting_key and processed_on, read only
+    if not eid:
+        return None
+    done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid))
+    return done or (minutes.processed_on_meeting(day, title, others) if same_title == 1 else None)
+
+
+def _title_counts(events):
+    """#389: how many of a day's meetings share each title, as minutes.norm_title matches them (set-aside ones included)."""
+    import minutes
+    return Counter(minutes.norm_title(str(ev.get("title") or "Meeting")) for ev in events)
+
+
+def _inbox_row(day, ev, projects, remembered, drafts, checked, loaded, same_title=1, others=()):
+    """One Calendar import row for a saved calendar entry (see inbox_meetings). `same_title`: how many of the day's meetings have
+    this title (all of them, set aside or not); only a meeting alone with its title takes a processing recorded by day and title
+    (#389: never a guess), and never someone else's minutes (`others`)."""
     title = str(ev.get("title") or "Meeting")
     sens = invite_clean.sensitivity(ev)              # fail closed: an older saved row's "personal" or odd value too
     private = sens == "private" or ("private" not in ev and title == "Busy" and not ev.get("where"))
     conf = sens == "confidential"                                           # #232: title and times only
     code, how, match = _inbox_match(title, ev, private, conf, projects, remembered)
     eid = str(ev.get("id") or "") or None
-    done = minutes.processed_on(minutes.meeting_key(day, title, event_id=eid)) if eid else None
-    return {"day": day, "start": ev.get("start") or "", "end": ev.get("end") or "", "title": title,
+    done = _inbox_done(day, title, eid, same_title, others)
+    return {"day": day, "start": ev.get("start") or "", "end": ev.get("end") or "", "title": title, "same_title": same_title,
             "teams": bool(ev.get("teams")), "organiser": ev.get("organiser") or False, "private": private,
             "confidential": conf, "id": eid, "key": meeting_clear_key(day, ev.get("start") or "", title, eid),
             "p": code, "how": how, "series": series_of(title), "processed": done,
@@ -2968,19 +2987,21 @@ def inbox_meetings(settings, projects, today):
     entries = cleared_load(settings, today)
     set_aside = {e["key"]: e for e in entries if e.get("kind") != "later"}      # Not needed (Clear day)
     snoozed = {e["key"]: e for e in entries if e.get("kind") == "later"}         # #232: Later, until the transcript arrives
+    import minutes                                   # #389: someone else's minutes never mark a meeting processed
     import transcripts                               # BL-42 phase 3: what the sweep found for each meeting, and what is already loaded
     checked, loaded = transcripts.load_state()["checked"], transcripts.inbox_event_ids()
     remembered = _dig(settings, ("prep", "series"), {}) or {}
     drafts = {(d.get("meeting") or {}).get("key") for _, d in review.proposals()                    # waiting in Review
               if (d.get("meeting") or {}).get("key") and not (d.get("meeting") or {}).get("applied")}
-    out = []
+    out, others = [], minutes.by_others_keys()
     for day, events in (cal.get("days") or {}).items():
         if not (start.isoformat() <= day <= today.isoformat()) or not isinstance(events, list):
             continue
-        for ev in events:
-            if ev.get("all_day"):
-                continue
-            out.append(_inbox_row(day, ev, projects, remembered, drafts, checked, loaded))
+        timed = [ev for ev in events if not ev.get("all_day")]
+        titles = _title_counts(timed)                 # #389: before Not needed and Later leave the rows, so a twin set aside counts
+        for ev in timed:
+            out.append(_inbox_row(day, ev, projects, remembered, drafts, checked, loaded,
+                                  same_title=titles[minutes.norm_title(str(ev.get("title") or "Meeting"))], others=others))
     by_day = {}                                       # newest day first, each day in time order
     for m in out:
         by_day.setdefault(m["day"], []).append(m)
@@ -3009,6 +3030,8 @@ def split_set_aside(ordered, set_aside, snoozed):
 # sweep) or "other" (cx-edit, reports, weekly updates, file changes). Read only; derived from data built just before it.
 # Shape: dev/proposals/intake-review-232/README.md (the seams for 232-A, 232-B and 232-C).
 IR_MAIL_RUNS = ("cx-sweep",)
+# #232 E1: a proposal's meeting.kind for someone else's minutes (minutes.BY_OTHERS); never linked to a meeting (#389)
+IR_BY_OTHERS = "minutes by others"
 
 
 def proposal_meta():
@@ -3018,7 +3041,8 @@ def proposal_meta():
     for p, data in review.proposals():
         m = data.get("meeting") or {}
         out[p.name] = {"mkey": m.get("key") or None, "title": str(m.get("title") or ""), "day": str(m.get("date") or ""),
-                       "transcript": m.get("transcript") or None, "run": str(data.get("source_run") or "")}
+                       "transcript": m.get("transcript") or None, "run": str(data.get("source_run") or ""),
+                       "kind": str(m.get("kind") or "")}
     return out
 
 
@@ -3056,10 +3080,11 @@ def processed_this_week(today):
 def intake_review(meetings, files, queue, today, meta=None, stale_after=None, aside=None):
     """The merged row model for Intake and Review (#232), from the built meetings, inbox and review lists. `aside` is
     intake-cleared.json's entries (Not needed and Later), which also keep an uploaded file away from the rows (#232-A)."""
+    import minutes                                   # #389: someone else's minutes (#232 E1) are never linked to a meeting
     return intake_review_model(meetings or {}, files or [], queue or [], proposal_meta() if meta is None else meta, today,
                                review.stale_days() if stale_after is None else stale_after,
                                cleared_load(today=today) if aside is None else aside,
-                               processed_this_week(today))
+                               processed_this_week(today), minutes.by_others_keys())
 
 
 def _ir_split(rows):
@@ -3179,6 +3204,42 @@ def _ir_filed(done, used, today, stale_after):
                     day=d["day"], p=d.get("p")) for d in done if d["key"] not in used]
 
 
+def _ir_fp(key):
+    """(day, normalised title) of a processing key fp:<day>|<title>|<hash>, or None for any other key."""
+    parts = str(key or "")[3:].split("|") if str(key or "").startswith("fp:") else []
+    return (parts[0], parts[1]) if len(parts) >= 3 else None
+
+
+def _ir_link(cal, meta, done, others=()):
+    """#389: a meeting processed from a file (an fp: key, no event ID) is its calendar meeting's when that meeting is the only one
+    on its day with that title (minutes.norm_title; two of them are never guessed). Its proposals join the calendar row (the file's
+    own row is then not listed) and a filing this week (#307) marks the calendar row done instead of making a second row. Returns
+    (calendar rows, meta, the linked files' paths, the linked filings' keys); the inputs are not changed."""
+    alone = _ir_alone(cal)
+    meta, paths_ = dict(meta), set()
+    for name, m in meta.items():
+        hit = None if m.get("kind") == IR_BY_OTHERS else alone.get(_ir_fp(m.get("mkey")))
+        if hit:
+            meta[name] = {**m, "mkey": f"calendar:{hit['id']}"}
+            paths_.update([m["transcript"]] if m.get("transcript") else [])
+    hits = [(d, None if d.get("key") in others else alone.get(_ir_fp(d.get("key")))) for d in done]
+    filed = {}
+    for d, hit in hits:
+        if hit:
+            filed.setdefault(hit["id"], d.get("date") or d.get("day") or True)
+    cal = [{**m, "processed": filed[m["id"]]} if m.get("id") in filed and not m.get("processed") else m for m in cal]
+    return cal, meta, paths_, {d["key"] for d, hit in hits if hit}
+
+
+def _ir_alone(cal):
+    """{(day, normalised title): calendar row} for the calendar meetings (with an event ID and a title) alone on their day with
+    their title: the row's own same_title (inbox_meetings counts the whole day, set-aside meetings too), else the rows here."""
+    import minutes
+    keys = [(m.get("day"), minutes.norm_title(str(m.get("title") or ""))) for m in cal]
+    seen = Counter(keys)
+    return {k: m for k, m in zip(keys, cal) if m.get("same_title", seen[k]) == 1 and seen[k] == 1 and k[1] and m.get("id")}
+
+
 def _ir_counts(out, queue):
     """The stage counts, the proposals to approve and the badge (ready meetings and files, plus proposals). A file whose kind is
     not sure (`ft` ""; transcript or minutes is not known yet) is not ready: `need_type` counts them (#232-A5; the mockup's nProc)."""
@@ -3218,22 +3279,23 @@ def _ir_aside_lists(meetings, files, aside):
     return later + later_files, not_needed + gone_files
 
 
-def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None, done=None):
+def intake_review_model(meetings, files, queue, meta, today, stale_after, aside=None, done=None, others=()):
     """Pure: the model from its inputs (unit tested in dev/tests/test_intake_review_model.py).
     {"v": 1, "meetings": [row], "mail": groups, "other": groups, "later": [..], "not_needed": [..], "counts": {..}}
     row: {id, src (calendar|upload|draft), key, mkey, path, title, day, start, end, p, stage (arrived|drafted|approved),
     state (ready|waiting|proposals|done), age, stale, files, groups {needs, routine}; a calendar row also private, teams, tx,
     later_back; an upload ext, ft (transcript|minutes|"" not sure), size, fixed (a .vtt or .srt: no switch) and already (a copy already
     filed)}."""
+    cal, meta, linked_paths, linked_done = _ir_link(meetings.get("rows") or [], meta, done or [], others)
     by_mkey, by_path, mail, other = _ir_buckets(queue, meta)
-    cal = meetings.get("rows") or []
     out = [_ir_calendar(m, by_mkey, today, stale_after) for m in cal]
     loaded = {m.get("id") for m in cal if m.get("loaded")}
     aside_keys = {e.get("key") for e in aside or []}
-    out += _ir_uploads(files, by_path, loaded, today, stale_after, aside_keys)
+    out += _ir_uploads(files, by_path, loaded, today, stale_after, aside_keys | linked_paths)
     used = {r["mkey"] for r in out if r["mkey"]} | {r["path"] for r in out if r["path"]}
     out += _ir_drafts(by_mkey, by_path, used, meta, today, stale_after)
-    out += _ir_filed(done or [], {r["mkey"] for r in out if r["mkey"]}, today, stale_after)      # #307
+    out += _ir_filed([d for d in done or [] if d.get("key") not in linked_done], {r["mkey"] for r in out if r["mkey"]},
+                     today, stale_after)      # #307
     out.sort(key=lambda r: r["start"])
     out.sort(key=lambda r: r["day"], reverse=True)       # newest day first, each day in time order (as Intake); stable sorts
     later, not_needed = _ir_aside_lists(meetings, files, aside)

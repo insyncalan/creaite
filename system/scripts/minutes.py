@@ -1407,6 +1407,36 @@ def processed_meeting(day, title):
     return any(needle in line for line in paths.PROCESSED.read_text(encoding="utf-8").splitlines() if not line.startswith("#"))
 
 
+def processed_on_meeting(day, title, skip=()):
+    """#389: the date processed.txt records for a meeting of this date and title processed from a file (an fp: key, its content
+    part ignored as processed_meeting does), or None. Its calendar row then leaves Intake's Arrived list. Never a comment line,
+    rejected minutes ("not filed | 0") or a key in `skip` (someone else's minutes, by_others_keys: #232 E1)."""
+    if not paths.PROCESSED.exists() or not norm_title(title):
+        return None
+    needle = f"fp:{day}|{norm_title(title)}|"
+    for line in paths.PROCESSED.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.split(" | ")]
+        if line.startswith("#") or len(cells) < 2 or not cells[1].startswith(needle) or cells[1] in skip:
+            continue
+        if cells[2:4] != ["not filed", "0"]:
+            return cells[0]
+    return None
+
+
+def by_others_keys():
+    """#389: the processing keys of someone else's minutes (#232 E1), waiting in Review or applied (system/staging/applied/).
+    They must never mark a meeting processed. Read only; an unreadable proposal is skipped."""
+    keys = set()
+    for f in [*paths.STAGING.glob("proposed-*.json"), *paths.APPLIED.glob("*.json")]:
+        try:
+            m = json.loads(f.read_text(encoding="utf-8")).get("meeting") or {}
+        except (OSError, ValueError, AttributeError):
+            continue                                  # a proposal being written, or an odd one: it names no one's minutes
+        if isinstance(m, dict) and m.get("kind") == BY_OTHERS and m.get("key"):
+            keys.add(m["key"])
+    return keys
+
+
 def meeting_files(code):
     """[{path, date, title, how}] for every file in a project's minutes and transcripts folders (never the other folders), oldest
     first. The date is in the name (creaite's or Teams'), else the file's own date. Online-only files are left out."""
