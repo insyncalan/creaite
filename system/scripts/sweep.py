@@ -92,7 +92,7 @@ import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved
 import invite_clean  # noqa: E402  (#265 review M1, M2: what a saved invite may keep)
 
 LOCK = paths.STAGING / "sweep.lock"
-SWEEP_FAILED = paths.STAGING / "sweep-failed.json"          # #370: {at, retry_at, day} of a missed check (times only); `fail` writes it, `done` clears it
+SWEEP_FAILED = paths.STAGING / "sweep-failed.json"  # #370: a missed check, times only
 STALE = timedelta(minutes=30)
 
 

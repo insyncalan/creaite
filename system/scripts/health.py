@@ -169,7 +169,8 @@ def home_short(text):
 def built_fix(fix_id, kind=""):
     """A built fix (health_fixes.describe), with the fields every fix has, so the page reads one shape."""
     d = health_fixes.describe(fix_id)
-    return {**d, "kind": kind or fix_id, "would_run": d.get("command") or d.get("url") or d.get("call", ""), "waits_for": "", "how": d["does"]}
+    would_run = d.get("command") or d.get("url") or d.get("call", "")
+    return {**d, "kind": kind or fix_id, "would_run": would_run, "waits_for": "", "how": d["does"]}
 
 
 def fix_for(kind, problem_id=None, detail=""):
