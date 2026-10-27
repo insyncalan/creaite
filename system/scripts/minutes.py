@@ -1405,6 +1405,19 @@ def processed_meeting(day, title):
     return any(needle in line for line in paths.PROCESSED.read_text(encoding="utf-8").splitlines() if not line.startswith("#"))
 
 
+def processed_on_meeting(day, title):
+    """#389: the date processed.txt records for a meeting of this date and title processed from a file (an fp: key, its content
+    part ignored as processed_meeting does), or None. Its calendar row then leaves Intake's Arrived list."""
+    if not paths.PROCESSED.exists():
+        return None
+    needle = f"fp:{day}|{norm_title(title)}|"
+    for line in paths.PROCESSED.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.split(" | ")]
+        if not line.startswith("#") and len(cells) >= 2 and cells[1].startswith(needle):
+            return cells[0]
+    return None
+
+
 def meeting_files(code):
     """[{path, date, title, how}] for every file in a project's minutes and transcripts folders (never the other folders), oldest
     first. The date is in the name (creaite's or Teams'), else the file's own date. Online-only files are left out."""
