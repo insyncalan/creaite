@@ -253,7 +253,9 @@ PRIVATE_PATHS = ("system/staging", "system/logs", "system/branding")   # never i
 PRIVATE_SPECS = tuple(f":(icase){p}" for p in PRIVATE_PATHS)                # a volume that ignores case may hold System/Staging
 EXCLUDE_SPECS = tuple(f":(exclude,icase){p}" for p in PRIVATE_PATHS)
 SAFE_GIT = ("-c", "core.hooksPath=/dev/null", "-c", "core.excludesFile=/dev/null", "-c", "commit.gpgsign=false",
-            "-c", "user.name=creaite", "-c", "user.email=creaite@localhost")   # nothing of the user's git setup runs on the snapshot
+            "-c", "user.name=creaite", "-c", "user.email=creaite@localhost",
+            "-c", "gc.auto=0", "-c", "maintenance.auto=false", "-c", "gc.autoDetach=false")
+# SAFE_GIT: no user hook, global setting or background gc/maintenance runs on the snapshot repository
 BUNDLE_NOTE = []                       # ["snapshot"] when the last bundle was the filtered snapshot (for the manifest)
 SNAPSHOT_NOTE = "git history: a snapshot of the latest commit (earlier history held private files)"
 
@@ -303,7 +305,8 @@ def bundle_filtered(git, dest):
     branch = run_git(git, root, "symbolic-ref", "-q", "--short", "HEAD", text=True).stdout.strip()
     if not branch or run_git(git, root, "rev-parse", "-q", "--verify", "HEAD").returncode:
         return "git bundle failed: the history holds private files and has no branch to snapshot"
-    with tempfile.TemporaryDirectory() as work:
+    work = tempfile.mkdtemp(prefix="creaite-bundle-")
+    try:
         snap, idx = Path(work) / "snap", Path(work) / "index"
         snap.mkdir()
         read = run_git(git, root, "read-tree", "HEAD", index=idx)       # a temporary index: the vault's own is never touched
@@ -311,11 +314,13 @@ def bundle_filtered(git, dest):
         if read.returncode or listed.returncode:
             return "git bundle failed: couldn't read the latest commit"
         out = run_git(git, root, "checkout-index", "-z", "--stdin", f"--prefix={snap}/", index=idx, input=listed.stdout)
-        steps = [["init", "-q"], ["checkout", "-q", "-b", branch], [*SAFE_GIT, "add", "-A", "-f"],
-                 [*SAFE_GIT, "commit", "-q", "-m", SNAPSHOT_NOTE], ["bundle", "create", str(dest), "HEAD", branch]]
-        if out.returncode or any(run_git(git, snap, *st).returncode for st in steps) or not dest.is_file():
+        steps = [["init", "-q"], ["checkout", "-q", "-b", branch], ["add", "-A", "-f"],
+                 ["commit", "-q", "-m", SNAPSHOT_NOTE], ["bundle", "create", str(dest), "HEAD", branch]]
+        if out.returncode or any(run_git(git, snap, *SAFE_GIT, *st).returncode for st in steps) or not dest.is_file():
             dest.unlink(missing_ok=True)
             return "git bundle failed: couldn't build the filtered snapshot"
+    finally:
+        shutil.rmtree(work, ignore_errors=True)         # a temporary folder that won't delete never discards a good bundle
     BUNDLE_NOTE.append("snapshot")
     return None
 
