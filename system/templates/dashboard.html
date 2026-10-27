@@ -40605,6 +40605,7 @@ system/scripts/run launch.py agent ${what}`;
     return { right: Math.max(...on2.map((c5) => c5.right)), bottom: tq.length ? tq[tq.length - 1].bottom : null, mid: (Math.min(...on2.map((c5) => c5.top)) + Math.max(...on2.map((c5) => c5.bottom))) / 2 };
   }
   var WKX = ["--wkx", "--wky"];
+  var WKMID = 12;
   function wkPlace() {
     WKPQ = 0;
     const w6 = $("#workWrap");
@@ -40622,8 +40623,8 @@ system/scripts/run launch.py agent ${what}`;
     const fit = xs2.map((x5) => {
       const td2 = x5.parentElement, l6 = wkLine(td2, x5), id2 = x5.querySelector(".rowid");
       if (!l6 || !id2) return null;
-      const cs2 = getComputedStyle(td2), room = td2.getBoundingClientRect().right - (parseFloat(cs2.paddingRight) || 0) - (parseFloat(cs2.borderRightWidth) || 0) - (l6.right + 10), left = x5.getBoundingClientRect().left, all = wkRects(x5), full = all.length ? Math.max(...all.map((c5) => c5.right)) - left : 0, stops = [full, ...[...x5.querySelectorAll(":scope > .pcode, :scope > .rowid")].map((e4) => e4.getBoundingClientRect().right - left).sort((p6, q5) => q5 - p6)], keep2 = stops.find((v5) => v5 > 0 && v5 <= room + 0.5);
-      return keep2 == null ? null : { dx: l6.right + 10 - left, clip: keep2 < full - 0.5 ? x5.getBoundingClientRect().width - keep2 : 0 };
+      const cs2 = getComputedStyle(td2), tr2 = td2.getBoundingClientRect(), start = Math.max(l6.right + 10, (tr2.left + tr2.right) / 2 + WKMID), room = tr2.right - (parseFloat(cs2.paddingRight) || 0) - (parseFloat(cs2.borderRightWidth) || 0) - start, left = x5.getBoundingClientRect().left, all = wkRects(x5), full = all.length ? Math.max(...all.map((c5) => c5.right)) - left : 0, stops = [full, ...[...x5.querySelectorAll(":scope > .pcode, :scope > .rowid")].map((e4) => e4.getBoundingClientRect().right - left).sort((p6, q5) => q5 - p6)], keep2 = stops.find((v5) => v5 > 0 && v5 <= room + 0.5);
+      return keep2 == null ? null : { dx: start - left, clip: keep2 < full - 0.5 ? x5.getBoundingClientRect().width - keep2 : 0 };
     });
     xs2.forEach((x5, i5) => {
       const f5 = fit[i5];
