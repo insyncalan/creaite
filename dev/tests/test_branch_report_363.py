@@ -89,9 +89,28 @@ class Fixture(unittest.TestCase):
         run(o, "branch", "twin-b")
         run(o, "checkout", "-q", "-b", "unique-old", "main")
         commit(o, "u.txt", "unique\n")
+        # in main, but checked out in a worktree (Stark's re-check): never delete
+        run(o, "checkout", "-q", "-b", "out-picked", "main")
+        commit(o, "o.txt", "checked out\n")
+        out_pick = run(o, "rev-parse", "HEAD")
+        # in main on origin, but the local copy has a commit of its own not on origin
+        run(o, "checkout", "-q", "-b", "ahead-local", "main")
+        commit(o, "a.txt", "ahead\n")
+        ahead_pick = run(o, "rev-parse", "HEAD")
         run(o, "checkout", "-q", "main")
+        run(o, "cherry-pick", out_pick)
+        run(o, "cherry-pick", ahead_pick)
         cls.clone = cls.tmp / "clone"
         run(cls.tmp, "clone", "-q", str(o), str(cls.clone))
+        c = cls.clone
+        cls.out_wt = cls.tmp / "wt-out"
+        run(c, "worktree", "add", "-q", str(cls.out_wt), "out-picked")             # a local out-picked, tracking origin's
+        run(c, "branch", "ahead-local", "origin/ahead-local")
+        run(c, "checkout", "-q", "ahead-local")
+        commit(c, "a2.txt", "local only commit\n")
+        run(c, "checkout", "-q", "-b", "local-work", "main")                          # a branch with no origin counterpart
+        commit(c, "l.txt", "local work\n")
+        run(c, "checkout", "-q", "main")
         cwd = os.getcwd()
         try:
             os.chdir(cls.clone)
@@ -145,16 +164,32 @@ class Fixture(unittest.TestCase):
     def test_unique_old_work_is_the_owners_call(self):
         self.assertEqual(self.suggest("unique-old"), "owner decides")
 
-    def test_only_remote_branches_are_reported_and_main_is_not(self):
+    def test_main_is_not_reported(self):
         self.assertNotIn("main", self.rows)
-        run(self.clone, "branch", "local-only")
-        cwd = os.getcwd()
-        try:
-            os.chdir(self.clone)
-            names = {r["branch"] for r in B.facts(pr={})}
-        finally:
-            os.chdir(cwd)
-        self.assertNotIn("local-only", names)
+
+    def test_a_branch_checked_out_in_a_worktree_is_never_delete(self):
+        """Stark's re-check: four "delete" branches were checked out in live worktrees. In main or not, it is kept and says where."""
+        r = self.rows["out-picked"]
+        self.assertEqual(r["commits_not_in_main"], 0, r)                 # its change is in main: delete, but for the worktree
+        self.assertEqual(r["checked_out"], [str(self.out_wt.resolve())], r)
+        self.assertEqual(r["suggest"], "keep", r)
+        self.assertIn("checked out in " + str(self.out_wt.resolve()), r["why"])
+
+    def test_a_local_branch_with_commits_not_on_origin_is_kept(self):
+        r = self.rows["ahead-local"]
+        self.assertEqual((r["where"], r["local_ahead"]), ("local and remote", 1), r)
+        self.assertEqual(r["suggest"], "keep", r)
+        self.assertIn("1 commit(s) not on origin", r["why"])
+
+    def test_local_only_and_remote_only_are_told_apart(self):
+        self.assertEqual(self.rows["local-work"]["where"], "local only")
+        self.assertEqual(self.rows["unique-old"]["where"], "remote only")
+        self.assertEqual(self.rows["out-picked"]["where"], "local and remote")
+        self.assertEqual(self.suggest("local-work"), "owner decides")
+        table = B.markdown(list(self.rows.values()))
+        self.assertIn("| Where |", table)
+        self.assertRegex(table, r"\| `local-work` \| local only \|")
+        self.assertRegex(table, r"\| `unique-old` \| remote only \|")
 
     def test_the_table_shows_dates_as_dd_mm_yyyy_and_escapes_bars(self):
         rows = [dict(self.rows["unique-old"], why="a | b")]
