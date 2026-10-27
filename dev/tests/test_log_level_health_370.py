@@ -87,6 +87,12 @@ class Row(unittest.TestCase):
         self.assertEqual(p.read_text(encoding="utf-8").count("\n"), 1)
         self.assertEqual(before, p.read_bytes())
 
+    def test_with_no_time_given_it_reads_creaite_now_as_the_rest_of_creaite_does(self):
+        p = log(self.tmp.name, change("2026-10-19 09:00:00"))
+        with mock.patch.dict("os.environ", {"CREAITE_NOW": "2026-10-21 13:00"}):
+            self.assertIsNone(health.detailed_logging_check(DEBUG, p))           # six days on: no row
+        with mock.patch.dict("os.environ", {"CREAITE_NOW": "2026-10-27 12:00"}):
+            self.assertIsNotNone(health.detailed_logging_check(DEBUG, p))        # eight days on: the row
 
 class Mutants(unittest.TestCase):
     """A change to the rule must fail the cases above: the same cases run against a copy with one line altered."""

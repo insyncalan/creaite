@@ -25,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import health_fixes  # noqa: E402
+import log  # noqa: E402
 import paths  # noqa: E402
 
 DOCTOR = Path(__file__).resolve().parent / "doctor.py"
@@ -184,7 +185,7 @@ def detailed_logging_check(settings=None, log_path=None, now=None):
             if isinstance(e, dict) and e.get("key") == "logging.level":
                 since = datetime.strptime(str(e.get("at", ""))[:19].replace("T", " "), "%Y-%m-%d %H:%M:%S") \
                     if str(e.get("new", "")).lower() == "debug" else None
-        if since is None or (now or datetime.now()) - since <= timedelta(days=DETAILED_LOGGING_DAYS):
+        if since is None or (now or log.now()) - since <= timedelta(days=DETAILED_LOGGING_DAYS):
             return None
     except (OSError, ValueError, TypeError, AttributeError):    # a suggestion never breaks Health
         return None
