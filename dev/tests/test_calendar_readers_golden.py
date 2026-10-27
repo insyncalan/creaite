@@ -140,6 +140,7 @@ ALLOWED = {
     "prep_page._event": {BODY: "filtered by the 2.6.9 filter", "registered": "unused"},
     "transcripts.calendar_rows": {BODY: "day purpose carries none", "attachments": "not read (id, all_day, end, teams, private, title)",
                                   "email": "not read", "registered": "not read", "organiser_email": "not read"},
+    "build_dashboard.inbox_meetings": {"same_title": "#389: added, how many of the day's meetings share the title (nothing removed)"},
 }
 
 

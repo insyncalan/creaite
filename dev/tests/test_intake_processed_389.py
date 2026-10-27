@@ -165,6 +165,11 @@ class ProcessedLines(unittest.TestCase):
                    "2026-09-30 | fp:2026-09-28|weekly sync|77aa01 | projects/ABC Alpha/minutes/x.docx | 2")
         self.assertEqual(minutes.processed_on_meeting("2026-09-28", "Weekly sync"), "2026-09-30")
 
+    def test_an_empty_title_is_never_matched(self):
+        """A title that normalises to nothing ('[ABC]') never takes a processing recorded as fp:<day>||…"""
+        self.lines("2026-09-29 | fp:2026-09-28||9f2c1a | projects/ABC Alpha/minutes/x.docx | 3")
+        self.assertIsNone(minutes.processed_on_meeting("2026-09-28", "[ABC]"))
+
     def test_someone_elses_minutes_are_skipped(self):
         self.lines("2026-09-29 | fp:2026-09-28|weekly sync|9f2c1a | projects/ABC Alpha/minutes/theirs.docx | 2")
         self.assertIsNone(minutes.processed_on_meeting("2026-09-28", "Weekly sync", skip={"fp:2026-09-28|weekly sync|9f2c1a"}))
