@@ -126,6 +126,8 @@ class V268(unittest.TestCase):
         try:
             r = git("worktree", "add", "--detach", str(wt), "origin/main")
             self.assertEqual(r.returncode, 0, r.stderr)
+            if any(subprocess.run(["git", "apply", "--reverse", "--check", str(REPO / d)], cwd=wt, capture_output=True).returncode == 0 for d in diffs):
+                self.skipTest("origin/main already is the released 2.6.8 (the chain is applied in it); nothing left to apply")
             for d in diffs:
                 p = subprocess.run(["git", "apply", str(REPO / d)], cwd=wt, capture_output=True, text=True)
                 self.assertEqual(p.returncode, 0, f"{d} does not apply in order on origin/main: {p.stderr[-600:]}")

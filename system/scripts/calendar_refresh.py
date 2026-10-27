@@ -18,12 +18,12 @@ module is what the route and the page share, all plain code:
 The request is `{"run": "<id>"?}` and nothing else. The stream is the run engine's events, plus one "calendar" event before the
 closure: {"type": "calendar", "saved": bool, "meetings": n, "days": n, "transcripts": bool}. Counts only, never a title or a body.
 """
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 
 KIND = "calendar"           # the run engine's kind, the usage monitor's kind and the guard hook's mode
 MODE = "calendar"
@@ -88,7 +88,7 @@ def outcome(started):
     meetings = days = 0
     if saved:
         try:
-            held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+            held = calendar_gateway.read("meta").get("days") or {}
         except (OSError, ValueError, AttributeError):
             held, saved = {}, False
         if isinstance(held, dict):

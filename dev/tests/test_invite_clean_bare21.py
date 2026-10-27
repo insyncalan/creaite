@@ -242,7 +242,7 @@ class Mutants(unittest.TestCase):
         self.assertFalse(leaks(m, [r for r in ALL_QUALIFIED_ROWS if "(" not in r[0].split("\n")[0] and "for dial-in" in r[0]][:5]))
 
     def test_no_phrase_qualifier(self):
-        m = mutant('_QPHRASE = rf"', '_QPHRASE = rf"(?!)')
+        m = mutant('_QPHRASE = (rf"', '_QPHRASE = (rf"(?!)')
         self.assertTrue(leaks(m, [("Passcode for dial-in:\n4417", "4417"), ("PIN to join:\n4417", "4417")]))
 
     def test_qualifier_limited_to_zero_extra_words(self):
@@ -259,7 +259,7 @@ class Mutants(unittest.TestCase):
         self.assertIn("12-11-2026", I.invite_text("Password reset\n12-11-2026\nAOB"))
 
     def test_qualifier_without_the_end_anchor_eats_sentences(self):
-        m = mutant("{_QUAL}(?:{_ALONE_TAIL})?{_QUIET}$\"", "{_QUAL}(?:{_ALONE_TAIL})?{_QUIET}\"")
+        m = mutant('rf"(?:\\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}$")', 'rf"(?:\\s*[.,;!?]+)?(?:{_ALONE_TAIL})?{_QUIET}")')
         self.assertNotEqual(m.invite_text("Passcode for staff is set by the admin team\nAOB"), "AOB")
 
     def test_dates_not_exempt(self):

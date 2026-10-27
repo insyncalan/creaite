@@ -1,0 +1,26 @@
+{
+ "expected_lines": [
+  "Vendor onboarding call. We will walk through the access request form.",
+  "",
+  "Join meeting",
+  "https://acme.webex.example.org/acme/j.php?MTID=m1a2b3c4d5",
+  "",
+  "Meeting number (access code): | 2551 880 1234",
+  "Meeting password: | Qw8rTy2z",
+  "",
+  "Join by phone",
+  "+1-415-555-0100 US Toll",
+  "Access code: 2551 880 1234",
+  "",
+  "Can't join the meeting? Get help"
+ ],
+ "planted_secrets": [
+  "2551 880 1234",
+  "Qw8rTy2z",
+  "m1a2b3c4d5",
+  "+1-415-555-0100"
+ ],
+ "must_keep": [
+  "Vendor onboarding call. We will walk through the access request form."
+ ]
+}

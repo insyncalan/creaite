@@ -88,6 +88,7 @@ except ImportError:
         main = staticmethod(lambda script, fn, *a: fn(*a))
 import tracker  # noqa: E402
 import extraction  # noqa: E402  (sprint-drafts-extraction)
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 import invite_clean  # noqa: E402  (#265 review M1, M2: what a saved invite may keep)
 
 LOCK = paths.STAGING / "sweep.lock"
@@ -654,7 +655,7 @@ def calendar_fetch_from(today=None):
     today = today or now().date()
     start = calendar_window(today)[0]
     try:
-        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        data = calendar_gateway.read("meta")
     except (OSError, ValueError):
         return start
     try:
@@ -669,7 +670,7 @@ def calendar_span(today=None):
     """(first day, last day) the saved calendar holds now, as dates, or None without one (BL-293): calendar_window(), its last
     day cut to the day the calendar was read to (#318: its "to"; a calendar saved before that, seven days after its fetch)."""
     try:
-        data = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        data = calendar_gateway.read("meta")
         data.get("fetched")
     except (OSError, ValueError, AttributeError):
         return None
@@ -756,25 +757,33 @@ def localise(spec_days, bad):
 
 def keep_held_past_days(days, start_day, today_day):
     """#146: the past days (inside the window) the saved calendar already holds stay as they are; they win over the same day
-    in this save, because past meetings don't change and a sweep no longer reads them."""
+    in this save, because past meetings don't change and a sweep no longer reads them. #375 S4: each held row keeps its OWN stamp
+    (calendar_gateway.stamp_row): a stamped row is kept as stored (ROW_KEYS only), an unstamped one (saved by an earlier version) is
+    cleaned and its body filtered and only then stamped, so a row is never stamped without having been filtered."""
     try:
-        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+        held = calendar_gateway.read_raw().get("days") or {}
     except (OSError, ValueError, AttributeError):
         held = {}
     for day, rows in held.items():
         if start_day <= str(day) < today_day and isinstance(rows, list):
-            days[day] = [invite_clean.clean_row(r) for r in rows if isinstance(r, dict)]     # rows saved by an earlier version too
+            days[day] = [_stamped(r) for r in rows if isinstance(r, dict)]
     return dict(sorted(days.items()))
 
 
-CAL_LOCK = paths.STAGING / "calendar.lock"
+def _stamped(row):
+    """A saved row ready to write: a trusted row (current stamp, well formed) as stored but limited to the saved keys, with its
+    sensitivity worked out first (calendar_gateway.keep_row); any other cleaned, filtered and stamped."""
+    return calendar_gateway.stamp_row(row)
+
+
+CAL_LOCK = calendar_gateway.LOCK            # the one lock file: calendar_gateway.lock takes the same flock
 
 
 @contextlib.contextmanager
 def calendar_lock(wait=20.0):
-    """Hold the calendar's write lock (flock on system/staging/calendar.lock) while the saved calendar is read, changed and written, so a
-    sweep's save and the clean-up cannot lose each other's write. Yields True when held; False when it could not be taken within `wait`
-    seconds (the caller decides: the clean-up skips, a save goes on as it always did)."""
+    """Hold the calendar's write lock (flock on calendar_gateway.LOCK, system/staging/calendar.lock) while the saved calendar is read,
+    changed and written, so a sweep's save and the clean-up cannot lose each other's write. Yields True when held; False when it
+    could not be taken within `wait` seconds (the caller decides: the clean-up skips, a save goes on as it always did)."""
     fd, got = None, False
     try:
         import fcntl
@@ -820,15 +829,28 @@ def _stamp(path):
     return st.st_mtime_ns, st.st_size, st.st_ino
 
 
+def _rescrubbed(cal):
+    """#375 S4: the calendar as the rescrub writes it: the shape of invite_clean.clean_calendar (only fetched, to and days; bad days and
+    rows dropped), every stamped row kept as stored, every unstamped one cleaned, body filtered, stamped; the file is stamped too.
+    The only writer that stamps old rows without a sweep. A rescrubbed calendar rescrubs to itself."""
+    shape = invite_clean.clean_calendar({k: v for k, v in cal.items() if k in ("fetched", "to")} | {"days": {}}) if isinstance(cal, dict) \
+        else {"days": {}}
+    days = cal.get("days") if isinstance(cal, dict) else None
+    shape["days"] = {d: [_stamped(r) for r in rows if isinstance(r, dict)] for d, rows in (days if isinstance(days, dict) else {}).items()
+                     if isinstance(d, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", d) and isinstance(rows, list)}
+    shape.update(calendar_gateway.file_stamp())
+    return shape
+
+
 def _clean_calendar_file(locked):
     """One pass: read, clean, write when something changed. Returns (changed rows, retry): with the lock held the write is certain; without
     it the file is looked at again right before the write, and a file that changed meanwhile is not overwritten (retry)."""
     try:
         before = _stamp(paths.CALENDAR)
-        cal = json.loads(paths.CALENDAR.read_text(encoding="utf-8"))
+        cal = calendar_gateway.read_raw()
     except (OSError, ValueError):
         return 0, False
-    new = invite_clean.clean_calendar(cal)
+    new = _rescrubbed(cal)
     if new == cal:
         return 0, False
     if not locked:
@@ -879,7 +901,7 @@ def spec_meetings(spec):
 def saved_meetings_from(day):
     """#265 review L4: how many meetings the saved calendar holds on `day` (YYYY-MM-DD) or later."""
     try:
-        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+        held = calendar_gateway.read("meta").get("days") or {}
     except (OSError, ValueError, AttributeError):
         return 0
     if not isinstance(held, dict):
@@ -1046,8 +1068,14 @@ def _calendar(spec_file):
                       f"today's or later meetings ({len(bad)} unreadable, {sum(ignored.values())} ignored)")
         return 1
     with calendar_lock():                  # the clean-up (rescrub_calendar) takes the same lock: neither loses the other's write
+        if len(json.dumps(days, ensure_ascii=False).encode("utf-8")) > CAL_MAX_SAVED:     # as the reply came, before the body cap trims it
+            print(CAL_REFUSED)
+            debuglog.warn("sweep", "calendar: a reply that would save over the size limit was refused")
+            return 1
+        days = calendar_gateway.stamp_rows(days)                                       # #375 S4: every row filtered and stamped
         days = keep_held_past_days(days, calendar_window()[0].isoformat(), today_day)
-        saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days},
+        saved = json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "to": calendar_window()[1].isoformat(), "days": days,
+                            **calendar_gateway.file_stamp()},
                            indent=1, ensure_ascii=False)
         if len(saved.encode("utf-8")) > CAL_MAX_SAVED:
             print(CAL_REFUSED)

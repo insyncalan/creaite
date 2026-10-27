@@ -29,7 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
-import invite_clean  # noqa: E402  (2.6.8: a saved calendar is cleaned again when it is read)
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 import docx_tools  # noqa: E402  (md_spans: the one reader of **bold**, _italic_, ~~strike~~ and `code`, shared with Word)
 
 REGISTRY = paths.STAGING / "prep-pages.json"
@@ -67,7 +67,7 @@ def latest():
 
 def _event(key, day):
     try:
-        days = invite_clean.read_calendar(paths.CALENDAR).get("days") or {}
+        days = calendar_gateway.read("prep_panel").get("days") or {}
     except (OSError, ValueError):
         return None
     start, title = key.split("|")[-2:]

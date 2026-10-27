@@ -4803,7 +4803,9 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IMG_MAX: () => IMG_MAX,
     IMG_SIDE: () => IMG_SIDE,
     INFLIGHT: () => INFLIGHT,
+    IR_AGAIN: () => IR_AGAIN,
     IR_FOLDED: () => IR_FOLDED,
+    IR_FOUND: () => IR_FOUND,
     IR_GROUPS: () => IR_GROUPS,
     IR_GROUP_KEY: () => IR_GROUP_KEY,
     IR_KINDS: () => IR_KINDS,
@@ -4816,6 +4818,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     IR_STATE_CHIP: () => IR_STATE_CHIP,
     IR_STATE_FILTERS: () => IR_STATE_FILTERS,
     IR_STATE_STAGE: () => IR_STATE_STAGE,
+    IR_STILL: () => IR_STILL,
     IR_UPLOAD_TYPES: () => IR_UPLOAD_TYPES,
     IR_VIEWS: () => IR_VIEWS,
     IR_VIEW_KEY: () => IR_VIEW_KEY,
@@ -76960,6 +76963,7 @@ ${d5.text}`);
           continue;
         }
         if (ev.type === "closure") {
+          shared.LASTCLOSE = ev;
           spin.remove();
           grp = null;
           outcome = ev.ok ? "done" : ev.stopped ? "stopped" : "failed";
@@ -78199,6 +78203,20 @@ ${d5.text}`);
   }
   var calOf = (m5) => m5.src === "calendar" ? (D.meetings && D.meetings.rows || []).find((x5) => x5.key === m5.key) || null : null;
   var rowOf = (id2) => irModel().meetings.find((x5) => x5.id === id2) || null;
+  var IR_AGAIN = "Claude Code did not reach Microsoft 365. Looking again, once.";
+  var IR_STILL = "Looked again, and Microsoft 365 still could not be reached. Nothing was loaded. Press Process to try again.";
+  var IR_FOUND = "Found it on the second look.";
+  async function irLoadRun(id2) {
+    shared.LASTCLOSE = null;
+    try {
+      await jobLive("/api/transcripts/load", { id: id2 });
+    } catch (e4) {
+    }
+  }
+  var irNoReach = () => {
+    const c5 = shared.LASTCLOSE;
+    return !!c5 && c5.ok === false && !c5.stopped && /did not reach Microsoft 365/.test(String(c5.line || ""));
+  };
   var irRun = "";
   async function irProcess(m5) {
     if (!irCanProcess(m5)) return false;
@@ -78237,20 +78255,28 @@ ${d5.text}`);
         file = x5.loaded;
         if (!file) {
           shared.RUNLABEL = label;
-          try {
-            await jobLive("/api/transcripts/load", { id: x5.id });
-          } catch (e4) {
+          let again = false;
+          await irLoadRun(x5.id);
+          if (irNoReach() && !irStopped) {
+            again = true;
+            irNote(m5.id, IR_AGAIN);
+            await irLoadRun(x5.id);
           }
           await reloadData();
           const now = calOf(m5);
           file = now && now.loaded;
+          if (!file && again && irNoReach()) {
+            irNote(m5.id, IR_STILL);
+            return false;
+          }
           if (!file) {
-            irNote(m5.id, `Skipped: ${TXWHY[
+            irNote(m5.id, `${again ? "Looked again. " : ""}Skipped: ${TXWHY[
               /** @type {keyof TXWHY} */
               now && now.transcript
             ] || "No transcript could be loaded"}`);
             return false;
           }
+          if (again) snack(IR_FOUND);
         }
       }
       shared.RUNLABEL = label;
@@ -82184,6 +82210,7 @@ Next: `;
         "TXWHY",
         "Tabs",
         "TextEditor",
+        "Timeline",
         "ToDecide",
         "Toast",
         "TranscriptPane",

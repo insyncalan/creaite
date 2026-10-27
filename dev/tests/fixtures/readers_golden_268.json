@@ -1,0 +1,2198 @@
+{
+ "build_dashboard.calendar": {
+  "days": {
+   "2026-10-22": [
+    {
+     "all_day": false,
+     "end": "09:00",
+     "id": "h1",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "08:00",
+     "teams": false,
+     "title": "Held past day",
+     "where": ""
+    }
+   ],
+   "2026-10-23": [
+    {
+     "all_day": false,
+     "end": "11:00",
+     "id": "r4",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "10:00",
+     "teams": true,
+     "title": "Quay design",
+     "where": "Teams"
+    }
+   ],
+   "2026-10-26": [
+    {
+     "all_day": false,
+     "end": "10:00",
+     "id": "r1",
+     "organiser": "Pat Doe",
+     "p": null,
+     "private": false,
+     "recurrence": "weekly",
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": true,
+     "title": "Weekly sync",
+     "where": "Room 204"
+    },
+    {
+     "all_day": false,
+     "end": "11:30",
+     "id": "r2",
+     "organiser": true,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "11:00",
+     "teams": false,
+     "title": "Stamped review",
+     "where": ""
+    },
+    {
+     "all_day": true,
+     "end": "",
+     "id": "r3",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "",
+     "teams": false,
+     "title": "Offsite",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "13:00",
+     "id": "rP",
+     "organiser": false,
+     "p": null,
+     "private": true,
+     "start": "12:00",
+     "teams": true,
+     "title": "Busy",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "15:00",
+     "id": "rC",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "14:00",
+     "teams": false,
+     "title": "Board pay",
+     "where": ""
+    }
+   ],
+   "2026-10-27": [
+    {
+     "all_day": false,
+     "end": "10:00",
+     "id": "o1",
+     "organiser": false,
+     "p": "ABC",
+     "private": false,
+     "sensitivity": "normal",
+     "start": "09:00",
+     "teams": false,
+     "title": "ABC planning",
+     "where": ""
+    },
+    {
+     "all_day": true,
+     "end": "",
+     "id": "o2",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "",
+     "teams": false,
+     "title": "Company day",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "11:00",
+     "id": "o3",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "recurrence": "weekly",
+     "sensitivity": "normal",
+     "start": "10:00",
+     "teams": false,
+     "title": "Series",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "12:00",
+     "id": "o4",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "11:00",
+     "teams": false,
+     "title": "Declined one",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "12:30",
+     "id": "o5",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "12:00",
+     "teams": false,
+     "title": "Canceled: Old sync",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "14:00",
+     "id": "o6",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "13:00",
+     "teams": false,
+     "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "15:00",
+     "id": "o7",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "14:00",
+     "teams": false,
+     "title": "No emails",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "16:00",
+     "id": "o8",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "15:00",
+     "teams": false,
+     "title": "Revis\u00e3o do or\u00e7amento \u9810\u7b97",
+     "where": "Caf\u00e9 Z\u00fcrich"
+    },
+    {
+     "all_day": false,
+     "end": "17:00",
+     "id": "o9",
+     "organiser": false,
+     "p": null,
+     "private": true,
+     "start": "16:00",
+     "teams": true,
+     "title": "Busy",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "17:30",
+     "id": "o10",
+     "organiser": false,
+     "p": null,
+     "private": true,
+     "start": "17:00",
+     "teams": false,
+     "title": "Busy",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "18:00",
+     "id": "o11",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "17:30",
+     "teams": false,
+     "title": "Bare conf",
+     "where": ""
+    },
+    {
+     "id": "o12",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "18:00",
+     "teams": false,
+     "title": "Meeting",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "19:00",
+     "id": "o13",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "18:30",
+     "teams": false,
+     "title": "String attendees",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "19:30",
+     "id": "o14",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "19:00",
+     "teams": false,
+     "title": "None in list",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "08:30",
+     "id": "o15",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "08:00",
+     "teams": false,
+     "title": "Meeting",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "09:00",
+     "id": "o16",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "normal",
+     "start": "08:30",
+     "teams": false,
+     "title": "Meeting",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "07:30",
+     "id": "o17",
+     "organiser": false,
+     "p": null,
+     "private": false,
+     "sensitivity": "confidential",
+     "start": "07:00",
+     "teams": false,
+     "title": "Stamped bare conf",
+     "where": ""
+    },
+    {
+     "all_day": false,
+     "end": "08:00",
+     "id": "o18",
+     "organiser": false,
+     "p": null,
+     "private": true,
+     "start": "07:30",
+     "teams": false,
+     "title": "Busy",
+     "where": ""
+    }
+   ]
+  },
+  "fetched": "2026-10-26 08:00"
+ },
+ "build_dashboard.fetched": "2026-10-26 08:00",
+ "build_dashboard.inbox_meetings": {
+  "cleared": [],
+  "fetched": "2026-10-26 08:00",
+  "from": "2026-10-26",
+  "later": [],
+  "rows": [
+   {
+    "cands": [
+     "ABC"
+    ],
+    "confidential": false,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "10:00",
+    "how": "likely",
+    "id": "r1",
+    "key": "r1",
+    "level": "likely",
+    "loaded": null,
+    "offer": null,
+    "organiser": "Pat Doe",
+    "p": "ABC",
+    "private": false,
+    "processed": null,
+    "reason": "Fits the project's register entry",
+    "series": "weekly sync",
+    "start": "09:00",
+    "teams": true,
+    "title": "Weekly sync",
+    "transcript": null,
+    "transcript_checked": null
+   },
+   {
+    "cands": [
+     "ABC"
+    ],
+    "confidential": false,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "11:30",
+    "how": "likely",
+    "id": "r2",
+    "key": "r2",
+    "level": "likely",
+    "loaded": null,
+    "offer": null,
+    "organiser": true,
+    "p": "ABC",
+    "private": false,
+    "processed": null,
+    "reason": "Fits the project's register entry",
+    "series": "stamped review",
+    "start": "11:00",
+    "teams": false,
+    "title": "Stamped review",
+    "transcript": null,
+    "transcript_checked": null
+   },
+   {
+    "confidential": false,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "13:00",
+    "how": "private",
+    "id": "rP",
+    "key": "rP",
+    "loaded": null,
+    "organiser": false,
+    "p": null,
+    "private": true,
+    "processed": null,
+    "series": "busy",
+    "start": "12:00",
+    "teams": true,
+    "title": "Busy",
+    "transcript": null,
+    "transcript_checked": null
+   },
+   {
+    "confidential": true,
+    "day": "2026-10-26",
+    "draft": false,
+    "end": "15:00",
+    "how": "unsure",
+    "id": "rC",
+    "key": "rC",
+    "loaded": null,
+    "organiser": false,
+    "p": null,
+    "private": false,
+    "processed": null,
+    "series": "board pay",
+    "start": "14:00",
+    "teams": false,
+    "title": "Board pay",
+    "transcript": null,
+    "transcript_checked": null
+   }
+  ]
+ },
+ "build_dashboard.prep_match_ev": {
+  "h1": [
+   "ABC",
+   "likely"
+  ],
+  "o1": [
+   "ABC",
+   "matched"
+  ],
+  "o10": [
+   null,
+   "unsure"
+  ],
+  "o11": [
+   null,
+   "unsure"
+  ],
+  "o12": [
+   null,
+   "unsure"
+  ],
+  "o13": [
+   null,
+   "unsure"
+  ],
+  "o14": [
+   "ABC",
+   "likely"
+  ],
+  "o15": [
+   null,
+   "unsure"
+  ],
+  "o16": [
+   null,
+   "unsure"
+  ],
+  "o17": [
+   null,
+   "unsure"
+  ],
+  "o18": [
+   null,
+   "unsure"
+  ],
+  "o2": [
+   null,
+   "unsure"
+  ],
+  "o3": [
+   "ABC",
+   "likely"
+  ],
+  "o4": [
+   "ABC",
+   "likely"
+  ],
+  "o5": [
+   null,
+   "unsure"
+  ],
+  "o6": [
+   null,
+   "unsure"
+  ],
+  "o7": [
+   null,
+   "unsure"
+  ],
+  "o8": [
+   null,
+   "unsure"
+  ],
+  "o9": [
+   null,
+   "unsure"
+  ],
+  "r1": [
+   "ABC",
+   "likely"
+  ],
+  "r2": [
+   "ABC",
+   "likely"
+  ],
+  "r3": [
+   null,
+   "unsure"
+  ],
+  "r4": [
+   "ABC",
+   "likely"
+  ],
+  "rC": [
+   null,
+   "unsure"
+  ],
+  "rP": [
+   null,
+   "unsure"
+  ]
+ },
+ "build_dashboard.saved_calendar_days": {
+  "2026-10-22": [
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     }
+    ],
+    "body": "Notes",
+    "end": "09:00",
+    "id": "h1",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "08:00",
+    "teams": false,
+    "title": "Held past day",
+    "where": ""
+   }
+  ],
+  "2026-10-23": [
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     },
+     {
+      "email": "ada@brightwater.example",
+      "name": "Ada Fox",
+      "registered": true,
+      "response": "none",
+      "type": "optional"
+     }
+    ],
+    "body": "Notes",
+    "end": "11:00",
+    "id": "r4",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "10:00",
+    "teams": true,
+    "title": "Quay design",
+    "where": "Teams"
+   }
+  ],
+  "2026-10-26": [
+   {
+    "all_day": false,
+    "attachments": [
+     "plan.docx"
+    ],
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     },
+     {
+      "email": "ada@brightwater.example",
+      "name": "Ada Fox",
+      "registered": true,
+      "response": "none",
+      "type": "optional"
+     }
+    ],
+    "body": "Agenda\nBudget and plan",
+    "end": "10:00",
+    "id": "r1",
+    "organiser": "Pat Doe",
+    "organiser_email": "pat.doe@brightwater.example",
+    "private": false,
+    "recurrence": "weekly",
+    "sensitivity": "normal",
+    "start": "09:00",
+    "teams": true,
+    "title": "Weekly sync",
+    "where": "Room 204"
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     }
+    ],
+    "body": "Kept as stored",
+    "end": "11:30",
+    "id": "r2",
+    "organiser": true,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "11:00",
+    "teams": false,
+    "title": "Stamped review",
+    "where": ""
+   },
+   {
+    "all_day": true,
+    "end": "",
+    "id": "r3",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "",
+    "teams": false,
+    "title": "Offsite",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "13:00",
+    "id": "rP",
+    "organiser": false,
+    "private": true,
+    "start": "12:00",
+    "teams": true,
+    "title": "Busy",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "15:00",
+    "id": "rC",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "confidential",
+    "start": "14:00",
+    "teams": false,
+    "title": "Board pay",
+    "where": ""
+   }
+  ],
+  "2026-10-27": [
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     }
+    ],
+    "end": "10:00",
+    "id": "o1",
+    "organiser": false,
+    "organiser_email": "pat.doe@brightwater.example",
+    "private": false,
+    "sensitivity": "normal",
+    "start": "09:00",
+    "teams": false,
+    "title": "ABC planning",
+    "where": ""
+   },
+   {
+    "all_day": true,
+    "end": "",
+    "id": "o2",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "",
+    "teams": false,
+    "title": "Company day",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     },
+     {
+      "email": "ada@brightwater.example",
+      "name": "Ada Fox",
+      "registered": true,
+      "response": "none",
+      "type": "optional"
+     }
+    ],
+    "end": "11:00",
+    "id": "o3",
+    "organiser": false,
+    "private": false,
+    "recurrence": "weekly",
+    "sensitivity": "normal",
+    "start": "10:00",
+    "teams": false,
+    "title": "Series",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "declined"
+     }
+    ],
+    "end": "12:00",
+    "id": "o4",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "11:00",
+    "teams": false,
+    "title": "Declined one",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "12:30",
+    "id": "o5",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "12:00",
+    "teams": false,
+    "title": "Canceled: Old sync",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "14:00",
+    "id": "o6",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "13:00",
+    "teams": false,
+    "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "name": "Kim"
+     },
+     {
+      "name": "Lou",
+      "type": "optional"
+     }
+    ],
+    "end": "15:00",
+    "id": "o7",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "14:00",
+    "teams": false,
+    "title": "No emails",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "jose@ext.example",
+      "name": "Jos\u00e9 N\u00fa\u00f1ez"
+     }
+    ],
+    "end": "16:00",
+    "id": "o8",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "15:00",
+    "teams": false,
+    "title": "Revis\u00e3o do or\u00e7amento \u9810\u7b97",
+    "where": "Caf\u00e9 Z\u00fcrich"
+   },
+   {
+    "all_day": false,
+    "end": "17:00",
+    "id": "o9",
+    "organiser": false,
+    "private": true,
+    "start": "16:00",
+    "teams": true,
+    "title": "Busy",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "17:30",
+    "id": "o10",
+    "organiser": false,
+    "private": true,
+    "start": "17:00",
+    "teams": false,
+    "title": "Busy",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "18:00",
+    "id": "o11",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "confidential",
+    "start": "17:30",
+    "teams": false,
+    "title": "Bare conf",
+    "where": ""
+   },
+   {
+    "id": "o12",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "18:00",
+    "teams": false,
+    "title": "Meeting",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "19:00",
+    "id": "o13",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "18:30",
+    "teams": false,
+    "title": "String attendees",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "sam@harbourco.example",
+      "name": "Sam Lee",
+      "response": "accepted",
+      "type": "required"
+     }
+    ],
+    "end": "19:30",
+    "id": "o14",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "19:00",
+    "teams": false,
+    "title": "None in list",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "x@y.example",
+      "name": "x@y.example"
+     }
+    ],
+    "end": "08:30",
+    "id": "o15",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "08:00",
+    "teams": false,
+    "title": "Meeting",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "attendees": [
+     {
+      "email": "x@y.example",
+      "name": "x@y.example"
+     }
+    ],
+    "end": "09:00",
+    "id": "o16",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "normal",
+    "start": "08:30",
+    "teams": false,
+    "title": "Meeting",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "07:30",
+    "id": "o17",
+    "organiser": false,
+    "private": false,
+    "sensitivity": "confidential",
+    "start": "07:00",
+    "teams": false,
+    "title": "Stamped bare conf",
+    "where": ""
+   },
+   {
+    "all_day": false,
+    "end": "08:00",
+    "id": "o18",
+    "organiser": false,
+    "private": true,
+    "start": "07:30",
+    "teams": false,
+    "title": "Busy",
+    "where": ""
+   }
+  ]
+ },
+ "calendar_refresh.outcome": {
+  "days": 6,
+  "meetings": 29,
+  "saved": true,
+  "transcripts": false
+ },
+ "close_day.Lookup.meeting": {
+  "o1": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "ABC planning",
+   "type": "Transcript ready"
+  },
+  "o10": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Busy",
+   "type": "Transcript ready"
+  },
+  "o11": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Bare conf",
+   "type": "Transcript ready"
+  },
+  "o12": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Meeting",
+   "type": "Transcript ready"
+  },
+  "o13": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "String attendees",
+   "type": "Transcript ready"
+  },
+  "o14": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "None in list",
+   "type": "Transcript ready"
+  },
+  "o15": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Meeting",
+   "type": "Transcript ready"
+  },
+  "o16": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Meeting",
+   "type": "Transcript ready"
+  },
+  "o17": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Stamped bare conf",
+   "type": "Transcript ready"
+  },
+  "o18": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Busy",
+   "type": "Transcript ready"
+  },
+  "o2": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Company day",
+   "type": "Transcript ready"
+  },
+  "o3": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Series",
+   "type": "Transcript ready"
+  },
+  "o4": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Declined one",
+   "type": "Transcript ready"
+  },
+  "o5": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Canceled: Old sync",
+   "type": "Transcript ready"
+  },
+  "o6": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+   "type": "Transcript ready"
+  },
+  "o7": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "No emails",
+   "type": "Transcript ready"
+  },
+  "o8": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Revis\u00e3o do or\u00e7amento \u9810\u7b97",
+   "type": "Transcript ready"
+  },
+  "o9": {
+   "day": "2026-10-27",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Busy",
+   "type": "Transcript ready"
+  },
+  "r1": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Weekly sync",
+   "type": "Transcript ready"
+  },
+  "r2": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Stamped review",
+   "type": "Transcript ready"
+  },
+  "r4": {
+   "day": "2026-10-23",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Quay design",
+   "type": "Transcript ready"
+  },
+  "rC": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Board pay",
+   "type": "Transcript ready"
+  },
+  "rP": {
+   "day": "2026-10-26",
+   "kind": "intake",
+   "open": true,
+   "p": null,
+   "t": "Busy",
+   "type": "Transcript ready"
+  }
+ },
+ "drafts._meeting_attendees": [
+  [
+   "Sam Lee",
+   "Ada Fox"
+  ],
+  [
+   "Sam Lee",
+   "Ada Fox"
+  ],
+  []
+ ],
+ "drafts.calendar_event": {
+  "o1": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "end": "10:00",
+   "id": "o1",
+   "organiser": false,
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": false,
+   "title": "ABC planning",
+   "where": ""
+  },
+  "o10": {
+   "all_day": false,
+   "end": "17:30",
+   "id": "o10",
+   "organiser": false,
+   "private": true,
+   "start": "17:00",
+   "teams": false,
+   "title": "Busy",
+   "where": ""
+  },
+  "o11": {
+   "all_day": false,
+   "end": "18:00",
+   "id": "o11",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "17:30",
+   "teams": false,
+   "title": "Bare conf",
+   "where": ""
+  },
+  "o12": {
+   "id": "o12",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "18:00",
+   "teams": false,
+   "title": "Meeting",
+   "where": ""
+  },
+  "o13": {
+   "all_day": false,
+   "end": "19:00",
+   "id": "o13",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "18:30",
+   "teams": false,
+   "title": "String attendees",
+   "where": ""
+  },
+  "o14": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "end": "19:30",
+   "id": "o14",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "19:00",
+   "teams": false,
+   "title": "None in list",
+   "where": ""
+  },
+  "o15": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "x@y.example",
+     "name": "x@y.example"
+    }
+   ],
+   "end": "08:30",
+   "id": "o15",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "08:00",
+   "teams": false,
+   "title": "Meeting",
+   "where": ""
+  },
+  "o16": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "x@y.example",
+     "name": "x@y.example"
+    }
+   ],
+   "end": "09:00",
+   "id": "o16",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "08:30",
+   "teams": false,
+   "title": "Meeting",
+   "where": ""
+  },
+  "o17": {
+   "all_day": false,
+   "end": "07:30",
+   "id": "o17",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "07:00",
+   "teams": false,
+   "title": "Stamped bare conf",
+   "where": ""
+  },
+  "o18": {
+   "all_day": false,
+   "end": "08:00",
+   "id": "o18",
+   "organiser": false,
+   "private": true,
+   "start": "07:30",
+   "teams": false,
+   "title": "Busy",
+   "where": ""
+  },
+  "o2": {
+   "all_day": true,
+   "end": "",
+   "id": "o2",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "",
+   "teams": false,
+   "title": "Company day",
+   "where": ""
+  },
+  "o3": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "end": "11:00",
+   "id": "o3",
+   "organiser": false,
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "10:00",
+   "teams": false,
+   "title": "Series",
+   "where": ""
+  },
+  "o4": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "declined"
+    }
+   ],
+   "end": "12:00",
+   "id": "o4",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Declined one",
+   "where": ""
+  },
+  "o5": {
+   "all_day": false,
+   "end": "12:30",
+   "id": "o5",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "12:00",
+   "teams": false,
+   "title": "Canceled: Old sync",
+   "where": ""
+  },
+  "o6": {
+   "all_day": false,
+   "end": "14:00",
+   "id": "o6",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "13:00",
+   "teams": false,
+   "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+   "where": ""
+  },
+  "o7": {
+   "all_day": false,
+   "attendees": [
+    {
+     "name": "Kim"
+    },
+    {
+     "name": "Lou",
+     "type": "optional"
+    }
+   ],
+   "end": "15:00",
+   "id": "o7",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "14:00",
+   "teams": false,
+   "title": "No emails",
+   "where": ""
+  },
+  "o8": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "jose@ext.example",
+     "name": "Jos\u00e9 N\u00fa\u00f1ez"
+    }
+   ],
+   "end": "16:00",
+   "id": "o8",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "15:00",
+   "teams": false,
+   "title": "Revis\u00e3o do or\u00e7amento \u9810\u7b97",
+   "where": "Caf\u00e9 Z\u00fcrich"
+  },
+  "o9": {
+   "all_day": false,
+   "end": "17:00",
+   "id": "o9",
+   "organiser": false,
+   "private": true,
+   "start": "16:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  },
+  "r1": {
+   "all_day": false,
+   "attachments": [
+    "plan.docx"
+   ],
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Agenda\nBudget and plan",
+   "end": "10:00",
+   "id": "r1",
+   "organiser": "Pat Doe",
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": true,
+   "title": "Weekly sync",
+   "where": "Room 204"
+  },
+  "r2": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Kept as stored",
+   "end": "11:30",
+   "id": "r2",
+   "organiser": true,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Stamped review",
+   "where": ""
+  },
+  "r4": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Notes",
+   "end": "11:00",
+   "id": "r4",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "10:00",
+   "teams": true,
+   "title": "Quay design",
+   "where": "Teams"
+  },
+  "rC": {
+   "all_day": false,
+   "end": "15:00",
+   "id": "rC",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "14:00",
+   "teams": false,
+   "title": "Board pay",
+   "where": ""
+  },
+  "rP": {
+   "all_day": false,
+   "end": "13:00",
+   "id": "rP",
+   "organiser": false,
+   "private": true,
+   "start": "12:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  }
+ },
+ "drafts.followup_facts": {
+  "o1": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   }
+  ],
+  "o10": [],
+  "o11": [],
+  "o12": [],
+  "o13": [],
+  "o14": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   }
+  ],
+  "o15": [
+   {
+    "email": "x@y.example",
+    "name": "x@y.example"
+   }
+  ],
+  "o16": [
+   {
+    "email": "x@y.example",
+    "name": "x@y.example"
+   }
+  ],
+  "o17": [],
+  "o18": [],
+  "o2": [],
+  "o3": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   },
+   {
+    "email": "ada@brightwater.example",
+    "name": "Ada Fox"
+   }
+  ],
+  "o4": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   }
+  ],
+  "o5": [],
+  "o6": [],
+  "o7": [
+   {
+    "email": "",
+    "name": "Kim"
+   },
+   {
+    "email": "",
+    "name": "Lou"
+   }
+  ],
+  "o8": [
+   {
+    "email": "jose@ext.example",
+    "name": "Jos\u00e9 N\u00fa\u00f1ez"
+   }
+  ],
+  "o9": [],
+  "r1": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   },
+   {
+    "email": "ada@brightwater.example",
+    "name": "Ada Fox"
+   }
+  ],
+  "r2": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   }
+  ],
+  "r4": [
+   {
+    "email": "sam@harbourco.example",
+    "name": "Sam Lee"
+   },
+   {
+    "email": "ada@brightwater.example",
+    "name": "Ada Fox"
+   }
+  ],
+  "rC": [],
+  "rP": []
+ },
+ "prep_page._event": {
+  "Board pay": {
+   "all_day": false,
+   "end": "15:00",
+   "id": "rC",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "14:00",
+   "teams": false,
+   "title": "Board pay",
+   "where": ""
+  },
+  "Busy": {
+   "all_day": false,
+   "end": "13:00",
+   "id": "rP",
+   "organiser": false,
+   "private": true,
+   "start": "12:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  },
+  "Stamped review": {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Kept as stored",
+   "end": "11:30",
+   "id": "r2",
+   "organiser": true,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Stamped review",
+   "where": ""
+  },
+  "Weekly sync": {
+   "all_day": false,
+   "attachments": [
+    "plan.docx"
+   ],
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Agenda\nBudget and plan",
+   "end": "10:00",
+   "id": "r1",
+   "organiser": "Pat Doe",
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": true,
+   "title": "Weekly sync",
+   "where": "Room 204"
+  }
+ },
+ "prep_view.people_brief": {
+  "09:00": {
+   "confidential": false,
+   "count": 1,
+   "invitees": [
+    {
+     "initials": "SL",
+     "name": "Sam Lee",
+     "registered": false
+    }
+   ],
+   "organiser": {
+    "initials": "PD",
+    "name": "Pat Doe",
+    "registered": false
+   }
+  },
+  "10:00": {
+   "confidential": false,
+   "count": 2,
+   "invitees": [
+    {
+     "initials": "SL",
+     "name": "Sam Lee",
+     "registered": false
+    },
+    {
+     "initials": "AF",
+     "name": "Ada Fox",
+     "registered": false
+    }
+   ],
+   "organiser": null
+  },
+  "15:00": {
+   "confidential": false,
+   "count": 1,
+   "invitees": [
+    {
+     "initials": "JN",
+     "name": "Jos\u00e9 N\u00fa\u00f1ez",
+     "registered": false
+    }
+   ],
+   "organiser": null
+  }
+ },
+ "sweep.calendar_fetch_from": "2026-10-26",
+ "sweep.calendar_span": "(datetime.date(2026, 10, 26), datetime.date(2026, 10, 30))",
+ "sweep.saved_meetings_from": [
+  28,
+  27
+ ],
+ "transcripts.calendar_rows": [
+  {
+   "all_day": false,
+   "attachments": [
+    "plan.docx"
+   ],
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Agenda\nBudget and plan",
+   "day": "2026-10-26",
+   "end": "10:00",
+   "id": "r1",
+   "organiser": "Pat Doe",
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": true,
+   "title": "Weekly sync",
+   "where": "Room 204"
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Kept as stored",
+   "day": "2026-10-26",
+   "end": "11:30",
+   "id": "r2",
+   "organiser": true,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Stamped review",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-26",
+   "end": "13:00",
+   "id": "rP",
+   "organiser": false,
+   "private": true,
+   "start": "12:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-26",
+   "end": "15:00",
+   "id": "rC",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "14:00",
+   "teams": false,
+   "title": "Board pay",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "10:00",
+   "id": "o1",
+   "organiser": false,
+   "organiser_email": "pat.doe@brightwater.example",
+   "private": false,
+   "sensitivity": "normal",
+   "start": "09:00",
+   "teams": false,
+   "title": "ABC planning",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "11:00",
+   "id": "o3",
+   "organiser": false,
+   "private": false,
+   "recurrence": "weekly",
+   "sensitivity": "normal",
+   "start": "10:00",
+   "teams": false,
+   "title": "Series",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "declined"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "12:00",
+   "id": "o4",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "11:00",
+   "teams": false,
+   "title": "Declined one",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "12:30",
+   "id": "o5",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "12:00",
+   "teams": false,
+   "title": "Canceled: Old sync",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "14:00",
+   "id": "o6",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "13:00",
+   "teams": false,
+   "title": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "name": "Kim"
+    },
+    {
+     "name": "Lou",
+     "type": "optional"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "15:00",
+   "id": "o7",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "14:00",
+   "teams": false,
+   "title": "No emails",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "jose@ext.example",
+     "name": "Jos\u00e9 N\u00fa\u00f1ez"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "16:00",
+   "id": "o8",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "15:00",
+   "teams": false,
+   "title": "Revis\u00e3o do or\u00e7amento \u9810\u7b97",
+   "where": "Caf\u00e9 Z\u00fcrich"
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "17:00",
+   "id": "o9",
+   "organiser": false,
+   "private": true,
+   "start": "16:00",
+   "teams": true,
+   "title": "Busy",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "17:30",
+   "id": "o10",
+   "organiser": false,
+   "private": true,
+   "start": "17:00",
+   "teams": false,
+   "title": "Busy",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "18:00",
+   "id": "o11",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "17:30",
+   "teams": false,
+   "title": "Bare conf",
+   "where": ""
+  },
+  {
+   "day": "2026-10-27",
+   "id": "o12",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "18:00",
+   "teams": false,
+   "title": "Meeting",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "19:00",
+   "id": "o13",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "18:30",
+   "teams": false,
+   "title": "String attendees",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "19:30",
+   "id": "o14",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "19:00",
+   "teams": false,
+   "title": "None in list",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "x@y.example",
+     "name": "x@y.example"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "08:30",
+   "id": "o15",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "08:00",
+   "teams": false,
+   "title": "Meeting",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "x@y.example",
+     "name": "x@y.example"
+    }
+   ],
+   "day": "2026-10-27",
+   "end": "09:00",
+   "id": "o16",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "08:30",
+   "teams": false,
+   "title": "Meeting",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "07:30",
+   "id": "o17",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "confidential",
+   "start": "07:00",
+   "teams": false,
+   "title": "Stamped bare conf",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "day": "2026-10-27",
+   "end": "08:00",
+   "id": "o18",
+   "organiser": false,
+   "private": true,
+   "start": "07:30",
+   "teams": false,
+   "title": "Busy",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    }
+   ],
+   "body": "Notes",
+   "day": "2026-10-22",
+   "end": "09:00",
+   "id": "h1",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "08:00",
+   "teams": false,
+   "title": "Held past day",
+   "where": ""
+  },
+  {
+   "all_day": false,
+   "attendees": [
+    {
+     "email": "sam@harbourco.example",
+     "name": "Sam Lee",
+     "response": "accepted",
+     "type": "required"
+    },
+    {
+     "email": "ada@brightwater.example",
+     "name": "Ada Fox",
+     "registered": true,
+     "response": "none",
+     "type": "optional"
+    }
+   ],
+   "body": "Notes",
+   "day": "2026-10-23",
+   "end": "11:00",
+   "id": "r4",
+   "organiser": false,
+   "private": false,
+   "sensitivity": "normal",
+   "start": "10:00",
+   "teams": true,
+   "title": "Quay design",
+   "where": "Teams"
+  }
+ ]
+}

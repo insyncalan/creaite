@@ -63,6 +63,18 @@ export function irChooseKind(m, kind) { if (m && m.src === "upload" && !irFixed(
 const calOf = m => (m.src === "calendar" ? ((D.meetings && D.meetings.rows) || []).find((/** @type {any} */ x) => x.key === m.key) || null : null);
 const rowOf = (/** @type {string} */ id) => irModel().meetings.find((/** @type {any} */ x) => x.id === id) || null;
 
+/** #371: what the page says when a Load ends without reaching Microsoft 365. It looks again once, never more. */
+export const IR_AGAIN = "Claude Code did not reach Microsoft 365. Looking again, once.";
+export const IR_STILL = "Looked again, and Microsoft 365 still could not be reached. Nothing was loaded. Press Process to try again.";
+export const IR_FOUND = "Found it on the second look.";
+/** One Load run for a meeting; the run's closing line is kept in shared.LASTCLOSE. @param {string} id */
+async function irLoadRun(id) {
+  shared.LASTCLOSE = null;
+  try { await jobLive("/api/transcripts/load", { id }); } catch (e) { /* the row says what happened */ }
+}
+/** Whether the last Load run ended failed (not stopped) with the line the server gives when no Microsoft 365 call was made. */
+const irNoReach = () => { const c = shared.LASTCLOSE; return !!c && c.ok === false && !c.stopped && /did not reach Microsoft 365/.test(String(c.line || "")); };
+
 /** The Process run in progress (its ID, for Stop on the row), or "". */
 let irRun = "";
 
@@ -86,11 +98,18 @@ export async function irProcess(m) {
       file = x.loaded;
       if (!file) {                                   /* Load and Process are one step */
         shared.RUNLABEL = label;
-        try { await jobLive("/api/transcripts/load", { id: x.id }); } catch (e) { /* the row says what happened */ }
+        let again = false;
+        await irLoadRun(x.id);
+        if (irNoReach() && !irStopped) {                /* #371: the run never reached Microsoft 365 (no step at all): look again, once, and say so */
+          again = true; irNote(m.id, IR_AGAIN);
+          await irLoadRun(x.id);
+        }
         await reloadData();
         const now = calOf(m);
         file = now && now.loaded;
-        if (!file) { irNote(m.id, `Skipped: ${TXWHY[/** @type {keyof TXWHY} */ (now && now.transcript)] || "No transcript could be loaded"}`); return false; }
+        if (!file && again && irNoReach()) { irNote(m.id, IR_STILL); return false; }
+        if (!file) { irNote(m.id, `${again ? "Looked again. " : ""}Skipped: ${TXWHY[/** @type {keyof TXWHY} */ (now && now.transcript)] || "No transcript could be loaded"}`); return false; }
+        if (again) snack(IR_FOUND);
       }
     }
     shared.RUNLABEL = label;

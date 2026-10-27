@@ -335,14 +335,29 @@ class Browser:
             return pos
         return dict(pos, x=self.eval("document.querySelector(%s).getBoundingClientRect().left" % json.dumps(selector)) + inset)
 
-    def click(self, selector, button="left", count=1, modifiers=0, exact=False, inset=None):
+    def _text_point(self, pos, selector, on_text):
+        """click's point, moved onto the element's own text when asked: the first line of its first non-blank text node directly
+        inside it (a Work title cell's title, not its second line of ID and project links)."""
+        if not on_text or not pos:
+            return pos
+        at = self.eval("""(()=>{ const t=document.querySelector(%s), n=t&&[...t.childNodes].find(c=>c.nodeType===3&&c.textContent.trim());
+          if(!n) return null; const r=document.createRange(); r.selectNodeContents(n); const b=r.getClientRects()[0];
+          return b&&b.width&&b.height?{x:b.left+Math.min(b.width/2,40),y:b.top+b.height/2}:null; })()""" % json.dumps(selector))
+        if not at:
+            raise RuntimeError(f"can't click the text of {selector}: it has no text of its own")
+        return at
+
+    def click(self, selector, button="left", count=1, modifiers=0, exact=False, inset=None, on_text=False):
         """A real mouse click at the element's centre (not element.click()), so overlays and hit-testing count.
         modifiers is Chrome's bit mask: Alt 1, Ctrl 2, Command 4, Shift 8.
         exact (#152): wait until the element has stopped moving (two frames in a row at the same place; the page may still be laying
         out after the last action, and a centre measured before that is somewhere else afterwards), then require the point to be on
         the element itself, not on something that merely contains it. A miss says what was there instead (hit_report).
         inset: click that many pixels in from the element's left edge instead of its centre (a wide cell whose middle holds a link,
-        such as a Work title cell, where #241 puts the ID and project beside the title)."""
+        such as a Work title cell, where #241 puts the ID and project beside the title).
+        on_text: click on the element's own text instead (_text_point). A Work title cell is two lines, the title and then the ID and
+        project links, and its centre is on the second: which link is under it moves with the cell's width, which follows the day's
+        date strings in the other columns. The title text is where a person clicks, at every width, density and date."""
         self.wait(f"!!({json.dumps(selector)} && document.querySelector({json.dumps(selector)}))", 10)
         pos = self.box(selector)
         # #202: scrolling it into view can change the layout (the report header hides on a scroll down): measure again
@@ -359,7 +374,7 @@ class Browser:
                 pos = again or pos
         if not pos:
             raise RuntimeError(f"can't click {selector}: it has no size (hidden?)")
-        pos = self._inset_point(pos, selector, inset)
+        pos = self._text_point(self._inset_point(pos, selector, inset), selector, on_text)
         hit = self.eval("""(()=>{
           const e=document.elementFromPoint(%f,%f), t=document.querySelector(%s);
           return !!(e&&t&&(t===e||t.contains(e)||(%s&&e.contains(t)))); })()"""

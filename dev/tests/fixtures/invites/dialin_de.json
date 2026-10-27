@@ -1,0 +1,19 @@
+{
+ "expected_lines": [
+  "Abstimmung zum Projektplan: Meilensteine und Budget.",
+  "",
+  "Einwahl per Telefon: +49 69 5050 1234",
+  "Konferenz-ID: 8812 3347",
+  "PIN: 5520 6671#",
+  "",
+  "Besprechungsoptionen | Zur Besprechung"
+ ],
+ "planted_secrets": [
+  "+49 69 5050 1234",
+  "8812 3347",
+  "5520 6671"
+ ],
+ "must_keep": [
+  "Abstimmung zum Projektplan: Meilensteine und Budget."
+ ]
+}

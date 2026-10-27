@@ -65,6 +65,8 @@ class CalendarTests(unittest.TestCase):
         days = self.saved()["days"]
         self.assertEqual(sorted(days), ["2026-10-05", "2026-10-07", "2026-10-12"])           # last week dropped
         steering = days["2026-10-05"][0]
+        steering.pop("clean", None)                                 # #375 S4: every saved row is stamped
+        steering.pop("clean_v", None)                               # ... with the filter fingerprint (a5202712)
         self.assertEqual(steering, {"id": "ev-1", "start": "09:00", "end": "10:00", "all_day": False,
                                     "title": "ABC Steering", "where": "Teams", "teams": True, "private": False,
                                     "organiser": True, "sensitivity": "normal", "body": "Agenda: secret",
@@ -85,6 +87,9 @@ class CalendarTests(unittest.TestCase):
         (self.v.root / "system/staging/calendar.json").unlink()          # #146: past days already held are kept, so start afresh
         self.calendar()
         private = self.saved()["days"]["2026-10-05"][1]
+        private.pop("clean", None)                                  # #375 S4: every saved row is stamped
+        private.pop("clean_v", None)
+        self.assertEqual(private.pop("sensitivity", None), "private")   # clean_row normalises sensitivity (a5202712)
         self.assertEqual(private, {"id": "ev-2", "start": "14:00", "end": "14:30", "all_day": False, "title": "Busy",
                                    "where": "", "teams": True, "private": True, "organiser": False})
 

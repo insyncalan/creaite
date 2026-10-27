@@ -1,0 +1,19 @@
+{
+ "expected_lines": [
+  "Onboarding session for new joiners.",
+  "",
+  "Meeting ID | 873 555 210",
+  "Passcode | kT7mW3",
+  "Host | Priya Nair",
+  "",
+  "Lunch is provided."
+ ],
+ "planted_secrets": [
+  "873 555 210",
+  "kT7mW3"
+ ],
+ "must_keep": [
+  "Onboarding session for new joiners.",
+  "Lunch is provided."
+ ]
+}

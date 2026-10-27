@@ -837,9 +837,11 @@ class SavedCalendar(unittest.TestCase):
         self.assertEqual(self.save({self.tomorrow: [self.meeting()]}).returncode, 0)
         rows = {r["id"]: r for r in self.held()[past]}
         # H3c: a trailing passcode drops the title whole, as 2.5.3 (was "Sync")
+        rows["o1"].pop("clean_v", None)                 # the stamp's fingerprint is covered by the gateway tests
         self.assertEqual(rows["o1"], {"id": "o1", "start": "09:00", "end": "10:00", "all_day": False, "title": "Meeting", "where": "",
-                                      "teams": False, "private": False, "organiser": False, "sensitivity": "confidential"})
-        self.assertEqual((rows["o2"]["body"], rows["o2"]["attachments"], rows["o2"]["attendees"][0]["name"]),
+                                      "teams": False, "private": False, "organiser": False, "sensitivity": "confidential", "clean": 1})
+        # S4: the body goes through the gateway's filter (composition D): the link line goes, the agenda line stays
+        self.assertEqual((rows["o2"].get("body", ""), rows["o2"]["attachments"], rows["o2"]["attendees"][0]["name"]),
                          ("Agenda: budget", ["pack.pdf"], "x@example.test"))
         for gone in ("4321", "pwd", "bit.ly", "998877", "zoom"):
             self.assertNotIn(gone, self.cal.read_text())

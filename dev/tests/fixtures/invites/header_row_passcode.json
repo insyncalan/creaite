@@ -1,0 +1,17 @@
+{
+ "expected_lines": [
+  "Security review kick-off with the platform team.",
+  "",
+  "Passcode | Other",
+  "Zx81pQ44 | See the wiki page",
+  "",
+  "Pre-read: the threat model summary."
+ ],
+ "planted_secrets": [
+  "Zx81pQ44"
+ ],
+ "must_keep": [
+  "Security review kick-off with the platform team.",
+  "Pre-read: the threat model summary."
+ ]
+}

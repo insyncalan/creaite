@@ -1,0 +1,78 @@
+# #375 E1 adversarial self-review
+
+Branch `v269-adv`, from `v269-int` (02b1c3ef). Nothing under `system/scripts/` was changed. Added: `dev/tests/test_e1_adversarial.py` and this file.
+Subject: `invite_blocks.py`, `invite_filter.py` (`filter_text_with_scrub`, "C"), `calendar_gateway.py`; compared with the 2.6.8 scrub alone (`invite_clean.invite_text`, "old").
+All data is fictional. Counts are for 3,000 bodies per generator and the fixed seeds in the test file (`ADV_FULL=1` runs 30,000). Reproduce the tables with `python3 dev/tests/test_e1_adversarial.py --report`.
+
+## Verdict
+
+Provider boilerplate is handled well: across 3,000 Teams, Zoom, Webex, Meet, BlueJeans and GoToMeeting invites (plain and HTML, note before, after or both) C leaks nothing and loses no ordinary line, where the old scrub leaks 10 bodies and loses 516 lines. Digit disguises (fullwidth, Arabic-Indic and other digit sets, thin space, NBSP, zero-width, soft hyphen, split by tags or entities), comments, hidden spans, title/style, alt text and data URIs are all clean. No ReDoS: every regex survives 200 KB crafted inputs (slowest 0.7 s, the old scrub; C and `to_lines` are linear and fast).
+
+The weaknesses are at the edges of the design, in two directions: short values behind a label the filter does not know (leaks), and the digit-run anchor plus whole-block drop (data loss of ordinary agenda numbers).
+
+## Findings
+
+Severity: HIGH = digit/ID leak in a common layout; MEDIUM = ordinary agenda data lost, or leak in an uncommon layout; LOW = the rest. "Test" is the minimal `expectedFailure` test in `Findings` (or `GatewayProps`); the marker comes off when the fix lands.
+
+| # | Sev | Finding | Count (of 3,000 bodies) | Minimal example | Test |
+|---|-----|---------|------------------------|-----------------|------|
+| 1 | HIGH | A 4-digit PIN or short password behind a label in another language that the scrub does not list, in its own block (blank line from the ID block; the usual shape of Outlook `<p>`-per-line HTML), survives. Only the ID is protected (7+ digits). Never leaks when the PIN is in the ID's block (block drop). By language, PIN leaks: sv 33, es 29, pl 26, zh 22, tr 21, it 19, pt 16, ko 9; alphanumeric passwords sv/pl/tr 24. The old scrub alone leaks the same PINs (and every ID). | 283 (9.4%) in `localised` | `ID de la reunión:\n\n901 917 930 4\n\nClave\n8825` leaks 8825; also `Hasło : 7679`, `Åtkomstkod : 5885`, `访问代码 \| 4256`, `Geçiş kodu`, `Codice segreto` | F03 |
+| 2 | HIGH | A code in a plain sentence with no listed label word: `Use 6802 to join`, `Pass 4417`. (`Enter code`, `Join code:`, `Meeting code`, `Security code`, `OTP`, `PIN no.`, `4417 is your passcode` etc. are caught.) | 119 (4.0%) in `phrasing`: "use … to join" 56, "pass …" 63 | `Hi all, use 9668 to join.` | F04, F08 |
+| 3 | MEDIUM | An ID split over lines, divs or br never reaches 7 digits on any line; with a label the label line goes and the continuation groups stay (partial), without a label everything stays. Includes a pasted ICS description folded with leading spaces. | 36 `digit_styles` (one group per line), 234 `html_split` (br or div per group), 175 (every folded-ICS body) in `noise` | `Meeting ID:\n412\n889\n330` leaves `889\n330`; `<div>412</div><div>889</div><div>330</div>` leaves everything | F01, F02, F11 |
+| 4 | MEDIUM | Data loss: the 7+ digit anchor reads ordinary numbers as secrets and drops the whole block. 11 of 32 number formats are lost every time: grouped money (`1.250.000 €`, `1 250 000 kr`), plain 7+ digit money, year ranges (`2026-2027`, `2026 - 2027`), dotted and compact time ranges (`14.00 - 15.30`, `1400-1530`), three numbers in a row (`Counts: 752 637 814`), PO numbers, ticket ids (`INC0880021`), 4-part build numbers. Not lost: 24h times with a colon, ISO and dotted dates, versions `v8.13.2`, room `7.30`, postcodes, percentages. Old scrub loses none of these. | isolated: 4,660 of 13,554 lines (34%) in `agenda_isolated`; collateral: neighbours of the trigger line in the same block, 4,169 lines in `agenda_list` (the isolated 1,015 there are the trigger lines) | `Agenda\n1. Welcome\n2. Budget: £1250000\n3. Next steps` returns nothing; `Slot 14.00 - 15.30` is lost | L01-L04 |
+| 5 | MEDIUM | Data loss in HTML data tables: a cell holding 5+ digits (`125000`, `20000`, `90210`) is a "bare PIN", and a cell of 6+ letters and digits (`Room204`, `Q42026`, `Level4`, `INC001`) is an "id or password" to the shape gate. | 5,064 of 13,592 cells (every one of those two shapes) in `table_cells` | `<td>125000</td>` | L05, L06 |
+| 6 | MEDIUM | Data loss from the scrub's bare-label rule (already in 2.6.8, identical in old): a sentence holding `pin`, `token`, `key:`, `access:`, `code` or `password` is dropped whole. About 100% lost: `Dress code: casual.`, `The code of conduct applies…`, `Pin the poster on the board…`, `Tokens of appreciation…`, `Key: owner, due date, status.`, `Access: via the east entrance.`, `Zip code lookup…`, `Area code changes…`, `Country code: UK`, `Secret Santa…`, `Password policy:…`, `Code review: …`, `PIN pad replacement…`. Kept: `Postcode:`, `Number of attendees:`, `Opinion`, `Spinning`, `Pass the action list`. | 3,451 of 7,484 lines (46%) in `innocent`, same for old | `Dress code: casual.` | L14 |
+| 7 | MEDIUM | Regression against 2.6.8, from the layer order (anchors first, scrub second): the anchor layer removes the value line, so the scrub sees a lone label and its window removes the next ordinary line. | localised: 679 isolated lines lost (old 248); digit_styles 684 (old 533); noise 268 (old 1) | `Meeting ID\n\n412 889 330\n\nSee you Monday.` returns nothing (old keeps `See you Monday.`) | L11 |
+| 8 | MEDIUM | A short PIN inside an address-like token: `meet-8990@x.example.test`, `pin.1234@…` (7+ digits go). `mailto:join449038@…` is not a join scheme. | 218 `phones` (email-pin 4 and 6 digits), 200 `urls` (mailto) | `Join by SIP or mail: meet-8990@x.example.test` | F09, F10 |
+| 9 | MEDIUM | Unlabelled tokens that are not all letters+digits: `Summer2026!` (punctuation breaks the alnum test), JWT-like and `sk-live-…` tokens with `.` `_` `-` under 300 characters, a bare Google Meet code `abc-defg-hij`. | 169 + 84 in `noise`; Meet code by hand | `Hello.\n\nSummer2026!` | F05, F06, F12 |
+| 10 | MEDIUM | Region to the end: text after the last divider is in the join block's region and is dropped with it (a note typed under a Teams or Zoom block, agenda under the block). Verified only when the join block is not closed by a second divider (real Teams closes it, so the 3,000 provider invites lose nothing). | by hand | `Hello.\n____\nMeeting ID: 412 889 330 22\n\nPlease read the pre-read.` | L07 |
+| 11 | MEDIUM | Signature blocks with a mobile number lose the name and title with it (block drop), also any contact list. Defensible policy (a phone number is not an id) but it is a visible loss. | 3,928 collateral lines in `phones` | `Best regards,\nMia Hale\nProgramme Manager\nM: +44 7700 900123` returns nothing | L08 |
+| 12 | MEDIUM | Gateway: a stamped row with a non-iterable `attendees` (`3`) raises `TypeError` out of `read()`. Readers catch OSError and ValueError only, so one bad row takes the day view down. Stamped rows are not type-checked (a `title` list or `start` number is served as stored). | by hand | `{"id":"a","clean":1,"attendees":3}` | G04, G02 |
+| 13 | LOW | P2 (idempotence) and P1 (subset) break on a very long line: a line that would cross the 1,500 cap ends the output and leaves a trailing blank line (second pass strips it); a line over 2,000 characters is judged by the scrub in pieces and a kept piece is output though it is not an input line. Also: one long ordinary paragraph over 1,500 characters ends the output (everything after it is lost; documented cap behaviour). No secret was seen to leak this way (probed around the 2,000 boundary). | 115 non-idempotent, 23 non-subset of 3,000 in `noise` | `Hi.\n\n` + `word ` * 400 + `\n\nBye.` | L12, L13 |
+| 14 | LOW | A pasted ICS block loses `SUMMARY` and `LOCATION` with the Teams URL line (block drop). | by hand | `BEGIN:VEVENT\nSUMMARY:Budget review\nX-MICROSOFT-SKYPETEAMSMEETINGURL:https://…\nEND:VEVENT` | L09 |
+| 15 | LOW | A stamped row is trusted completely: `clean >= 1` serves the body as stored, so a hand edit or an import that adds the stamp bypasses the filter (by design; the sweep and rescrub are the only writers). | by hand | `clean: 1, body: "Meeting ID: 412 889 330"` served raw | G03 |
+| 16 | LOW | A 1,000,000-deep nested JSON file raises `RecursionError` (not ValueError). Needs a hostile file; 100,000 deep is fine. | by hand | `"[" * 10**6 + "]" * 10**6` | G01 |
+
+## Checked and fine
+
+* Gateway: `read()` never writes (bytes, mtime, directory listing unchanged over 60 random calendars and every purpose); stamped rows are served as stored, unstamped rows filtered; no purpose returns a field outside its table (extra keys such as `secret`, `ics`, `joinurl` are dropped; `day` and `meta` never carry a body; attendees reduced to name, type, response; private/confidential rows reduced to HEAD); unknown purposes (empty, case variants, `None`, a list, homoglyph, NUL) raise `UnknownPurpose` (a `LookupError`, not OSError or ValueError); truncated JSON at every 7th byte, empty/array/scalar/NaN/non-UTF-8 documents give ValueError or a valid empty view; a 40-row, 1 MB-class file is served within the 1,500 cap.
+* Concurrent read during a write: with the sweep's atomic replace, 12,788 reads, 0 errors, 0 torn views. With a non-atomic writer (truncate then write in two halves), 393 good reads and 48 `ValueError` (11%), never another exception and never a wrong calendar; a torn read is not cached (the next read of the finished file is correct). The sweep uses `write_text_atomic`, so the real exposure is only an external editor.
+* Timing: 66 crafted inputs (digit chains with space, dot and dash, date-like and time-like repeats, nested tags, entity floods, comment and CDATA openers, unclosed style/script, 5,000-deep nesting, long attributes, repeated labels, quotes, confusables) at 200 KB through C, old, `to_lines`, `filter_text`, `keep_lines` and `gateway.filter_body`, and 1 MB hostile HTML through `to_lines` and C, all under 1 s (alarm 5 s). 9,000 lines the scrub rewrites: not quadratic.
+* P1 and P2 hold on every generator except the long-line `noise` case (finding 13). C leaks no more bodies than old on any generator (a test). This describes the EARLIER C composition, not the shipped D (see ADVERSARIAL-2.md for the measured claim).
+
+## Per generator (C against old, bodies with a surviving planted secret / isolated ordinary lines lost)
+
+| Generator | Bodies | C leaks | old leaks | C lost isolated | old lost isolated | C lost collateral |
+|-----------|--------|---------|-----------|-----------------|-------------------|-------------------|
+| localised (14 languages, 5 layouts) | 3,000 | 283 | 1,635 | 679 | 248 | 0 |
+| digit_styles (22 renderings) | 3,000 | 36 | 75 | 684 | 533 | 0 |
+| html_split (tags, entities) | 3,000 | 234 | 677 | 0 | 0 | 0 |
+| phones (16 national formats, prose, list, signature, pin addresses) | 3,000 | 218 | 1,157 | 0 | 0 | 3,928 |
+| urls (16 forms) | 3,000 | 200 | 200 | 0 | 0 | 0 |
+| reply_chain (quotes, forwards, footers) | 3,000 | 1 | 1 | 0 | 0 | 3,000 |
+| agenda_isolated (32 number formats) | 3,000 | 0 | 0 | 4,660 | 0 | 0 |
+| agenda_list | 3,000 | 0 | 0 | 1,015 | 0 | 4,169 |
+| table_cells | 3,000 | 0 | 0 | 5,064 | 0 | 0 |
+| templates (6 providers, plain and HTML) | 3,000 | 0 | 10 | 0 | 516 | 0 |
+| noise (CRLF, tabs, long lines, comments, hidden, ICS, tokens) | 3,000 | 428 | 752 | 268 | 1 | 152 |
+| phrasing (39 English phrasings) | 3,000 | 119 | 141 | 109 | 124 | 0 |
+| innocent (32 ordinary sentences with label words) | 3,000 | 0 | 0 | 3,451 | 3,451 | 0 |
+
+"Isolated" loss: a planted ordinary line alone in its block was dropped. "Collateral": it shared a block with a secret or with the trigger line (dropped by design, shown for scale). Part of `phones` leaks (218) is finding 8; `urls` 200 is the mailto form only; `noise` 428 is findings 3 and 9.
+
+## Suggested fixes (not applied; `system/scripts/` is untouched)
+
+1. Orphan rule for findings 1, 2 and 7: after an anchor drop, treat a following short block (one line, at most about 24 characters, holding 4+ digits or a mixed letter-digit token, or at most three tokens including such a token) as part of the dropped block, whatever its label. Do not let the scrub's lone-label window run on a label whose value block the anchor layer dropped (run the scrub on the full lines and intersect, as the "both judge" variant, or tell the window that the successor was removed). Add the missing label words to the list: `clave`, `hasło`, `lösenord`, `åtkomstkod`, `pinkod`, `senha`, `codice`, `geçiş kodu`, `访问代码`, `패스코드`, `пароль`, and `pass`, `use … to join`.
+2. Digit run (finding 4): require the chain to be unbroken by a 1-3 character gap only when the gaps are the same character (a phone or an id), do not join across ` - ` between two groups of different size, treat `dd.dd - dd.dd` and `yyyy - yyyy` as ranges (like dates and times today), and treat `d.ddd.ddd` and `d ddd ddd` money as a number when followed by a currency word or symbol. Or lower the penalty: drop only the anchor line and its labelled neighbours instead of the whole block when the run has no label, link or dial string.
+3. Shape gate (finding 5): apply it only to a line that is the only line of its block and not to a table cell in a data table with other cells, or only when it follows a dropped block or a label.
+4. Multi-line ids (finding 3): join consecutive digit-only short lines inside a block before counting the run (`412`, `889`, `330`), and drop the labelled line's continuation lines that are digit groups.
+5. Scrub label rule (finding 6): require a separator or a value after the label (`pin 4417`, `password: x`), not the bare word, or keep a line whose label word is inside a longer sentence with no digit and no token value. This is a 2.6.8 behaviour, so a separate decision.
+6. Cap (finding 13): `"\n".join(...).rstrip("\n")` after `_capped`; emit only matched input lines from `_scrub_pairs` (drop unmatched fragments) so P1 holds.
+7. Gateway (findings 12, 15, 16): make `_people` accept only lists, coerce non-string short fields on stamped rows, and catch `(ValueError, OSError, RecursionError)` or convert the last to ValueError in `read()`.
+8. Findings 8 and 9: add `mailto:` to `_URL`; treat a token with `@` and 4+ digits in the local part as an anchor; treat a single token of 12+ characters with 3+ classes (upper, lower, digit, punctuation) as a blob; treat `xxx-xxxx-xxx` as a Meet code.
+
+## The three most important issues
+
+1. Unlisted-language labels leak short PINs and passwords when the value is in its own block (finding 1, 9.4% of the localised bodies; plus `Use … to join` and `Pass …`, finding 2). The anchor layer is language-free but only above 6 digits; below that the filter is back to the English-centred label list.
+2. Ordinary agenda numbers cost whole blocks (findings 4 and 5): 11 common formats are lost every time (year and time ranges, grouped money, long figures, PO and ticket ids, 5+ digit and alphanumeric table cells), and their neighbours go with them. 34% of isolated number lines and every 5+ digit table cell are gone; the old scrub kept them all.
+3. Layer interaction and multi-line ids (findings 7 and 3): putting the anchor layer first makes the scrub's lone-label window eat an ordinary line (a regression against 2.6.8), and an id written one group per line or per div is never counted as an id.

@@ -28,7 +28,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
-import invite_clean  # noqa: E402  (2.6.8: a saved calendar is cleaned again when it is read)
+import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved calendar)
 try:
     import log as debuglog  # BL-102: the debug log (not `log`: some scripts have a function of that name); optional
 except ImportError:
@@ -219,7 +219,7 @@ def classify(*, online, uri, count, error, past):
 def calendar_rows():
     """The timed meetings in system/staging/calendar.json, each with its day."""
     try:
-        cal = invite_clean.read_calendar(paths.CALENDAR)
+        cal = calendar_gateway.read("day")
     except (OSError, ValueError):
         return []
     out = []
@@ -525,6 +525,7 @@ def file_event_id(path):
 
 
 # ── one lookup, as the live server runs it ──
+SEARCH_BOUND = 3        # #382: the load prompt's "never more than three searches"; a fourth is logged in the diagnosis
 class Job:
     """What one transcript run (a check, or a load) reads. The live server hands it every tool call and result of the run;
     finish() then writes the status and the files. Nothing here comes from what Claude says."""
@@ -583,16 +584,25 @@ class Job:
         """Counts only, for the debug log (#365): the tool results the run returned (name, error or ok, length) and how the
         event read went (none, error, unreadable, ok). Never any text."""
         calls = ", ".join(f"{n} {'error' if e else 'ok'} {ln}" for n, e, ln in self.calls[:12]) or "none"
-        return f"{len(self.calls)} tool results ({calls}); event read: {self.event_read or 'none'}"
+        n = self.searches()
+        over = f" (over the bound of {SEARCH_BOUND})" if n > SEARCH_BOUND else ""
+        return f"{len(self.calls)} tool results ({calls}); calendar searches: {n}{over}; event read: {self.event_read or 'none'}"
+
+    def searches(self):
+        """#382: how many calendar searches the run made (the prompt allows three); the server only counts and logs it."""
+        return sum(1 for n, _, _ in self.calls if n == "outlook_calendar_search")
 
     def no_event(self):
         """The plain line when the event was not read, saying which way it failed; the debug log gets the counts (#365)."""
         debuglog.warn("transcripts", f"{self.mode} {self.id[-8:]}: no calendar event: {self.diagnosis()}")
         if not self.calls:
-            return "Claude Code made no Microsoft 365 call, so nothing was loaded: try again."
+            return ("Claude Code did not reach Microsoft 365, so it never looked for the meeting's calendar event "
+                    "and nothing was loaded. Press Process to try again.")
         if self.event_read is None:
-            return "Claude Code never read the meeting's calendar event, so nothing was loaded: try again."
-        return "The meeting's calendar event couldn't be read, so nothing was loaded."
+            return ("Claude Code searched Microsoft 365 but never opened the meeting's calendar event, "
+                    "so nothing was loaded. Press Process to try again.")
+        return ("The meeting's calendar event was found but could not be read, so nothing was loaded. "
+                "Press Process to try again.")
 
     def facts(self):
         """What the run found for this meeting: online or not, the transcript URL and window, count, error, chat thread."""

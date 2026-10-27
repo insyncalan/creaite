@@ -812,7 +812,7 @@ export async function askStream(url,body,confirmed,ctl,ended,plain,opts){ let re
       if(opts&&opts.skip&&ev.seq&&ev.seq<=opts.skip&&ev.type!=="step") continue;   /* #358: already drawn from the saved chat */
       if(guessing&&ev.type==="step"){ guessing=false; if(ev.label===MC_MARKER) plain=false; }   /* #339 A: the first step settles the guess */
       if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
-      if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
+      if(ev.type==="closure"){ shared.LASTCLOSE=ev; spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
       else if(ev.type==="step"){
         if(!mc&&!plain&&ev.label===MC_MARKER){ mc={s:mcNew(),started:startIso,pl:""}; if(shared.RUN) shared.RUN.mailCheck=true; }   /* #358: the server's marker, first on a typed check */
         if(mc){ mc.s=mcStep(mc.s,ev.label); const q=spin.querySelector&&spin.querySelector(".mcline"); if(q) q.textContent=mcLine(mc.s);
