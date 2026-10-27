@@ -197,7 +197,65 @@ class Classified(unittest.TestCase):
 
 
 @APPLIED_ONLY
+class EmptyTable(Base):
+    """Banner's re-check (rev 2c): before the move, no people op may write the table, or its export would replace the register
+    (Follow, Hidden and everything the move refuses to drop) with a one-row table that neither Undo nor the move can bring back."""
+
+    def ops(self):
+        return (item(1, "people", {"name": "Ann Lee"}), item(2, "people", {"name": "Bo Ray"}, op="add"),
+                change(3, "people", "1", {"email": "ann@client.com"}), change(4, "people", "1", {"name": "Ann Ray"}, op="rename"),
+                change(5, "people", "1", {}, op="merge", into="2"), change(6, "people", "1", {}, op="cancel"),
+                change(7, "people", "1", {}, op="hide"))
+
+    def test_no_people_op_before_the_move(self):
+        self.write_register()                                     # Follow and Hidden still only here, as Banner's case
+        before = self.files()
+        out = self.apply(*self.ops()).stdout
+        self.assertEqual(out.count("run the move first"), len(self.ops()), out)
+        self.assertEqual(self.v.rows("people"), [])
+        self.assertEqual(self.path(REGISTER).read_text(encoding="utf-8"), REG)
+        self.assertEqual({k: v for k, v in self.files().items() if k.startswith("projects/")},
+                         {k: v for k, v in before.items() if k.startswith("projects/")})
+        r = self.migrate(ok=False)                                # and the move still guards the register
+        self.assert_refused(r, "who you follow")
+
+    def test_no_people_op_before_the_move_without_a_register(self):
+        self.path(REGISTER).unlink()
+        out = self.apply(item(1, "people", {"name": "Ann Lee"})).stdout
+        self.assertIn("run the move first", out)
+        self.assertEqual(self.v.rows("people"), [])
+        self.assertFalse(self.path(REGISTER).exists())
+
+    def test_an_unknown_owner_adds_no_one_before_the_move(self):  # auto-add waits for the move too
+        self.write_register()
+        self.apply(action(1, owner="Kim New"))
+        self.assertEqual(self.v.rows("people"), [])
+        self.assertEqual(self.path(REGISTER).read_text(encoding="utf-8"), REG)
+
+    def test_after_the_move_people_ops_are_written(self):
+        self.write_register()
+        self.private_moved()
+        self.migrate()
+        self.apply(item(1, "people", {"name": "Ann Lee"}))
+        self.assertIn("Ann Lee", self.people())
+
+
+@APPLIED_ONLY
 class Writer(Base):
+    """People ops after the move (a register of one person, and Alan from the settings identity)."""
+    MOVED = {"Jane Doe", "Alan Carter"}
+
+    def setUp(self):
+        super().setUp()
+        self.write_register(SMALL)
+        self.migrate()
+
+    def mine(self):
+        return sorted(set(self.people()) - self.MOVED)
+
+    def pid(self, name):
+        return str(self.people()[name]["id"])
+
     def test_add_update_and_undo(self):
         self.apply(item(1, "people", {"name": "  Priya Nair ", "aliases": ["PN", "pn", " "], "projects_add": ["ABC"]}))
         p = self.people()["Priya Nair"]
@@ -208,7 +266,7 @@ class Writer(Base):
         self.v.run("undo")
         self.assertEqual(self.people()["Priya Nair"]["needs_details"], 1)
         self.v.run("undo")
-        self.assertEqual(self.v.rows("people"), [])
+        self.assertEqual(self.mine(), [])
 
     def test_validation_holds_the_item(self):
         self.apply(item(1, "people", {"name": "Ann Lee", "aliases": ["Ann"]}))
@@ -224,7 +282,7 @@ class Writer(Base):
         self.apply(item(1, "people", {"name": "Ánn Lee"}))
         out = self.apply(*[item(i, "people", v) for i, v in enumerate(bad, 1)]).stdout
         self.assertEqual(out.count("Held in Review"), len(bad), out)
-        self.assertEqual(sorted(self.people()), ["Ann Lee", "Ánn Lee"])
+        self.assertEqual(self.mine(), ["Ann Lee", "Ánn Lee"])
 
     def test_a_known_label_and_project_are_taken(self):
         self.apply(item(1, "people", {"name": "Ann Lee", "labels": ["sensitive"], "projects_remove": ["ABC"]}))
@@ -239,14 +297,14 @@ class Writer(Base):
 
     def test_people_rows_cannot_be_cancelled(self):
         self.apply(item(1, "people", {"name": "Ann Lee"}))
-        out = self.apply(change(1, "people", "1", {}, op="cancel")).stdout
+        out = self.apply(change(1, "people", self.pid("Ann Lee"), {}, op="cancel")).stdout
         self.assertIn("Held in Review", out)
 
     def test_there_is_no_hide_op(self):                    # hidden is slice 2's route's, never the record's
         self.apply(item(1, "people", {"name": "Ann Lee"}))
-        out = self.apply(change(1, "people", "1", {}, op="hide")).stdout
+        out = self.apply(change(1, "people", self.pid("Ann Lee"), {}, op="hide")).stdout
         self.assertIn("Held in Review", out)
-        out = self.apply(change(1, "people", "1", {"hidden": 1})).stdout
+        out = self.apply(change(1, "people", self.pid("Ann Lee"), {"hidden": 1})).stdout
         self.assertIn("Held in Review", out)
 
 
