@@ -479,15 +479,25 @@ class AppBrowserTests(LiveBrowserCase):
         b.wait("document.title.includes(\"isn't running\")", 10)
         self.assertIn("Check again", b.eval("document.body.innerText"))
 
-    def test_a_page_opened_before_a_restart_says_reload(self):
-        """BL-174: after a restart the page's token is old; its next request shows the banner with Reload, not a bare refusal."""
-        b = self.b
-        self.assertTrue(b.eval("document.getElementById('staleAlert').hidden"))
+    def restart(self):
         self.proc.terminate()
         self.proc.wait(timeout=10)
         self.proc = subprocess.Popen([sys.executable, str(self.v.root / "system/scripts/live_server.py")],
                                      env={**os.environ, "CREAITE_PORT": str(self.port)}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.assertTrue(wait_until(lambda: alive(self.port)))
+
+    def test_a_page_opened_before_a_restart_reloads_once_then_says_reload(self):
+        """BL-174, #370: after a restart the page's token is old. Its first refused request reloads the page once (the new page has
+        the new token); if a refusal comes again after that reload, the banner says reload with its button, not a bare refusal."""
+        b = self.b
+        self.assertTrue(b.eval("document.getElementById('staleAlert').hidden"))
+        self.restart()
+        b.eval("window.BEFORE_RESTART=1; api('/api/apply',{}); 1")                      # not awaited: the page reloads under it
+        b.wait("typeof window.BEFORE_RESTART==='undefined' && typeof go==='function' && LIVE", 20)
+        self.assertTrue(b.eval("document.getElementById('staleAlert').hidden"))
+        self.assertTrue(b.eval("api('/api/here',{}).then(r=>r.ok)"))                   # the reloaded page has the new token
+        self.restart()
+        b.eval("sessionStorage.setItem('creaite.staleReload','1'); 1")                 # as if this page were that one reload
         r = b.eval("api('/api/apply',{})")
         self.assertFalse(r["ok"])
         self.assertIn("Reload", r["message"])
@@ -499,7 +509,6 @@ class AppBrowserTests(LiveBrowserCase):
         b.click("#staleReload")
         b.wait("typeof go==='function' && LIVE && document.getElementById('staleAlert') && document.getElementById('staleAlert').hidden", 20)
         self.assertTrue(b.eval("api('/api/here',{}).then(r=>r.ok)"))
-
 
 if __name__ == "__main__":
     unittest.main()
