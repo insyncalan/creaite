@@ -11,9 +11,10 @@ rest, including the draft's check 3 (the archive beside each project) and the op
   13  public     once VERSION is 2.6.10: the notes carry no GUARDED marker or real names; whats_new.py finds the section
   14  guides     once VERSION is 2.6.10: both guides carry 2.6.10 and no earlier 2.6 string; the first-day guide names the 2.6.10 zip
   15  guarded    no guarded file differs from the 2.6.9 release (tag v2.6.9, else the merge base with v269-release) except through
-                 the diffs GUARDED-2.6.10.chain lists, byte for byte; once VERSION is 2.6.10, every listed diff is in and nothing pends
-  16  chain      every diff GUARDED-2.6.10.chain lists exists and has the sha256 the list records (the approved bytes are frozen)
-  17  pin        the 2.6.10 chain pin in guarded_chain.py matches the list, and a marked commit exists (skipped until the pin exists)
+                 the diffs the two 2.6.10 chains list (GUARDED-2.6.10.chain, then GUARDED-2.6.10b.chain), byte for byte; once VERSION
+                 is 2.6.10, every listed diff is in and nothing pends
+  16  chain      every diff the two 2.6.10 chains list exists and has the sha256 its list records (the approved bytes are frozen)
+  17  pin        both 2.6.10 chain pins in guarded_chain.py match their lists, and each chain has its marked commit
   20  #385       a project's own folder: the mapping, its checks on save, a missing folder reported and never made, the archive slot
                  beside the folder (test_project_paths_385, test_project_paths_385_p2)
   21  #385       the four approved guarded diffs on a throwaway vault (test_project_paths_385_guarded)
@@ -24,11 +25,12 @@ rest, including the draft's check 3 (the archive beside each project) and the op
   28  #250       G4, the rules bullet (test_rules_retained_338; skipped until the G4 diff lands)
   29  #329       shareable minutes: the words in the built page, and the shareable tests that need no browser
   30  #370       a missed check: Today and Health wording, Check now, the 24-hour retry time, and slices 1 and 2's tests
-  31  #370       slice 3, the guarded live server patch (skipped until it lands)
+  31  #370       slice 3, the guarded live server patch (the second 2.6.10 chain) and its tests
   32  #374       file paths and Show in Finder (skipped until #374 lands)
   33  #366       the tests-only item's tests pass
   34  unchanged  approve and undo, and Health's Check now route, as before
-  35  claims     the 2.6.10 notes never name #386 or #366, and name #374, #250 and #385 only once their code (guarded part too) is in
+  35  claims     the 2.6.10 notes never name #386 or #366, and name #374, #250, #385 and #370 only once their code (guarded part
+                 too) is in
 
 Run (from the repository root):  python3 dev/tests/handchecks/test_v2610.py      (about four minutes: the reused tests run one at a time)
 """
@@ -75,6 +77,12 @@ DRAFT = {
 NOT_CUT = "VERSION is {}: the 2.6.10 release shape is not cut yet"
 CHAIN = "dev/proposals/GUARDED-2.6.10.chain"
 MARKER = "Guarded 2.6.10 chain:"
+CHAIN_B = "dev/proposals/GUARDED-2.6.10b.chain"                     # the second 2.6.10 chain: #370 slice 3 rev 2, after G3
+MARKER_B = "Guarded 2.6.10 chain (370 slice 3):"
+CHAINS = ((CHAIN, MARKER), (CHAIN_B, MARKER_B))
+S3_DIFF = "dev/proposals/370/live_server-370s3-rev2.diff"
+S3_SHA256 = "4c56677a60ccd2ac932d837fd470f77bc6c919949bcfca51fd4cb1ba187cc1cf"
+S3_TESTS = ("test_job_prompts_370", "test_handle_error_370", "test_catalogue_503_370")
 
 
 def read(p):
@@ -134,14 +142,15 @@ def landed_374():
     return (REPO / "system/templates/dashboard/src/core/finderReveal.js").exists()
 
 
-def chain_entries():
-    """[(diff path, [files it changes], sha256 the list records)] in landing order; comment lines carry the sha256."""
+def chain_entries(chains=(CHAIN, CHAIN_B)):
+    """[(diff path, [files it changes], sha256 the list records)] in landing order, the first 2.6.10 chain then the second; the
+    first sha256 in the comment lines above a diff line is that diff's (later ones name other bytes, such as a result)."""
     out, sha = [], None
-    for ln in read(CHAIN).splitlines():
+    for ln in (l for c in chains for l in read(c).splitlines()):
         s = ln.strip()
         if s.startswith("#"):
             m = re.search(r"sha256 ([0-9a-f]{64})", s)
-            sha = m.group(1) if m else sha
+            sha = sha or (m.group(1) if m else None)
             continue
         if s:
             p = REPO / s
@@ -172,13 +181,13 @@ def applied(ref, f, diffs):
         return t.read_bytes()
 
 
-def spec_2610():
-    """(guarded_chain, its 2.6.10 spec) once guarded_chain.py knows the 2.6.10 marker; else (module, None)."""
+def spec_2610(marker=MARKER):
+    """(guarded_chain, the spec for a 2.6.10 marker) once guarded_chain.py knows it; else (module, None)."""
     import guarded_chain as gc
     for k in dir(gc):
-        if k.endswith("_MARKER") and getattr(gc, k) == MARKER:
+        if k.endswith("_MARKER") and getattr(gc, k) == marker:
             pre = k[:-len("_MARKER")]
-            return gc, (MARKER, getattr(gc, pre + "_FILE", None), pre + "_SHA256")
+            return gc, (marker, getattr(gc, pre + "_FILE", None), pre + "_SHA256")
     return gc, None
 
 
@@ -279,11 +288,14 @@ class V2610(unittest.TestCase):
                     self.assertEqual(list(ok), mine, f"{f}: at the cut every listed diff for it is in")
         if cut():
             self.assertEqual(changed, listed, "at the cut every file the chain lists carries its diffs")
-            self.assertNotRegex(read(CHAIN), r"(?m)^#\s*PENDING", "at the cut nothing in the 2.6.10 chain is pending")
+            for c in (CHAIN, CHAIN_B):
+                self.assertNotRegex(read(c), r"(?m)^#\s*PENDING", f"at the cut nothing in {c} is pending")
 
     def test_c16_chain_bytes_frozen(self):
         entries = chain_entries()
-        self.assertGreaterEqual(len(entries), 6, "the 2.6.10 chain lists the six approved diffs (#385 x4, #250 G3 and G4)")
+        self.assertGreaterEqual(len(chain_entries((CHAIN,))), 6, "the 2.6.10 chain lists the six approved diffs (#385 x4, #250 G3 and G4)")
+        self.assertEqual(chain_entries((CHAIN_B,)), [(S3_DIFF, ["system/scripts/live_server.py"], S3_SHA256)],
+                         "the second 2.6.10 chain lists the #370 slice 3 rev 2 diff alone, with its approved sha256")
         for diff, targets, sha in entries:
             with self.subTest(diff):
                 self.assertTrue((REPO / diff).exists(), f"{diff} is listed but missing")
@@ -294,15 +306,18 @@ class V2610(unittest.TestCase):
                                  f"{diff} is not the approved bytes (the list records {sha})")
 
     def test_c17_chain_pin(self):
-        gc, spec = spec_2610()
-        if spec is None:
-            self.skipTest("guarded_chain.py has no 2.6.10 pin yet (it is added with the marked chain commit, on Alan's say)")
-        self.assertEqual(spec[1], CHAIN)
-        pin = getattr(gc, spec[2], "")
-        self.assertTrue(pin, "the 2.6.10 pin is empty")
-        self.assertEqual(gc.chain_digest(REPO, "HEAD", spec), pin, "the 2.6.10 pin is not the listed chain")
-        self.assertNotIn("NOT pinned", read(CHAIN).splitlines()[0])
-        self.assertTrue(git("log", "--format=%H", f"--grep={MARKER}", "-F").stdout.strip(), "no commit carries the 2.6.10 marker")
+        for chain, marker in CHAINS:
+            with self.subTest(chain):
+                gc, spec = spec_2610(marker)
+                self.assertIsNotNone(spec, f"guarded_chain.py has no pin for {marker!r}")
+                self.assertEqual(spec[1], chain)
+                pin = getattr(gc, spec[2], "")
+                self.assertTrue(pin, f"the pin for {chain} is empty")
+                self.assertEqual(gc.chain_digest(REPO, "HEAD", spec), pin, f"the pin is not the list in {chain}")
+                self.assertNotIn("NOT pinned", read(chain).splitlines()[0])
+                subjects = git("log", "--no-merges", "--format=%s").stdout.splitlines()
+                self.assertTrue([s for s in subjects if s.startswith(marker)], f"no commit subject starts with {marker!r}")
+        self.assertFalse(MARKER.startswith(MARKER_B) or MARKER_B.startswith(MARKER), "one 2.6.10 marker prefixes the other")
         self.run_all("test_guarded_chain")
 
     # ---- #385 a project's own folder (the draft's checks 1 to 3, open point 4) ----------------------------------------------
@@ -365,9 +380,21 @@ class V2610(unittest.TestCase):
         self.run_all("test_sweep_failed_370", "test_log_level_health_370", "test_page_errors_370", "test_stale_events_370")
 
     def test_c31_smaller_fixes_s3(self):
-        if not landed_370_s3():
-            self.skipTest("waits for #370 slice 3 (guarded live_server-370s3.diff, marker RUN_LIMITS_370; pending approval)")
-        self.run_all("test_job_prompts_370", "test_handle_error_370", "test_catalogue_503_370")
+        """Slice 3 is the second 2.6.10 chain: its names are in live_server.py, and its own tests pass. Those tests come with the #370
+        branch (an ordinary merge, not the chain): until VERSION is 2.6.10 a missing one is skipped, at the cut it is a failure."""
+        self.assertTrue(landed_370_s3(), "#370 slice 3 (the second 2.6.10 chain, marker RUN_LIMITS_370) is not in live_server.py")
+        live = read("system/scripts/live_server.py")
+        for name in ("def run_limits(kind)", "def _count_refusal(self, part)", "self._count_refusal(part)",
+                     "def handle_error(self, request, client_address)", "def catalogue_lasting(e)"):
+            self.assertIn(name, live, f"live_server.py lacks slice 3's {name!r}")
+        present = [t for t in S3_TESTS if (REPO / f"dev/tests/{t}.py").exists()]
+        for t in S3_TESTS:
+            if t not in present:
+                with self.subTest(t):
+                    if cut():
+                        self.fail(f"dev/tests/{t}.py is missing at the cut (it comes with the #370 branch)")
+                    self.skipTest(f"dev/tests/{t}.py comes with the #370 branch, not merged here yet")
+        self.run_all(*present)
 
     # ---- #374 file paths (the draft's check 7, open point 3) ------------------------------------------------------------------
     def test_c32_file_paths(self):
@@ -391,7 +418,7 @@ class V2610(unittest.TestCase):
         texts = {n: t for n, t in (("What's new 2.6.10", wn_section()), ("2.6.10-plain.md", plain_notes())) if t is not None}
         if not texts:
             self.skipTest("no 2.6.10 notes yet")
-        rules = {"#374": landed_374(), "#250": landed_250_g3(), "#385": landed_385_guarded()}
+        rules = {"#374": landed_374(), "#250": landed_250_g3(), "#385": landed_385_guarded(), "#370": landed_370_s3()}
         for name, t in texts.items():
             with self.subTest(name):
                 for n in ("#386", "#366"):
