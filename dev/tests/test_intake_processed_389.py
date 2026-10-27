@@ -133,6 +133,27 @@ class ReviewFindings(unittest.TestCase):
         self.assertEqual(m["counts"]["arrived"], 1, "their filing stays its own Done row")
         self.assertEqual(m["counts"]["approved"], 1)
 
+    def test_the_meetings_own_date_is_kept_when_a_file_is_filed_too(self):
+        """M9: a filing this week never overwrites the date the meeting was processed under its own key (the row is Done either way)."""
+        done = [{"key": FP, "day": "2026-10-05", "title": "Weekly sync", "date": "2026-10-07", "path": "x", "p": "ABC"}]
+        cal_rows, _, _, keys = build_dashboard._ir_link([cal(2, "2026-10-05", "15:00", "Weekly sync", processed="2026-10-06")], {}, done)
+        self.assertEqual(cal_rows[0]["processed"], "2026-10-06")
+        cal_rows, _, _, _ = build_dashboard._ir_link([cal(2, "2026-10-05", "15:00", "Weekly sync")], {}, done)
+        self.assertEqual(cal_rows[0]["processed"], "2026-10-07")
+
+    def test_the_page_model_is_given_someone_elses_keys(self):
+        """M24: intake_review (what the page builds from) passes minutes.by_others_keys to the model."""
+        done = [{"key": FP, "day": "2026-10-05", "title": "Weekly sync", "path": "x", "p": "ABC"}]
+        rows = {"rows": [cal(2, "2026-10-05", "15:00", "Weekly sync", transcript="available")]}
+        with mock.patch.object(build_dashboard, "processed_this_week", return_value=done), \
+                mock.patch.object(minutes, "by_others_keys", return_value={FP}):
+            m = build_dashboard.intake_review(rows, [], [], TODAY, meta={}, stale_after=14, aside=[])
+        self.assertEqual(m["counts"]["arrived"], 1)
+        with mock.patch.object(build_dashboard, "processed_this_week", return_value=done), \
+                mock.patch.object(minutes, "by_others_keys", return_value=set()):
+            m = build_dashboard.intake_review(rows, [], [], TODAY, meta={}, stale_after=14, aside=[])
+        self.assertEqual(m["counts"]["arrived"], 0)
+
     def test_an_empty_title_never_links(self):
         meta = {"proposed-sync.json": dict(META["proposed-sync.json"], mkey="fp:2026-10-05||9f2c1a")}
         m = model([cal(2, "2026-10-05", "15:00", "[ABC]", transcript="available")], files=[FILE], queue=[q(1, "proposed-sync.json")],
@@ -198,7 +219,7 @@ class InboxMeetingsRows(unittest.TestCase):
     applied proposal never mark the calendar meeting processed."""
     DAY = "2026-10-21"
 
-    def rows(self, events, processed, cleared=(), applied=None):
+    def rows(self, events, processed, cleared=(), applied=None, staged=None):
         import json
         import subprocess
         from test_dashboard import populate
@@ -214,6 +235,8 @@ class InboxMeetingsRows(unittest.TestCase):
         if applied:
             (st / "applied").mkdir(parents=True, exist_ok=True)
             (st / "applied" / "proposed-theirs.json").write_text(json.dumps(applied), encoding="utf-8")
+        if staged:
+            (st / "proposed-waiting.json").write_text(json.dumps(staged), encoding="utf-8")
         code = ("import json\nfrom datetime import date\nimport build_dashboard as bd\n"
                 f"print(json.dumps(bd.inbox_meetings(bd.paths.load_settings(), [], date.fromisoformat({self.DAY!r}))))")
         r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts')\n" + code], cwd=v.root,
@@ -234,9 +257,22 @@ class InboxMeetingsRows(unittest.TestCase):
         self.assertIsNone(rows["w2"]["processed"])
 
     def test_alone_it_is_processed(self):
-        fp = f"2026-10-22 | fp:{self.DAY}|weekly sync|9f2c1a | projects/ABC Alpha/minutes/x.docx | 3"
-        rows = self.rows([self.ev("w2", "15:00")], [fp])
+        """M22: Alan's own processing of a file (its applied proposal is not someone else's minutes) marks the meeting."""
+        key = f"fp:{self.DAY}|weekly sync|9f2c1a"
+        fp = f"2026-10-22 | {key} | projects/ABC Alpha/minutes/x.docx | 3"
+        mine = {"meeting": {"key": key, "title": "Weekly sync", "date": self.DAY, "transcript": "inbox/sync.docx",
+                            "minutes_decision": "approved", "applied": "a1"}, "items": []}
+        rows = self.rows([self.ev("w2", "15:00")], [fp], applied=mine)
         self.assertEqual((rows["w2"]["same_title"], rows["w2"]["processed"]), (1, "2026-10-22"))
+
+    def test_someone_elses_minutes_waiting_in_review_never_mark_it(self):
+        """M21: a part-applied proposal of someone else's minutes is still in staging; its key is theirs all the same."""
+        key = f"fp:{self.DAY}|weekly sync|9f2c1a"
+        staged = {"meeting": {"key": key, "kind": "minutes by others", "title": "Weekly sync", "date": self.DAY,
+                              "minutes_decision": "approved", "applied": "a1"}, "items": [{"decision": "pending"}]}
+        rows = self.rows([self.ev("w2", "15:00")], [f"2026-10-22 | {key} | projects/ABC Alpha/minutes/theirs.docx | 2"],
+                         staged=staged)
+        self.assertIsNone(rows["w2"]["processed"])
 
     def test_someone_elses_minutes_never_mark_it(self):
         key = f"fp:{self.DAY}|weekly sync|9f2c1a"
