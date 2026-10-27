@@ -230,6 +230,13 @@ class Writer(Base):
         self.apply(item(1, "people", {"name": "Ann Lee", "labels": ["sensitive"], "projects_remove": ["ABC"]}))
         self.assertEqual(json.loads(self.people()["Ann Lee"]["projects_remove"]), ["ABC"])
 
+    def test_an_unknown_label_or_project_says_how_to_fix_it(self):
+        out = self.apply(item(1, "people", {"name": "Iz", "projects_add": ["ZZZ"]}),
+                         item(2, "people", {"name": "Jo", "labels": ["Nonesuch"]})).stdout
+        self.assertIn("projects_add: ZZZ isn't one of your projects: add the project first, or leave ZZZ out", out)
+        self.assertIn("unknown label 'Nonesuch'", out)
+        self.assertIn("add it in Settings or ask creaite first", out)
+
     def test_people_rows_cannot_be_cancelled(self):
         self.apply(item(1, "people", {"name": "Ann Lee"}))
         out = self.apply(change(1, "people", "1", {}, op="cancel")).stdout
@@ -396,6 +403,18 @@ class Migration(Base):
         self.assertEqual(self.applies(), applies)
         with self.db() as con:
             self.assertEqual(con.execute("SELECT count(*) FROM change_log WHERE tbl = 'people'").fetchone()[0], 0)
+
+    def test_an_unknown_label_or_project_says_which_whose_and_how(self):
+        for cells, which in ((("Kim Label", "", "", "", "", "", "", "Nonesuch"), "unknown label 'Nonesuch'"),
+                             (("Kim Code", "", "", "", "", "", "", "", "", "ZZZ"), "ZZZ isn't one of your projects")):
+            text = with_row(row(*cells))
+            self.write_register(text)
+            self.private_moved()
+            r = self.migrate(ok=False)
+            self.assert_refused(r, which, text)
+            self.assertIn(f"{cells[0]}: ", r.stdout)                                     # whose
+            self.assertIn(f"Change {cells[0]}'s row in the people register, or add what is missing first, then run the move "
+                          "again.", r.stdout)                                            # how
 
     def test_a_pending_register_write_stops_it(self):
         self.write_register()
