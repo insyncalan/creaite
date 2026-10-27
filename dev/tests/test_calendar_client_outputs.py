@@ -10,6 +10,9 @@ and a join link, meeting ID, passcode and dial-in in the body) is never copied i
 A confidential meeting keeps only its title and times in calendar.json, a private one is "Busy": their details (place, organiser, body,
 attendees, attachments, recurrence) are in no saved file and in no client output either. The follow-up email's facts do carry the
 invite's attendees, by design (the meeting's own follow-up, never a client report); that is recorded here, not treated as a leak.
+No client output builder reads calendar.json today, so tests 2 to 4 (client report, Steerco, AI draft contexts) are tripwires: they
+fail only if a builder starts reading the calendar. The outputs that really read the calendar are the agenda (the meeting's Prep
+page) and the follow-up email (test 5).
 Source: the review kit's probe `k26-b-outputs` (dev/proposals/review-kit/src/k26/b232.py on team-cap-reviewkit-26d), made to run
 on current main with CREAITE_NOW pinned and no kit shim.
 """

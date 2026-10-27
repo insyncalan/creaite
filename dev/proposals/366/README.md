@@ -8,6 +8,8 @@ Tests only; no file under `system/` changed. No real defect found, so there is n
 |---|---|---|---|---|
 | `dev/tests/test_calendar_client_outputs.py` | 5 | about 6 s | A saved calendar's title, place, organiser, body, attendee and attachment names, and a join link, meeting ID, passcode and dial-in, never reach the client report (draft, HTML, Word, filed), the client-safe Steerco data and Word one-pager, or the client-audience AI draft contexts. A confidential meeting keeps only title and times; a private one is Busy; their details are in no saved file and no client output. The follow-up email's facts carry the invite's attendees by design (recorded, and still free of join detail and held meetings). | `k26-b-outputs` (and the held/private lines of `k26-b-save`) |
 
+No client output builder reads `calendar.json` today, so tests 2 to 4 (client report, Steerco, AI draft contexts) are tripwires: they fail only if a builder starts reading the calendar. The outputs that really read the calendar are the agenda (the meeting's Prep page) and the follow-up email.
+
 Engine and local live server only (the report routes, `sweep.py calendar`, `report.py`, `drafts.py`); no browser, no Claude, no network.
 `CREAITE_NOW` is pinned through `test_reports.NOW`; every address is `*.example`, the data is fictional. No kit helper is used.
 
