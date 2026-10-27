@@ -1687,7 +1687,8 @@ def help_sections():
 
 def sweep_due_info():
     """#200: whether the daily sweep is due (sweep.due_info(): the last success before today's sweep.due_from, and now after it),
-    for Today's 'Sweep due since 07:00' banner. {due, due_from, last[, failed: {at, retry}]} (#370); CREAITE_NOW fixes the clock as in sweep.py."""
+    for Today's 'Sweep due since 07:00' banner. {due, due_from, last[, failed: {at, retry}]} (#370);
+    CREAITE_NOW fixes the clock as in sweep.py."""
     try:
         import sweep
         d = sweep.due_info()
