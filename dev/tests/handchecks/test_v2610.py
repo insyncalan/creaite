@@ -26,7 +26,7 @@ rest, including the draft's check 3 (the archive beside each project) and the op
   29  #329       shareable minutes: the words in the built page, and the shareable tests that need no browser
   30  #370       a missed check: Today and Health wording, Check now, the 24-hour retry time, and slices 1 and 2's tests
   31  #370       slice 3, the guarded live server patch (the second 2.6.10 chain) and its tests
-  32  #374       file paths and Show in Finder (skipped until #374 lands)
+  32  #374       file paths and Show in Finder (in 2.6.10)
   33  #366       the tests-only item's tests pass
   34  unchanged  approve and undo, and Health's Check now route, as before
   35  claims     the 2.6.10 notes never name #386 or #366, and name #374, #250, #385 and #370 only once their code (guarded part
