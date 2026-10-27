@@ -162,7 +162,8 @@ class Classifier(unittest.TestCase):
                "refresh my calendar please", "sweep now", "sweep please.", "sweep and apply", "sweep then approve", "sweep for the", "sweep for me", "what did the sweep find",
                "hello", "", "  sweep   mail  ", "sweep the last 7 days and apply", "check my mail for abc", "check my mail for the last 7 days", "x" * 130,
                "sweep the last ٧ days", "check my mail the last ٣ days", "sweep for ABC for the last ١٠ days", "sweep the last ٧ days and apply", "sweep\x85mail",
-               "sweep\ufeff", "\ufeffsweep", "sweep\ufeffmail", "refresh\ufeffcalendar", "refresh calendar\ufeff", "sweep the ésend thread", "ſweep", "sweep the " + "é" * 60 + " thread", "sweep the " + "😀" * 71 + " thread", "x" * 120]
+               "sweep\ufeff", "\ufeffsweep", "sweep\ufeffmail", "refresh\ufeffcalendar", "refresh calendar\ufeff", "sweep the ésend thread", "ſweep", "sweep the " + "é" * 60 + " thread", "sweep the " + "😀" * 71 + " thread", "x" * 120,
+               "please sweep the " + "a" * 80 + " thread now please.", "sweep the " + "a" * 81 + " thread", "check my mail for abcd", "check my mail for abc"]
 
     def test_a_saved_chat_is_a_mail_check_by_the_servers_own_words(self):
         """The page's answer equals the server's panel_sweep for every phrasing (live_server imported only here, to compare)."""
@@ -175,6 +176,14 @@ class Classifier(unittest.TestCase):
             self.assertTrue(by[yes], yes)                                                  # Arabic-Indic digits, as the server reads them
         for yes in ("check my email", "check email", "check email and teams", "refresh my calendar", "sweep", "please sweep", "check my mail"):
             self.assertTrue(by[yes], yes)
+        # the longest sweep the words allow is 116 characters (an 80-character subject), so the server's 120 cap can never be reached
+        # by a valid phrase; the limit that matters is the subject's 80, and the page and the server must stop at the same one
+        long_ok, long_no = "please sweep the " + "a" * 80 + " thread now please.", "sweep the " + "a" * 81 + " thread"
+        self.assertEqual(len(long_ok), 116)
+        self.assertTrue(by[long_ok])                                                       # the longest valid sweep: accepted on both sides
+        self.assertFalse(by[long_no])                                                      # a subject one character over: refused on both sides
+        self.assertTrue(by["check my mail for abc"])                                       # a short lower-case code (len <= 3)
+        self.assertFalse(by["check my mail for abcd"])                                     # four lower-case letters read as a word
         for no in ("sweep and apply", "sweep then approve", "what did the sweep find", "hello", ""):
             self.assertFalse(by[no], no)
 
