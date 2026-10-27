@@ -9,4 +9,5 @@ Draft paragraph for the release notes (Romanoff writes the final note).
 - A private all-day entry holds nothing back.
 - When the clocks go back, a meeting in the repeated hour is held back rather than risk fetching a confidential one. Press **Process**.
 - The fetch is off until you switch it on.
+- **Check now** on Today and in Health uses the same check as a typed sweep, so with the setting on it fetches transcripts too.
 - The form of the transcript links from live Microsoft 365 is still to be checked on a real account; until then, a link creaite does not recognise is left for **Process**.
