@@ -120,6 +120,20 @@ class FailsClosedOnTheConnection(Base):
         self.assertIn("RegisterUnreadable", r.stderr)
 
 
+class Complexity(unittest.TestCase):
+    """check.py's complexity limit holds for the patched names check (so G-c applied never fails check.py)."""
+
+    def test_register_aliases_and_its_helper_are_within_the_limit(self):
+        import ast
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+        import check
+        src = (Path(__file__).resolve().parents[2] / "system" / "scripts" / "client_leak.py").read_text(encoding="utf-8")
+        cc = {q: check.complexity(fn) for q, fn in check.functions(ast.parse(src))}
+        for q in ("register_aliases", "_table_aliases"):
+            if q in cc:
+                self.assertLessEqual(cc[q], check.NEW_CC, q)
+
+
 class Unchanged(Base):
     """What G-c leaves as it was (true with or without the diff)."""
 
