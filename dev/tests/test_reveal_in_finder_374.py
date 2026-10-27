@@ -155,7 +155,7 @@ class RouteLaunch(unittest.TestCase):
 
     def argv(self, plat, rel):
         root = self.v.root
-        real = str(root / rel)
+        real = str((root / rel).resolve())          # the route launches the resolved path; on a Mac the temp folder sits behind /var -> /private/var
         is_file = (root / rel).is_file()
         if plat == "darwin":
             return ["open", "-R", real] if is_file else ["open", real]
@@ -180,7 +180,7 @@ class RouteLaunch(unittest.TestCase):
 
     def test_linux_opens_the_files_folder_not_the_file(self):
         c = self.out["ok"]["linux|projects/ABC Test/minutes/plain.docx"]["calls"][0]["a"][0]
-        self.assertEqual(c, ["xdg-open", str(self.v.root / "projects/ABC Test/minutes")])
+        self.assertEqual(c, ["xdg-open", str((self.v.root / "projects/ABC Test/minutes").resolve())])
 
     def test_every_refusal_launches_nothing_on_every_platform(self):
         self.assertTrue(self.out["refused"])
