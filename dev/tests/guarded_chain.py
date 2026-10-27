@@ -95,13 +95,13 @@ BASE9 = "026528d9bdd64ee0039096a5425c7e3500db6106"
 # marker, list and pin. Its marker does not start with CHAIN9_MARKER (a space, not a colon, follows "chain"), CHAIN7_MARKER or
 # CHAIN8_MARKER, nor they with it. BASE10 is the commit just before its marked commit (v2610-chain 101f4583: the first 2.6.10 chain
 # applied, the rev 2 list committed), so a range from BASE10 checks the second chain alone; a range from BASE9 or the 2.6.9 release holds
-# both, peeled latest first. BASE is BASE10 from here, as BASE9 was for the first chain.
+# both, peeled latest first. BASE stays BASE9, so the default range covers both 2.6.10 chains; BASE10 is the second chain's own base.
 # `python3 dev/tests/guarded_chain.py` prints the pin; change it only with the list, on Alan's say.
 CHAIN10_MARKER = "Guarded 2.6.10 chain (370 slice 3):"
 CHAIN10_FILE = "dev/proposals/GUARDED-2.6.10b.chain"
 CHAIN10_SHA256 = "1d79e11d6c3f63c1da63fe7c799a9f39b5bb2bb0ea64e7b834b92c3b81e7f4f4"
 BASE10 = "101f45837e144d7b6cf66e4c9d756e682bbd23f1"
-BASE = BASE10
+BASE = BASE9
 SPEC1 = (CHAIN_MARKER, CHAIN_FILE, "CHAIN_SHA256")
 SPEC2 = (CHAIN2_MARKER, CHAIN2_FILE, "CHAIN2_SHA256")
 SPEC3 = (CHAIN3_MARKER, CHAIN3_FILE, "CHAIN3_SHA256")

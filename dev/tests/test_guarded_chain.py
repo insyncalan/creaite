@@ -433,8 +433,8 @@ class ShippedPin10(unittest.TestCase):
         self.assertTrue(subj.startswith(SPEC10[0]))
         self.assertFalse(any(subj.startswith(s[0]) for s in (SPEC1, SPEC2, SPEC3, SPEC4, SPEC5, SPEC6, SPEC7, SPEC8, SPEC9)))
 
-    def test_base_is_the_second_2610_base(self):
-        self.assertEqual(guarded_chain.BASE, guarded_chain.BASE10)
+    def test_base_covers_both_2610_chains(self):
+        self.assertEqual(guarded_chain.BASE, guarded_chain.BASE9)   # the default range holds both 2.6.10 chains; BASE10 pins the second
 
 
 class Chains9And10(unittest.TestCase):
@@ -489,8 +489,8 @@ class Chains9And10(unittest.TestCase):
 
 
 class ShippedRange2610(unittest.TestCase):
-    """The real 2.6.10 range: from the 2.6.9 release (tag v2.6.9, db5adb2a) and from BASE9 both 2.6.10 chains, from BASE10 (the default
-    BASE) the second alone; every guarded change is a marked, pinned 2.6.10 chain."""
+    """The real 2.6.10 range: from the 2.6.9 release (tag v2.6.9, db5adb2a) and from BASE9 both 2.6.10 chains, from BASE10 the second
+    alone (BASE, the default, is BASE9); every guarded change is a marked, pinned 2.6.10 chain."""
 
     def test_the_release_range_passes(self):
         repo = Path(__file__).resolve().parents[2]
