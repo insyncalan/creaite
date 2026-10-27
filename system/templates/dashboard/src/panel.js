@@ -711,7 +711,8 @@ export async function pkUndoLast(only){ await shared.PKQ; const s=only||shared.P
   if(only&&!shared.PKS.includes(only)){ snack("Already saved or undone"); return; }
   await (async()=>{ if(!s) return; let ok=false;
   try{ ok=await vq(async()=>{ const path="system/staging/"+s.name; if(!/-dashboard(-\d+)?\.json$/.test(s.name)||!await shared.VW.exists(path)) return false;
-      const data=JSON.parse(await shared.VW.read(path)); if(data.source_run!=="dashboard"||(data.items||[]).some(i=>i.applied)) return false;
+      let data; try{ data=JSON.parse(await shared.VW.read(path)); }catch(e){ return false; }   /* #370: a body that is not JSON is treated as gone */
+      if(data.source_run!=="dashboard"||(data.items||[]).some(i=>i.applied)) return false;
       await shared.VW.remove(path); return true; }); }catch(e){ ok=false; }
   { const i=shared.PKS.indexOf(s); if(i>=0) shared.PKS.splice(i,1); }
   if(!ok){ pkPersist(); refreshAll(); snack("Already saved: undo it in Activity"); return; }

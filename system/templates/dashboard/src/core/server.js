@@ -2,6 +2,8 @@
 /* core/server.js (BL-231 step 2b): vault access, the live server (`api`, `reloadData`, `applyNow`), proposals (`writeProposal`, `save`), the snackbar and undo, status, the pulse, the event stream and the debug log's error hook.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
+import { errorFrame } from "./pageErrors.js";   /* #370 */
+import { staleEventsAct, staleMarkClear } from "./staleReload.js";   /* #370 */
 import { irLiveCounts, irModelBehind } from "../stores/intakeReview.js";   /* #232-C */
 import { renderIntakeReview } from "../components/intakeReview/IntakeReviewPage.jsx";
 import { renderReports } from "../components/reporting/ReportsPage.jsx";
@@ -25,7 +27,7 @@ import { decidedWords, plainSay, savedCapped } from "./say.js";
 import { heldWords, rjLoadGuesses } from "../review.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
-import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
+import { mvEdDraw, mvSig, renderMilestones, staleShow } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, openProposal, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
@@ -512,7 +514,13 @@ export function evOpen(){ if(!SERVED||EVS.ctl||document.hidden||evStale()) retur
   const ctl=new AbortController(); EVS.ctl=ctl; EVS.opened++;
   fetch("/api/events",{headers:{"X-Creaite-Token":D.token||""},signal:ctl.signal,cache:"no-store"}).then(res=>evRead(res,ctl))
     .catch(()=>null).finally(()=>evDown(ctl)); }
-export async function evRead(res,ctl){ if(!res.ok||!res.body) return;
+/* #370: a stale refusal (a tab left open across a restart) reloads the page once; if the reload does not clear it, the banner says so */
+function evStore(){ try{ return window.sessionStorage; }catch(e){ return null; } }
+async function evRefused(res){ let j=null; try{ j=await res.clone().json(); }catch(e){ j=null; }
+  if(staleEventsAct(res.status,j,evStore(),()=>location.reload())==="banner") staleShow(j&&j.message); }
+export async function evRead(res,ctl){ if(res.status===403){ await evRefused(res); return; }
+  if(!res.ok||!res.body) return;
+  staleMarkClear(evStore());   /* #370: the stream opened, so a later restart may reload again */
   EVS.up=true; EVS.wait=1000; const rd=res.body.getReader(), dec=new TextDecoder(); let buf="";
   for(;;){ const {value,done}=await rd.read(); if(done||ctl.signal.aborted) return; buf+=dec.decode(value,{stream:true});
     for(let i=buf.indexOf("\n\n"); i>=0; i=buf.indexOf("\n\n")){ const ch=buf.slice(0,i); buf=buf.slice(i+2); if(!ch.startsWith("data: ")) continue;
@@ -557,6 +565,8 @@ if(SERVED) evOpen();
    text, addresses and paths out), and Settings › Diagnostics shows the latest errors, opens the log folder, switches the
    level and copies a report to paste into a chat. A quiet link in the top bar appears only when there were errors today. */
 shared.DIAGSENT=0;
+/* #370: an error or a refused promise names its top stack frame (function and line, no path and no text) when it has one */
+export const diagFrame=(err,source,line)=>{ const f=errorFrame(err); return f?{source:f.source,line:f.line}:{source,line}; };
 export const diagHook=(message,source,line)=>{ if(!SERVED||shared.DIAGSENT>=50||/^(Uncaught )?ResizeObserver loop/.test(String(message||""))) return; shared.DIAGSENT++;   /* BL-283: a browser notice, not a fault */
   fetch("/api/log/error",{method:"POST",headers:{"Content-Type":"application/json","X-Creaite-Token":D.token||""},keepalive:true,
     body:JSON.stringify({message:String(message||"").slice(0,300),view:typeof shared.VIEW==="string"?shared.VIEW:"",source:String(source||"").slice(0,300),line:line||0})
@@ -572,8 +582,8 @@ export const diagLoad=onceFor(2000,async()=>{ if(!SERVED) return; const r=await 
 export const diagErr=e=>`<details class="diagerr"><summary><span class="x">${esc(fd(e.at.slice(0,10)))} ${esc(e.at.slice(11,16))}</span> · ${esc(e.area)} · ${esc(e.message)}</summary>${e.detail.length?`<pre class="diagtb">${esc(e.detail.join("\n"))}</pre>`:'<div class="sub">No traceback.</div>'}</details>`;
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0152's place) */
 export function bootDebugLog(){
-window.addEventListener("error",e=>diagHook(e.message,e.filename,e.lineno));
-window.addEventListener("unhandledrejection",e=>diagHook(e.reason&&e.reason.message?e.reason.message:e.reason,"promise",0));
+window.addEventListener("error",e=>{ const f=diagFrame(e.error,e.filename,e.lineno); diagHook(e.message,f.source,f.line); });
+window.addEventListener("unhandledrejection",e=>{ const f=diagFrame(e.reason,"promise",0); diagHook(e.reason&&e.reason.message?e.reason.message:e.reason,f.source,f.line); });
 /* BL-255: its .diagerr rules are in style.css, so the page adds no <style> at run time and the policy can list the style hashes */
 }
 

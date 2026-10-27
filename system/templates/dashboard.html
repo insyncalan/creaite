@@ -5810,6 +5810,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     depsCard: () => depsCard,
     diagCardHtml: () => diagCardHtml,
     diagErr: () => diagErr,
+    diagFrame: () => diagFrame,
     diagHook: () => diagHook,
     diagLoad: () => diagLoad,
     diagRedraw: () => diagRedraw,
@@ -8548,6 +8549,54 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   function bootThemeButton() {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeIcon);
     themeIcon();
+  }
+
+  // core/pageErrors.js
+  function topFrame(stack) {
+    if (typeof stack !== "string") return null;
+    for (const ln2 of stack.split("\n").slice(0, 40)) {
+      const t47 = ln2.trim();
+      let m5 = /^at\s+(?:async\s+)?(?:new\s+)?([^\s(]+)\s+\(.*?:(\d+):\d+\)$/.exec(t47);
+      if (!m5) m5 = /^at\s+()\S*?:(\d+):\d+$/.exec(t47);
+      if (!m5) m5 = /^([^@\s]*)@.*?:(\d+):\d+$/.exec(t47);
+      if (!m5) continue;
+      const name = String(m5[1] || "").split(/[./]/).pop().replace(/[^\w$]/g, "").slice(0, 60), line = Number(m5[2]);
+      if (!Number.isFinite(line) || line < 0 || line > 9999999) continue;
+      return { source: name || "anonymous", line };
+    }
+    return null;
+  }
+  function errorFrame(err) {
+    return err && typeof err === "object" ? topFrame(err.stack) : null;
+  }
+
+  // core/staleReload.js
+  var STALE_RELOAD_KEY = "creaite.staleReload";
+  function read(mem) {
+    try {
+      return !!mem && mem.getItem(STALE_RELOAD_KEY) === "1";
+    } catch (e4) {
+      return false;
+    }
+  }
+  function staleMarkClear(mem) {
+    try {
+      if (mem) mem.removeItem(STALE_RELOAD_KEY);
+    } catch (e4) {
+      return;
+    }
+  }
+  function staleEventsAct(code, body2, mem, reload) {
+    if (code !== 403 || !body2 || body2.stale !== true) return "none";
+    if (read(mem)) return "banner";
+    try {
+      if (!mem) return "banner";
+      mem.setItem(STALE_RELOAD_KEY, "1");
+    } catch (e4) {
+      return "banner";
+    }
+    reload();
+    return "reload";
   }
 
   // ../../vendor/preact/preact/dist/preact.module.js
@@ -29936,11 +29985,11 @@ ${s5}`;
       /** @type {"box" | "btn"} */
       "box"
     );
-    const t47 = text.trim(), read = t47 ? readDate(t47) : null, bad = !!t47 && !read;
-    const chosen = read || date;
+    const t47 = text.trim(), read2 = t47 ? readDate(t47) : null, bad = !!t47 && !read2;
+    const chosen = read2 || date;
     h2(() => {
-      if (read) setView(read.slice(0, 7));
-    }, [read]);
+      if (read2) setView(read2.slice(0, 7));
+    }, [read2]);
     const back2 = (toBox) => {
       const el2 = !toBox && via.current === "btn" ? btn.current : inp.current;
       if (!el2 || document.activeElement === el2) return;
@@ -30040,7 +30089,7 @@ ${s5}`;
                 e4.preventDefault();
                 e4.stopPropagation();
                 if (!t47) commit("");
-                else if (read) commit(read);
+                else if (read2) commit(read2);
                 else setOpen2(true);
               } else if (e4.key === "Escape" && open2) {
                 e4.preventDefault();
@@ -30106,9 +30155,9 @@ ${s5}`;
             }
           },
           children: [
-            /* @__PURE__ */ u4("div", { class: `typed${bad ? " bad" : ""}`, id: "noteDateRead", role: "status", "aria-live": "polite", children: !t47 ? "Type a date or words like last monday." : read ? /* @__PURE__ */ u4(S2, { children: [
+            /* @__PURE__ */ u4("div", { class: `typed${bad ? " bad" : ""}`, id: "noteDateRead", role: "status", "aria-live": "polite", children: !t47 ? "Type a date or words like last monday." : read2 ? /* @__PURE__ */ u4(S2, { children: [
               "Reads as ",
-              /* @__PURE__ */ u4("b", { children: sayDate(read) }),
+              /* @__PURE__ */ u4("b", { children: sayDate(read2) }),
               " · Enter to use"
             ] }) : "Not a date I can read. Try 12-10-2026 or last monday." }),
             /* @__PURE__ */ u4("div", { class: "mh", children: [
@@ -34955,7 +35004,7 @@ system/scripts/run launch.py agent ${what}`;
       const d5 = draftRef.current;
       if (d5 && d5.d) draftStat(d5.feature, "rejected");
     }, []);
-    async function read(t47, pk2) {
+    async function read2(t47, pk2) {
       const n4 = ++seq2.current;
       if (!t47.trim()) {
         setReply(null);
@@ -35008,7 +35057,7 @@ system/scripts/run launch.py agent ${what}`;
         return;
       }
       timer2.current = /** @type {any} */
-      setTimeout(() => read(t47, picks), SP_DEBOUNCE);
+      setTimeout(() => read2(t47, picks), SP_DEBOUNCE);
     }
     function again(t47, pk2) {
       setText(t47);
@@ -35016,7 +35065,7 @@ system/scripts/run launch.py agent ${what}`;
       setDone(null);
       setShown(true);
       clearTimeout(timer2.current);
-      read(t47, pk2);
+      read2(t47, pk2);
       input.current?.focus();
     }
     async function make(r5, note) {
@@ -35024,7 +35073,7 @@ system/scripts/run launch.py agent ${what}`;
       let rr2 = r5;
       if (note && note.trim()) {
         const t210 = `${text.trim().replace(/[.,;]+$/, "")}, add an update: ${note.trim()}`;
-        const n4 = await read(t210, picks);
+        const n4 = await read2(t210, picks);
         if (!n4 || !n4.stage) {
           setShown(true);
           return;
@@ -35129,7 +35178,7 @@ system/scripts/run launch.py agent ${what}`;
       }
       const t47 = text.trim();
       if (!t47) return;
-      const r5 = await read(t47, picks);
+      const r5 = await read2(t47, picks);
       setShown(true);
       if (!r5 || !r5.ok || r5.refused || r5.choices) return;
       const task = r5.task;
@@ -61389,7 +61438,12 @@ ${pre}**Current state title:** ${title}`);
       ok2 = await vq(async () => {
         const path = "system/staging/" + d5.name;
         if (!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d5.name) || !await shared.VW.exists(path)) return false;
-        const data = JSON.parse(await shared.VW.read(path));
+        let data;
+        try {
+          data = JSON.parse(await shared.VW.read(path));
+        } catch (e4) {
+          return false;
+        }
         if ((data.items || []).some(
           /** @param {any} i */
           (i5) => i5.applied || i5.decision !== "pending"
@@ -64582,7 +64636,12 @@ ${d5.text}`);
         ok2 = await vq(async () => {
           const path = "system/staging/" + s5.name;
           if (!/-dashboard(-\d+)?\.json$/.test(s5.name) || !await shared.VW.exists(path)) return false;
-          const data = JSON.parse(await shared.VW.read(path));
+          let data;
+          try {
+            data = JSON.parse(await shared.VW.read(path));
+          } catch (e4) {
+            return false;
+          }
           if (data.source_run !== "dashboard" || (data.items || []).some((i5) => i5.applied)) return false;
           await shared.VW.remove(path);
           return true;
@@ -71613,8 +71672,8 @@ ${d5.text}`);
     closeClientReport();
     const fresh = psCode.peek() !== code || !psMounted;
     psCode.value = code;
-    const read = partners.peek();
-    if (read.code !== code || !read.loaded) loadPartners(code);
+    const read2 = partners.peek();
+    if (read2.code !== code || !read2.loaded) loadPartners(code);
     readClientLogos(code);
     if (!psMounted) {
       R(/* @__PURE__ */ u4(ProjectSettings, {}), el2);
@@ -81855,8 +81914,29 @@ ${d5.text}`);
     EVS.opened++;
     fetch("/api/events", { headers: { "X-Creaite-Token": D.token || "" }, signal: ctl.signal, cache: "no-store" }).then((res) => evRead(res, ctl)).catch(() => null).finally(() => evDown(ctl));
   }
+  function evStore() {
+    try {
+      return window.sessionStorage;
+    } catch (e4) {
+      return null;
+    }
+  }
+  async function evRefused(res) {
+    let j5 = null;
+    try {
+      j5 = await res.clone().json();
+    } catch (e4) {
+      j5 = null;
+    }
+    if (staleEventsAct(res.status, j5, evStore(), () => location.reload()) === "banner") staleShow(j5 && j5.message);
+  }
   async function evRead(res, ctl) {
+    if (res.status === 403) {
+      await evRefused(res);
+      return;
+    }
     if (!res.ok || !res.body) return;
+    staleMarkClear(evStore());
     EVS.up = true;
     EVS.wait = 1e3;
     const rd2 = res.body.getReader(), dec = new TextDecoder();
@@ -81967,6 +82047,10 @@ ${d5.text}`);
     if (SERVED) evOpen();
   }
   shared.DIAGSENT = 0;
+  var diagFrame = (err, source, line) => {
+    const f5 = errorFrame(err);
+    return f5 ? { source: f5.source, line: f5.line } : { source, line };
+  };
   var diagHook = (message, source, line) => {
     if (!SERVED || shared.DIAGSENT >= 50 || /^(Uncaught )?ResizeObserver loop/.test(String(message || ""))) return;
     shared.DIAGSENT++;
@@ -82007,8 +82091,14 @@ ${d5.text}`);
   });
   var diagErr = (e4) => `<details class="diagerr"><summary><span class="x">${esc(fd(e4.at.slice(0, 10)))} ${esc(e4.at.slice(11, 16))}</span> · ${esc(e4.area)} · ${esc(e4.message)}</summary>${e4.detail.length ? `<pre class="diagtb">${esc(e4.detail.join("\n"))}</pre>` : '<div class="sub">No traceback.</div>'}</details>`;
   function bootDebugLog() {
-    window.addEventListener("error", (e4) => diagHook(e4.message, e4.filename, e4.lineno));
-    window.addEventListener("unhandledrejection", (e4) => diagHook(e4.reason && e4.reason.message ? e4.reason.message : e4.reason, "promise", 0));
+    window.addEventListener("error", (e4) => {
+      const f5 = diagFrame(e4.error, e4.filename, e4.lineno);
+      diagHook(e4.message, f5.source, f5.line);
+    });
+    window.addEventListener("unhandledrejection", (e4) => {
+      const f5 = diagFrame(e4.reason, "promise", 0);
+      diagHook(e4.reason && e4.reason.message ? e4.reason.message : e4.reason, f5.source, f5.line);
+    });
   }
   var serverSeams = { api: (v5) => {
     api = v5;
@@ -82383,6 +82473,7 @@ Next: `;
         "SKEY",
         "SNAP",
         "SORT",
+        "STALE_RELOAD_KEY",
         "STALE_ROW_MSG",
         "START_CMD",
         "STATUSES",
@@ -82574,6 +82665,7 @@ Next: `;
         "defs",
         "designation",
         "diagCardHtml",
+        "diagFrame",
         "diagHook",
         "dismissFiled",
         "dispFoot",
@@ -82611,10 +82703,12 @@ Next: `;
         "editProposal",
         "emailKey",
         "errBanner",
+        "errorFrame",
         "esc",
         "evClose",
         "evOn",
         "evOpen",
+        "evRead",
         "evRoot",
         "evidence",
         "fd",
@@ -83162,6 +83256,9 @@ Next: `;
         "splitPanes",
         "srcHTML",
         "srcParse",
+        "staleEventsAct",
+        "staleMarkClear",
+        "staleShow",
         "stampMsg",
         "startCurEdit",
         "status",
@@ -83183,6 +83280,7 @@ Next: `;
         "tipHide",
         "tl",
         "toIso",
+        "topFrame",
         "trackApprove",
         "trackCounts",
         "trackOf",

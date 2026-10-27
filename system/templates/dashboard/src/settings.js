@@ -761,7 +761,8 @@ export async function alertStaged(){ const d=shared.CUR&&shared.CUR.alertDone; c
   snack(`Saved the new ${d.word} for Review: “${String(d.title).slice(0,60)}”`,()=>alertUnstage(d)); }
 export async function alertUnstage(d){ let ok=false;
   try{ ok=await vq(async()=>{ const path="system/staging/"+d.name; if(!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d.name)||!await shared.VW.exists(path)) return false;
-      const data=JSON.parse(await shared.VW.read(path)); if((data.items||[]).some(/** @param {any} i */i=>i.applied||i.decision!=="pending")) return false;
+      let data; try{ data=JSON.parse(await shared.VW.read(path)); }catch(e){ return false; }   /* #370: a body that is not JSON is treated as gone */
+      if((data.items||[]).some(/** @param {any} i */i=>i.applied||i.decision!=="pending")) return false;
       await shared.VW.remove(path); return true; }); }catch(e){ ok=false; }
   if(!ok){ snack("Already decided in Review: undo it in Activity"); return; }
   const c=d.al.cand?{cand:d.al.cand}:{}, u=await api("/api/alerts/undo",{ids:[d.al.id],...c});
