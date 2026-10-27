@@ -13,7 +13,7 @@ import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { SheetEditor } from "../report/SheetText.jsx";
 import { Checked } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
-import { carriedOf, itemName, lineKey, mdLines, lineTag } from "./minutesDoc.js";
+import { carriedOf, carriedRefs, itemName, lineKey, mdLines, lineTag } from "./minutesDoc.js";
 import { jumpTo } from "./TranscriptPane.jsx";
 
 /** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
@@ -41,7 +41,8 @@ function TextLine({ ctx, line, i, li, onEdit }) {
   const tags = /** @type {TimeTag[]} */ (s.tags || []), tag = live ? lineTag(line, tags) : null;
   const checks = live && m ? m.checks.filter(c => c.section === s.id && c.line === i) : [];
   const Tag = li ? "li" : "p";
-  const key = lineKey(s.id, line.text), held = m && !ctx.exported ? carriedOf(m.doc)[key] : undefined;   // #329: held back with an item
+  const key = lineKey(s.id, line.text), refs = m && !ctx.exported ? carriedRefs(carriedOf(m.doc)[key]) : [];   // #329: held back with items
+  const held = refs.length ? refs.join(" ") : "";
   return (
     <Tag class="mnline" data-line={i}>
       {line.flag ? <b class="mnflag">{line.flag}</b> : null}
@@ -49,7 +50,7 @@ function TextLine({ ctx, line, i, li, onEdit }) {
       {live ? <span class="mntext" onClick={e => { if (!(/** @type {HTMLElement} */ (e.target)).closest("button")) onEdit(); }}><Checked text={line.text} checks={checks} /></span>
         : <span>{line.text}</span>}
       {tag ? <TimeTag tag={tag} onRemove={() => ctx.update({ tags: tags.filter(t => t !== tag) }, "Time tag removed")} /> : null}
-      {held && m ? <span class="mnheldw" data-held-with={held}> <span class="tag">held back with {itemName(m.doc, held)}</span>{" "}
+      {held && m ? <span class="mnheldw" data-held-with={held}> <span class="tag">held back with {refs.map(r => itemName(m.doc, r)).join("; ")}</span>{" "}
         <button type="button" class="linkbtn" onClick={() => { m.change({ op: "shareable", answers: [{ key, answer: "release" }] }); }}>Show in the shareable version</button></span> : null}
     </Tag>
   );

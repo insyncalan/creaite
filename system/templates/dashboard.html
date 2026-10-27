@@ -72291,6 +72291,20 @@ ${d5.text}`);
 
   // components/minutes/minutesDoc.js
   var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
+  var MN_HEADINGS = (
+    /** @type {Record<string, string>} */
+    {
+      header: "Meeting",
+      summary: "Executive Summary",
+      updates: "Updates",
+      decisions: "Decisions",
+      raid: "Risks, Issues, Assumptions & Dependencies",
+      actions: "Actions",
+      open_questions: "Open Questions / Escalations",
+      not_covered: "Not covered in this meeting",
+      source: "Source"
+    }
+  );
   var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
   function mdLines(text) {
     const out = [];
@@ -72345,6 +72359,23 @@ ${d5.text}`);
     );
     return c5 && typeof c5 === "object" && !Array.isArray(c5) ? c5 : {};
   };
+  var carriedRefs = (v5) => typeof v5 === "string" ? [v5] : Array.isArray(v5) ? v5.filter((x5) => typeof x5 === "string") : [];
+  var rowKey = (r4) => !r4 || typeof r4 !== "object" ? "" : Number.isInteger(r4.n) ? `row:@${r4.n}` : r4.ref || r4.was ? `row:${r4.ref || r4.was}` : "";
+  var plainOf = (doc) => {
+    const p6 = (
+      /** @type {any} */
+      (doc.layout || {}).plain
+    );
+    return new Set(p6 && typeof p6 === "object" && !Array.isArray(p6) ? Object.keys(p6).filter((k5) => typeof p6[k5] === "string") : []);
+  };
+  var plainHeading = (s5) => String(s5.default_heading || "").trim() || MN_HEADINGS[String(s5.id || "")] || "";
+  var plainTitle = (doc) => {
+    const d5 = String(
+      /** @type {any} */
+      doc.date || ""
+    );
+    return /^\d{4}-\d\d-\d\d$/.test(d5) ? `Meeting, ${d5.slice(8, 10)}-${d5.slice(5, 7)}-${d5.slice(0, 4)}` : "Meeting";
+  };
   function carriedItem(doc, ref) {
     const all = (
       /** @type {Record<string, any>} */
@@ -72359,12 +72390,13 @@ ${d5.text}`);
     ) if (x5 && x5.kept_line && x5.was === r4) return r4;
     return null;
   }
-  function carriedOut(doc, section, text, held) {
-    const ref = carriedOf(doc)[lineKey(section, text)];
-    if (typeof ref !== "string") return false;
-    const k5 = carriedItem(doc, ref);
-    return k5 == null || !!heldBack(doc, k5, held) || !!(held && held[ref]);
+  function carriedKeyOut(doc, key2, held) {
+    return carriedRefs(carriedOf(doc)[key2]).some((ref) => {
+      const k5 = carriedItem(doc, ref);
+      return k5 == null || !!heldBack(doc, k5, held) || !!(held && held[ref]);
+    });
   }
+  var carriedOut = (doc, section, text, held) => carriedKeyOut(doc, lineKey(section, text), held);
   function itemName(doc, ref) {
     const k5 = carriedItem(doc, ref) || ref, it2 = (
       /** @type {any} */
@@ -72381,19 +72413,38 @@ ${d5.text}`);
     return name.length > 80 ? `${name.slice(0, 79).trim()}…` : name;
   }
   function distributedOf(doc, held) {
-    const sections = doc.sections.map((s5) => {
+    const plain = plainOf(doc);
+    const out = (s5) => (
+      /** @param {string} t */
+      (t47) => isInternal(doc, s5.id, { text: t47 }) || carriedOut(doc, s5.id, t47, held)
+    );
+    const sections = doc.sections.map((s02) => {
+      const s5 = plain.has(`heading:${s02.id}`) ? { ...s02, heading: plainHeading(s02) } : s02;
       if (s5.type === "table") {
-        const keptRows = (s5.rows || []).filter((r4) => !(r4.ref && (heldBack(doc, r4.ref, held) || isInternal(doc, s5.id, { ref: r4.ref, n: (
-          /** @type {any} */
-          r4.n
-        ) }))));
+        const keptRows = (s5.rows || []).filter((r4) => {
+          const x5 = (
+            /** @type {any} */
+            r4
+          ), id2 = x5.ref || x5.was;
+          return !(id2 && heldBack(doc, id2, held) || x5.kept_line && !x5.was || x5.ref && isInternal(doc, s5.id, { ref: x5.ref, n: x5.n }) || carriedKeyOut(doc, rowKey(x5), held));
+        });
         return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
       }
-      if (s5.type === "header" || !s5.text) return s5;
-      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }) && !carriedOut(doc, s5.id, l6.text, held));
-      return { ...s5, text: mdUnlines(kept) || "None recorded." };
+      if (s5.type === "header") return s5;
+      const gone = out(s5), d5 = (
+        /** @type {any} */
+        s5.data
+      );
+      const topics = d5 && Array.isArray(d5.topics) ? { data: { ...d5, topics: d5.topics.filter((t47) => t47 && typeof t47 === "object").map((t47) => ({
+        ...t47,
+        heading: gone(unbold(String(t47.heading || ""))) ? "" : t47.heading,
+        lines: (t47.lines || []).filter((x5) => !(x5 && typeof x5 === "object" && gone(unbold(String(x5.text || "")))))
+      })) } } : {};
+      if (!s5.text) return { ...s5, ...topics };
+      const kept = mdLines(s5.text).filter((l6) => !gone(l6.text));
+      return { ...s5, ...topics, text: mdUnlines(kept) || "None recorded." };
     });
-    return { ...doc, audience: "distributed", sections };
+    return { ...doc, ...plain.has("title") ? { title: plainTitle(doc) } : {}, audience: "distributed", sections };
   }
   function leftOut(doc, held) {
     const out = [];
@@ -72571,7 +72622,8 @@ ${d5.text}`);
     ), tag = live ? lineTag(line, tags) : null;
     const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
     const Tag2 = li2 ? "li" : "p";
-    const key2 = lineKey(s5.id, line.text), held = m5 && !ctx.exported ? carriedOf(m5.doc)[key2] : void 0;
+    const key2 = lineKey(s5.id, line.text), refs = m5 && !ctx.exported ? carriedRefs(carriedOf(m5.doc)[key2]) : [];
+    const held = refs.length ? refs.join(" ") : "";
     return /* @__PURE__ */ u4(Tag2, { class: "mnline", "data-line": i5, children: [
       line.flag ? /* @__PURE__ */ u4("b", { class: "mnflag", children: line.flag }) : null,
       line.flag ? " " : null,
@@ -72584,7 +72636,7 @@ ${d5.text}`);
         " ",
         /* @__PURE__ */ u4("span", { class: "tag", children: [
           "held back with ",
-          itemName(m5.doc, held)
+          refs.map((r4) => itemName(m5.doc, r4)).join("; ")
         ] }),
         " ",
         /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", onClick: () => {
@@ -72728,7 +72780,7 @@ ${d5.text}`);
     });
   }
   var active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
-  function rowKey(e4, keyApi) {
+  function rowKey2(e4, keyApi) {
     if (e4.metaKey || e4.ctrlKey || e4.altKey || e4.shiftKey || e4.isComposing || !e4.key || e4.key.length !== 1 || !active()) return false;
     const doc = keyApi.doc();
     if (!doc || doc.state !== "draft") return false;
@@ -72776,7 +72828,7 @@ ${d5.text}`);
     if (installed) return;
     installed = true;
     document.addEventListener("keydown", (e4) => {
-      if (rowKey(e4, keyApi)) {
+      if (rowKey2(e4, keyApi)) {
         e4.preventDefault();
         e4.stopPropagation();
       }
@@ -73161,6 +73213,20 @@ ${d5.text}`);
   }
 
   // components/minutes/ShareReview.jsx
+  var ANSWERS = (
+    /** @type {Record<string, [string, string][]>} */
+    {
+      line: [["hold", "Hold back with it"], ["keep", "Keep"]],
+      row: [["hold", "Hold back with it"], ["keep", "Keep"]],
+      heading: [["plain", "Use a plain heading"], ["keep", "Keep"]],
+      title: [["plain", "Use a plain heading"], ["keep", "Keep"]],
+      header: [["keep", "Keep"]]
+    }
+  );
+  var WHAT = (
+    /** @type {Record<string, string>} */
+    { row: "A row", heading: "A heading", title: "The title", header: "The meeting's details" }
+  );
   var shareAsk = (
     /** @type {import("@preact/signals").Signal<{lines: ReviewLine[], answers: Record<string, string>, again: () => void, error: string}|null>} */
     y3(null)
@@ -73178,7 +73244,7 @@ ${d5.text}`);
   async function exportAgain() {
     const a5 = shareAsk.value;
     if (!a5) return;
-    const answers = a5.lines.map((l6) => ({ key: l6.key, ref: l6.ref, answer: a5.answers[l6.key] }));
+    const answers = a5.lines.map((l6) => ({ key: l6.key, ref: l6.ref, refs: l6.refs || [l6.ref], answer: a5.answers[l6.key] }));
     const r4 = await changeMinutes({ op: "shareable", answers });
     if (!r4.ok) {
       shareAsk.value = { ...a5, error: r4.message || "Your answers weren't saved." };
@@ -73195,34 +73261,24 @@ ${d5.text}`);
       /* @__PURE__ */ u4("ul", { class: "mnap-l", children: a5.lines.map((l6, i5) => /* @__PURE__ */ u4("li", { "data-share-key": l6.key, style: "display:block", children: [
         /* @__PURE__ */ u4("div", { children: l6.text }),
         /* @__PURE__ */ u4("div", { class: "sub", children: [
+          WHAT[l6.kind || ""] ? `${WHAT[l6.kind || ""]}. ` : "",
           "May describe: ",
           l6.item
         ] }),
-        /* @__PURE__ */ u4("div", { role: "group", "aria-label": `For the line: ${l6.text.slice(0, 60)}`, style: "display:flex;gap:6px;margin-top:6px", children: [
-          /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              class: "btn sm",
-              id: `mnShareHold${i5}`,
-              "data-share": "hold",
-              "aria-pressed": a5.answers[l6.key] === "hold" ? "true" : "false",
-              onClick: () => answer(l6.key, "hold"),
-              children: "Hold back with it"
-            }
-          ),
-          /* @__PURE__ */ u4(
-            "button",
-            {
-              type: "button",
-              class: "btn sm",
-              "data-share": "keep",
-              "aria-pressed": a5.answers[l6.key] === "keep" ? "true" : "false",
-              onClick: () => answer(l6.key, "keep"),
-              children: "Keep"
-            }
-          )
-        ] })
+        l6.kind === "header" ? /* @__PURE__ */ u4("div", { class: "sub", children: "This can't be held back: change it in the minutes before sharing if it shouldn't go out." }) : null,
+        /* @__PURE__ */ u4("div", { role: "group", "aria-label": `For the line: ${l6.text.slice(0, 60)}`, style: "display:flex;gap:6px;margin-top:6px", children: (ANSWERS[l6.kind || "line"] || ANSWERS.line).map(([what, label], j5) => /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "btn sm",
+            id: j5 ? void 0 : `mnShareHold${i5}`,
+            "data-share": what,
+            "aria-pressed": a5.answers[l6.key] === what ? "true" : "false",
+            onClick: () => answer(l6.key, what),
+            children: label
+          },
+          what
+        )) })
       ] }, l6.key)) }),
       a5.error ? /* @__PURE__ */ u4("p", { class: "sub", role: "alert", style: "color:var(--bad, #b00020)", children: a5.error }) : null,
       /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
@@ -83354,6 +83410,7 @@ Next: `;
         "rjMenu",
         "rkText",
         "row",
+        "rowKey",
         "rowKeys",
         "rows",
         "rtOK",
