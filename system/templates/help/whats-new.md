@@ -2,6 +2,16 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.11
+
+2.6.11 contains all of 2.6.10. The headline: a meeting you processed from a file no longer waits in Intake's Arrived list.
+
+### Intake
+- **A meeting you processed from a file leaves Arrived.** When you drop in or upload a meeting's transcript and process it, its calendar meeting no longer stays in Arrived as "Transcript ready"; Intake shows one row for the meeting. If two meetings on the same day have the same title, creaite does not guess and leaves both as they were. Someone else's minutes are never linked this way. (#389)
+
+- Update from the release zip as usual.
+- Reload any dashboard tab that was open before the update.
+
 ## creaite 2.6.10
 
 2.6.10 contains all of 2.6.9. The headline: each project can keep its folder in its own place, creaite can fetch your meeting transcripts as they appear, and shareable minutes now warn you before they carry a sensitive item.
