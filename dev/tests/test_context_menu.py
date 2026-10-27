@@ -124,7 +124,10 @@ class ContextMenuTests(LiveBrowserCase):
     def test_keyboard_opens_and_drives_it(self):
         b = self.b
         ids = self.work()
-        b.click(f'#workTbl tr[data-row="{ids[1]}"] td.title')
+        b.click(f'#workTbl tr[data-row="{ids[1]}"] td.title', inset=110)   # #241 puts the ID and project beside the title: off the link
+        # The pointer then rests over the row, where the keyboard menu opens: Chrome's mouseover for a menu drawn under a still pointer
+        # focuses the item there (hover focuses), racing the arrow keys below. A keyboard user's pointer is elsewhere; move it off.
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=5, y=5, button="none")
         b.eval('document.activeElement.blur(); document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"F10",shiftKey:true,bubbles:true}))')
         b.wait(f'!!document.querySelector("{MENU}")')
         self.assertTrue(b.eval(f'document.activeElement.closest("{MENU}")!==null'))
