@@ -422,7 +422,7 @@ class ArchiveInOneDrive(OneDriveCase):
         self.assertEqual((reg.read_text(encoding="utf-8"), sorted(str(p) for p in self.eng("ABC").rglob("*"))), before)
 
 
-NEW_TABLES = ("item_events",)     # the work-item-history table: present only when that schema is installed
+NEW_TABLES = ("item_events", "people")     # the work-item-history table and #386's people table: present only when that schema is installed
 
 
 class Migration(unittest.TestCase):

@@ -36,6 +36,7 @@ RECORD = os.environ.get("CREAITE_PIN_RECORD") == "1"
 OLD_SQL = PINNED / "old-code.sql"     # a database the code before the split wrote, as SQL text (git ignores *.db files)
 SRC = f"{ABC}/minutes/2026-10-01 Steering.docx — Actions"
 TABLES_SKIPPED = {"vault_search", "sqlite_sequence"}
+EMPTY_SKIPPED = {"people"}     # #386: the people table, left out while empty (it is empty until migrate-people; the pins predate it)
 TS = re.compile(r"\d{4}-\d\d-\d\d[ T]\d\d:\d\d:\d\d(?:\.\d+)?")
 
 
@@ -267,7 +268,10 @@ def snapshot(v, norm):
             if t in TABLES_SKIPPED or t.startswith("vault_search"):
                 continue
             order = "rowid" if t in ("change_log", "applies") else "1"
-            out[t] = [norm.value(dict(r)) for r in con.execute(f"SELECT * FROM {t} ORDER BY {order}")]
+            rows = [norm.value(dict(r)) for r in con.execute(f"SELECT * FROM {t} ORDER BY {order}")]
+            if t in EMPTY_SKIPPED and not rows:
+                continue
+            out[t] = rows
     out["files"] = vault_files(v)
     processed = v.root / "system" / "processed.txt"
     out["processed"] = norm.text(processed.read_text(encoding="utf-8")) if processed.exists() else None

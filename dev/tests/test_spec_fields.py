@@ -54,7 +54,8 @@ class DocsShapeTests(unittest.TestCase):
         self.assertIn("`name`*, `description`", block)               # the milestone fields ask creaite guessed
 
     def test_every_editable_table_is_listed(self):
-        self.assertEqual(set(propose.FIELD_TABLES), set(tracker.TABLES) - {"item_labels", "updates"})
+        # #386 slice 3: people are changed through propose.py people (its ordinary half), not the fields list
+        self.assertEqual(set(propose.FIELD_TABLES), set(tracker.TABLES) - {"item_labels", "updates", "people"})
 
     def test_generator_check(self):
         r = subprocess.run([sys.executable, str(ROOT / "dev" / "tools" / "skill_fields.py"), "--check"],

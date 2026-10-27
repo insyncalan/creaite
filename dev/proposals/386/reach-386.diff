@@ -1,0 +1,14 @@
+diff --git a/system/scripts/reach.py b/system/scripts/reach.py
+index 28f260f84..9a4b79a4c 100644
+--- a/system/scripts/reach.py
++++ b/system/scripts/reach.py
+@@ -967,7 +967,8 @@ def _settings_refused(script, words):
+ READ, DERIVED, STAGE, GUARDED, RECORD = "read", "derived", "stage", "guarded", "record"
+ SCRIPT_COMMANDS = {
+     "tracker.py": {"read": READ, "validate": READ, "query": READ, "index": DERIVED,
+-                   "init": RECORD, "apply": RECORD, "undo": RECORD, "undo-changes": RECORD, "migrate": RECORD},
++                   "init": RECORD, "apply": RECORD, "undo": RECORD, "undo-changes": RECORD, "migrate": RECORD,
++                   "migrate-people": (RECORD, "--dry-run")},                      # #386: the register moves into the people table
+     "review.py": {"pending": READ, "list": READ, "approve": RECORD, "reject": RECORD, "bulk": RECORD,
+                   "assign": (RECORD, "--dry-run"), "edit": RECORD, "workstream": RECORD, "keep": RECORD, "override": RECORD,
+                   "merge": RECORD, "keep-new": RECORD,

@@ -1,0 +1,13 @@
+# #386 slice 3 guarded chain (nothing is pinned: dev/tests/guarded_chain.py does not know it; a pin is added only on Alan's say).
+# One diff per line, in landing order. Base: the v2.6.9 release commit 0b637e926. All three land together, as one commit.
+# Guarded files only: system/scripts/schema.sql (counted with tracker), system/scripts/tracker.py, system/scripts/reach.py.
+#
+# G-a: the people table
+dev/proposals/386/schema-386.diff
+# G-b: people ops, rename and merge across the seven name columns, auto-add, the register export, migrate-people
+dev/proposals/386/tracker-386.diff
+# G-b2: tracker.py migrate-people classified as a record command (BL-267)
+dev/proposals/386/reach-386.diff
+#
+# Not guarded (ordinary commits on the branch): dev/tests/test_people_table_386.py, dev/tests/test_writer_pinned.py,
+# dev/tests/test_archive_projects.py, dev/tests/test_spec_fields.py, dev/tests/test_record_commands.py

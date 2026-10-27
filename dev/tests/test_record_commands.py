@@ -126,7 +126,9 @@ class Classified(unittest.TestCase):
             "permissions.py", "live_server.py", "launch.py",
             "archive.py daily", "archive.py items"]       # BL-10 (14-10-2026): the daily archiving writes the record
             # #307 path 12: Discard's Undo puts a proposal back in staging, classed record as reject is (dev/proposals/discard-undo/reach.py.diff)
-            + (["review.py restore-discarded"] if "restore-discarded" in reach.SCRIPT_COMMANDS["review.py"] else [])))
+            + (["review.py restore-discarded"] if "restore-discarded" in reach.SCRIPT_COMMANDS["review.py"] else [])
+            # #386 slice 3: moving the people register into the people table writes the record (dev/proposals/386/reach-386.diff)
+            + (["tracker.py migrate-people"] if "migrate-people" in reach.SCRIPT_COMMANDS["tracker.py"] else [])))
 
 
 class Hook(unittest.TestCase):
