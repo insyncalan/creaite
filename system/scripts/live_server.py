@@ -560,13 +560,15 @@ TRANSCRIPT_CHAT = (
 
 def deny_tools():
     """DENY_TOOLS plus, for the folders creaite never reads or writes (99 Archive, _Archive, _Templates), a deny on every way in (BL-93)."""
-    extra = [f"{t}({paths.tool_pattern(g)})" for g in paths.never_index_patterns() for t in ("Read", "Edit", "Write")]
+    extra = [f"{t}({pat})" for g in paths.never_index_patterns() for pat in paths.tool_patterns(g)   # #385: in a project's
+             for t in ("Read", "Edit", "Write")]                                                    # own folder too
     return DENY_TOOLS + extra
 
 
 def extra_dirs():
-    """Folders outside the vault the run may read: the projects root when it is outside (BL-85, BL-93). Nothing else."""
-    return [str(paths.projects_root())] if paths.external() else []
+    """Folders outside the vault the run may read: the projects root when it is outside (BL-85, BL-93) and (#385) each project's
+    own folder (reach.mapped_roots, as the guard hook's reach has them). Nothing else."""
+    return [str(paths.projects_root())] + [str(p) for p in reach.mapped_roots()] if paths.external() else []
 
 
 def claude_path():
@@ -1343,6 +1345,7 @@ class Handler(BaseHTTPRequestHandler):
         clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
         if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
             return self.send(200, {"ok": False, "message": clash})
+        before_loc = paths.locations() if op == "write" and p == paths.SETTINGS else None     # #385
         p.parent.mkdir(parents=True, exist_ok=True)
         if op == "append":
             with open(p, "a", encoding="utf-8") as f:
@@ -1353,6 +1356,9 @@ class Handler(BaseHTTPRequestHandler):
             import minutes_record                                                            # moves its minutes record's row too
             with LOCK:
                 minutes_record.follow(p)
+        if before_loc is not None:                 # #385: the matching additionalDirectories, in this same save
+            follow = project_dirs_follow(before_loc)
+            return self.send(200, {"ok": "message" not in follow, **follow})     # Cap's LOW 8: a failed second write says so
         return self.send(200, {"ok": True})
 
     def fs_read(self, p, rel):
@@ -1364,7 +1370,12 @@ class Handler(BaseHTTPRequestHandler):
         return self.send(200, {"ok": True, "text": text})
 
     def fs_write_if_unchanged(self, p, rel, req, expect):
-        """The write op with expect_text (#233 L5): a file that changed since the page read it is never written over."""
+        """The write op with expect_text (#233 L5): a file that changed since the page read it is never written over. #385 (Cap's
+        LOW 6): settings.json gets fs_save's checks and its matching additionalDirectories, as a plain write does."""
+        clash = settings_notes_clash(p, req.get("text", "")) if p == paths.SETTINGS else None
+        if clash:
+            return self.send(200, {"ok": False, "message": clash})
+        before_loc = paths.locations() if p == paths.SETTINGS else None
         with LOCK:
             with open(p, encoding="utf-8", newline="") as fh:
                 changed = fh.read() != expect
@@ -1372,6 +1383,9 @@ class Handler(BaseHTTPRequestHandler):
                 paths.write_text_atomic(p, req.get("text", ""))
         if changed:
             return self.send(409, {"ok": False, "message": f"{rel} changed since it was read, so nothing was saved; try again"})
+        if before_loc is not None:                 # #385 (Cap's LOW 6): the matching additionalDirectories, in this same save
+            follow = project_dirs_follow(before_loc)
+            return self.send(200, {"ok": "message" not in follow, **follow})
         return self.send(200, {"ok": True})
 
     def fs_upload(self, p, req):
@@ -1682,7 +1696,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(409 if busy else 400, {"ok": False, "message": said, "busy": busy})
             return run
         return Run(run_id, message, req.get("session"), req.get("chat"), req.get("confirmed"), images=images,
-                   sweep=panel_sweep(message, images, req.get("confirmed")), fresh=fresh_session(req))
+                   sweep=panel_sweep(message, images, req.get("confirmed")), fresh=fresh_session(req), fetch_as="typed")
 
     def here(self, req):
         """POST /api/here: the open page's "still here" every 10 seconds; keeps a launcher-started server running (BL-86)."""
@@ -2415,7 +2429,7 @@ def queued_run(item, images, session, chat):
             raise CalendarRefused(said)
         return run
     return Run(f"r-{secrets.token_hex(6)}", item["text"], session, chat, None, images=images,
-               sweep=panel_sweep(item["text"], images), fresh=True)                             # BL-309: a queued sweep too
+               sweep=panel_sweep(item["text"], images), fresh=True, fetch_as="typed")           # BL-309: a queued sweep too
 
 
 PANEL_SWEEP_PROMPT = (
@@ -2791,7 +2805,7 @@ class Run:
             raise
 
     def _start(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
-               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False):
+               sweep=False, lines=None, closer=None, files=None, as_minutes=None, fresh=False, fetch_as=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
         held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
@@ -2820,6 +2834,7 @@ class Run:
         self.resumed = resumed                                  # #327 B: the usage line says which (counts only)
         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
         self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
+        self.fetch = self._fetch_for(kind, sweep, fetch_as)     # #250: an interactive sweep's transcript fetch, only when the setting is on
         self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
         self.events, self.cond, self.watchers = [], threading.Condition(), 0
         self.pending, self.said, self.steps = {}, [], []
@@ -2923,6 +2938,7 @@ class Run:
             self._end_answered(final)
         if self.job and not self.stop:                     # the status and the files are written here, from the tool results
             self._finish_job()
+        self._fetch_finish(proc, final)                    # #250: settle the fetch, in its own try; _done() always follows
         self._done()
 
     def _on_assistant(self, ev):
@@ -2988,6 +3004,7 @@ class Run:
         return False
 
     def _on_tool_result(self, part):
+        self._fetch_observe(part)                                       # #250: the fetch sees the result (queues, writes nothing)
         if self.job and part.get("tool_use_id") in self.tooluse:        # a transcript job keeps what Microsoft 365 returned
             self.job_observe(part)   # BL-228 (sprint-debt-safety)
         # ===== BL-248 (sprint-portability): a creaite script that failed before it started is creaite's fault =====
@@ -3189,6 +3206,7 @@ class Run:
         """Emit the closure, keep the run's plain lines in the day's history chat and the run record in the debug log."""
         c = self._closing(failed)
         c = {k: v for k, v in c.items() if k in ("ok", "line", "href", "link", "stopped")}
+        c = self._with_fetch_line(c)                       # #250: a sweep's transcript count joins the closure line
         if not str(c.get("href") or "#").startswith("#"):           # a link is only ever a place in the dashboard
             c.pop("href", None)
             c.pop("link", None)
@@ -3224,6 +3242,65 @@ class Run:
             self.cond.notify_all()
         EVENTS.poke()                                     # BL-253 (sprint-live-updates): what the run wrote shows at once
     # ===== end BL-229 (read) =====
+
+    # ===== #250 (v2.6.10): transcripts fetched as they appear (sweep.fetch_transcripts, off unless exactly true) =====
+    FETCH_RUNS = ("typed", "catchup")     # Alan, 27-10-2026 ("fetch B"): the interactive sweeps only; unattended runs never fetch
+    def _fetch_for(self, kind, sweep, fetch_as=None):
+        """The run's SweepFetch, only for an interactive sweep Alan named (27-10-2026) and only while the setting is on; else None: a
+        typed sweep (fetch_as "typed", a plain sweep by BL-309) or Close the day's catch-up ("catchup", kind "sweep"). Any other run,
+        a scheduled or a new kind of sweep among them, never fetches. It adds no tool, no folder and no rule: it sees the results of
+        tools the run already has."""
+        named = fetch_as in self.FETCH_RUNS and (sweep is True if fetch_as == "typed" else kind == "sweep")
+        if not named or not vault_transcripts.fetch_on():
+            return None
+        try:
+            return vault_transcripts.SweepFetch()
+        except Exception as e:  # noqa: BLE001  the sweep runs without the fetch
+            swallowed("fetch", e)
+            return None
+
+    def _fetch_observe(self, part):
+        """Hand the fetch a read_resource result (its text, as the server received it); nothing else. Logged by name if it raises."""
+        fetch = getattr(self, "fetch", None)
+        if fetch is None:
+            return
+        try:
+            name, given = self.tooluse.get(part.get("tool_use_id"), ("", {}))
+            if name == vault_transcripts.FETCH_TOOLS[1]:
+                fetch.observe(name, given, vault_transcripts.result_text(part.get("content")), bool(part.get("is_error")))
+        except Exception as e:  # noqa: BLE001  never let the reader die
+            swallowed("fetch observe", e)
+
+    def _fetch_finish(self, proc, final):
+        """After proc.wait(), before _done(): settle the fetch. Only a run that ended with its answer (not stopped, not timed out,
+        exit 0, a non-error result, a final answer: _answered) writes; any other ending leaves every read for Process. A fault is logged."""
+        fetch = getattr(self, "fetch", None)
+        if fetch is None:
+            return
+        try:
+            answered = self._answered(proc, final)
+            self.fetch_line = vault_transcripts.fetch_text(fetch.finish(answered))
+            if self.fetch_line and not self.plain:         # a typed sweep has no closure: the count is a line of the chat
+                self.said.append(self.fetch_line)
+                self.emit("text", text=self.fetch_line)
+                self.record()
+        except Exception as e:  # noqa: BLE001
+            swallowed("fetch finish", e)
+
+    def _answered(self, proc, final):
+        """True only for a run that ended well (not stopped, timed out or failed), exited 0 and sent a result event that is not an
+        error and carries a final answer: an exit 0 with no answer (no result event, is_error, empty text) settles nothing."""
+        ended_well = not (self.stop or getattr(self, "timed_out", False) or getattr(self, "failed", False))
+        result = getattr(self, "usage_result", None)           # the stream's result event, set only by _on_result
+        return bool(ended_well and proc.returncode == 0 and isinstance(result, dict) and not result.get("is_error") and final)
+
+    def _with_fetch_line(self, c):
+        """The closure with the fetch's count after its own words (counts only: no title, name or reason)."""
+        line = getattr(self, "fetch_line", "")
+        if not line or not c.get("line"):
+            return c
+        return {**c, "line": f"{str(c['line']).rstrip('. ')}. {line}."}
+    # ===== end #250 =====
 
     # ===== BL-228 (sprint-debt-safety) =====
     def job_observe(self, part):
@@ -5294,6 +5371,7 @@ def build_card(run, rule_item=None):
             items.append(item)
         else:
             refused.append(why_not)
+    n = card_dirs(items, refused, n, run.was_marked)     # #385: settings.json's project folders and their permission, one card
     if not items and not refused:
         return None
     card = None
@@ -5512,6 +5590,67 @@ def edit_stage(c, how):
     code, out = edit_run(c["id"], json.dumps(spec, ensure_ascii=False).encode("utf-8"), "stage")
     m = re.search(r"Staged and approved: (\S+\.json)", out)
     return (Path(m.group(1)).name, None) if code == 0 and m else (None, out.strip() or "propose.py stage failed")
+
+
+def project_dirs_follow(before_loc):
+    """#385 (Cap's LOW 4): after the page saved settings.json, the matching additionalDirectories in .claude/settings.json
+    (permissions.sync_project_dirs: a project's own folder added or taken out, backed up and logged), so the two never drift
+    apart. {} when nothing changed; {"dirs": [...]} when folders changed; {"message": why} when the second write failed."""
+    try:
+        changed = vault_permissions.sync_project_dirs(before_loc, paths.locations(), "dashboard")
+    except (OSError, ValueError, SystemExit) as e:
+        return {"message": f"Saved, but the folders Claude Code may read weren't updated to match ({type(e).__name__}). "
+                           "Settings › Health says how to put it right."}
+    return {"dirs": changed} if changed else {}
+
+
+def card_dirs(items, refused, n, marked):
+    """#385 (Cap's LOW 4): a card item changing locations in system/config/settings.json gets the matching additionalDirectories in
+    .claude/settings.json on the same card (permissions.dirs_for_locations), merged into the card's own change to that file when
+    it has one: Approve makes both or, when the second is refused, neither is offered. The next free item number."""
+    import filechange
+    def edits(target):
+        real = os.path.realpath(target)
+        return next((it for it in items if it["op"] in ("create", "edit")
+                     and os.path.realpath(filechange.resolve(it["path"])) == real), None)
+    cfg = edits(paths.SETTINGS)
+    if cfg is None:
+        return n
+    try:
+        before = json.loads(paths.SETTINGS.read_text(encoding="utf-8")) if paths.SETTINGS.is_file() else {}
+        after = json.loads(cfg["_change"]["data"].decode("utf-8"))
+        own = edits(paths.CLAUDE_SETTINGS)
+        base = json.loads(own["_change"]["data"].decode("utf-8") if own else paths.CLAUDE_SETTINGS.read_text(encoding="utf-8"))
+        new = vault_permissions.dirs_for_locations(base, before.get("locations") or {}, after.get("locations") or {})
+        current = json.loads(paths.CLAUDE_SETTINGS.read_text(encoding="utf-8")) if paths.CLAUDE_SETTINGS.is_file() else {}
+        wider = (vault_permissions.card_dirs_problem(current, base if new is None else new, after.get("locations") or {})
+                 if (before.get("locations") or {}) != (after.get("locations") or {}) else None)
+    except (OSError, ValueError, AttributeError, TypeError) as e:
+        items.remove(cfg)
+        refused.append(f"{cfg['path']}: its matching .claude/settings.json folders couldn't be worked out ({type(e).__name__})")
+        return n
+    if wider:                                     # Cap's Full review, MEDIUM 4: never a folder riding along with the card's
+        for it in (cfg, own):
+            if it is not None:
+                items.remove(it)
+        refused.append(f"{cfg['path']}: {wider}")
+        return n
+    if new is None:
+        return n
+    data = (json.dumps(new, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    if own is None:
+        n += 1
+    item, why_not = card_item(int(own["id"][1:]) if own else n, "edit", ".claude/settings.json", None,
+                              "the matching folder for a project's own folder (locations.project_paths)", data, marked)
+    if item is None:
+        items.remove(cfg)
+        refused += [f"{cfg['path']}: its matching .claude/settings.json change is refused", why_not]
+        return n
+    if own is not None:
+        items[items.index(own)] = dict(item, title=own["title"], reason=own["reason"], **{k: own[k] for k in ("rule",) if k in own})
+    else:
+        items.append(item)
+    return n
 
 
 def settings_notes_clash(p, text):
@@ -7331,7 +7470,7 @@ def start_catchup(now, force=False):
     """Start cx-sweep as a guarded "sweep" run (START_LOCK held): {status: start, run} or {status: cant, message}."""
     before = sorted(p.name for p in paths.STAGING.glob("proposed-*.json"))
     try:
-        run = Run(f"s-{secrets.token_hex(6)}", "sweep", None, None, None, kind="sweep",
+        run = Run(f"s-{secrets.token_hex(6)}", "sweep", None, None, None, kind="sweep", fetch_as="catchup",
                   label="Catch-up sweep: mail and Teams since the last sweep",                                          # BL-326
                   lines={"done": "The catch-up sweep has finished: anything it found is waiting in Review", "href": "#review",
                          "link": "Review"})

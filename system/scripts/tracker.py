@@ -423,7 +423,50 @@ def safe_path(rel_path, purpose):
     hit = next((n for n in paths.skipped_names() if n.lower() in below), None)
     if hit:                                     # BL-09, #252: never into 99 Archive or the old two, _Templates, 99 System
         raise Invalid(f"{purpose}: {hit} is never written by creaite ({rel_path})")
+    _missing_base_check(p, purpose)            # #385: a mapped folder or projects root that isn't there
+    _skipped_below_bases(p, purpose, rel_path)  # #385: below every mapped project's own folder too
     return p
+
+
+def _skipped_below_bases(p, purpose, rel_path):
+    """#385: safe_path's skipped names (99 Archive and the old two, _Templates, 99 System) looked for below every base, the
+    projects root and each mapped project's own folder, names compared as macOS compares them."""
+    for below in _below_bases(p):
+        if purpose == "mkdir" and below:        # a new project's own empty 99 Archive folder (from the skeleton) may be made
+            below = below[:-1]
+        hit = next((n for n in paths.skipped_names() if _apfs_folded((n,))[0] in below), None)
+        if hit:                                 # BL-09, #252: never into 99 Archive or the old two, _Templates, 99 System
+            raise Invalid(f"{purpose}: {hit} is never written by creaite ({rel_path})")
+
+
+def _missing_base_check(p, purpose):
+    """#385: refuse a path under a base that isn't there (a project's own folder, the portfolio or the projects root on a drive or
+    OneDrive not connected): every write's mkdir(parents=True) would otherwise make it on the laptop's own disk. The portfolio may be
+    made, inside a projects folder that is there."""
+    b = paths.base_of(p)
+    if b is not None and b == paths._resolved(paths.portfolio_dir()):
+        b = paths._resolved(paths.projects_root())
+    if b is not None and not b.is_dir():
+        raise Invalid(f"{purpose}: {b.name} isn't there (a drive or OneDrive not connected?): creaite never creates it")
+
+
+def _missing_base(x):
+    """#385: for an undo, x's base (a project's own folder, the portfolio or the projects root) when it isn't there, else None. A
+    move needs nothing more: a project's folder and its archive slot share the folder that holds them, and the source must exist."""
+    b = paths.base_of(x)
+    return b if b is not None and not b.is_dir() else None
+
+
+def _below_bases(p):
+    """#385: p's parts (as macOS compares names) below each base a skipped name is looked for under: the projects root (in the
+    vault or outside) and each project mapped to a folder of its own (paths.parts_below_base's bases, every one that holds p)."""
+    q = _apfs_folded(Path(p).parts)
+    out = []
+    for base in [paths.projects_root(), *paths.project_roots().values()]:
+        b = _apfs_folded(Path(os.path.realpath(base)).parts)
+        if len(q) > len(b) and q[:len(b)] == b:
+            out.append(list(q[len(b):]))
+    return out
 
 
 def file_hash(p):
@@ -1479,6 +1522,7 @@ def _copy_bases():
     bases = [(paths.ROOT, Path(os.path.realpath(paths.ROOT)))]
     if paths.external():
         bases.append((paths.projects_root(), Path(os.path.realpath(paths.projects_root()))))
+        bases += [(p, Path(os.path.realpath(p))) for p in paths.project_roots().values()]     # #385: a project's own folder
     return sorted(bases, key=lambda b: -len(b[0].parts))
 
 
@@ -2293,12 +2337,47 @@ def check_move(fop, blk):
     problem = reach.archive_move_problem(src, dst, kind)
     if problem:
         raise Invalid(f"move: {problem}")
+    problem = _outside_end_problem(src, dst, kind)   # #385: an end outside the roots only for a mapped project's own slot
+    if problem:
+        raise Invalid(f"move: {problem}")
     if kind in ("reports_back", "notes_back"):   # BL-331, #124: only a file an archive (or Delete note) moved there, back
         import archive                            # to where it came from
         # #252: the apply record keeps the archive folder's name as it was; src may name it either way (paths.follow_stored)
         was = archive.archived_moves(kind=kind[:-len("_back")]).get(paths.follow_stored(src))
         if was != dst and not (kind == "notes_back" and was and reach.NOTES_BACK_RENAMES and _renamed_back(was, dst)):
             raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
+
+
+def _outside_end_problem(src, dst, kind):
+    """#385: a move's end outside paths.allowed_roots is refused, except an archive into, or a restore out of (from 99 Archive or an
+    old name), exactly the archive slot (paths.archive_slot) of a project mapped to a folder of its own, whose other end is exactly
+    that folder. None when the move may be made."""
+    real = os.path.realpath
+    a, b = paths.resolve(src, archived=False), paths.resolve(dst, archived=False)
+    mapping = paths._mapping()
+    if not _mapped_end(src, dst, a, b, kind, mapping) and \
+            all(any(Path(real(x)) == r or r in Path(real(x)).parents for r in paths.allowed_roots()) for x in (a, b)):
+        return None
+    refused = f"{dst if kind == 'archive' else src} is outside the projects folder and isn't a project's own archive place"
+    k = paths._mapped_name(Path(str(dst if kind == "archive" else src)).name, mapping) if kind in ("archive", "restore") else None
+    if not k:
+        return refused
+    slot = paths.archive_slot(k)
+    own_end, slot_end = (a, b) if kind == "archive" else (b, a)
+    places = [slot] if kind == "archive" else [slot.parent.parent / n / k for n in paths.archive_names()]
+    if real(own_end) != real(mapping[k]) or real(slot_end) not in {real(x) for x in places}:
+        return refused
+    return None
+
+
+def _mapped_end(src, dst, a, b, kind, mapping):
+    """#385 (Cap's Full review, LOW 1): whether either end of an archive or a restore is a mapped project, by name or by its
+    folder: then only exactly its own folder and its slot will do, even when both ends are in reach."""
+    if kind not in ("archive", "restore") or not mapping:
+        return False
+    own = {os.path.realpath(v) for v in mapping.values()}
+    return any(paths._mapped_name(Path(str(x)).name, mapping) for x in (src, dst)) or \
+        any(os.path.realpath(x) in own for x in (a, b))
 
 
 def _renamed_back(was, dst):
@@ -2396,7 +2475,7 @@ def _named_notes(c, archived=False):
         parts = [_folded(x) for x in Path(c).parts[len(Path(r).parts):]]
         if not name or paths.notes_shape(parts, name, archived):
             return True
-    return False
+    return paths.in_mapped_notes(c, archived=archived)     # #385: a mapped project's notes folder (and, archived, its slot's)
 
 
 def _hard_linked_note(p, folders):
@@ -2489,6 +2568,10 @@ def _op_move(apply_id, fop, blk, done, prop=None):
     while not made.parent.exists():               # BL-03: the highest folder this move makes (99 Archive/04 Reporting/Weekly)
         made = made.parent
     made = made if not made.exists() else None
+    try:
+        made_rel = paths.rel(made) if made else None
+    except ValueError:                            # #385: the 99 Archive beside a mapped project's folder has no stored path:
+        made_rel = None                           # an undo leaves it there, empty
     b.parent.mkdir(parents=True, exist_ok=True)
     try:
         _move(a, b, blk.get("archive"))
@@ -2496,7 +2579,7 @@ def _op_move(apply_id, fop, blk, done, prop=None):
         raise Invalid(f"move: {fop['to']} already exists; a folder move never overwrites") from None
     except SymlinkMove:                           # #124 F1: a symlink put there after the check: never followed, never moved
         raise Invalid(f"move: {fop['from']} is a symlink; a file move never follows one") from None
-    done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(made) if made else None,
+    done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": made_rel,
                  "kind": blk.get("archive")})
 
 
@@ -2610,6 +2693,8 @@ def reverse_file_ops(records, report):
             p = paths.resolve(rec["path"])
             if p.exists():
                 report.append(f"skipped restoring {rec['path']}: a file is already there")
+            elif _missing_base(p) is not None:    # #385: a drive or OneDrive not connected: never made on the laptop's disk
+                report.append(f"skipped restoring {rec['path']}: {_missing_base(p).name} isn't there")
             else:
                 p.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(paths.resolve(rec["kept"]), p)
@@ -2617,6 +2702,8 @@ def reverse_file_ops(records, report):
             p = paths.resolve(rec["path"])
             if p.exists() and file_hash(p) != rec["hash"]:
                 report.append(f"skipped restoring the draft status line in {rec['path']}: changed since")
+            elif _missing_base(p) is not None:    # #385 (Cap's LOW 3): never made on the laptop's disk
+                report.append(f"skipped restoring the draft status line in {rec['path']}: {_missing_base(p).name} isn't there")
             else:
                 shutil.copy2(paths.resolve(rec["previous"]), p)
         elif op == "mkdir":
@@ -2630,6 +2717,8 @@ def reverse_file_ops(records, report):
             p = paths.resolve(rec["path"])
             if p.exists() and file_hash(p) != rec["hash"]:
                 report.append(f"skipped {rec['path']}: changed since")
+            elif rec["previous"] is not None and _missing_base(p) is not None:    # #385 (Cap's LOW 3): as a remove
+                report.append(f"skipped restoring {rec['path']}: {_missing_base(p).name} isn't there")
             elif rec["previous"] is None:
                 p.unlink(missing_ok=True)
             else:

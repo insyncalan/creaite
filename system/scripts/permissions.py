@@ -43,6 +43,7 @@ Anything else (a blanket Bash or Edit rule, node, curl, a path outside the vault
 """
 import hashlib
 import json
+import os
 import re
 import shutil
 import sys
@@ -383,10 +384,81 @@ def _add_refused(f, data, cur, label):
         if not RULE.match(val) and val not in ("WebFetch", "WebSearch"):
             return "a deny entry is written like Edit(path), Bash(command) or WebFetch"
         return None
-    root = str(paths.locations().get("projects_root") or "").strip().rstrip("/")
-    if not root or val.rstrip("/") != root:
-        return "the only folder outside the vault creaite adds is the projects root (locations.projects_root)"
+    dirs = project_dirs()                           # #385: the projects root, or a project's own folder
+    if val.rstrip("/") not in dirs:
+        return ("the only folders outside the vault creaite adds are the projects root (locations.projects_root) and each "
+                "project's own folder (locations.project_paths)" if len(dirs) > 1 else
+                "the only folder outside the vault creaite adds is the projects root (locations.projects_root)")
     return None
+
+
+# ===== #385: a project's own folder in additionalDirectories =====
+def project_dirs(loc=None):
+    """#385: the additionalDirectories entries creaite adds for `locations` value `loc` (the saved one by default): the projects
+    root as saved, then the folder of each project in the register mapped to a folder of its own (paths._loc_project_roots, which
+    leaves out every entry paths.project_mapping_problem refuses, under the register's spelling), as its permission pattern (~/…,
+    paths.tool_pattern's form), inside the home folder only. [] when the projects are in the vault."""
+    loc = paths.locations() if loc is None else loc
+    root = str(loc.get("projects_root") or "").strip().rstrip("/")
+    if not root:
+        return []
+    out = [root]
+    registered = {paths._fold(v) for v in paths.register_folders().values()}
+    home = Path(os.path.realpath(os.path.expanduser("~")))
+    for name, p in paths._loc_project_roots(loc).items():
+        real = Path(os.path.realpath(p))
+        if paths._fold(name) in registered and home in real.parents:
+            out.append(paths._pattern_of(real))
+    return list(dict.fromkeys(out))
+
+
+def dirs_for_locations(data, before_loc, after_loc):
+    """#385 (Cap's LOW 4: never drifting apart): a Claude Code settings file's parsed content `data` with additionalDirectories
+    matching a change of `locations` from before_loc to after_loc: each mapped project's folder that is no longer one taken out, each
+    new one added (the projects root and anything else there stay as they are). None when nothing changes."""
+    new = project_dirs(after_loc)[1:]
+    old = project_dirs(before_loc)[1:] + _own_folder_dirs(before_loc) + _own_folder_dirs(after_loc)    # Cap's LOW 8
+    perms = dict(data.get("permissions") or {})
+    cur = list(perms.get("additionalDirectories") or [])
+    want = [d for d in cur if d not in old or d in new] + [d for d in new if d not in cur]
+    if want == cur:
+        return None
+    perms["additionalDirectories"] = want
+    return dict(data, permissions=perms)
+
+
+def _own_folder_dirs(loc):
+    """#385 (Cap's LOW 8): the additionalDirectories entries creaite may have added for every well-formed project_paths entry in
+    `loc` (paths._loc_raw_roots: archived and dropped ones too, such as a folder since replaced by a symlink), as written and as
+    its real path, so a sync takes out the folder of a project that is no longer honoured."""
+    out = []
+    for p in paths._loc_raw_roots(loc or {}).values():
+        try:
+            out += [paths._pattern_of(Path(os.path.abspath(p))), paths._pattern_of(Path(os.path.realpath(p)))]
+        except ValueError:
+            continue
+    return out
+
+
+def sync_project_dirs(before_loc, after_loc, via):
+    """#385: after `locations` changed from before_loc to after_loc in one save (the page's settings save), write the matching
+    additionalDirectories to .claude/settings.json in that same save: backed up, each added or removed folder logged (so undo
+    takes back one at a time). The list of folders changed ([] when none)."""
+    data = read_file("settings")
+    new = dirs_for_locations(data, before_loc, after_loc)
+    if new is None:
+        return []
+    cur = list((data.get("permissions") or {}).get("additionalDirectories") or [])
+    want = new["permissions"]["additionalDirectories"]
+    backup = write_file("settings", new, stamp())
+    n = next_id()
+    changed = [("remove", d) for d in cur if d not in want] + [("add", d) for d in want if d not in cur]
+    for i, (op, d) in enumerate(changed):
+        log({"id": n + i, "at": now(), "op": op, "kind": "dir", "rule": d, "why": "a project's own folder (locations.project_paths)",
+             "via": via, "backup": backup})
+        settings_log("claude_permissions.additionalDirectories", d if op == "remove" else None, d if op == "add" else None)
+    return [d for _, d in changed]
+# ===== end #385 =====
 
 
 def _remove_refused(lst, val, cur, label):
@@ -682,8 +754,8 @@ def broad_rule(rule):
     if tool == "Bash" and spec and bash_bounds(spec):
         return bash_bounds(spec)
     if tool in ("Edit", "Write") and spec:
-        root = str(paths.locations().get("projects_root") or "").strip().rstrip("/")
-        if spec.startswith(("//", "~", "/")) and not (root and (spec.startswith(root + "/") or spec.startswith("//" + root.lstrip("/") + "/"))):
+        dirs = project_dirs()                       # #385: the projects root, then each project's own folder
+        if spec.startswith(("//", "~", "/")) and not any(spec.startswith(d + "/") or spec.startswith("//" + d.lstrip("/") + "/") for d in dirs):
             return "a path outside the vault and the projects folder"
     return None
 
@@ -842,6 +914,9 @@ def _config_problem(before, after):
         home = os.path.realpath(os.path.expanduser("~"))
         if not real.startswith(home + "/"):
             return "the projects folder must be inside your home folder"
+    before_loc, after_loc = before.get("locations") or {}, after.get("locations") or {}
+    if isinstance(after_loc, dict) and isinstance(before_loc, dict):     # #385: every project's own folder, as on the page's save
+        return paths.project_paths_problem(before_loc, after_loc)
     return None
 
 
@@ -886,6 +961,38 @@ def _whole_disk_folder(bp, ap):
     for d in ap.get("additionalDirectories") or []:
         if d not in (bp.get("additionalDirectories") or []) and str(d).strip().rstrip("/") in ("", "/", "//"):
             return f"the new folder {d} is the whole disk"
+        if d not in (bp.get("additionalDirectories") or []) and never_folder(d):     # #385 (Cap's Full review, MEDIUM 4)
+            return f"the new folder {d} is refused: {never_folder(d)}"
+    return None
+
+
+def never_folder(d):
+    """#385 (Cap's Full review, MEDIUM 4): why folder `d` is never in additionalDirectories, whatever is approved: the home folder
+    itself, or a place on reach's never list (secrets, the system, what runs commands) or one holding it (paths._never_place).
+    None otherwise."""
+    s = str(d).strip()
+    if not s:
+        return None
+    try:
+        real = Path(os.path.realpath(os.path.expanduser(s)))
+    except ValueError:                              # a NUL byte: never a folder
+        return "it isn't a folder"
+    if real == Path(os.path.realpath(os.path.expanduser("~"))):
+        return "it is your home folder, which holds your secrets"
+    why = paths._never_place(real)
+    return f"it is, or holds, a place creaite never touches ({why})" if why else None
+
+
+def card_dirs_problem(before, after, loc):
+    """#385 (Cap's Full review, MEDIUM 4): on a card that changes locations, why .claude/settings.json content `after` (parsed) can't
+    go with it: a folder it adds to additionalDirectories (beside `before`'s) that isn't one creaite adds for the card's new
+    locations `loc` (project_dirs: the projects root and each project's own folder). None when every added folder is one."""
+    want = set(project_dirs(loc))
+    had = list((before.get("permissions") or {}).get("additionalDirectories") or [])
+    for d in (after.get("permissions") or {}).get("additionalDirectories") or []:
+        if d not in had and str(d).strip().rstrip("/") not in want:
+            return (f"the new folder {d} isn't the projects folder or a project's own folder (locations.project_paths) on this "
+                    "card, so it isn't added with them")
     return None
 
 
@@ -1071,7 +1178,7 @@ def cmd_apply(rule, why, via):
         return 1
     written = real_rule(rule)
     settings.setdefault("permissions", {}).setdefault("allow", []).append(written)
-    n = len([e for e in log_entries() if e.get("op") == "add"]) + 1
+    n = next_id()                                  # #385: a sync logs removes too, so never a count of the adds
     text = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
     backup = write_settings(text, datetime.now().strftime("%Y-%m-%d-%H%M%S"))
     log({"id": n, "at": now(), "op": "add", "rule": written, "why": why, "via": via, "backup": backup,
@@ -1090,20 +1197,22 @@ def cmd_projects_root(why, via):
     if not paths.external():
         print("Not added: the projects are in the vault (locations.projects_root is not set), which Claude Code already reads.")
         return 1
-    entry = str(paths.locations()["projects_root"]).strip().rstrip("/")
     settings = read_settings()
     dirs = settings.setdefault("permissions", {}).setdefault("additionalDirectories", [])
-    if entry in dirs:
-        print(f"Already allowed: {entry} is in permissions.additionalDirectories.")
+    entries = [e for e in project_dirs() if e not in dirs]       # #385: the projects root and each project's own folder
+    if not entries:
+        print(f"Already allowed: {', '.join(project_dirs())} {'is' if len(project_dirs()) == 1 else 'are'} in "
+              "permissions.additionalDirectories.")
         return 1
-    dirs.append(entry)
-    n = len([e for e in log_entries() if e.get("op") == "add"]) + 1
+    dirs += entries
+    n = next_id()                                  # #385 (Cap's LOW 7): never a number already used
     text = json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
     backup = write_settings(text, datetime.now().strftime("%Y-%m-%d-%H%M%S"))
-    log({"id": n, "at": now(), "op": "add", "kind": "dir", "rule": entry, "why": why, "via": via, "backup": backup,
-         "after": hashlib.sha256(text.encode()).hexdigest()[:16]})
-    settings_log("claude_permissions.additionalDirectories", None, entry)
-    print(f"Added {entry} to permissions.additionalDirectories (change {n}; the file before is {backup}). "
+    for i, entry in enumerate(entries):                           # one entry each, so undo takes back one at a time
+        log({"id": n + i, "at": now(), "op": "add", "kind": "dir", "rule": entry, "why": why, "via": via, "backup": backup,
+             "after": hashlib.sha256(text.encode()).hexdigest()[:16]})
+        settings_log("claude_permissions.additionalDirectories", None, entry)
+    print(f"Added {', '.join(entries)} to permissions.additionalDirectories (change {n}; the file before is {backup}). "
           "Undo it with: python3 system/scripts/permissions.py undo")
     return 0
 

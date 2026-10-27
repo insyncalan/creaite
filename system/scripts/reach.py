@@ -105,12 +105,49 @@ def parts_under(p, base):
 
 
 def roots():
-    """(name, real path) of the places in reach: the vault, the projects root (when it is outside the vault) and the home folder."""
+    """(name, real path) of the places in reach: the vault, the projects root (when it is outside the vault), each project mapped to
+    a folder of its own (#385: also "projects"; never its parent, its archive slot or an archived project's) and the home folder."""
     out = [("vault", Path(os.path.realpath(paths.ROOT)))]
     if paths.external():
         out.append(("projects", Path(os.path.realpath(paths.projects_root()))))
+        out += [("projects", p) for p in mapped_roots()]
     out.append(("home", home()))
     return out
+
+
+def mapped_roots():
+    """#385: the real folder of each project in the register mapped to a folder of its own (paths.project_roots: fail closed, never
+    an archived project's), the folders ask creaite may reach outside the projects root. The live server's --add-dir uses the same."""
+    return [Path(os.path.realpath(p)) for p in paths.project_roots().values()] if paths.external() else []
+
+
+def skipped_below(p):
+    """#385: real path p's parts a skipped name (99 Archive and the old two, _Templates, 99 System) is looked for in: below the
+    projects root and below every mapped project's own folder (archived ones too), and the archive folder beside a mapped project
+    (its slot's folder: <parent>/99 Archive or an old name), which ask creaite never reaches. Cap's LOW 2: the slots of every
+    well-formed entry (paths._loc_raw_roots), so a mapping dropped on read (its folder now a symlink) never lifts its slot's never.
+    Names compare as macOS compares them (folded_under: case and Unicode form, as tracker's safe_path)."""
+    out = [x for b in [paths.projects_root(), *all_mapped().values()] for x in (folded_under(p, Path(os.path.realpath(b))) or ())]
+    raw = paths._loc_raw_roots(paths.locations()) if paths.external() else {}
+    for own in [*all_mapped().values(), *raw.values()]:
+        for parent in {Path(os.path.realpath(own)).parent, Path(os.path.realpath(Path(os.path.abspath(own)).parent))}:
+            below = folded_under(p, parent)
+            if below and paths.is_archive_name(below[0]):
+                out.append(below[0])
+    return out
+
+
+def folded_under(p, base):
+    """#385 (Cap's MEDIUM 2): parts_under with names compared as macOS compares them (paths._fold: case and Unicode form), as
+    tracker.py's _below_bases does: a path spelled in NFD below a folder named in NFC is below it."""
+    a, b = [paths._fold(x) for x in Path(p).parts], [paths._fold(x) for x in Path(base).parts]
+    return list(Path(p).parts[len(b):]) if a[:len(b)] == b else None
+
+
+def all_mapped():
+    """#385: {folder name: real path} of every honoured mapping, archived projects' too (paths._mapping): what a restore and an
+    archived project's moves are measured from. Never a place in reach."""
+    return paths._mapping() if paths.external() else {}
 
 
 def matches(rel_parts, pattern):
@@ -218,9 +255,9 @@ def _never_verdict(p, operation, where):
         return why
     if operation in WRITES and any(x.lower() == ".git" for x in p.parts):
         return "it is inside a .git folder, whose hooks run commands"
-    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))     # 99 Archive and the old two, _Templates, 99 System
-    skipped = {n.lower() for n in paths.skipped_names()}
-    hit = next((x for x in (below or ()) if x.lower() in skipped), None)
+    below = skipped_below(p)                                               # #385: below every base, not the projects root only
+    skipped = {paths._fold(n) for n in paths.skipped_names()}              # 99 Archive and the old two, _Templates, 99 System
+    hit = next((x for x in below if paths._fold(x) in skipped), None)
     if hit:
         return f"{hit} is never read or written by creaite"
     if operation in ("read", "change", "move", "delete") and p.is_file() and paths.is_online_only(p):
@@ -345,9 +382,10 @@ def _report_archive(pa, pb, old=False):
 
 
 def _portfolio_folder(name):
-    """name is the portfolio's own folder, directly in the projects root (_Portfolio, or projects/_portfolio in the vault)."""
+    """name is the portfolio's own folder, directly in the projects root (_Portfolio, or projects/_portfolio in the vault), and
+    (#385) not a project mapped to a folder of its own, whose parts _move_parts names by the project's folder name."""
     pf = Path(os.path.realpath(paths.portfolio_dir()))
-    return pf.name == name and pf.parent == Path(os.path.realpath(paths.projects_root()))
+    return pf.name == name and pf.parent == Path(os.path.realpath(paths.projects_root())) and paths.archive_slot(name) is None
 
 
 # #124 (Jarvis, 16-10-2026): Move back of a deleted note whose name a new note has taken. True: the note comes back under the free
@@ -443,12 +481,11 @@ def archive_move_problem(src, dst, kind):
         return f"a folder move is an archive or a restore (got {kind!r})"
     if any(".." in Path(str(x)).parts for x in (src, dst)):
         return "a path with .. in it"
-    root = Path(os.path.realpath(paths.projects_root()))
     a, b = paths.resolve(src, archived=False), paths.resolve(dst, archived=False)
     if a.is_symlink() or b.is_symlink():
         return "a folder move never follows a symlink"
-    pa = parts_under(Path(os.path.realpath(a)), root)
-    pb = parts_under(Path(os.path.realpath(b.parent)) / b.name, root)
+    pa = _move_parts(Path(os.path.realpath(a)))
+    pb = _move_parts(Path(os.path.realpath(b.parent)) / b.name)
     if not pa or not pb:
         return "a folder move stays inside the projects folder"
     if not _move_shape(kind, pa, pb):
@@ -460,6 +497,23 @@ def archive_move_problem(src, dst, kind):
     if b.exists():
         return f"{dst} already exists; a folder move never overwrites"
     return None
+
+
+def _move_parts(p):
+    """#385: real path p's parts as a move's shape reads them: below the projects root, or, for a project mapped to a folder of its
+    own, [<its folder name>, …] below that folder and [<archive>, <its folder name>, …] below exactly its archive slot (its
+    folder's parent's 99 Archive/<folder name>, or an old archive name for a restore). Nothing else in that parent is a move's
+    end. None when p is under none of them. Names compare as macOS compares them (folded_under, Cap's MEDIUM 2)."""
+    for k, own in all_mapped().items():
+        own = Path(os.path.realpath(own))
+        below = folded_under(p, own)
+        if below is not None:
+            return [k, *below]
+        for name in paths.archive_names():
+            below = folded_under(p, own.parent / name / k)
+            if below is not None:
+                return [p.parts[len(own.parts) - 1], k, *below]     # the archive folder's name as it is on disk
+    return folded_under(p, Path(os.path.realpath(paths.projects_root())))
 # ===== end BL-09 =====
 
 
@@ -743,7 +797,8 @@ def outside_reason(tool, inp, outside):
     if tool == "Grep" and (inp or {}).get("output_mode") == "content":     # a search whose folder holds the inbox or the projects
         try:
             where = real((inp or {}).get("path") or str(paths.ROOT))
-            if any(parts_under(Path(os.path.realpath(f)), where) is not None for f in (paths.INBOX, paths.projects_root())):
+            if any(parts_under(Path(os.path.realpath(f)), where) is not None
+                   for f in (paths.INBOX, paths.projects_root(), *mapped_roots())):     # #385: a mapped project's folder too
                 return "searched the text of files that include outside content"
         except (OSError, ValueError, RuntimeError):  # BL-228: an unresolvable search path; its paths are still checked below
             pass
