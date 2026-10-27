@@ -982,6 +982,11 @@ def linear_looks_like_html(text):
     return False
 
 
+# The fitted exponent of a linear scan is about 1.0 on a quiet machine; under a loaded suite run its small times are noisy and
+# it reached 1.39 against the old 1.3 bound (best of 2). The quadratic function this file guards against fits 1.87 over the
+# same sizes. Best of 5 calms the noise and 1.5, half way between, still tells the two apart with room on both sides.
+LINEAR_MAX = 1.5
+
 QUAD_INPUTS = {
     "open_tags_no_gt": lambda n: "<b " * (n // 3),
     "words_then_open_tag": lambda n: "a <" * (n // 3),
@@ -1040,8 +1045,8 @@ class LooksLikeHtml(unittest.TestCase):
 
     def test_fix_is_linear(self):
         for name, make in QUAD_INPUTS.items():
-            sizes, times = growth(linear_looks_like_html, make, sizes=(100000, 200000, 400000, 800000), reps=2)
-            self.assertLess(_fit_exponent(sizes, times), 1.3, (name, times))
+            sizes, times = growth(linear_looks_like_html, make, sizes=(100000, 200000, 400000, 800000), reps=5)
+            self.assertLess(_fit_exponent(sizes, times), LINEAR_MAX, (name, times))
 
     def test_L1_looks_like_html_is_quadratic_on_unclosed_tags(self):
         """Every '<b ' makes text.find('>', i) scan to the end of the text when no '>' follows: O(n * number of '<'). 1,000,000 characters of
@@ -1053,8 +1058,8 @@ class LooksLikeHtml(unittest.TestCase):
         d = time.perf_counter() - a
         self.assertLess(d, 0.5, d)
         for name, make in QUAD_INPUTS.items():
-            sizes, times = growth(B.looks_like_html, make, sizes=(100000, 200000, 400000, 800000), reps=2)
-            self.assertLess(_fit_exponent(sizes, times), 1.3, (name, times))
+            sizes, times = growth(B.looks_like_html, make, sizes=(100000, 200000, 400000, 800000), reps=5)
+            self.assertLess(_fit_exponent(sizes, times), LINEAR_MAX, (name, times))
 
 
 # ================================================================================ gateway invariants over the generated bodies
