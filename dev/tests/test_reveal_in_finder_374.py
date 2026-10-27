@@ -23,6 +23,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import Vault  # noqa: E402
+from test_onedrive_projects import touch  # noqa: E402
+from test_project_paths_385 import ABC, DEF, MIN, MappedCase  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 MOD = ROOT / "system/templates/dashboard/src/core/finderReveal.js"
@@ -194,6 +196,62 @@ class RouteLaunch(unittest.TestCase):
         for rel in ("system/tracker.db", "system/config/settings.json", "system/logs/debug.log", "system/backups/x.db", "system/staging/proposed-x.json"):
             self.assertIn("linux|" + rel, self.out["refused"], rel)
             self.assertFalse(self.out["refused"]["linux|" + rel]["ok"], rel)
+
+
+MAPPED_SCRIPT = r'''
+import json, os, sys, types
+sys.path.insert(0, "system/scripts")
+os.environ.pop("CREAITE_NO_LAUNCH", None)
+import report_server as rs
+calls = []
+rs.subprocess = types.SimpleNamespace(Popen=lambda *a, **kw: calls.append([list(x) for x in a]))
+rs.sys = types.SimpleNamespace(platform="darwin")
+class H:
+    def send(self, st, body): self.out = (st, body)
+out = {}
+for rel in json.loads(sys.argv[1]):
+    del calls[:]; h = H(); rs.reveal_route(h, {"path": rel})
+    out[rel] = {"ok": h.out[1]["ok"], "calls": list(calls)}
+print(json.dumps(out))
+'''
+
+
+class MappedProject(MappedCase):
+    """#385: a project mapped to its own folder (~/Work/Acme/Programme) can be shown; its parent, a sibling and a link out cannot."""
+
+    def reveal(self, rels):
+        r = subprocess.run([sys.executable, "-c", MAPPED_SCRIPT, json.dumps(rels)], capture_output=True, text=True,
+                           cwd=str(self.v.root), timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def test_a_file_and_a_folder_of_a_mapped_project_are_revealed(self):
+        f = self.own / MIN / "2026-10-20 Steering.docx"
+        touch(f)
+        out = self.reveal([f"projects/{ABC}/{MIN}/2026-10-20 Steering.docx", f"projects/{ABC}/{MIN}"])
+        self.assertEqual(out[f"projects/{ABC}/{MIN}/2026-10-20 Steering.docx"],
+                         {"ok": True, "calls": [[["open", "-R", str(f.resolve())]]]})
+        self.assertEqual(out[f"projects/{ABC}/{MIN}"]["calls"], [[["open", str((self.own / MIN).resolve())]]])
+
+    def test_the_parent_a_sibling_and_a_link_out_are_refused(self):
+        touch(self.own.parent / "Other" / "x.txt")
+        touch(self.own.parent / "top.txt")
+        outside = self.home / "elsewhere.txt"
+        touch(outside)
+        (self.own / "out-link").symlink_to(outside)
+        (self.own / "up-link").symlink_to(self.own.parent / "top.txt")
+        (self.own / "in-link").symlink_to(self.own / "CLAUDE.md")
+        rels = [f"projects/{ABC}/../Other/x.txt", f"projects/{ABC}/../top.txt", f"projects/{ABC}/out-link", f"projects/{ABC}/up-link"]
+        out = self.reveal(rels + [f"projects/{ABC}/in-link"])
+        for rel in rels:
+            self.assertEqual(out[rel], {"ok": False, "calls": []}, rel)
+        self.assertTrue(out[f"projects/{ABC}/in-link"]["ok"])
+
+    def test_an_unmapped_project_is_unchanged(self):
+        f = self.root / DEF / MIN / "m.docx"
+        touch(f)
+        out = self.reveal([f"projects/{DEF}/{MIN}/m.docx"])
+        self.assertEqual(out[f"projects/{DEF}/{MIN}/m.docx"], {"ok": True, "calls": [[["open", "-R", str(f.resolve())]]]})
 
 
 if __name__ == "__main__":
