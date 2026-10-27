@@ -1463,28 +1463,39 @@ def _distributed_text(s, marks):
 
 
 def _without_topic_lines(s, gone):
-    """#329: the Updates' own copy of its lines (data.topics) without the lines whose words are in `gone`."""
+    """#329: the Updates' own copy of its lines (data.topics) without the lines whose words are in `gone` (a topic's heading too)."""
     topics = s["data"].get("topics") if isinstance(s.get("data"), dict) else None
     if isinstance(topics, list):
-        s["data"] = {**s["data"], "topics": [{**t, "lines": [x for x in t.get("lines") or [] if not (
+        s["data"] = {**s["data"], "topics": [{**t, "heading": "" if line_text(str(t.get("heading") or "")) in gone else t.get("heading"),
+                                              "lines": [x for x in t.get("lines") or [] if not (
             isinstance(x, dict) and line_text(str(x.get("text") or "")) in gone)]} for t in topics if isinstance(t, dict)]}
 
 
 def distributed_of(doc, held=None):
     """The distributed version of an internal minutes record (audience "distributed"), as the view's preview makes it: without the
     rows of withheld items or marked Internal only, the lines marked Internal only, their tags and the withheld items; based on
-    the internal record. Nothing is written."""
+    the internal record. #329: also without the lines and rows held back with a held item (layout.carried), and with a plain
+    heading or title where Alan chose one (layout.plain). Nothing is written."""
     held = withheld(doc) if held is None else held
     marks = [m for m in (doc.get("layout") or {}).get("internal_only") or [] if isinstance(m, dict)]
-    marks += [{"section": sid, "text": t} for sid, t in sorted(carried_gone(doc, held))]     # #329: a line held with its item
+    lines, rows = carried_gone(doc, held)
+    marks += [{"section": sid, "text": t} for sid, t in sorted(lines)]     # #329: a line held with its item
+    plain = _plain_keys(doc)
     out = json.loads(json.dumps(doc))
     gone_refs = set(held)
+    for s in out.get("sections") or []:     # #329: a row held back with an item goes as a withheld row does (its tags, its item)
+        gone_refs |= {r.get("ref") or r.get("was") for r in s.get("rows") or [] if isinstance(r, dict) and row_key(r) in rows}
+    gone_refs.discard(None)
     for s in out.get("sections") or []:
         mine = [m for m in marks if m.get("section") == s.get("id")]
         if s.get("type") == "table":
             _distributed_table(s, mine, gone_refs)
         elif s.get("type") != "header":
             _distributed_text(s, mine)
+        if heading_key(s) in plain:
+            s["heading"] = plain_heading(s)
+    if "title" in plain:
+        out["title"] = plain_title(doc)
     return _without_items(out, gone_refs, doc.get("version"))
 
 
@@ -1501,20 +1512,30 @@ def _without_items(out, gone_refs, version):
     return out
 
 
-# ── #329: the lines that describe a held item (Alan, 27-10-2026: both a warning before sharing and lines carried with the item) ──
-# Item rows and minutes-only decisions are held back by withheld(); free-text prose about them was not. Now:
-# - layout.carried = {line key: the item's row ref}: a line Alan holds back with an item. distributed_of drops it while the item is
-#   withheld, and fails closed (dropped) when the item is no longer in the record; otherwise it shows as usual.
-# - layout.reviewed = {line key: text_hash of its words}: a line Alan chose to keep in the shareable version; asked again only when
-#   its words change.
-# - describing_lines(doc): the prose lines not yet answered that look like they describe a withheld item. Every path that makes a
+# ── #329: the text that may describe a held item (Alan, 27-10-2026: both a warning before sharing and lines carried with the item;
+# Jarvis, 27-10-2026 on Cap's review: every piece of text the shareable version shows is checked, failing toward a warning) ──
+# Item rows and minutes-only decisions are held back by withheld(); free text about them was not. Now every piece of text the
+# shareable version shows is a candidate (shown_text): each prose line, each shared table row (all its cells), each section's
+# heading, the title, and the header's lines with the project's name and client. Its key:
+#   "<section id>:<the line's words>" for a prose or header line (as layout.internal_only marks a line), "row:@<n>" for a row (its
+#   number, which it keeps once approved; "row:<ref>" for one without), "heading:<section id>" and "title".
+# - layout.carried = {key: [row refs]}: a line or row Alan holds back with the held items it matched (one ref, a string, is read
+#   too). distributed_of drops it while any of them is withheld, and fails closed (dropped) when one is no longer in the record.
+# - layout.plain = {key: "plain"}: a heading or the title shown plain in the shareable version (plain_heading, plain_title).
+# - layout.reviewed = {key: text_hash of its words}: kept as it is in the shareable version; asked again only when its words change.
+# - describing_lines(doc): the candidates of the shareable version itself (distributed_of, so what it leaves out is never asked
+#   about and nothing it shows is missed) not yet answered that look like they describe a withheld item. Every path that makes a
 #   shareable copy (the export, the follow-up email) refuses while there are any: REVIEW_WORDS, with the lines.
-# A line key is "<section id>:<the line's words>" (line_text), the same section-and-words pair layout.internal_only marks a line by.
 # Filed minutes are never saved over, so their answers live beside them in system/staging/minutes-shareable.json, by a hash of the
 # key (never the words), and are read back into the record's layout whenever it is opened (record_at).
-LINE_MARKS = ("internal_only", "carried", "reviewed")
+LINE_MARKS = ("internal_only", "carried", "reviewed", "plain")
 SHARED_MARKS = paths.STAGING / "minutes-shareable.json"
 REVIEW_WORDS = "Review these lines before sharing."
+# What each kind of candidate can be answered with: a line or row can be held back with its item; a heading or the title shown
+# plain; a header line (or the project's name) only kept, or changed before sharing. Release undoes a hold or a plain heading.
+ANSWERS_OF = {"line": ("hold", "keep", "release"), "row": ("hold", "keep", "release"), "heading": ("plain", "keep", "release"),
+              "title": ("plain", "keep", "release"), "header": ("keep", "release")}
+ANSWERS = ("hold", "keep", "release", "plain")
 _STOP = frozenset("""
 about above after again also back been before being below between both came come could does doing done down during each even
 ever every from further give given going good have having here into just keep kept know last later like made make many more most
@@ -1522,6 +1543,8 @@ much must need needs next only other ours over really said same says shall shoul
 theirs them then there these they this those through today told under until upon very want week weeks well went were what when
 where which while will with within without would your yours stay stays meeting minutes item items agreed noted line lines
 """.split())
+_SUFFIXES = ("ions", "ion", "ing", "ed", "es", "s")
+PERSON_CELLS = ("owner", "by", "due")       # a held item's people and dates: not the words that describe it
 
 
 def line_key(section, text):
@@ -1529,26 +1552,97 @@ def line_key(section, text):
     return f"{section}:{text}"
 
 
+def row_key(row):
+    """A table row's key: "row:@<n>" (the number a row keeps once approved), else "row:<its ref>"; "" for a row naming nothing."""
+    if not isinstance(row, dict):
+        return ""
+    n = row.get("n")
+    ref = row.get("ref") or row.get("was")
+    return f"row:@{n}" if isinstance(n, int) else f"row:{ref}" if ref else ""
+
+
+def heading_key(section):
+    """A section heading's key."""
+    return f"heading:{section.get('id') or ''}"
+
+
+def plain_heading(section):
+    """The heading creaite gives a section of its type: its default heading, else the usual name of its type (HEADINGS), else none."""
+    return str(section.get("default_heading") or "").strip() or HEADINGS.get(str(section.get("id") or ""), "")
+
+
+def plain_title(doc):
+    """The title the shareable version shows when Alan chose a plain one: "Meeting, DD-MM-YYYY"."""
+    d = str(doc.get("date") or "")
+    return f"Meeting, {d[8:10]}-{d[5:7]}-{d[:4]}" if re.fullmatch(r"\d{4}-\d\d-\d\d", d) else "Meeting"
+
+
 def text_hash(text):
     """The first 16 hex of the sha256 of `text`: how a reviewed line's words (and a filed record's keys) are kept."""
     return hashlib.sha256(str(text).encode("utf-8")).hexdigest()[:16]
 
 
-def prose_lines(doc):
-    """(section id, line words) for each line of a text section: every section but the header and the item tables."""
+def _row_text(row):
+    """A row's words as the shareable version shows them: each of its cells, " · " between."""
+    return " · ".join(str(v).strip() for v in (row.get("cells") or {}).values() if str(v or "").strip())
+
+
+def _section_lines(s):
+    """The words of each line of a section's text (no bullet, flag or bold); "None recorded." left out."""
+    for raw in str(s.get("text") or "").split("\n"):
+        t = line_text(raw) if raw.strip() else ""
+        if t and t != "None recorded.":
+            yield t
+
+
+def shown_text(doc):
+    """(key, kind, words) for every piece of text the minutes show that can be checked: the title, the project's name and client,
+    each shown section's heading (unless it is already the plain one), the header's lines, each prose line and each shown table
+    row (a line kept in the minutes only that names no item included). A hidden section shows nothing."""
+    title = str(doc.get("title") or "").strip()
+    if title and title != plain_title(doc):
+        yield "title", "title", title
+    for name in (doc.get("project_name"), doc.get("client")):
+        if str(name or "").strip():
+            yield line_key("header", str(name).strip()), "header", str(name).strip()
     for s in doc.get("sections") or []:
-        if not isinstance(s, dict) or s.get("type") in ("header", "table"):
+        if not isinstance(s, dict) or s.get("hidden"):
             continue
-        for raw in str(s.get("text") or "").split("\n"):
-            t = line_text(raw) if raw.strip() else ""
-            if t and t != "None recorded.":
-                yield str(s.get("id") or ""), t
+        sid, head = str(s.get("id") or ""), str(s.get("heading") or "").strip()
+        if head and head != plain_heading(s):
+            yield heading_key(s), "heading", head
+        if s.get("type") == "table":
+            for r in s.get("rows") or []:
+                text = _row_text(r) if isinstance(r, dict) and r.get("shown", True) else ""
+                if text and row_key(r):
+                    yield row_key(r), "row", text
+            continue
+        kind = "header" if s.get("type") == "header" else "line"
+        for t in _section_lines(s):
+            yield line_key(sid, t), kind, t
 
 
 def _marks(doc, name):
-    """layout.carried or layout.reviewed as {key: value} (strings only); {} when it isn't a mapping."""
+    """layout.reviewed or layout.plain as {key: value} (strings only); {} when it isn't a mapping."""
     v = (doc.get("layout") or {}).get(name)
     return {k: x for k, x in v.items() if isinstance(k, str) and isinstance(x, str)} if isinstance(v, dict) else {}
+
+
+def _refs(v):
+    """A carried value as a list of refs: a list of them, or one (the older form)."""
+    return [v] if isinstance(v, str) else [x for x in v if isinstance(x, str)] if isinstance(v, list) else []
+
+
+def _carried(doc):
+    """layout.carried as {key: [refs]} (a key with no ref left out); {} when it isn't a mapping."""
+    v = (doc.get("layout") or {}).get("carried")
+    out = {k: _refs(x) for k, x in v.items() if isinstance(k, str)} if isinstance(v, dict) else {}
+    return {k: x for k, x in out.items() if x}
+
+
+def _plain_keys(doc):
+    """The headings and title shown plain (layout.plain's keys)."""
+    return set(_marks(doc, "plain"))
 
 
 def _carried_item(doc, ref):
@@ -1569,27 +1663,42 @@ def _kept_as_line(doc, ref):
 
 
 def carried_gone(doc, held):
-    """{(section id, words)} of the carried lines the distributed version leaves out: the item is withheld, or it is no longer in the
-    record (fail closed: what it described may still be there)."""
-    out = set()
-    for key, ref in _marks(doc, "carried").items():
-        sid, _, text = key.partition(":")
-        k = _carried_item(doc, ref)
-        if k is None or k in held or ref in held:
-            out.add((sid, text))
-    return out
+    """({(section id, words)} of the carried lines, {row keys} of the carried rows) the distributed version leaves out: one of the
+    items it was held back with is withheld, or is no longer in the record (fail closed: what it described may still be there)."""
+    lines, rows = set(), set()
+    for key, refs in _carried(doc).items():
+        if not any(_carried_item(doc, ref) is None or _carried_item(doc, ref) in held or ref in held for ref in refs):
+            continue
+        if key.startswith("row:"):
+            rows.add(key)
+        else:
+            sid, _, text = key.partition(":")
+            lines.add((sid, text))
+    return lines, rows
+
+
+def _stem(w):
+    """A word's simple form: a final "ions", "ion", "ing", "ed", "es" or "s" dropped (twice at most: "restructurings"), else a
+    final "e", while 4 letters stay ("restructuring", "restructured" and "restructure" all read "restructur")."""
+    cut = False
+    for _ in range(2):
+        suf = next((x for x in _SUFFIXES if w.endswith(x) and len(w) - len(x) >= 4), None)
+        if suf is None:
+            break
+        w, cut = w[:-len(suf)], True
+    return w[:-1] if not cut and w.endswith("e") and len(w) > 4 else w
 
 
 def _significant(text):
-    """The significant words of `text`: 4 or more letters, lower case, a final "s" dropped (from 5 letters), the stop words left out;
-    each word also as it reads with its accents stripped ("café" and "cafe" both)."""
+    """The significant words of `text`: 4 or more letters, lower case, in their simple form (_stem), the stop words left out; each
+    word also as it reads with its accents stripped ("café" and "cafe" both)."""
     low = str(text or "").lower()
     bare = "".join(c for c in unicodedata.normalize("NFKD", low) if not unicodedata.combining(c))
     out = set()
     for w in re.findall(r"[^\W\d_]{4,}", low) + re.findall(r"[^\W\d_]{4,}", bare):
         if w in _STOP:
             continue
-        w = w[:-1] if len(w) > 4 and w.endswith("s") else w
+        w = _stem(w)
         if w not in _STOP:
             out.add(w)
     return out
@@ -1610,50 +1719,51 @@ RAID_TYPES = ("Risk", "Issue", "Assumption", "Dependency")
 
 
 def _item_texts(doc, ref, it):
-    """An item's own words: its staged values and changes, then the cells of its row (or of the line it was kept as)."""
+    """An item's own words: its staged values and changes, then the cells of its row (or of the line it was kept as), but not its
+    owner, who made it or its deadline (PERSON_CELLS: an attendee is not a description of the item)."""
     v = {**(it.get("values") or {}), **(it.get("changes") or {})}
     texts = [str(v.get(k) or "") for k in ("description", "decision", "title", "action", "reasoning")]
     for s in doc.get("sections") or []:
         texts += [str(c or "") for r in s.get("rows") or [] if isinstance(r, dict) and ref in (r.get("ref"), r.get("was"))
-                  for c in (r.get("cells") or {}).values()]
+                  for k, c in (r.get("cells") or {}).items() if k not in PERSON_CELLS]
     return texts
 
 
 def describing_lines(doc, held=None):
-    """[{key, text, ref, item, why}] for each prose line (a line of a text section, never a table row) that may describe an item the
-    distributed version holds back, and that Alan hasn't answered: not marked Internal only, not carried, not reviewed with these
-    words. Plain code, no AI. A line counts when it names the item (its ID or row ref, as a whole word) or shares at least two
-    significant words with the item's own words (its description, decision or title, and its row). Significant: 4 or more
-    letters, lower case, a final "s" dropped, a short stop-word list left out, compared also with accents stripped. Listing too
-    many is the safe direction: a line listed is only asked about, once."""
+    """[{key, kind, text, ref, refs, item, why}] for each piece of text the shareable version shows (shown_text of distributed_of:
+    a prose line, a shared row, a heading, the title, a header line) that may describe an item it holds back, and that Alan hasn't
+    answered: not kept with these words (layout.reviewed). Plain code, no AI. It counts when it names the item (its ID or row ref,
+    as a whole word, in any case) or shares at least two significant words with the item's own words (its description, decision
+    or title, and its row). Significant: 4 or more letters, lower case, in a simple form (_stem), a short stop-word list left out,
+    compared also with accents stripped. Every held item it matches is listed in `refs`. Listing too many is the safe direction:
+    a line listed is only asked about, once."""
     held = withheld(doc) if held is None else held
     if not held:
         return []
-    carried, reviewed = _marks(doc, "carried"), _marks(doc, "reviewed")
-    internal = {(m.get("section"), m.get("text")) for m in (doc.get("layout") or {}).get("internal_only") or [] if isinstance(m, dict)}
+    reviewed = _marks(doc, "reviewed")
     items = [(ref, *_held_item(doc, ref)) for ref in held]
     out, seen = [], set()
-    for sid, text in prose_lines(doc):
-        key = line_key(sid, text)
-        if key in seen or (sid, text) in internal or key in carried or reviewed.get(key) == text_hash(text):
+    for key, kind, text in shown_text(distributed_of(doc, held)):
+        if key in seen or reviewed.get(key) == text_hash(text):
             continue
         seen.add(key)
-        hit = _describes(text, items)
-        if hit:
-            out.append({"key": key, "text": text, **hit})
+        hits = _describes(text, items)
+        if hits:
+            out.append({"key": key, "kind": kind, "text": text, "ref": hits[0]["ref"], "refs": [h["ref"] for h in hits],
+                        "item": hits[0]["item"], "why": hits[0]["why"]})
     return out
 
 
 def _describes(text, items):
-    """{ref, item, why} for the first held item the line names (an ID or row ref, as a whole word) or shares at least two
-    significant words with; None when it describes none."""
-    words = _significant(text)
+    """[{ref, item, why}] for each held item the text names (an ID or row ref, as a whole word, in any case) or shares at least
+    two significant words with; [] when it describes none."""
+    words, out = _significant(text), []
     for ref, name, names, item_words in items:
-        named = next((n for n in sorted(names) if re.search(rf"(?<![\w@-]){re.escape(n)}(?![\w-])", text)), None)
+        named = next((n for n in sorted(names) if re.search(rf"(?<![\w@-]){re.escape(n)}(?![\w-])", text, re.I)), None)
         shared = sorted(words & item_words)
         if named or len(shared) >= 2:
-            return {"ref": ref, "item": name, "why": f"names {named}" if named else "shares the words " + ", ".join(shared[:4])}
-    return None
+            out.append({"ref": ref, "item": name, "why": f"names {named}" if named else "shares the words " + ", ".join(shared[:4])})
+    return out
 
 
 def _shareable_waits(doc, held, rel, dist=True):
@@ -1664,11 +1774,12 @@ def _shareable_waits(doc, held, rel, dist=True):
 
 def review_refusal(lines):
     """The answer of a shareable copy that waits for the lines to be answered: nothing was made."""
-    return {"ok": False, "review": [{k: x[k] for k in ("key", "text", "item", "ref")} for x in lines], "message": REVIEW_WORDS}
+    return {"ok": False, "review": [{k: x[k] for k in ("key", "kind", "text", "item", "ref", "refs")} for x in lines],
+            "message": REVIEW_WORDS}
 
 
 def _shared_records():
-    """{stored path: {carried, reviewed, released}} from minutes-shareable.json (by hashed key); {} when there is none."""
+    """{stored path: {carried, reviewed, plain, released}} from minutes-shareable.json (by hashed key); {} when there is none."""
     try:
         d = json.loads(SHARED_MARKS.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -1679,95 +1790,125 @@ def _shared_records():
 
 def with_shared_marks(rel, doc):
     """Filed minutes' answers (kept beside them, by hashed key) read into the record's layout as their real keys; `doc` itself when
-    there are none. A key whose line has gone matches nothing and is ignored."""
+    there are none. A key whose text has gone matches nothing and is ignored."""
     rec = _shared_records().get(rel)
     if not isinstance(rec, dict):
         return doc
-    by_hash = {text_hash(line_key(sid, t)): line_key(sid, t) for sid, t in prose_lines(doc)}
+    by_hash = {text_hash(k): k for k, _kind, _t in shown_text(doc)}
     lay = dict(doc.get("layout") or {})
 
     def real(name):
         """The answers kept under `name`, by their real keys."""
         got = rec.get(name) if isinstance(rec.get(name), dict) else {}
-        return {by_hash[h]: v for h, v in got.items() if h in by_hash and isinstance(v, str)}
+        return {by_hash[h]: v for h, v in got.items() if h in by_hash}
     released = {by_hash[h] for h in rec.get("released") or [] if isinstance(h, str) and h in by_hash}
-    lay["carried"] = {k: v for k, v in {**_marks(doc, "carried"), **real("carried")}.items() if k not in released}
-    lay["reviewed"] = {**_marks(doc, "reviewed"), **real("reviewed")}
+    carried = {**_carried(doc), **{k: _refs(v) for k, v in real("carried").items() if _refs(v)}}
+    lay["carried"] = {k: v for k, v in carried.items() if k not in released}
+    lay["reviewed"] = {**_marks(doc, "reviewed"), **{k: v for k, v in real("reviewed").items() if isinstance(v, str)}}
+    plain = {**_marks(doc, "plain"), **{k: "plain" for k in real("plain")}}
+    lay["plain"] = {k: v for k, v in plain.items() if k not in released}
     return {**doc, "layout": lay}
 
 
-def _write_shared(rel, answers, lines):
+def _write_shared(rel, answers, texts):
     """Filed minutes' answers kept in minutes-shareable.json (written whole, then moved into place): hashes and refs, never words."""
     d = {"version": 1, "records": _shared_records()}
     rec = d["records"].setdefault(rel, {})
     carried, reviewed = dict(rec.get("carried") or {}), dict(rec.get("reviewed") or {})
+    plain = dict(rec.get("plain") or {})
     released = set(rec.get("released") or [])
     for a in answers:
         h = text_hash(a["key"])
+        carried.pop(h, None)
+        plain.pop(h, None)
+        if a["answer"] == "release":
+            released.add(h)
+            continue
+        released.discard(h)
         if a["answer"] == "hold":
-            carried[h] = a["ref"]
-            released.discard(h)
+            carried[h] = a["refs"]
+            reviewed.pop(h, None)
+        elif a["answer"] == "plain":
+            plain[h] = "plain"
             reviewed.pop(h, None)
         else:
-            carried.pop(h, None)
-            released.add(h)
-            if a["answer"] == "keep":
-                reviewed[h] = text_hash(lines[a["key"]])
-    d["records"][rel] = {"carried": carried, "reviewed": reviewed, "released": sorted(released)}
+            reviewed[h] = text_hash(texts[a["key"]][1])
+            released.add(h)          # kept: a hold or plain heading in the record's own layout no longer counts
+    d["records"][rel] = {"carried": carried, "reviewed": reviewed, "plain": plain, "released": sorted(released)}
     SHARED_MARKS.parent.mkdir(parents=True, exist_ok=True)
     tmp = SHARED_MARKS.with_name(SHARED_MARKS.name + ".tmp")
     tmp.write_text(json.dumps(d, indent=1, sort_keys=True), encoding="utf-8")
     tmp.replace(SHARED_MARKS)
 
 
-ANSWERS = ("hold", "keep", "release")
+WRONG_ANSWER = {"header": "That line can only be kept: change it in the minutes before sharing if it shouldn't go out.",
+                "heading": "A heading is shown plain or kept; it isn't held back.",
+                "title": "The title is shown plain or kept; it isn't held back.",
+                "line": "Hold the line back with its item, or keep it in the shareable version.",
+                "row": "Hold the row back with its item, or keep it in the shareable version."}
 
 
 def _answers_of(doc, answers):
-    """The answers checked against the record: each names a line it holds (and, to hold it, an item kept out); raises RecordError."""
+    """The answers checked against the record: each names a piece of text it shows, an answer its kind takes (ANSWERS_OF) and, to
+    hold it back, items kept out (a row: items it matched). A hold records every held item the text matches. Raises RecordError."""
     if not isinstance(answers, list) or not answers or len(answers) > 200:
         raise RecordError("Which lines?")
-    lines = {line_key(sid, t): t for sid, t in prose_lines(doc)}
+    texts = {k: (kind, t) for k, kind, t in shown_text(doc)}
     use = tracked_of(doc)
     held = withheld(use)
+    items = [(ref, *_held_item(use, ref)) for ref in held]
     out = []
     for a in answers:
         a = a if isinstance(a, dict) else {}
-        key, what, ref = str(a.get("key") or ""), a.get("answer"), str(a.get("ref") or "")
+        key, what = str(a.get("key") or ""), a.get("answer")
+        given = [str(x) for x in (a.get("refs") if isinstance(a.get("refs"), list) else [a.get("ref")]) if x]
         if what not in ANSWERS:
             raise RecordError("Hold the line back with its item, or keep it in the shareable version.")
-        if key not in lines:
+        if key not in texts:
             raise RecordError("That line is no longer in the minutes.")
-        if what == "hold" and ref not in held and _carried_item(use, ref) not in held:
-            raise RecordError("That item isn't kept out of the shareable version.")
-        out.append({"key": key, "answer": what, "ref": ref})
-    return out, lines
+        kind, text = texts[key]
+        if what not in ANSWERS_OF[kind]:
+            raise RecordError(WRONG_ANSWER[kind])
+        refs = []
+        if what == "hold":
+            matched = [h["ref"] for h in _describes(text, items)]
+            if not given or any(ref not in held and _carried_item(use, ref) not in held for ref in given):
+                raise RecordError("That item isn't kept out of the shareable version.")
+            if kind == "row" and any(ref not in matched and _carried_item(use, ref) not in matched for ref in given):
+                raise RecordError("That row doesn't look like it describes that item.")
+            refs = sorted(set(given) | set(matched))
+        out.append({"key": key, "answer": what, "ref": refs[0] if refs else "", "refs": refs})
+    return out, texts
 
 
 def shareable_answer(path, answers, base_version=None, via="dashboard"):
-    """#329: Alan's answers on lines that may describe a held item: "hold" (carried with the item), "keep" (reviewed, kept in the
-    shareable version until its words change) or "release" (shown in the shareable version again). A draft keeps them in its
-    layout (a new version, as the view saves); filed minutes, which are never saved over, beside them (minutes-shareable.json)."""
+    """#329: Alan's answers on the text that may describe a held item: "hold" (a line or row carried with the items it matched),
+    "plain" (a heading or the title shown plain), "keep" (reviewed, kept in the shareable version until its words change) or
+    "release" (a hold or plain heading undone). A draft keeps them in its layout (a new version, as the view saves); filed minutes,
+    which are never saved over, beside them (minutes-shareable.json)."""
     rel, doc = record_at(path)
-    checked, lines = _answers_of(doc, answers)
+    checked, texts = _answers_of(doc, answers)
     if doc.get("state") == "draft":
         cur = creaite_doc.read(rel)
-        carried, reviewed = _marks(cur, "carried"), _marks(cur, "reviewed")
+        carried, reviewed, plain = _carried(cur), _marks(cur, "reviewed"), _marks(cur, "plain")
         for a in checked:
+            carried.pop(a["key"], None)
+            plain.pop(a["key"], None)
             if a["answer"] == "hold":
-                carried[a["key"]] = a["ref"]
+                carried[a["key"]] = a["refs"]
                 reviewed.pop(a["key"], None)
-            else:
-                carried.pop(a["key"], None)
-                if a["answer"] == "keep":
-                    reviewed[a["key"]] = text_hash(lines[a["key"]])
-        cur["layout"] = {**(cur.get("layout") or {}), "carried": carried, "reviewed": reviewed}
+            elif a["answer"] == "plain":
+                plain[a["key"]] = "plain"
+                reviewed.pop(a["key"], None)
+            elif a["answer"] == "keep":
+                reviewed[a["key"]] = text_hash(texts[a["key"]][1])
+        cur["layout"] = {**(cur.get("layout") or {}), "carried": carried, "reviewed": reviewed, "plain": plain}
         r = save_record(rel, cur, "Minutes: lines for the shareable version", base_version=base_version, via=via)
         if r.get("needs_approval"):
             return r
         version = r["version"]
     else:
-        _write_shared(rel, checked, lines)
+        _write_shared(rel, checked, texts)
         version = doc.get("version")
     n = len(checked)
     words = ("The line shows in the shareable version again." if all(a["answer"] == "release" for a in checked) else
@@ -1790,7 +1931,10 @@ def distributed_export(rel, doc, fmt, file_beside=True):
     dist = actions_wording(distributed_of(doc, held))
     dist["based_on"] = {"path": rel, "version": doc.get("version")}
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
-    work = paths.free_path(paths.DRAFTS, f"{creaite_doc.real(rel).stem} (shareable)", ".html")
+    stem = creaite_doc.real(rel).stem       # #329: a plain title names the file plainly too (the stem holds the internal title)
+    if "title" in _plain_keys(doc):
+        stem = f"{doc.get('date') or ''} Meeting".strip()
+    work = paths.free_path(paths.DRAFTS, f"{stem} (shareable)", ".html")
     work.write_text(creaite_doc.dumps(dist), encoding="utf-8")
     try:
         folder = str(Path(rel).parent) if file_beside else None
