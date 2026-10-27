@@ -73,7 +73,9 @@ class ChatBox(LiveBrowserCase):
         self.assertGreater(g30["sh"], g30["ch"])                            # it scrolls inside
         self.assertEqual(g30["ov"], "auto")
         self.assertGreaterEqual(g30["st"] + g30["ch"], g30["sh"] - 2)       # with the cursor (at the end) in view
-        for _ in range(60):                                                 # deleting back shrinks it again
+        # deleting back shrinks it again: all 24 "more" lines (5 characters each) go, leaving six. Deleting 60 left 18 lines (376 px),
+        # still at the maximum whenever the panel is under about 756 px tall (a 351 px maximum in a 790 px window, 350 in a suite run)
+        for _ in range(120):
             b.key("Backspace")
         b.pump(0.1)
         self.assertLess(self.geo()["h"], g30["h"])
