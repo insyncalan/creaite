@@ -56,11 +56,7 @@ class TitleCentre(LiveBrowserCase):
                     b.eval("closePanel(); document.activeElement&&document.activeElement.blur()")
                     sel = f'#workTbl tr[data-row="{rid}"] td.title'
                     at = b.eval("(s=>{ const c=document.querySelector(s).getBoundingClientRect(), e=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2); return e.tagName+'.'+e.className+' '+(e.textContent||'').slice(0,30); })(%r)" % sel)
-                    # HELD, a real product defect (#341's centre check at 1400 px compact; tracked for 2.6.10 with this check restored).
-                    # Held for a design decision (27-10): the cell is two lines and its centre is on the second (ID · project), so which
-                    # link is under it moves with the cell's width, which follows the day's dates (A.rowid on 26-10, the project link on
-                    # 27-10). Until #341's Work half is designed, the double-click goes on the title text, where a person aims.
-                    b.click(sel, count=2, exact=True, on_text=True)      # exact: the point must be on the cell itself, not on a link in it
+                    b.click(sel, count=2, exact=True)                    # exact: the point must be on the cell itself, not on a link in it
                     try:
                         b.wait("document.getElementById('panel').classList.contains('on')", 5)
                     except TimeoutError:
