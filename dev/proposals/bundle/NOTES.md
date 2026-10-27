@@ -15,3 +15,4 @@
 - A history whose latest commit holds nothing outside the private paths gives no bundle (the snapshot would be empty; it fails closed and the manifest says why).
 - A detached HEAD together with private history gives no git history in the zip (there is no branch to snapshot; fails closed). A clean history with a detached HEAD is bundled whole as before.
 - Every git call in backup.py's bundle, verify and restore path goes through `git_env()` (no caller `GIT_*` variable reaches git).
+- Rev 5 (incremental, README-rev5.md): no background gc in the snapshot repository and a tolerant cleanup of its folder, after CI run 40404813380 (OSError "Directory not empty" at snap/.git). Rev 4's bytes are unchanged and pinned.

@@ -77,8 +77,9 @@ class MinutesExportChoice(LiveBrowserCase):
         return lines
 
     def open_menu(self):
-        self.b.click("#v-minutes [data-mnexport]")
-        self.b.wait("document.querySelector('#v-minutes .ddmenu.on')")
+        # click_until (BL-327): under a loaded suite the press can land and the menu still not open (CI 27-10: focus on #mnExport,
+        # no .ddmenu.on after the wait); press again only while it is closed, so a second press can't close it.
+        self.b.click_until("#v-minutes [data-mnexport]", "!!document.querySelector('#v-minutes .ddmenu.on')", timeout=15)
 
     def pick(self, label):
         self.open_menu()

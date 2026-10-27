@@ -42,19 +42,19 @@ class PeekFollowTests(LiveBrowserCase):
 
     def test_work_table(self):
         b = self.b
-        ids, sel = self.work()
-        b.click(self.row(sel, ids[0]))                                     # no peek: a click only highlights
+        ids, sel = self.work()     # on_text: on the title, not the cell's centre, which is on the ID and project line (cdp.click)
+        b.click(self.row(sel, ids[0]), on_text=True)                      # no peek: a click only highlights
         self.assertIsNone(self.cur())
         self.assertEqual(b.eval("[...HL.keys()]"), [ids[0]])
-        b.click(self.row(sel, ids[0]), count=2)
+        b.click(self.row(sel, ids[0]), count=2, on_text=True)
         b.wait(f"CUR&&CUR.id==={ids[0]!r}&&pkOn()")
         b.eval("document.activeElement.blur()")
-        b.click(self.row(sel, ids[1]))                                     # the peek follows a single click
+        b.click(self.row(sel, ids[1]), on_text=True)                      # the peek follows a single click
         b.wait(f"CUR&&CUR.id==={ids[1]!r}")
         self.assertEqual(b.eval("[...HL.keys()]"), [ids[1]])
         self.assertFalse(b.eval('document.getElementById("panel").contains(document.activeElement)'))   # focus wasn't pulled in
         self.assertEqual(b.eval("pkOrder().findIndex(o=>o.id===CUR.id)>0&&!$('#pkPrev').disabled"), True)
-        b.click(self.row(sel, ids[2]), modifiers=SHIFT)                     # Shift extends the highlight and never shows ids[2];
+        b.click(self.row(sel, ids[2]), modifiers=SHIFT, on_text=True)       # Shift extends the highlight and never shows ids[2];
         self.assertNotEqual(self.cur(), ids[2])                            # two highlighted hand over to the bulk bar (BL-122)
         self.assertEqual(sorted(b.eval("[...HL.keys()]")), sorted(ids[1:3]))
 

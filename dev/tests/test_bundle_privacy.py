@@ -133,6 +133,11 @@ def patched():
     return "PRIVATE_PATHS" in (REPO / "system/scripts/backup.py").read_text(encoding="utf-8")
 
 
+def rev5():
+    """True when backup.py also has revision 5 (dev/proposals/bundle/backup-bundle-rev5.diff: no background gc, tolerant cleanup)."""
+    return "gc.auto=0" in (REPO / "system/scripts/backup.py").read_text(encoding="utf-8")
+
+
 def vault_py(root, code, *args, env=None):
     """Run Python inside the vault's scripts folder; returns the completed process."""
     return subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import backup; " + code,
@@ -294,6 +299,53 @@ class ExistingVault(unittest.TestCase):
                 idx, cfg, head = (gd / "index").read_bytes(), (gd / "config").read_bytes(), (gd / "HEAD").read_bytes()
                 after = (idx, cfg, head, git(self.root, "for-each-ref"), git(self.root, "status", "--porcelain"))
                 self.assertEqual(after, before, f"{name} changed the vault's repository")
+
+    def many_files_vault(self, n=1500):
+        """A vault of n tiny tracked files (as many loose objects) plus a private file, so git's own `gc --auto` would start."""
+        d = self.root / "many"
+        d.mkdir()
+        for i in range(n):
+            (d / f"f{i}.txt").write_text(f"{i}\n")
+        for i in range(12):                                              # incompressible, so a repack takes a while
+            (d / f"big{i}.bin").write_bytes(os.urandom(1_000_000))
+        (self.root / "system/staging/ask").mkdir(parents=True)
+        (self.root / "system/staging/ask/chat-x.json").write_text(f"{CHAT}\n")
+        git(self.root, "add", "-f", "-A")
+        git(self.root, "commit", "-q", "-m", "many")
+
+    @unittest.skipUnless(rev5(), "needs revision 5 (backup-bundle-rev5.diff)")
+    def test_snapshot_survives_background_gc(self):
+        """The CI failure: the temp repository's detached `gc --auto` was still writing when its folder was deleted
+        ("Directory not empty"), so the day had no bundle. A global gc.auto=1 makes it start every time."""
+        self.many_files_vault()
+        home = self.work / "home"
+        home.mkdir()
+        (home / ".gitconfig").write_text("[gc]\n\tauto = 1\n[maintenance]\n\tstrategy = gc\n")
+        dest, tmp = self.work / "vault.bundle", self.work / "tmp"
+        tmp.mkdir()
+        r = vault_py(self.root, "print(json.dumps(backup.make_bundle(sys.argv[1])))", str(dest),
+                     env={**ENV, "HOME": str(home), "TMPDIR": str(tmp)})
+        self.assertIsNone(json.loads(r.stdout.strip().splitlines()[-1]), r.stdout + r.stderr)
+        self.assertEqual(list(tmp.iterdir()), [], "the temporary folder was left behind (a background gc was still writing)")
+        clone, text = self.everything(dest)
+        self.assertNotIn(CHAT, text)
+        self.assertEqual(git(clone, "rev-list", "--count", "--all").strip(), "1")
+
+    @unittest.skipUnless(rev5(), "needs revision 5 (backup-bundle-rev5.diff)")
+    def test_a_folder_that_will_not_delete_does_not_discard_the_bundle(self):
+        self.old_history(untrack=False)
+        dest = self.work / "vault.bundle"
+        code = ("import shutil; real = shutil.rmtree\n"
+                "def boom(path, *a, **k):\n"
+                "    if 'creaite-bundle-' in str(path):\n"
+                "        if k.get('ignore_errors'): return\n"
+                "        raise OSError(39, 'Directory not empty')\n"
+                "    return real(path, *a, **k)\n"
+                "backup.shutil.rmtree = boom\n"
+                "print(json.dumps(backup.make_bundle(sys.argv[1])))")
+        r = vault_py(self.root, code, str(dest))
+        self.assertIsNone(json.loads(r.stdout.strip().splitlines()[-1]), r.stdout + r.stderr)
+        self.assertTrue(dest.is_file())
 
     def fresh_vault(self):
         fresh = Path(tempfile.mkdtemp(prefix="creaite-fresh-")).resolve()

@@ -1248,11 +1248,14 @@ class GatewayProps(unittest.TestCase):
                     pass
 
     def test_huge_document_is_bounded(self):
-        rows = [row("e%d" % i, body=("Line %d\n" % i) * 3000) for i in range(40)]
+        # 20 rows of 3,000 lines each (every body is cut at BODY_MAX). Measured 27-10-2026 with the same filter code: 40 rows took
+        # 10.4 s on a Mac under Python 3.9 and 22.2 s on a CI runner (about twice as slow), so 20 rows take about 5 s and 11 s; the
+        # bound is 30 s so a runner twice slower again still passes, while a quadratic blow-up (minutes) is still caught.
+        rows = [row("e%d" % i, body=("Line %d\n" % i) * 3000) for i in range(20)]
         write(self.path, self.cal(rows))
         t = time.time()
         out = G.read("agenda", self.path)
-        self.assertLess(time.time() - t, 20)
+        self.assertLess(time.time() - t, 30)
         for r in out["days"]["2026-10-12"]:
             self.assertLessEqual(len(r["body"]), G.BODY_CAP)
 
