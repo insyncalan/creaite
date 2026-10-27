@@ -56700,6 +56700,16 @@ ${pre}**Current state title:** ${title}`);
     R(/* @__PURE__ */ u4(WeekAhead, { ...props }), host2);
   }
 
+  // core/sweepDue.js
+  var FIX_CALLS = ["/api/day/catchup"];
+  var fixCallAllowed = (call) => typeof call === "string" && FIX_CALLS.includes(call);
+  function sweepDueLine(sd2, ctx) {
+    const c5 = ctx || {};
+    if (!(sd2 && sd2.due) || c5.dev || c5.setupBlocks) return "";
+    if (sd2.failed) return "failed";
+    return c5.dismissed ? "" : "due";
+  }
+
   // stores/today.js
   var selDay = y3("");
 
@@ -57583,10 +57593,9 @@ ${pre}**Current state title:** ${title}`);
     const d5 = SDMEM || store.get(SDKEY, null);
     return !!(d5 && d5.day === TODAY && d5.last === sdLast());
   }
-  var sweepFailed = () => !!(D.sweep_due && D.sweep_due.failed);
+  var sweepLine = () => sweepDueLine(D.sweep_due, { dev: !!D.dev, setupBlocks: setupShown() && !swept(), dismissed: sweepDueDismissed() });
   function sweepDueShown() {
-    const sd2 = D.sweep_due;
-    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && (sweepFailed() || !sweepDueDismissed());
+    return sweepLine() !== "";
   }
   function renderOwnFolders() {
     const box = $("#ownFolders");
@@ -57603,13 +57612,13 @@ ${pre}**Current state title:** ${title}`);
   function renderSweepDue() {
     const box = $("#sweepDue");
     if (!box) return;
-    const on2 = sweepDueShown();
+    const line = sweepLine(), on2 = line !== "";
     box.hidden = !on2;
     if (!on2) {
       putHTML(box, html``);
       return;
     }
-    if (sweepFailed()) {
+    if (line === "failed") {
       putHTML(box, html`<b>Today's mail and Teams check didn't run.</b> <button type="button" class="btn primary sd-run" id="sweepFailedRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span>`);
       return;
     }
@@ -59126,7 +59135,11 @@ ${pre}**Current state title:** ${title}`);
   };
   var CARD_WAITING = "On the approval card, waiting for you";
   async function runHealthFix(f5) {
-    const r4 = f5.call ? await api(f5.call, {}) : await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
+    if (f5.call && !fixCallAllowed(f5.call)) {
+      snack("That fix can't be run from here");
+      return false;
+    }
+    const r4 = f5.call ? await api(f5.call, f5.body || {}) : await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
     if (r4.ok && r4.card) {
       markCardWaiting(f5.id || "");
       snack(CARD_WAITING + ": nothing moves until you approve it.");
@@ -82275,6 +82288,7 @@ Next: `;
         "FF",
         "FIELD",
         "FILES",
+        "FIX_CALLS",
         "FOPEN",
         "FX",
         "FilterBar",
@@ -82611,6 +82625,7 @@ Next: `;
         "filingError",
         "firstHelp",
         "fitFilterBar",
+        "fixCallAllowed",
         "flip",
         "flowCard",
         "forgetRenamed",
@@ -83157,6 +83172,7 @@ Next: `;
         "store",
         "subOf",
         "sw",
+        "sweepDueLine",
         "swept",
         "syncView",
         "synthDay",

@@ -1,10 +1,12 @@
 """creaite Health's Fix it (BL-320; Alan's guard decision, 14-10-2026): each fix runs exactly one known command, with nothing
-from the page.
+from the page, or (#370, Check now) makes the page call the server's own catch-up route with a fixed body.
 
 Used by the live server's dashboard-only routes (POST /api/health/fixes, POST /api/health/fix/<id>); it has no command line of
 its own. Each fix is a fixed entry in FIXES: its words for Alan (what it will do, shown before he presses Fix it) and either the
 one creaite script command it runs, or, for Microsoft 365, only the address of Claude's connector page (creaite can't sign in
-for him and never tries). Nothing here touches Microsoft 365, a permission file or the record.
+for him and never tries). Nothing here signs in to Microsoft 365, changes a permission file or touches the record. One fix,
+sweep_failed (#370), has the page post to the live server's own catch-up route (`call`, with its fixed `body`), which starts a
+check of mail and Teams, as Check now on Today does; the page allows only that route.
 
 CHECK_FIXES maps a doctor check id (its function name in doctor.py, the `id` health.py reports for each problem) to its fix:
 fix_for(check_id, detail) gives the fix's id, or None when the check has no fix or its detail isn't the problem the fix mends.
@@ -21,7 +23,8 @@ import paths  # noqa: E402
 CONNECTOR_URL = "https://claude.ai/settings/connectors"
 FIX_LOG = paths.STAGING / "health-fixes.jsonl"       # when each fix ran and whether it worked: ids and exit codes only
 
-# id: what it is, the button, what it will do (shown first), and its one command (a creaite script and fixed words) or the page
+# id: what it is, the button, what it will do (shown first), and its one command (a creaite script and fixed words), the page,
+# or (#370) the one route the page calls itself, with its fixed body
 FIXES = {
     "launcher": {"title": "Your creaite app opens a different copy of creaite", "button": "Fix it",
                  "does": "Make the creaite app for this copy again, replacing the one that opens a different copy.",
@@ -54,7 +57,7 @@ FIXES = {
     # decides whether it can start); the fix runs no command of its own, so the fix route has nothing to run for it
     "sweep_failed": {"title": "A mail and Teams check didn't run", "button": "Check now",
                      "does": "Check your mail and Teams now, as Check now on Today does.",
-                     "call": "/api/day/catchup"},
+                     "call": "/api/day/catchup", "body": {"force": True}},      # force: a missed check starts, never "offer"
 }
 
 # doctor check id → (fix id, words in its detail that mean this fix mends it: any of them, or None for any detail)
@@ -86,6 +89,7 @@ def describe(fix_id):
         out["url"] = f["url"]
     elif "call" in f:                                    # #370: the page posts to this route itself (Check now)
         out["call"] = f["call"]
+        out["body"] = dict(f.get("body") or {})
     else:
         out["command"] = "system/scripts/run " + " ".join(f["command"])
     return out
@@ -123,7 +127,8 @@ def run_fix(fix_id, runner):
         return {"ok": True, "fix": fix_id, "url": f["url"],
                 "message": "Opening Claude's connector settings: reconnect Microsoft 365 there, then check again."}
     if "call" in f:                                      # #370: the page makes this call itself; nothing runs here
-        return {"ok": False, "fix": fix_id, "message": "Use Check now on Today, or the button in Health."}
+        return {"ok": False, "fix": fix_id,
+                "message": "This one is started from the Check now button in Health or on Today, not from here."}
     code, out = runner(*f["command"])
     log(fix_id, code == 0, code)
     lines = [ln for ln in (out or "").splitlines() if ln.strip()]

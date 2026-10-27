@@ -19,6 +19,7 @@ import { A, LASTVISIT, open, overdue, P, pName, R, REMINDERS, REV, soon } from "
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { canHover, cardGroup } from "./core/hover.js";
 import { mDots } from "./core/motion.js";
+import { sweepDueLine } from "./core/sweepDue.js";
 import { countLink, go, jumpLink, navBlocked, navOf, openWork } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { linkAnchor } from "./core/linkUrl.js";
@@ -474,8 +475,8 @@ const sdLast=()=>String((D.sweep_due&&D.sweep_due.last)||"");
 function sweepDueDismissed(){ const d=SDMEM||store.get(SDKEY,null); return !!(d&&d.day===TODAY&&d.last===sdLast()); }
 /* #370: a check that didn't run today (the build's sweep_due.failed) shows one quiet line with Check now instead, which can't be
    dismissed while it holds; it goes when a check completes (the build drops `failed`). Check now starts the catch-up route. */
-const sweepFailed=()=>!!(D.sweep_due&&D.sweep_due.failed);
-export function sweepDueShown(){ const sd=D.sweep_due; return !!(sd&&sd.due)&&!D.dev&&!(setupShown()&&!swept())&&(sweepFailed()||!sweepDueDismissed()); }
+const sweepLine=()=>sweepDueLine(D.sweep_due,{dev:!!D.dev,setupBlocks:setupShown()&&!swept(),dismissed:sweepDueDismissed()});   /* core/sweepDue.js, tested under Node */
+export function sweepDueShown(){ return sweepLine()!==""; }
 /* #385: a project kept in a folder of its own that can't be reached now (OneDrive not running, a drive not connected), or whose
    saved place breaks the rules and so isn't used: one plain line each, with the project's settings. creaite never creates the
    folder; its files are where they were. */
@@ -483,9 +484,9 @@ export function renderOwnFolders(){ const box=$("#ownFolders"); if(!box) return;
   box.hidden=!miss.length&&!bad.length; if(box.hidden){ putHTML(box,html``); return; }
   const link=c=>html`<a href="#project-settings=${c}">${pName(c)}</a>`;
   putHTML(box,html`${miss.map(m=>html`<p><b>${link(m.code)}'s folder can't be reached</b> (${m.path}). Is OneDrive running and signed in, or the drive connected? Nothing is lost: creaite leaves it alone until it is back.</p>`)}${bad.map(d=>html`<p><b>${link(d.code)}'s own folder isn't used</b>: ${d.why} creaite treats it as if it were in the projects folder until its place is put right.</p>`)}`); }
-export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const on=sweepDueShown(); box.hidden=!on;
+export function renderSweepDue(){ const box=$("#sweepDue"); if(!box) return; const line=sweepLine(), on=line!==""; box.hidden=!on;
   if(!on){ putHTML(box,html``); return; }
-  if(sweepFailed()){ putHTML(box,html`<b>Today's mail and Teams check didn't run.</b> <button type="button" class="btn primary sd-run" id="sweepFailedRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span>`); return; }
+  if(line==="failed"){ putHTML(box,html`<b>Today's mail and Teams check didn't run.</b> <button type="button" class="btn primary sd-run" id="sweepFailedRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span>`); return; }
   putHTML(box,html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last?`Last checked ${fd(String(D.sweep_due.last))}.`:"Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`); }
 document.addEventListener("click",e=>{ if(!e.target.closest("#sweepX")) return; e.preventDefault();   /* #243 */
   const box=$("#sweepDue"), had=box&&box.contains(document.activeElement);

@@ -9,8 +9,10 @@ Run: python3 dev/tests/test_sweep_failed_370.py     (quick tier: no Chrome)
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -156,6 +158,86 @@ class HealthRow(Base):
             self.assertNotIn(bad, text)
 
 
+SWEEP_DUE_JS = REPO / "system/templates/dashboard/src/core/sweepDue.js"
+LINE_SCRIPT = """
+const f = await import(%s);
+const due = { due: true, last: "2026-10-25 17:00" }, failed = { due: true, failed: { at: "08:15", retry: null } };
+process.stdout.write(JSON.stringify({
+  failed: f.sweepDueLine(failed, {}), failedDismissed: f.sweepDueLine(failed, { dismissed: true }),
+  due: f.sweepDueLine(due, {}), dueDismissed: f.sweepDueLine(due, { dismissed: true }),
+  notDue: f.sweepDueLine({ due: false, failed: { at: "08:15" } }, {}), none: [f.sweepDueLine(null), f.sweepDueLine(undefined, {})],
+  dev: f.sweepDueLine(failed, { dev: true }), setup: f.sweepDueLine(failed, { setupBlocks: true }),
+  allowed: [f.fixCallAllowed("/api/day/catchup"), f.fixCallAllowed("/api/apply"), f.fixCallAllowed(""), f.fixCallAllowed(undefined),
+            f.fixCallAllowed("/api/day/catchup/x")], calls: f.FIX_CALLS }));
+"""
+
+
+def run_line_js(path=SWEEP_DUE_JS):
+    tmp = Path(tempfile.mkdtemp(prefix="sd370"))
+    try:
+        f = tmp / "sweepDue.mjs"
+        f.write_text(Path(path).read_text(encoding="utf-8"), encoding="utf-8")
+        r = subprocess.run(["node", "--input-type=module", "-e", LINE_SCRIPT % json.dumps(f.as_uri())], capture_output=True,
+                           text=True, timeout=60)
+        if r.returncode:
+            raise RuntimeError(r.stderr[-800:])
+        return json.loads(r.stdout)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+@unittest.skipUnless(shutil.which("node"), "needs Node")
+class TodayDecision(unittest.TestCase):
+    """The decision behind Today's line is a pure function (core/sweepDue.js), tested by behaviour, not by reading the source."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.o = run_line_js()
+
+    def test_failed_shows_the_failed_line_even_when_dismissed(self):
+        self.assertEqual(self.o["failed"], "failed")
+        self.assertEqual(self.o["failedDismissed"], "failed")
+
+    def test_the_ordinary_line_can_be_dismissed(self):
+        self.assertEqual(self.o["due"], "due")
+        self.assertEqual(self.o["dueDismissed"], "")
+
+    def test_nothing_when_not_due_missing_dev_or_set_up_first(self):
+        self.assertEqual(self.o["notDue"], "")
+        self.assertEqual(self.o["none"], ["", ""])
+        self.assertEqual(self.o["dev"], "")
+        self.assertEqual(self.o["setup"], "")
+
+    def test_only_the_catchup_route_is_allowed_for_a_fix(self):
+        self.assertEqual(self.o["allowed"], [True, False, False, False, False])
+        self.assertEqual(self.o["calls"], ["/api/day/catchup"])
+
+    def test_mutants_fail(self):
+        src = SWEEP_DUE_JS.read_text(encoding="utf-8")
+        tmp = Path(tempfile.mkdtemp(prefix="sd370m"))
+        try:
+            for old, new in (('if(sd.failed) return "failed";', ""), ('c.dismissed?"":"due"', '"due"'),
+                             ('return c.dismissed?"":"due";', 'return "";'), ('FIX_CALLS.includes(call)', "true"),
+                             ("if(!(sd&&sd.due)||c.dev||c.setupBlocks) return \"\";", "")):
+                self.assertIn(old, src)
+                m = tmp / "m.js"
+                m.write_text(src.replace(old, new, 1), encoding="utf-8")
+                try:
+                    o = run_line_js(m)
+                except RuntimeError:
+                    continue
+                self.assertNotEqual(o, self.o, old)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class HealthPage(unittest.TestCase):
+    def test_health_posts_the_fixes_own_body_after_the_allow_list(self):
+        src = (REPO / "system/templates/dashboard/src/components/settings/Health.jsx").read_text(encoding="utf-8")
+        self.assertRegex(src, r"api\(f\.call, f\.body \|\| \{\}\)")
+        self.assertLess(src.index("fixCallAllowed(f.call)"), src.index("api(f.call"))        # refused before anything is posted
+
+
 class TodayLine(unittest.TestCase):
     def test_the_exact_line_is_in_the_source_and_the_built_page(self):
         src = (REPO / "system/templates/dashboard/src/today.js").read_text(encoding="utf-8")
@@ -170,7 +252,7 @@ class TodayLine(unittest.TestCase):
         self.assertIn('id="sweepFailedRun"', line)
         self.assertIn("Check now", line)
         self.assertRegex(src, r'api\("/api/day/catchup",\{force:true\}\)')
-        self.assertRegex(src, r"sweepFailed\(\)\|\|!sweepDueDismissed\(\)")      # a dismissal doesn't hide it while it holds
+        self.assertRegex(src, r"sweepDueLine\(D\.sweep_due,")                 # the decision is core/sweepDue.js's, tested above
 
 
 if __name__ == "__main__":

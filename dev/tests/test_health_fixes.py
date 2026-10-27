@@ -69,6 +69,23 @@ class Catalogue(unittest.TestCase):
                                     "sweep_failed": None})                                  # #370: the page's own call, no command
         self.assertEqual(health_fixes.FIXES["m365"]["url"], "https://claude.ai/settings/connectors")
 
+    def test_the_page_calls_exactly_one_route_with_a_fixed_body(self):
+        """#370: a fix that makes the page call a route is pinned by id; a future `call: "/api/apply"` fails here."""
+        calls = {k: f["call"] for k, f in health_fixes.FIXES.items() if "call" in f}
+        self.assertEqual(calls, {"sweep_failed": "/api/day/catchup"})
+        self.assertEqual(health_fixes.FIXES["sweep_failed"]["body"], {"force": True})
+        d = health_fixes.describe("sweep_failed")
+        self.assertEqual((d["call"], d["body"]), ("/api/day/catchup", {"force": True}))
+        for f in health_fixes.FIXES.values():
+            self.assertTrue("call" in f or "body" not in f)               # a body belongs only to a call
+
+    def test_run_fix_for_a_page_call_says_so_plainly_and_runs_nothing(self):
+        ran = []
+        r = health_fixes.run_fix("sweep_failed", lambda *a: ran.append(a) or (0, "ran"))
+        self.assertEqual(ran, [])
+        self.assertFalse(r["ok"])
+        self.assertIn("Check now", r["message"])
+
     def test_no_fix_runs_a_record_permission_or_microsoft_365_command(self):
         for fid, f in health_fixes.FIXES.items():
             if "command" not in f:
