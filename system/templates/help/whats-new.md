@@ -2,6 +2,13 @@
 
 What changed for you in each release of creaite, newest first. Written in plain words; the technical notes are separate.
 
+## creaite 2.6.10
+
+The headline: Shareable minutes now ask about any line that may describe a Sensitive item before they are shared.
+
+### Shareable minutes
+- **Lines about a Sensitive item are asked about before sharing.** A Shareable export or follow-up email first lists any line that may describe something kept out of the shareable version, under **Review these lines before sharing**. **Hold back with it** leaves the line out whenever its item is; **Keep** keeps it, and creaite asks again only if you change its words. A line held back says so in the minutes, and **Show in the shareable version** puts it back. (#329)
+
 ## creaite 2.6.9
 
 2.6.9 contains all of 2.6.8. The headline: the text of your calendar invites is now cleaned by a stronger filter that removes whole join and dial-in blocks, instead of hunting for secret words one by one, and your backups no longer carry your chats or your follow list.
