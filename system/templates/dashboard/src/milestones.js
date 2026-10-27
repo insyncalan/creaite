@@ -13,6 +13,7 @@ import { go, hashOf, navState, navWrite, parseHash, restoreNav } from "./core/na
 import { D, DATE, fd, fdText, MOD, mScroll, reduced, S, TODAY, typeWord } from "./core/page.js";
 import { needVault, reloadData, renderBadge, save, snack, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
+import { staleApiAct, staleStore } from "./core/staleReload.js";
 import { draftStat } from "./drafts.js";
 import { helpPanelOpen } from "./helpscreen.js";
 import { drFcDraw, drSame, pkHistory, PKMON, pkShort, PKTABS, readForm } from "./panel.js";
@@ -121,7 +122,8 @@ export function bootMilestones0184(){
     if(shared.STALE&&String(typeof u==="string"?u:(u&&u.url)||"").includes("/api/")) return new Response(JSON.stringify({ok:false,stale:true,message:$("#staleMsg").textContent}),{status:403,headers:{"Content-Type":"application/json"}});
     const r=await f0(u,o);
     // @ts-expect-error TS2339: as above
-    try{ if(r.status===403&&String(typeof u==="string"?u:(u&&u.url)||"").includes("/api/")){ const j=await r.clone().json().catch(()=>null); if(j&&j.stale) staleShow(j.message); } }catch(e){}
+    try{ if(r.status===403&&String(typeof u==="string"?u:(u&&u.url)||"").includes("/api/")){ const j=await r.clone().json().catch(()=>null); if(j&&j.stale){ const a=staleApiAct(String(typeof u==="string"?u:(u&&u.url)||""),r.status,j,staleStore(),()=>location.reload());   /* #370: any stale refusal reloads once, else the banner */
+      if(a==="banner") staleShow(j.message); else if(a==="reload") shared.STALE=true; } } }catch(e){}
     return r; }; }
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest("#staleReload")) location.reload(); });
 }

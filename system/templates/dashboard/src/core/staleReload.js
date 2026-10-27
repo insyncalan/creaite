@@ -21,3 +21,20 @@ export function staleEventsAct(code,body,mem,reload){
   if(read(mem)) return "banner";
   try{ if(!mem) return "banner"; mem.setItem(STALE_RELOAD_KEY,"1"); }catch(e){ return "banner"; }   /* no mark can be kept: never risk a loop */
   reload(); return "reload"; }
+
+/** The page's sessionStorage, or null when the browser will not give it. */
+export function staleStore(){ try{ return window.sessionStorage; }catch(e){ return null; } }
+
+/** What the page's fetch wrapper does with a reply: staleEventsAct for a refused /api call of any kind (the pulse, the presence
+ *  post, a save, the stream), so the first stale refusal reloads whichever call it is; anything outside /api is "none".
+ *  @param {string} url @param {number} code @param {any} body @param {any} mem @param {() => void} reload */
+export function staleApiAct(url,code,body,mem,reload){
+  return String(url||"").includes("/api/")?staleEventsAct(code,body,mem,reload):"none"; }
+
+/** What evRead does with the stream's reply: "open" (a stream: the reload mark is cleared, so a later restart may reload again),
+ *  "refused" (a 403: the fetch wrapper has already reloaded or shown the banner) or "skip".
+ *  @param {number} code @param {boolean} ok @param {boolean} hasBody @param {any} mem */
+export function staleStreamAnswer(code,ok,hasBody,mem){
+  if(code===403) return "refused";
+  if(!ok||!hasBody) return "skip";
+  staleMarkClear(mem); return "open"; }

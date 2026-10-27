@@ -31,6 +31,15 @@ out.ff = f.topFrame("loadReview@http://127.0.0.1:1/a.js:31:11\\ngo@http://127.0.
 out.msgline = f.topFrame("Error: at secret (C:/Users/alan/Budget.docx:99:9)\\n    at okFn (http://h/a.js:7:1)");
 out.none = [f.topFrame(""), f.topFrame(undefined), f.topFrame("Error: only a message"), f.topFrame(42), f.errorFrame("text"), f.errorFrame(null), f.errorFrame({})];
 out.err = f.errorFrame({ stack: "Error: m\\n    at pick (http://h/a.js:3:4)" });
+out.review = f.topFrame("Error: Couldn't save\\nmia.hale@client.example:12:3\\n    at okFn (http://h/a.js:7:1)");
+out.fname = f.topFrame("Error: x\\n    at Projects.Brightwater_Takeover (http://h/a.js:8:1)");
+out.nomsgframe = f.topFrame("Error: Couldn't save\\nmia.hale@client.example:12:3");
+out.ffmsg = f.topFrame("hale@client.example:12:3");
+out.bound = [f.topFrame("Error\\n    at big (http://h/a.js:9999999:1)"), f.topFrame("Error\\n    at huge (http://h/a.js:10000000:1)\\n    at next (http://h/a.js:4:1)")];
+out.rej = f.rejectionReport({ reason: { message: "boom", stack: "Error: boom\\n    at doIt (http://h/a.js:21:5)" } });
+out.rejPlain = [f.rejectionReport({ reason: "text only" }), f.rejectionReport({ reason: null }), f.rejectionReport({})];
+out.errRep = [f.errorReport({ message: "m", error: { stack: "Error: m\\n    at pick (http://h/a.js:3:4)" }, filename: "http://h/a.js", lineno: 9 }),
+  f.errorReport({ message: "m2", error: null, filename: "a.js", lineno: 9 })];
 out.wild = f.topFrame("Error\\n    at we!rd<name> (http://h/a.js:3:4)");
 process.stdout.write(JSON.stringify(out));
 """
@@ -78,6 +87,29 @@ class Frame(unittest.TestCase):
     def test_no_usable_stack_gives_null(self):
         self.assertEqual(self.o["none"], [None] * 7)
 
+    def test_the_review_example_gives_the_function_not_a_name_from_the_message(self):
+        self.assertEqual(self.o["review"], {"source": "okFn", "line": 7})
+        self.assertEqual(self.o["fname"], {"source": "Brightwater_Takeover", "line": 8})      # a function's own name is the frame, by design
+        self.assertNotIn("hale", json.dumps(self.o["review"]))
+
+    def test_a_v8_message_with_no_frame_gives_nothing_but_firefox_style_still_parses(self):
+        self.assertIsNone(self.o["nomsgframe"])                                    # "Error: ..." and no "at" line: only a message
+        self.assertEqual(self.o["ffmsg"], {"source": "hale", "line": 12})
+
+    def test_the_line_number_has_an_upper_bound(self):
+        self.assertEqual(self.o["bound"][0], {"source": "big", "line": 9999999})
+        self.assertEqual(self.o["bound"][1], {"source": "next", "line": 4})        # 10000000 is not a line: the next frame is read
+
+    def test_the_rejection_report_carries_the_frame_not_promise_and_zero(self):
+        self.assertEqual(self.o["rej"], {"message": "boom", "source": "doIt", "line": 21})
+        self.assertEqual(self.o["rejPlain"][0], {"message": "text only", "source": "promise", "line": 0})
+        self.assertEqual(self.o["rejPlain"][1], {"message": None, "source": "promise", "line": 0})
+        self.assertEqual(self.o["rejPlain"][2], {"source": "promise", "line": 0})        # no message: undefined, dropped by JSON
+
+    def test_the_error_report_carries_the_frame_else_the_browsers_own_values(self):
+        self.assertEqual(self.o["errRep"][0], {"message": "m", "source": "pick", "line": 3})
+        self.assertEqual(self.o["errRep"][1], {"message": "m2", "source": "a.js", "line": 9})
+
     def test_a_message_line_that_looks_like_a_frame_is_not_taken(self):
         self.assertEqual(self.o["msgline"], {"source": "okFn", "line": 7})
 
@@ -96,6 +128,9 @@ class Mutants(unittest.TestCase):
             except RuntimeError:
                 return True
             return not (o["v8"] == {"source": "loadReview", "line": 42} and o["msgline"] == {"source": "okFn", "line": 7}
+                        and o["review"] == {"source": "okFn", "line": 7} and o["nomsgframe"] is None and o["bound"][1] == {"source": "next", "line": 4}
+                        and o["rej"] == {"message": "boom", "source": "doIt", "line": 21}
+                        and o["errRep"][0] == {"message": "m", "source": "pick", "line": 3}
                         and o["none"] == [None] * 7 and "http" not in json.dumps(o)
                         and re.fullmatch(r"[\w$]+", o["wild"]["source"]) is not None)
         finally:
@@ -105,17 +140,23 @@ class Mutants(unittest.TestCase):
         self.assertTrue(self._mutant('return {source:name||"anonymous",line};', 'return {source:t,line};'), "returns the raw frame text")
         self.assertTrue(self._mutant("if(typeof stack!==\"string\") return null;", "if(typeof stack!==\"string\") return {source:\"\",line:0};"), "no stack gives a frame")
         self.assertTrue(self._mutant(".replace(/[^\\w$]/g,\"\")", ""), "keeps odd characters")
+        self.assertTrue(self._mutant("if(first>0) lines=lines.slice(first);", ""), "reads message lines as frames")
+        self.assertTrue(self._mutant("else if(first<0&&", "else if(false&&"), "reads a frameless V8 message as a stack")
+        self.assertTrue(self._mutant("||line>9999999", ""), "no upper bound on the line")
+        self.assertTrue(self._mutant("const r=e&&e.reason, f=withFrame(r,\"promise\",0);\n  return {message:r&&r.message?r.message:r,source:f.source,line:f.line};",
+                                     "const r=e&&e.reason, f=withFrame(r,\"promise\",0);\n  return {message:r&&r.message?r.message:r,source:\"promise\",line:0};"), "the rejection frame is computed and dropped")
+        self.assertTrue(self._mutant("return {message:e&&e.message,source:f.source,line:f.line};", "return {message:e&&e.message,source:e&&e.filename,line:e&&e.lineno};"), "the error frame is computed and dropped")
 
 
 class Wired(unittest.TestCase):
     def setUp(self):
         self.js = SERVER_JS.read_text(encoding="utf-8")
 
-    def test_both_hooks_send_the_frame_with_today_s_values_as_the_fallback(self):
-        self.assertRegex(self.js, r'import \{ errorFrame \} from "\./pageErrors\.js"')
-        self.assertRegex(self.js, r'diagFrame=\(err,source,line\)=>\{ const f=errorFrame\(err\); return f\?\{source:f\.source,line:f\.line\}:\{source,line\}; \}')
-        self.assertRegex(self.js, r'"unhandledrejection",e=>\{ const f=diagFrame\(e\.reason,"promise",0\);')
-        self.assertRegex(self.js, r'"error",e=>\{ const f=diagFrame\(e\.error,e\.filename,e\.lineno\);')
+    def test_both_hooks_post_what_the_report_computed(self):
+        self.assertRegex(self.js, r'import \{ errorReport, rejectionReport \} from "\./pageErrors\.js"')
+        self.assertRegex(self.js, r'"error",e=>\{ const r=errorReport\(e\); diagHook\(r\.message,r\.source,r\.line\); \}\)')
+        self.assertRegex(self.js, r'"unhandledrejection",e=>\{ const r=rejectionReport\(e\); diagHook\(r\.message,r\.source,r\.line\); \}\)')
+        self.assertNotIn('"promise",0', self.js)           # the fallback lives in pageErrors.js, where it is tested
 
     def test_the_message_sent_is_still_cut_to_what_the_server_takes(self):
         self.assertIn("message:String(message||\"\").slice(0,300)", self.js)

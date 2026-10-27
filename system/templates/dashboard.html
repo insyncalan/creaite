@@ -5810,7 +5810,6 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     depsCard: () => depsCard,
     diagCardHtml: () => diagCardHtml,
     diagErr: () => diagErr,
-    diagFrame: () => diagFrame,
     diagHook: () => diagHook,
     diagLoad: () => diagLoad,
     diagRedraw: () => diagRedraw,
@@ -8554,7 +8553,11 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   // core/pageErrors.js
   function topFrame(stack) {
     if (typeof stack !== "string") return null;
-    for (const ln2 of stack.split("\n").slice(0, 40)) {
+    let lines2 = stack.split("\n");
+    const first = lines2.findIndex((l6) => /^\s+at\s/.test(l6));
+    if (first > 0) lines2 = lines2.slice(first);
+    else if (first < 0 && /^[\w$.]*(Error|Exception)(:|\s|$)/.test(lines2[0])) return null;
+    for (const ln2 of lines2.slice(0, 40)) {
       const t47 = ln2.trim();
       let m5 = /^at\s+(?:async\s+)?(?:new\s+)?([^\s(]+)\s+\(.*?:(\d+):\d+\)$/.exec(t47);
       if (!m5) m5 = /^at\s+()\S*?:(\d+):\d+$/.exec(t47);
@@ -8568,6 +8571,18 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
   }
   function errorFrame(err) {
     return err && typeof err === "object" ? topFrame(err.stack) : null;
+  }
+  function withFrame(err, source, line) {
+    const f5 = errorFrame(err);
+    return f5 ? { source: f5.source, line: f5.line } : { source, line };
+  }
+  function errorReport(e4) {
+    const f5 = withFrame(e4 && e4.error, e4 && e4.filename, e4 && e4.lineno);
+    return { message: e4 && e4.message, source: f5.source, line: f5.line };
+  }
+  function rejectionReport(e4) {
+    const r4 = e4 && e4.reason, f5 = withFrame(r4, "promise", 0);
+    return { message: r4 && r4.message ? r4.message : r4, source: f5.source, line: f5.line };
   }
 
   // core/staleReload.js
@@ -8597,6 +8612,22 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     }
     reload();
     return "reload";
+  }
+  function staleStore() {
+    try {
+      return window.sessionStorage;
+    } catch (e4) {
+      return null;
+    }
+  }
+  function staleApiAct(url, code, body2, mem, reload) {
+    return String(url || "").includes("/api/") ? staleEventsAct(code, body2, mem, reload) : "none";
+  }
+  function staleStreamAnswer(code, ok2, hasBody, mem) {
+    if (code === 403) return "refused";
+    if (!ok2 || !hasBody) return "skip";
+    staleMarkClear(mem);
+    return "open";
   }
 
   // ../../vendor/preact/preact/dist/preact.module.js
@@ -45452,7 +45483,11 @@ system/scripts/run launch.py agent ${what}`;
         try {
           if (r4.status === 403 && String(typeof u5 === "string" ? u5 : u5 && u5.url || "").includes("/api/")) {
             const j5 = await r4.clone().json().catch(() => null);
-            if (j5 && j5.stale) staleShow(j5.message);
+            if (j5 && j5.stale) {
+              const a5 = staleApiAct(String(typeof u5 === "string" ? u5 : u5 && u5.url || ""), r4.status, j5, staleStore(), () => location.reload());
+              if (a5 === "banner") staleShow(j5.message);
+              else if (a5 === "reload") shared.STALE = true;
+            }
           }
         } catch (e4) {
         }
@@ -81914,29 +81949,8 @@ ${d5.text}`);
     EVS.opened++;
     fetch("/api/events", { headers: { "X-Creaite-Token": D.token || "" }, signal: ctl.signal, cache: "no-store" }).then((res) => evRead(res, ctl)).catch(() => null).finally(() => evDown(ctl));
   }
-  function evStore() {
-    try {
-      return window.sessionStorage;
-    } catch (e4) {
-      return null;
-    }
-  }
-  async function evRefused(res) {
-    let j5 = null;
-    try {
-      j5 = await res.clone().json();
-    } catch (e4) {
-      j5 = null;
-    }
-    if (staleEventsAct(res.status, j5, evStore(), () => location.reload()) === "banner") staleShow(j5 && j5.message);
-  }
   async function evRead(res, ctl) {
-    if (res.status === 403) {
-      await evRefused(res);
-      return;
-    }
-    if (!res.ok || !res.body) return;
-    staleMarkClear(evStore());
+    if (staleStreamAnswer(res.status, res.ok, !!res.body, staleStore()) !== "open") return;
     EVS.up = true;
     EVS.wait = 1e3;
     const rd2 = res.body.getReader(), dec = new TextDecoder();
@@ -82047,10 +82061,6 @@ ${d5.text}`);
     if (SERVED) evOpen();
   }
   shared.DIAGSENT = 0;
-  var diagFrame = (err, source, line) => {
-    const f5 = errorFrame(err);
-    return f5 ? { source: f5.source, line: f5.line } : { source, line };
-  };
   var diagHook = (message, source, line) => {
     if (!SERVED || shared.DIAGSENT >= 50 || /^(Uncaught )?ResizeObserver loop/.test(String(message || ""))) return;
     shared.DIAGSENT++;
@@ -82092,12 +82102,12 @@ ${d5.text}`);
   var diagErr = (e4) => `<details class="diagerr"><summary><span class="x">${esc(fd(e4.at.slice(0, 10)))} ${esc(e4.at.slice(11, 16))}</span> · ${esc(e4.area)} · ${esc(e4.message)}</summary>${e4.detail.length ? `<pre class="diagtb">${esc(e4.detail.join("\n"))}</pre>` : '<div class="sub">No traceback.</div>'}</details>`;
   function bootDebugLog() {
     window.addEventListener("error", (e4) => {
-      const f5 = diagFrame(e4.error, e4.filename, e4.lineno);
-      diagHook(e4.message, f5.source, f5.line);
+      const r4 = errorReport(e4);
+      diagHook(r4.message, r4.source, r4.line);
     });
     window.addEventListener("unhandledrejection", (e4) => {
-      const f5 = diagFrame(e4.reason, "promise", 0);
-      diagHook(e4.reason && e4.reason.message ? e4.reason.message : e4.reason, f5.source, f5.line);
+      const r4 = rejectionReport(e4);
+      diagHook(r4.message, r4.source, r4.line);
     });
   }
   var serverSeams = { api: (v5) => {
@@ -82665,7 +82675,6 @@ Next: `;
         "defs",
         "designation",
         "diagCardHtml",
-        "diagFrame",
         "diagHook",
         "dismissFiled",
         "dispFoot",
@@ -82704,6 +82713,7 @@ Next: `;
         "emailKey",
         "errBanner",
         "errorFrame",
+        "errorReport",
         "esc",
         "evClose",
         "evOn",
@@ -83154,6 +83164,7 @@ Next: `;
         "regAddPerson",
         "regSetHidden",
         "rejectedAgainWords",
+        "rejectionReport",
         "rel",
         "reloadData",
         "remMenu",
@@ -83256,9 +83267,12 @@ Next: `;
         "splitPanes",
         "srcHTML",
         "srcParse",
+        "staleApiAct",
         "staleEventsAct",
         "staleMarkClear",
         "staleShow",
+        "staleStore",
+        "staleStreamAnswer",
         "stampMsg",
         "startCurEdit",
         "status",
@@ -83315,6 +83329,7 @@ Next: `;
         "weeklyHref",
         "wflag",
         "who",
+        "withFrame",
         "within",
         "wkMarksHtml",
         "workChanged",
