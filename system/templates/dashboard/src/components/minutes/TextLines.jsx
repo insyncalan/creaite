@@ -5,14 +5,15 @@
    (shown on hover or focus) takes the tag off. A check's words are underlined in the line. Edit, or a click on a line, opens
    the section in the sheet's Text (the one editor); there is no Done button (#302): edits save as you go, and a click
    away or Esc goes back to the lines.
-   #268: one version only, so no line is marked Internal only. The summary is edited where it stands (SummaryText).
+   #268: one version only, so no line is marked Internal only. #329: a line held back with a Sensitive item says so ("held back
+   with …") and can be released (Show in the shareable version). The summary is edited where it stands (SummaryText).
    Each topic of Updates is a block with ctx.level.
    Exported or read only: the lines alone, no tags, checks or controls. */
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { SheetEditor } from "../report/SheetText.jsx";
 import { Checked } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
-import { mdLines, lineTag } from "./minutesDoc.js";
+import { carriedOf, itemName, lineKey, mdLines, lineTag } from "./minutesDoc.js";
 import { jumpTo } from "./TranscriptPane.jsx";
 
 /** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
@@ -40,6 +41,7 @@ function TextLine({ ctx, line, i, li, onEdit }) {
   const tags = /** @type {TimeTag[]} */ (s.tags || []), tag = live ? lineTag(line, tags) : null;
   const checks = live && m ? m.checks.filter(c => c.section === s.id && c.line === i) : [];
   const Tag = li ? "li" : "p";
+  const key = lineKey(s.id, line.text), held = m && !ctx.exported ? carriedOf(m.doc)[key] : undefined;   // #329: held back with an item
   return (
     <Tag class="mnline" data-line={i}>
       {line.flag ? <b class="mnflag">{line.flag}</b> : null}
@@ -47,6 +49,8 @@ function TextLine({ ctx, line, i, li, onEdit }) {
       {live ? <span class="mntext" onClick={e => { if (!(/** @type {HTMLElement} */ (e.target)).closest("button")) onEdit(); }}><Checked text={line.text} checks={checks} /></span>
         : <span>{line.text}</span>}
       {tag ? <TimeTag tag={tag} onRemove={() => ctx.update({ tags: tags.filter(t => t !== tag) }, "Time tag removed")} /> : null}
+      {held && m ? <span class="mnheldw" data-held-with={held}> <span class="tag">held back with {itemName(m.doc, held)}</span>{" "}
+        <button type="button" class="linkbtn" onClick={() => { m.change({ op: "shareable", answers: [{ key, answer: "release" }] }); }}>Show in the shareable version</button></span> : null}
     </Tag>
   );
 }

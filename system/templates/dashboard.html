@@ -10507,15 +10507,15 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
         setOpen2(v5);
       }
     );
-    const close = (how) => {
+    const close2 = (how) => {
       back2.current = how === "esc";
       if (KB_OPEN === fold) KB_OPEN = null;
       if (back2.current) btn.current?.focus({ preventScroll: true });
       show(false);
       if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
-    const closeRef = A2(close);
-    closeRef.current = close;
+    const closeRef = A2(close2);
+    closeRef.current = close2;
     const fold = A2(() => {
       if (!isOpen.current) return;
       const at2 = document.activeElement, inside = !at2 || at2 === document.body || at2 === btn.current || !!box.current?.contains(at2);
@@ -10568,7 +10568,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
     }, [open2]);
     const pick = (it2) => {
       if (it2.disabled) return;
-      if (it2.checked === void 0 || it2.radio) close("pick");
+      if (it2.checked === void 0 || it2.radio) close2("pick");
       onPick(it2.id);
     };
     const onBtnKey = (e4) => {
@@ -10615,7 +10615,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
               return;
             }
             byPointer.current = false;
-            if (open2) close("pick");
+            if (open2) close2("pick");
             else {
               claimKb();
               show(true);
@@ -10635,7 +10635,7 @@ body:has(#runBadge:not([hidden])) .sweepdue{display:none}
           id: menuId,
           cls: `${left ? "left " : ""}${menuCls || ""}`,
           anchor: btn.current,
-          onClose: close,
+          onClose: close2,
           boxRef: box,
           autoFocus: !byPointer.current,
           children: /* @__PURE__ */ u4(MenuItems, { items: items2, onPick: pick })
@@ -28594,7 +28594,7 @@ ${s5}`;
     []
   );
   function noteEscape() {
-    for (const close of noteEscLayers) if (close()) return true;
+    for (const close2 of noteEscLayers) if (close2()) return true;
     return false;
   }
   function focusBack() {
@@ -29661,7 +29661,7 @@ ${s5}`;
       };
     }, [noteEl]);
     const rows2 = fuRows.value, state = fuState.value, ticked = fuTicked.value.length, saving = fuSaving.value;
-    const close = () => {
+    const close2 = () => {
       if (onClose) onClose();
     };
     const summary = state === "ready" ? [
@@ -29680,7 +29680,7 @@ ${s5}`;
         onKeyDown: (e4) => {
           if (e4.key === "Escape" && !fuOpen.value && state !== "busy") {
             e4.preventDefault();
-            close();
+            close2();
           }
         },
         children: [
@@ -29689,7 +29689,7 @@ ${s5}`;
               /* @__PURE__ */ u4(Icon, { name: "spark" }),
               " Found in this note"
             ] }),
-            /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close Find updates", onClick: close, cls: "fu-x" }),
+            /* @__PURE__ */ u4(IconButton, { icon: "x", label: "Close Find updates", onClick: close2, cls: "fu-x" }),
             summary && /* @__PURE__ */ u4("span", { class: "sub fu-sum", children: summary })
           ] }),
           /* @__PURE__ */ u4("div", { class: "vh", role: "status", "aria-live": "polite", children: state === "busy" ? "Finding updates in the note" : summary || fuMsg.value }),
@@ -29708,7 +29708,7 @@ ${s5}`;
             ] }),
             /* @__PURE__ */ u4("div", { class: "fu-acts", children: [
               /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", onClick: () => fuConfirm(), children: "Send to Claude" }),
-              /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: close, children: "Not now" })
+              /* @__PURE__ */ u4("button", { type: "button", class: "btn", onClick: close2, children: "Not now" })
             ] })
           ] }),
           ["none", "error", "done"].includes(state) && /* @__PURE__ */ u4("div", { class: "fu-msg", children: [
@@ -31536,7 +31536,7 @@ ${s5}`;
         if (opened) dom.setAttribute("aria-expanded", "false");
       }
     };
-    const close = () => {
+    const close2 = () => {
       if (!st2) return;
       st2 = null;
       draw2();
@@ -31548,16 +31548,16 @@ ${s5}`;
       const a5 = slashAt(editor);
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
-        return close();
+        return close2();
       }
       if (!st2 && !mayOpen) return;
-      if (st2 && st2.from !== a5.from && !mayOpen) return close();
+      if (st2 && st2.from !== a5.from && !mayOpen) return close2();
       if (a5.q.endsWith(" ")) {
         const base = a5.q.trim().toLowerCase();
-        if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close();
+        if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close2();
       }
       const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
-      if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
+      if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close2();
       const fresh = !st2 || st2.from !== a5.from;
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
       if (fresh) moved2 = false;
@@ -31566,7 +31566,7 @@ ${s5}`;
     const choose = (r4) => {
       const s5 = st2;
       if (!s5) return;
-      close();
+      close2();
       const c5 = editor.chain().focus().setMeta(r4.host || r4.hook ? OWN_HEAD : OWN_STEP, true).deleteRange({ from: s5.from, to: s5.to });
       if (r4.host) {
         c5.run();
@@ -31607,7 +31607,7 @@ ${s5}`;
           e4.preventDefault();
           e4.stopPropagation();
           choose(row2);
-        } else close();
+        } else close2();
       } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
         e4.preventDefault();
         e4.stopPropagation();
@@ -31615,11 +31615,11 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         dismissed = st2.from;
-        close();
+        close2();
       }
     };
     const blur = () => setTimeout(() => {
-      if (!el2.contains(document.activeElement)) close();
+      if (!el2.contains(document.activeElement)) close2();
     }, 120);
     const comp = () => {
       typedSlash = true;
@@ -31848,7 +31848,7 @@ ${s5}`;
         if (opened) dom.setAttribute("aria-expanded", "false");
       }
     };
-    const close = () => {
+    const close2 = () => {
       chosen = false;
       if (!st2) return;
       st2 = null;
@@ -31861,12 +31861,12 @@ ${s5}`;
       const a5 = hashAt(editor);
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
-        return close();
+        return close2();
       }
       if (!st2 && !mayOpen) return;
-      if (st2 && st2.from !== a5.from && !mayOpen) return close();
+      if (st2 && st2.from !== a5.from && !mayOpen) return close2();
       const opts = itemOptions(code(), a5.q);
-      if (!opts.length) return close();
+      if (!opts.length) return close2();
       if (cmd) chosen = true;
       st2 = { ...a5, opts, i: st2 && st2.from === a5.from ? Math.min(st2.i, opts.length - 1) : 0 };
       draw2();
@@ -31874,7 +31874,7 @@ ${s5}`;
     const choose = (o5) => {
       const s5 = st2;
       if (!s5) return;
-      close();
+      close2();
       editor.chain().focus().setMeta(OWN_STEP, true).deleteRange({ from: s5.from, to: s5.to }).insertContent(itemContent(o5.id)).run();
     };
     const keys = (e4) => {
@@ -31889,7 +31889,7 @@ ${s5}`;
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
         const id2 = chosen ? st2.opts[st2.i].id : itemByQuery(code(), st2.q), o5 = id2 && st2.opts.find((x5) => x5.id === id2);
         if (!o5) {
-          close();
+          close2();
           return;
         }
         e4.preventDefault();
@@ -31902,11 +31902,11 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         dismissed = st2.from;
-        close();
+        close2();
       }
     };
     const blur = () => setTimeout(() => {
-      if (!el2.contains(document.activeElement)) close();
+      if (!el2.contains(document.activeElement)) close2();
     }, 150);
     const comp = () => {
       typed2 = true;
@@ -32648,7 +32648,7 @@ ${s5}`;
   function NoteSide({ code, onOpen, onOpenItem }) {
     const cur = noteCur.value;
     if (!(noteFind.value && cur)) return /* @__PURE__ */ u4("div", { class: "nside", id: "noteSide", children: /* @__PURE__ */ u4(NoteContext, { code, onOpen, onOpenItem }) });
-    const close = () => {
+    const close2 = () => {
       fuPath.value = "";
       noteMarks.value = { markers: {}, hover: 0 };
       noteFind.value = false;
@@ -32664,7 +32664,7 @@ ${s5}`;
       {
         path: cur.path,
         p: noteFindP.value || void 0,
-        onClose: close,
+        onClose: close2,
         onMarks: (markers, hover) => {
           noteMarks.value = { markers, hover };
         }
@@ -34165,7 +34165,7 @@ system/scripts/run launch.py agent ${what}`;
   );
   function LeftOutDialog({ client, onExport }) {
     const open2 = crDialog.value, c5 = crCheck.value, lo2 = c5 && c5.left_out;
-    const close = () => {
+    const close2 = () => {
       crDialog.value = false;
     };
     const lines2 = [];
@@ -34217,7 +34217,7 @@ system/scripts/run launch.py agent ${what}`;
       ] }, "health"));
     }
     const blocked2 = !lo2 || !lo2.ready || lo2.findings.length > 0;
-    return /* @__PURE__ */ u4(Dialog, { open: open2, onClose: close, labelledBy: "crLeftH", id: "crLeftDlg", class: "crdlg", focus: "[data-crdcancel]", children: [
+    return /* @__PURE__ */ u4(Dialog, { open: open2, onClose: close2, labelledBy: "crLeftH", id: "crLeftDlg", class: "crdlg", focus: "[data-crdcancel]", children: [
       /* @__PURE__ */ u4("h2", { id: "crLeftH", children: [
         "Left out of ",
         client || "the client",
@@ -34233,7 +34233,7 @@ system/scripts/run launch.py agent ${what}`;
         /* @__PURE__ */ u4("p", { class: "sub", children: lo2.facts_week ? `Facts come from the internal report approved for week ending ${fd(lo2.facts_week)}.` : "The internal report isn't approved yet." })
       ] }),
       /* @__PURE__ */ u4("div", { class: "crdacts", children: [
-        /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crdcancel": true, onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crdcancel": true, onClick: close2, children: "Cancel" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crexport": "html", disabled: blocked2, onClick: () => onExport("html"), children: "HTML" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-crexport": "docx", disabled: blocked2, onClick: () => onExport("docx"), children: "Word" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-crexport": "pdf", disabled: blocked2, onClick: () => onExport("pdf"), children: "PDF" })
@@ -44366,9 +44366,9 @@ system/scripts/run launch.py agent ${what}`;
     }), []);
     h2(() => j3(() => {
       void railView.value;
-      if (isOpen.current) close(false);
+      if (isOpen.current) close2(false);
     }), []);
-    const close = (focusBack2) => {
+    const close2 = (focusBack2) => {
       if (menuGroup.current === btn.current) menuGroup.close();
       railMoreOpen.value = false;
       if (focusBack2) btn.current?.focus();
@@ -44380,7 +44380,7 @@ system/scripts/run launch.py agent ${what}`;
       setAt({ left: `${rail.right + 4}px`, bottom: `${Math.max(8, innerHeight - r4.bottom)}px` });
     }, [open2, mode]);
     const go3 = (id2) => {
-      close(false);
+      close2(false);
       onGo(id2);
     };
     const n4 = healthCount.value, first = healthFirst.value;
@@ -44390,7 +44390,7 @@ system/scripts/run launch.py agent ${what}`;
       badge
     ] });
     const health2 = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHealth", onClick: () => {
-      close(false);
+      close2(false);
       onHealth();
     }, children: [
       /* @__PURE__ */ u4(RailIcon, { name: "pulse" }),
@@ -44399,7 +44399,7 @@ system/scripts/run launch.py agent ${what}`;
       /* @__PURE__ */ u4("span", { class: "vh", children: n4 ? `: ${probs(n4)}` : "" })
     ] }, "health");
     const help = /* @__PURE__ */ u4("button", { type: "button", class: "nv", role: "menuitem", id: "railHelp", onClick: () => {
-      close(false);
+      close2(false);
       onHelp();
     }, children: [
       /* @__PURE__ */ u4(RailIcon, { name: "help" }),
@@ -44458,7 +44458,7 @@ system/scripts/run launch.py agent ${what}`;
           anchor: btn.current,
           boxRef: box,
           autoFocus: !ptr,
-          onClose: (how) => close(how === "esc"),
+          onClose: (how) => close2(how === "esc"),
           children: [
             /* @__PURE__ */ u4("div", { class: "avhead", role: "presentation", children: [
               circle(null),
@@ -44480,7 +44480,7 @@ system/scripts/run launch.py agent ${what}`;
                 id: "railCustBtn",
                 "aria-haspopup": "dialog",
                 onClick: () => {
-                  close(false);
+                  close2(false);
                   onCustomise(btn.current);
                 },
                 children: [
@@ -45169,8 +45169,8 @@ system/scripts/run launch.py agent ${what}`;
     p6.appendChild(host2);
     hint.hidden = !!SNK.at && SNK.at.where === "ms";
     flashPaint();
-    const bar = p6.querySelector(".mv-pkbar"), close = bar && bar.querySelector('[data-mvpk="close"]');
-    if (bar && close && !bar.querySelector("#mvSneakBtn")) addHTML(close, "beforebegin", raw(sparkBtn("mvSneakBtn", "mv-ib")));
+    const bar = p6.querySelector(".mv-pkbar"), close2 = bar && bar.querySelector('[data-mvpk="close"]');
+    if (bar && close2 && !bar.querySelector("#mvSneakBtn")) addHTML(close2, "beforebegin", raw(sparkBtn("mvSneakBtn", "mv-ib")));
     const b5 = $("#mvSneakBtn");
     if (b5) b5.setAttribute("aria-pressed", String(!!SNK.at && SNK.at.where === "ms"));
     if (SNK.at && SNK.at.where === "ms" && SNK.at.id !== shared.MV.peek) sneakClose(false);
@@ -47086,7 +47086,7 @@ system/scripts/run launch.py agent ${what}`;
         if (depth < 5) run(a5, b5, m5.bold || bold, m5.italic || italic, m5.strike || strike, depth + 1);
         else out.push([s5.slice(a5, b5), bold, italic, strike, false]);
       };
-      const close = (kind, start) => {
+      const close2 = (kind, start) => {
         if (kind in failed && start >= failed[kind]) return -1;
         let q5 = -1;
         if (kind === "**" || kind === "~~" || kind === "***") {
@@ -47127,7 +47127,7 @@ system/scripts/run launch.py agent ${what}`;
           }
         } else if (c5 === "*") {
           if (s5.startsWith("***", p6)) {
-            const q5 = close("***", p6 + 4);
+            const q5 = close2("***", p6 + 4);
             if (q5 > 0) {
               span(p6 + 3, q5, { bold: true, italic: true });
               i5 = q5 + 3;
@@ -47135,7 +47135,7 @@ system/scripts/run launch.py agent ${what}`;
             }
           }
           if (s5.startsWith("**", p6)) {
-            const q5 = close("**", p6 + 3);
+            const q5 = close2("**", p6 + 3);
             if (q5 > 0) {
               span(p6 + 2, q5, { bold: true });
               i5 = q5 + 2;
@@ -47146,7 +47146,7 @@ system/scripts/run launch.py agent ${what}`;
             continue;
           }
           if ((p6 === 0 || !(isWord(s5[p6 - 1]) || s5[p6 - 1] === "*")) && p6 + 1 < hi2 && !isSpace(s5[p6 + 1]) && s5[p6 + 1] !== "*") {
-            const q5 = close("*", p6 + 2);
+            const q5 = close2("*", p6 + 2);
             if (q5 > 0) {
               span(p6 + 1, q5, { italic: true });
               i5 = q5 + 1;
@@ -47155,7 +47155,7 @@ system/scripts/run launch.py agent ${what}`;
           }
         } else if (c5 === "_") {
           if ((p6 === 0 || !isWord(s5[p6 - 1])) && p6 + 1 < hi2 && !isSpace(s5[p6 + 1])) {
-            const q5 = close("_", p6 + 2);
+            const q5 = close2("_", p6 + 2);
             if (q5 > 0) {
               span(p6 + 1, q5, { italic: true });
               i5 = q5 + 1;
@@ -47163,7 +47163,7 @@ system/scripts/run launch.py agent ${what}`;
             }
           }
         } else if (c5 === "~" && s5.startsWith("~~", p6)) {
-          const q5 = close("~~", p6 + 3);
+          const q5 = close2("~~", p6 + 3);
           if (q5 > 0) {
             span(p6 + 2, q5, { strike: true });
             i5 = q5 + 2;
@@ -48138,7 +48138,7 @@ system/scripts/run launch.py agent ${what}`;
     ...(a5.notes || []).map((n4) => String(n4.note || "")).filter(Boolean),
     ...(a5.sentences || []).filter((x5) => x5.unsourced && String(x5.text || "").trim()).map((x5) => `No source: “${String(x5.text).trim()}”`)
   ];
-  function Redraft({ rd: rd2, s: s5, readOnly, close, onUse, onOpen, known: known2 }) {
+  function Redraft({ rd: rd2, s: s5, readOnly, close: close2, onUse, onOpen, known: known2 }) {
     if (rd2.status === "running") return /* @__PURE__ */ u4("div", { class: "sheet-redraft", role: "status", children: [
       "Drafting ",
       s5.heading,
@@ -48146,11 +48146,11 @@ system/scripts/run launch.py agent ${what}`;
     ] });
     if (rd2.status === "stale") return /* @__PURE__ */ u4("div", { class: "sheet-redraft", role: "alert", children: [
       rd2.why === "words" ? "You've changed this section since; the suggestion was made from the earlier words." : "This suggestion was made from an earlier version.",
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close2, children: "Close" })
     ] });
     if (rd2.status === "failed") return /* @__PURE__ */ u4("div", { class: "sheet-redraft", role: "alert", children: [
       rd2.message,
-      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
+      /* @__PURE__ */ u4("button", { type: "button", class: "btn sm", onClick: close2, children: "Close" })
     ] });
     const a5 = rd2.answer || {};
     const hl2 = !!a5.health;
@@ -49386,7 +49386,7 @@ system/scripts/run launch.py agent ${what}`;
       /** @type {Element|null} */
       null
     );
-    const close = () => {
+    const close2 = () => {
       if (CLOSE_PICKER.get(mine.current) === me2.current) CLOSE_PICKER.delete(mine.current);
       setOpen2(false);
       setList(null);
@@ -49395,8 +49395,8 @@ system/scripts/run launch.py agent ${what}`;
       setMsg("");
       setTimeout(() => btn.current?.focus(), 0);
     };
-    const closeNow = A2(close);
-    closeNow.current = close;
+    const closeNow = A2(close2);
+    closeNow.current = close2;
     h2(() => {
       if (open2 && search.current) search.current.focus();
     }, [open2]);
@@ -49430,7 +49430,7 @@ system/scripts/run launch.py agent ${what}`;
         },
         picked.length === 1 ? "Item added from your project record" : "Items added from your project record"
       );
-      close();
+      close2();
     };
     const toggle = (ref) => setSel(sel.includes(ref) ? sel.filter((x5) => x5 !== ref) : [...sel, ref]);
     return /* @__PURE__ */ u4("div", { class: "rs-pick", children: [
@@ -49438,7 +49438,7 @@ system/scripts/run launch.py agent ${what}`;
       open2 ? /* @__PURE__ */ u4("div", { class: "rs-picker", role: "group", "aria-label": `Add to ${s5.heading} from your project record`, onKeyDown: (e4) => {
         if (e4.key === "Escape") {
           e4.stopPropagation();
-          close();
+          close2();
         }
       }, children: [
         /* @__PURE__ */ u4("input", { type: "search", class: "rs-pick-search", ref: search, "aria-label": "Search your project record", placeholder: "Search", value: q5, onInput: (e4) => setQ(
@@ -49458,7 +49458,7 @@ system/scripts/run launch.py agent ${what}`;
         ] }),
         /* @__PURE__ */ u4("div", { class: "rs-pick-foot", children: [
           /* @__PURE__ */ u4("span", { class: "sub", children: sel.length ? `${sel.length} ticked` : "Tick the items to include. Your project record is not changed." }),
-          /* @__PURE__ */ u4("button", { type: "button", class: "btn sm rs-pick-cancel", onClick: close, children: "Cancel" }),
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn sm rs-pick-cancel", onClick: close2, children: "Cancel" }),
           /* @__PURE__ */ u4("button", { type: "button", class: "btn sm primary rs-pick-add", disabled: !sel.length, onClick: add, children: "Add to the report" })
         ] })
       ] }) : null
@@ -49967,10 +49967,10 @@ system/scripts/run launch.py agent ${what}`;
   // components/report/MatchHeldDialog.jsx
   function MatchHeldDialog() {
     const h5 = crHeld.value;
-    const close = () => {
+    const close2 = () => {
       crHeld.value = null;
     };
-    return /* @__PURE__ */ u4(Dialog, { open: !!h5, onClose: close, labelledBy: "crHeldH", id: "crHeldDlg", class: "crdlg", focus: "[data-crheldok]", children: [
+    return /* @__PURE__ */ u4(Dialog, { open: !!h5, onClose: close2, labelledBy: "crHeldH", id: "crHeldDlg", class: "crdlg", focus: "[data-crheldok]", children: [
       /* @__PURE__ */ u4("h2", { id: "crHeldH", children: "Match internal held some sections back" }),
       h5 ? /* @__PURE__ */ u4("div", { "data-crheld": true, children: [
         h5.message ? /* @__PURE__ */ u4("p", { class: "crbad", role: "alert", "data-crheldmsg": true, children: h5.message }) : null,
@@ -49994,7 +49994,7 @@ system/scripts/run launch.py agent ${what}`;
           "."
         ] }) : /* @__PURE__ */ u4("p", { class: "sub", children: "Nothing was copied; the client report is as it was." })
       ] }) : null,
-      /* @__PURE__ */ u4("div", { class: "crdacts", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-crheldok": true, onClick: close, children: "OK" }) })
+      /* @__PURE__ */ u4("div", { class: "crdacts", children: /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-crheldok": true, onClick: close2, children: "OK" }) })
     ] });
   }
 
@@ -50721,7 +50721,7 @@ system/scripts/run launch.py agent ${what}`;
       /** @type {HTMLButtonElement|null} */
       null
     );
-    const close = (how) => {
+    const close2 = (how) => {
       setOpen2(false);
       if (how === "esc" && btn.current) btn.current.focus({ preventScroll: true });
     };
@@ -50756,7 +50756,7 @@ system/scripts/run launch.py agent ${what}`;
           ]
         }
       ),
-      open2 ? /* @__PURE__ */ u4(MenuPanel, { label: "Weeks", bare: true, cls: "wkpop", anchor: btn.current, onClose: close, children: [
+      open2 ? /* @__PURE__ */ u4(MenuPanel, { label: "Weeks", bare: true, cls: "wkpop", anchor: btn.current, onClose: close2, children: [
         /* @__PURE__ */ u4("h4", { children: "Weeks" }),
         rows2.map((r4) => /* @__PURE__ */ u4(
           "button",
@@ -51902,13 +51902,13 @@ system/scripts/run launch.py agent ${what}`;
     const listId = `${id2}-list`, q5 = typed2 && field.current ? field.current.value.trim() : "";
     const L3 = open2 ? options(q5, typed2) : [];
     const ai2 = Math.min(act, Math.max(0, L3.length - 1));
-    const close = () => {
+    const close2 = () => {
       setOpen2(false);
-      if (OPEN && OPEN.close === close) OPEN = null;
+      if (OPEN && OPEN.close === close2) OPEN = null;
     };
     const show = () => {
-      if (OPEN && OPEN.close !== close) OPEN.close();
-      OPEN = { close };
+      if (OPEN && OPEN.close !== close2) OPEN.close();
+      OPEN = { close: close2 };
       setOpen2(true);
     };
     h2(() => {
@@ -51920,13 +51920,13 @@ system/scripts/run launch.py agent ${what}`;
         if (!box.current?.contains(
           /** @type {Node} */
           e4.target
-        )) close();
+        )) close2();
       };
       document.addEventListener("mousedown", away, true);
       return () => document.removeEventListener("mousedown", away, true);
     }, [open2]);
     const pick = async (o5) => {
-      close();
+      close2();
       const r4 = await onPick(o5);
       if (r4 !== false && field.current) field.current.value = o5.fill ?? o5.label;
     };
@@ -51945,12 +51945,12 @@ system/scripts/run launch.py agent ${what}`;
       } else if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
-        if (open2) close();
+        if (open2) close2();
         else if (field.current) {
           field.current.value = "";
           onInput && onInput("");
         }
-      } else if (e4.key === "Tab") close();
+      } else if (e4.key === "Tab") close2();
     };
     return /* @__PURE__ */ u4("div", { class: `combo${open2 ? " open" : ""}`, ref: box, children: [
       /* @__PURE__ */ u4(
@@ -54163,7 +54163,7 @@ system/scripts/run launch.py agent ${what}`;
   }
   shared.CURED = null;
   var CUR_PROPS = {
-    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)).replace(/<(\/?)h([345])>/g, (m5, close, n4) => "<" + close + "h" + (n4 - HEAD_SHIFT) + ">"),
+    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)).replace(/<(\/?)h([345])>/g, (m5, close2, n4) => "<" + close2 + "h" + (n4 - HEAD_SHIFT) + ">"),
     /* #122: stored ### #### ##### are the editor's Heading 1 to 3 */
     handlePaste: (view, e4) => {
       const pics = [...e4.clipboardData && e4.clipboardData.files || []].filter((f5) => /^image\//.test(f5.type));
@@ -54788,7 +54788,7 @@ ${pre}**Current state title:** ${title}`);
       const nodes = [];
       while (tw2.nextNode()) nodes.push(tw2.currentNode);
       let pieces = [];
-      const close = (ids) => {
+      const close2 = (ids) => {
         const text = pieces.map((t47) => t47.nodeValue).join("").replace(/\s+/g, " ").trim();
         if (text && (ids || (text.match(/[A-Za-z]{2,}/g) || []).length >= 3)) {
           n4++;
@@ -54817,12 +54817,12 @@ ${pre}**Current state title:** ${title}`);
             t47.nodeValue = before;
             pieces.push(t47);
           } else t47.remove();
-          close(m5[1].match(/F\d+/g) || []);
+          close2(m5[1].match(/F\d+/g) || []);
           t47 = nt2;
         }
         if (t47 && (t47.nodeValue.trim() || pieces.length)) pieces.push(t47);
       }
-      close(null);
+      close2(null);
     }
     return out;
   }
@@ -66512,8 +66512,12 @@ ${d5.text}`);
     deShow(`Follow-up: ${m5.title}`);
     if (viaServer()) deFollowFacts(shared.DE, m5);
   }
-  async function openMinutesFollowup(path, version) {
+  async function openMinutesFollowup(path, version, onReview) {
     const r4 = await api("/api/minutes/followup", { path, version });
+    if (r4 && !r4.ok && Array.isArray(r4.review) && r4.review.length && onReview) {
+      onReview(r4.review);
+      return;
+    }
     if (!r4 || !r4.ok) {
       snack(oneLine(r4 && r4.message || "") || "Couldn't read the minutes for the email");
       return;
@@ -69357,7 +69361,7 @@ ${d5.text}`);
         document.querySelector("#uRevSaw")?.focus()
       ), 0);
     };
-    const close = () => {
+    const close2 = () => {
       setOpen2(false);
       focusAdd();
     };
@@ -69382,7 +69386,7 @@ ${d5.text}`);
       } else if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
-        close();
+        close2();
       }
     };
     const val2 = (e4) => (
@@ -69415,7 +69419,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4("span", {}),
         /* @__PURE__ */ u4("div", { class: "urevact", children: [
           /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "uRevSave", disabled: busy2, onClick: save2, children: busy2 ? "Saving…" : "Save note" }),
-          /* @__PURE__ */ u4("button", { type: "button", class: "btn", disabled: busy2, onClick: close, children: "Cancel" }),
+          /* @__PURE__ */ u4("button", { type: "button", class: "btn", disabled: busy2, onClick: close2, children: "Cancel" }),
           /* @__PURE__ */ u4("span", { class: "sub", id: "uRevMsg", role: "status", children: msg })
         ] })
       ] }) : null,
@@ -71723,11 +71727,11 @@ ${d5.text}`);
     return { name: parts.pop() || p6, folder: parts.slice(-2).join(" › ") };
   };
   function ApprovePopup({ problems, checks = [], files = [], transcripts = 0, busy: busy2, onApprove }) {
-    const close = () => {
+    const close2 = () => {
       approveOpen.value = false;
     };
     const one = problems.length === 1, filed2 = files.map(filedAt)[0];
-    return /* @__PURE__ */ u4(Dialog, { open: approveOpen.value && problems.length !== 0, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u4("div", { class: "mnap", children: [
+    return /* @__PURE__ */ u4(Dialog, { open: approveOpen.value && problems.length !== 0, onClose: close2, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u4("div", { class: "mnap", children: [
       /* @__PURE__ */ u4("h2", { id: "mnApproveH", children: "Approve the minutes" }),
       /* @__PURE__ */ u4("p", { class: "sub", children: [
         "Before these minutes are approved, ",
@@ -71756,9 +71760,9 @@ ${d5.text}`);
         /* @__PURE__ */ u4("ul", { children: checks.map((c5) => /* @__PURE__ */ u4("li", { children: c5.note }, c5.id)) })
       ] }) : null,
       /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
-        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnApproveBack", onClick: close, children: "Go back" }),
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnApproveBack", onClick: close2, children: "Go back" }),
         /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: () => {
-          close();
+          close2();
           onApprove();
         }, children: "Approve anyway" })
       ] })
@@ -72333,6 +72337,49 @@ ${d5.text}`);
     return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
   }
   var heldBack = (doc, ref, held) => held && held[ref] || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
+  var lineKey = (section, text) => `${section}:${text}`;
+  var carriedOf = (doc) => {
+    const c5 = (
+      /** @type {any} */
+      (doc.layout || {}).carried
+    );
+    return c5 && typeof c5 === "object" && !Array.isArray(c5) ? c5 : {};
+  };
+  function carriedItem(doc, ref) {
+    const all = (
+      /** @type {Record<string, any>} */
+      doc.items || {}
+    ), r4 = String(ref || "");
+    if (all[r4] && typeof all[r4] === "object") return r4;
+    for (const [k5, it2] of Object.entries(all)) if (it2 && typeof it2 === "object" && r4 && (it2.id === r4 || `@${it2.n}` === r4)) return k5;
+    for (const s5 of doc.sections || []) for (
+      const x5 of
+      /** @type {any[]} */
+      s5.rows || []
+    ) if (x5 && x5.kept_line && x5.was === r4) return r4;
+    return null;
+  }
+  function carriedOut(doc, section, text, held) {
+    const ref = carriedOf(doc)[lineKey(section, text)];
+    if (typeof ref !== "string") return false;
+    const k5 = carriedItem(doc, ref);
+    return k5 == null || !!heldBack(doc, k5, held) || !!(held && held[ref]);
+  }
+  function itemName(doc, ref) {
+    const k5 = carriedItem(doc, ref) || ref, it2 = (
+      /** @type {any} */
+      (doc.items || {})[k5] || {}
+    ), v5 = { ...it2.values || {}, ...it2.changes || {} };
+    let name = String(v5.description || v5.decision || v5.title || "");
+    for (const s5 of doc.sections || []) for (
+      const r4 of
+      /** @type {any[]} */
+      s5.rows || []
+    )
+      if (!name && r4 && (r4.ref === k5 || r4.was === k5)) name = String(Object.values(r4.cells || {}).find((c5) => c5 && !/^(Risk|Issue|Assumption|Dependency)$/.test(String(c5))) || "");
+    name = name || String(ref);
+    return name.length > 80 ? `${name.slice(0, 79).trim()}…` : name;
+  }
   function distributedOf(doc, held) {
     const sections = doc.sections.map((s5) => {
       if (s5.type === "table") {
@@ -72343,7 +72390,7 @@ ${d5.text}`);
         return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
       }
       if (s5.type === "header" || !s5.text) return s5;
-      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
+      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }) && !carriedOut(doc, s5.id, l6.text, held));
       return { ...s5, text: mdUnlines(kept) || "None recorded." };
     });
     return { ...doc, audience: "distributed", sections };
@@ -72360,7 +72407,7 @@ ${d5.text}`);
         ) })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
       }
       if (s5.type !== "table" && s5.type !== "header") {
-        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
+        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text }) || carriedOut(doc, s5.id, l6.text, held)) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
       }
     }
     return out;
@@ -72524,6 +72571,7 @@ ${d5.text}`);
     ), tag = live ? lineTag(line, tags) : null;
     const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
     const Tag2 = li2 ? "li" : "p";
+    const key2 = lineKey(s5.id, line.text), held = m5 && !ctx.exported ? carriedOf(m5.doc)[key2] : void 0;
     return /* @__PURE__ */ u4(Tag2, { class: "mnline", "data-line": i5, children: [
       line.flag ? /* @__PURE__ */ u4("b", { class: "mnflag", children: line.flag }) : null,
       line.flag ? " " : null,
@@ -72531,7 +72579,18 @@ ${d5.text}`);
         if (!/** @type {HTMLElement} */
         e4.target.closest("button")) onEdit();
       }, children: /* @__PURE__ */ u4(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u4("span", { children: line.text }),
-      tag ? /* @__PURE__ */ u4(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null
+      tag ? /* @__PURE__ */ u4(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null,
+      held && m5 ? /* @__PURE__ */ u4("span", { class: "mnheldw", "data-held-with": held, children: [
+        " ",
+        /* @__PURE__ */ u4("span", { class: "tag", children: [
+          "held back with ",
+          itemName(m5.doc, held)
+        ] }),
+        " ",
+        /* @__PURE__ */ u4("button", { type: "button", class: "linkbtn", onClick: () => {
+          m5.change({ op: "shareable", answers: [{ key: key2, answer: "release" }] });
+        }, children: "Show in the shareable version" })
+      ] }) : null
     ] });
   }
   function blocks(ls2) {
@@ -73101,16 +73160,101 @@ ${d5.text}`);
     }) });
   }
 
+  // components/minutes/ShareReview.jsx
+  var shareAsk = (
+    /** @type {import("@preact/signals").Signal<{lines: ReviewLine[], answers: Record<string, string>, again: () => void, error: string}|null>} */
+    y3(null)
+  );
+  function askShare(lines2, again) {
+    shareAsk.value = { lines: lines2 || [], answers: {}, again, error: "" };
+  }
+  var close = () => {
+    shareAsk.value = null;
+  };
+  function answer(key2, what) {
+    const a5 = shareAsk.value;
+    if (a5) shareAsk.value = { ...a5, answers: { ...a5.answers, [key2]: what }, error: "" };
+  }
+  async function exportAgain() {
+    const a5 = shareAsk.value;
+    if (!a5) return;
+    const answers = a5.lines.map((l6) => ({ key: l6.key, ref: l6.ref, answer: a5.answers[l6.key] }));
+    const r4 = await changeMinutes({ op: "shareable", answers });
+    if (!r4.ok) {
+      shareAsk.value = { ...a5, error: r4.message || "Your answers weren't saved." };
+      return;
+    }
+    close();
+    a5.again();
+  }
+  function ShareReview() {
+    const a5 = shareAsk.value, done = !!a5 && a5.lines.every((l6) => a5.answers[l6.key]);
+    return /* @__PURE__ */ u4(Dialog, { open: !!a5, onClose: close, labelledBy: "mnShareH", id: "mnShare", class: "mnapprove", focus: "#mnShareHold0", children: a5 ? /* @__PURE__ */ u4("div", { class: "mnap", children: [
+      /* @__PURE__ */ u4("h2", { id: "mnShareH", children: "Review these lines before sharing" }),
+      /* @__PURE__ */ u4("p", { class: "sub", children: "These lines may describe something kept out of the shareable version." }),
+      /* @__PURE__ */ u4("ul", { class: "mnap-l", children: a5.lines.map((l6, i5) => /* @__PURE__ */ u4("li", { "data-share-key": l6.key, style: "display:block", children: [
+        /* @__PURE__ */ u4("div", { children: l6.text }),
+        /* @__PURE__ */ u4("div", { class: "sub", children: [
+          "May describe: ",
+          l6.item
+        ] }),
+        /* @__PURE__ */ u4("div", { role: "group", "aria-label": `For the line: ${l6.text.slice(0, 60)}`, style: "display:flex;gap:6px;margin-top:6px", children: [
+          /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              class: "btn sm",
+              id: `mnShareHold${i5}`,
+              "data-share": "hold",
+              "aria-pressed": a5.answers[l6.key] === "hold" ? "true" : "false",
+              onClick: () => answer(l6.key, "hold"),
+              children: "Hold back with it"
+            }
+          ),
+          /* @__PURE__ */ u4(
+            "button",
+            {
+              type: "button",
+              class: "btn sm",
+              "data-share": "keep",
+              "aria-pressed": a5.answers[l6.key] === "keep" ? "true" : "false",
+              onClick: () => answer(l6.key, "keep"),
+              children: "Keep"
+            }
+          )
+        ] })
+      ] }, l6.key)) }),
+      a5.error ? /* @__PURE__ */ u4("p", { class: "sub", role: "alert", style: "color:var(--bad, #b00020)", children: a5.error }) : null,
+      /* @__PURE__ */ u4("div", { class: "mnap-foot", children: [
+        /* @__PURE__ */ u4("button", { type: "button", class: "btn", id: "mnShareNo", onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u4(
+          "button",
+          {
+            type: "button",
+            class: "btn primary",
+            id: "mnShareGo",
+            disabled: !done,
+            "data-tip": done ? void 0 : "Answer each line first",
+            onClick: () => {
+              exportAgain();
+            },
+            children: "Export again"
+          }
+        )
+      ] })
+    ] }) : null });
+  }
+
   // components/minutes/MinutesView.jsx
   var MN_ZOOM = { min: 0.5, max: 2.5, fit: 1, fitMax: 1 };
   var mnExports = (draft) => {
     const hold = draft ? "Approve the minutes first" : void 0;
     return [
       { head: "Shareable: for sending" },
-      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-      // The email's summary is free text from the Shareable version (minutes_record.py followup_facts), so it has the same #329 gap as the Updates text.
+      { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+      { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+      { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+      // #329: a line that may describe a Sensitive item is asked about first (minutes_record.describing_lines), for the email too.
       { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent", tip: draft ? "Draft: check before sending" : void 0 },
       { id: "sep", sep: true },
       { head: "Internal: colleagues only" },
@@ -73146,7 +73290,9 @@ ${d5.text}`);
     if (!await mnSaveFirst()) return;
     const v5 = minutesView.value;
     if (id2 === "followup") {
-      openMinutesFollowup(v5 && v5.path, "distributed");
+      openMinutesFollowup(v5 && v5.path, "distributed", (ls2) => askShare(ls2, () => {
+        exportAs(id2);
+      }));
       return;
     }
     if (id2 === "followup-internal") {
@@ -73155,6 +73301,12 @@ ${d5.text}`);
     }
     const [fmt, ver] = id2.split(":");
     const r4 = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
+    if (!r4.ok && Array.isArray(r4.review) && r4.review.length) {
+      askShare(r4.review, () => {
+        exportAs(id2);
+      });
+      return;
+    }
     snack(r4.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").replace(/^Distributed minutes/, "Shareable minutes").split("\n")[0]);
   }
   async function readAgain() {
@@ -73531,7 +73683,8 @@ ${d5.text}`);
           busy: approving.value,
           onApprove: () => approveNow(true)
         }
-      )
+      ),
+      /* @__PURE__ */ u4(ShareReview, {})
     ] });
   }
   var mnMounted = false;
@@ -75051,7 +75204,7 @@ ${d5.text}`);
         }
       };
     };
-    const close = async () => {
+    const close2 = async () => {
       if (busy2) return;
       if (!viaServer()) {
         snack("Closing the day needs creaite to be running");
@@ -75190,7 +75343,7 @@ ${d5.text}`);
         /* @__PURE__ */ u4("footer", { class: "cdfoot", children: [
           /* @__PURE__ */ u4("span", { class: "left", children: sweeping ? "The check only suggests; closing now closes when it finishes." : `${step2 + 1} of 4` }),
           step2 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-cdback": "1", onClick: () => move(-1), children: "Back" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn", "data-dcnot": "1", onClick: notYet, children: "Not yet" }),
-          step2 < 3 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
+          step2 < 3 ? /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u4("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close2, children: day.closed ? "Close it again" : "Close the day" })
         ] })
       ] })
     ] }) });
@@ -80133,7 +80286,7 @@ ${d5.text}`);
       /** @type {HTMLDivElement | null} */
       null
     );
-    const close = (back2) => {
+    const close2 = (back2) => {
       const was = irAside.value;
       irAside.value = null;
       if (back2 && was && was.anchor && was.anchor.isConnected) was.anchor.focus({ preventScroll: true });
@@ -80153,10 +80306,10 @@ ${d5.text}`);
     const m5 = irModel().meetings.find((x5) => x5.id === a5.id);
     if (!m5) return null;
     const pick = (reason) => {
-      close(false);
+      close2(false);
       irNotNeeded(m5, reason);
     };
-    return /* @__PURE__ */ u4(MenuPanel, { bare: true, cls: "rvreason rjmenu", id: "irAside", label: "Not needed because", boxRef: box, anchor: a5.anchor, onClose: (how) => close(how === "esc"), onKey: (e4) => {
+    return /* @__PURE__ */ u4(MenuPanel, { bare: true, cls: "rvreason rjmenu", id: "irAside", label: "Not needed because", boxRef: box, anchor: a5.anchor, onClose: (how) => close2(how === "esc"), onKey: (e4) => {
       if (/^[1-4]$/.test(e4.key) && !e4.metaKey && !e4.ctrlKey && !e4.altKey) {
         e4.preventDefault();
         e4.stopPropagation();
@@ -82683,6 +82836,7 @@ Next: `;
         "dispPropsMarkup",
         "dispReset",
         "dispSelect",
+        "distributedOf",
         "dnBlock",
         "dnHtml",
         "dnList",
@@ -82934,6 +83088,7 @@ Next: `;
         "mdChat",
         "mdHtml",
         "mdInline",
+        "mdLines",
         "meNames",
         "meetingOfFile",
         "meetingRoute",

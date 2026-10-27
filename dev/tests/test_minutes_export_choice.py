@@ -61,6 +61,21 @@ class MinutesExportChoice(LiveBrowserCase):
             self.b.click(go)
             self.b.pump(0.7)
 
+    def hold_back_if_asked(self, wait=5):
+        """#329: the Review these lines before sharing box, if it opens: every line held back with its item, then Export again."""
+        try:
+            self.b.wait("(document.getElementById('mnShare')||{}).open", wait)
+        except Exception:
+            return []
+        lines = self.b.eval("[...document.querySelectorAll('#mnShare [data-share-key]')].map(li=>li.querySelector('div').textContent)")
+        self.assertEqual(self.b.eval("document.getElementById('mnShareH').textContent"), "Review these lines before sharing")
+        self.assertTrue(self.b.eval("document.getElementById('mnShareGo').disabled"), "Export again waits for every answer")
+        self.b.eval("document.querySelectorAll('#mnShare [data-share=hold]').forEach(b=>b.click())")
+        self.b.pump(0.3)
+        self.b.click("#mnShareGo")
+        self.b.pump(1.5)
+        return lines
+
     def open_menu(self):
         self.b.click("#v-minutes [data-mnexport]")
         self.b.wait("document.querySelector('#v-minutes .ddmenu.on')")
@@ -92,7 +107,7 @@ class MinutesExportChoice(LiveBrowserCase):
         lines = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].map(x=>[x.querySelector('b').textContent, x.textContent, x.getAttribute('aria-disabled'), x.getAttribute('data-tip')])")
         for name, whole, dis, tip in lines[:3]:
             self.assertEqual((dis, tip), ("true", "Approve the minutes first"), f"{name}: Shareable file is disabled on a draft, with its reason")
-            self.assertIn("check the Updates text", whole)
+            self.assertIn("the lines held back with them left out", whole)      # #329: such lines are asked about first
             self.assertNotIn("No Sensitive or Internal-only", whole, "no claim wider than the item rows")
         self.assertIsNone(lines[3][2], "the Shareable email works on a draft (existing behaviour)")
         self.assertEqual(lines[3][3], "Draft: check before sending", "with a tip, not a disable")
@@ -105,6 +120,8 @@ class MinutesExportChoice(LiveBrowserCase):
     def test_2_the_shareable_follow_up_is_the_default_pairing(self):
         self.open_menu()
         self.b.eval("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].find(x=>x.querySelector('b').textContent==='Draft the follow-up email').click()")
+        self.assertEqual(self.hold_back_if_asked(15), ["The committee reviewed the SOW and the pilot site.", "The pilot stays on the lighthouse site."],
+                         "#329: the lines that describe the Sensitive decision are asked about first")
         self.b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         self.assertEqual(self.ev("DE.version"), "distributed")
         words = self.ev("document.getElementById('deDlg').textContent")
@@ -129,15 +146,18 @@ class MinutesExportChoice(LiveBrowserCase):
                 with self.subTest(format=fmt, version=ver):
                     before = self.files()
                     self.export_done(label + suffix)
+                    if ver == "distributed" and self.hold_back_if_asked(2):      # #329: answered once (test_2 answers on the draft)
+                        self.b.wait("window.__exp.sent>=window.__exp.base+2 && window.__exp.done===window.__exp.sent", 90)
                     new = [f for f in self.files() - before if f.suffix == "." + fmt]
                     self.assertEqual(len(new), 1, f"{label}{suffix} made one {fmt} file: {new}")
                     text = export_text(self.v.root, new[0], fmt)
                     self.assertIn(KEPT, text, "the unmarked action is there (the file is not empty)")
-                    # The fixture's Updates summary repeats the Sensitive decision's words as a plain line; that line is not an
-                    # item row (only a line marked Internal only is withheld), so the decision is checked in its own section.
+                    # The fixture's Updates repeat the Sensitive decision's words as a plain line. #329: the Shareable file holds it
+                    # back with the decision (answered in the box), so Shareable is checked in the whole text; Internal keeps the
+                    # decision in its own section.
                     decisions = text[text.index("Decisions") if "Decisions" in text else text.upper().index("DECISIONS"):]
                     decisions = decisions[:decisions.upper().index("RISKS")]
-                    for s, where in ((SECRETS[0], decisions), (SECRETS[1], text)):
+                    for s, where in ((SECRETS[0], text if ver == "distributed" else decisions), (SECRETS[1], text)):
                         if ver == "distributed":
                             self.assertNotIn(s, where, f"Shareable {fmt} must not hold the Sensitive item {s!r}")
                         else:

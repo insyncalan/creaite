@@ -84,11 +84,27 @@ class MinutesViewV261(LiveBrowserCase):
     def test_01_the_sensitive_items_are_marked_in_the_record(self):
         self.assertEqual(self.ev("document.querySelectorAll('#v-minutes .mnsens').length"), 2, "the two marked rows carry the tag")
 
+    def hold_back_if_asked(self, wait=5):
+        """#329: the Review these lines before sharing box, if it opens: every line held back with its item, then Export again."""
+        try:
+            self.b.wait("(document.getElementById('mnShare')||{}).open", wait)
+        except Exception:
+            return []
+        lines = self.b.eval("[...document.querySelectorAll('#mnShare [data-share-key]')].map(li=>li.querySelector('div').textContent)")
+        self.assertEqual(self.b.eval("document.getElementById('mnShareH').textContent"), "Review these lines before sharing")
+        self.assertTrue(self.b.eval("document.getElementById('mnShareGo').disabled"), "Export again waits for every answer")
+        self.b.eval("document.querySelectorAll('#mnShare [data-share=hold]').forEach(b=>b.click())")
+        self.b.pump(0.3)
+        self.b.click("#mnShareGo")
+        self.b.pump(1.5)
+        return lines
+
     def open_followup(self, label):
         b = self.b
         b.click("#v-minutes [data-mnexport]")
         b.wait("document.querySelector('#v-minutes .ddmenu.on')")
         b.eval("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].find(x=>x.textContent.includes(%s)).click()" % json.dumps(label))
+        self.asked = self.hold_back_if_asked(15) if "Internal" not in label else []
         b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
         b.pump(0.4)
         return (self.ev("document.getElementById('deDlg').textContent + ' ' + document.querySelector('#deSubj').value"),
@@ -96,6 +112,9 @@ class MinutesViewV261(LiveBrowserCase):
 
     def test_02_the_default_follow_up_email_is_the_distributed_version_with_no_sensitive_item(self):
         whole, subject = self.open_followup("Draft the follow-up email")
+        self.assertEqual(self.asked, ["The committee reviewed the SOW and the pilot site.", "The pilot stays on the lighthouse site."],
+                         "#329: the lines that describe the Sensitive decision are asked about first, then held back")
+        self.assertNotIn("pilot site", self.ev("DE.summary"), "the summary line held back with the decision")
         self.assertNotIn("[Internal]", subject, "the default is not the Internal version")
         self.assertNotIn(SECRET_DECISION, whole, "a Sensitive decision never reaches the default draft")
         self.assertNotIn(SECRET_ACTION, whole, "a Sensitive action never reaches the default draft")
@@ -122,6 +141,13 @@ class MinutesViewV261(LiveBrowserCase):
         for version in ("internal", "distributed"):
             with self.subTest(version=version):
                 f = self.facts(version)
+                if f.get("review"):                   # #329: answered first (test_02 answers them in the box when it runs first)
+                    self.assertEqual(f["message"], "Review these lines before sharing.")
+                    answers = [{"key": x["key"], "ref": x["ref"], "answer": "hold"} for x in f["review"]]
+                    subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts'); import minutes_record; "
+                                    f"minutes_record.change({me.DRAFT!r}, {{'op': 'shareable', 'answers': {answers!r}}})"],
+                                   cwd=self.v.root, capture_output=True, text=True, check=True)
+                    f = self.facts(version)
                 words = [i["t"] for i in f["items"]]
                 self.assertIn(OPEN_ACTION, words, f"{version}: the unmarked action")
                 if version == "internal":

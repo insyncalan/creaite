@@ -167,7 +167,9 @@ export function openFollowup(t){ const m=(D.hub||{})[t]; if(!m){ snack("That mee
 /* v2.1.0 P7: from the minutes view's Export menu, for the version shown ("internal" or "distributed"). The server builds the content
    (minutes_record.followup_facts: the distributed version through distributed_of, so no Internal only, Sensitive, partner-only or
    excluded content reaches the draft); the Internal version is marked Internal. The same popup, builder and Polish as the meeting's. */
-export async function openMinutesFollowup(path,version){ const r=await api("/api/minutes/followup",{path,version});
+/* #329: onReview(lines) when the Shareable email waits for lines that may describe a held item (minutes_record.describing_lines) */
+export async function openMinutesFollowup(path,version,onReview){ const r=await api("/api/minutes/followup",{path,version});
+  if(r&&!r.ok&&Array.isArray(r.review)&&r.review.length&&onReview){ onReview(r.review); return; }
   if(!r||!r.ok){ snack(oneLine((r&&r.message)||"")||"Couldn't read the minutes for the email"); return; }
   const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred({...i,sens:false}));
   if(!ok.length){ snack(version==="distributed"?"The distributed version has no actions or decisions to put in an email":"The minutes have no actions or decisions to put in an email"); return; }

@@ -8,7 +8,8 @@
      a figure the transcript doesn't say, an item your project record's checks refused;
    - distributedOf(doc): the distributed version (BL-338 point 13) as the page shows it: the internal record without the lines
      and rows marked Internal only (`layout.internal_only`) and without withheld items (Sensitive, partner-only or labelled to
-     exclude: the item's own flags and the route's `withheld`, from its labels). minutes_record.distributed_of makes the same
+     exclude: the item's own flags and the route's `withheld`, from its labels), and (#329) without a line held back with a held
+     item (`layout.carried`; one whose item has gone too). minutes_record.distributed_of makes the same
      record on the server for /api/minutes/export with version "distributed"; this is the view's preview of it. */
 import { deadlineOf, deadlineDay } from "./DeadlinePopover.jsx";
 import { fd } from "../../core/page.js";
@@ -80,6 +81,39 @@ export function toggleInternal(doc, section, what) {
     @param {SheetDoc} doc @param {string} ref @param {Record<string, string>} [held] the route's `withheld` */
 export const heldBack = (doc, ref, held) => (held && held[ref]) || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
 
+/** #329: a prose line's key in layout.carried and layout.reviewed: its section and its words (minutes_record.line_key).
+    @param {string} section @param {string} text */
+export const lineKey = (section, text) => `${section}:${text}`;
+/** layout.carried: {line key: the row ref of the item the line is held back with}. @param {SheetDoc} doc @returns {Record<string, string>} */
+export const carriedOf = doc => { const c = /** @type {any} */ (doc.layout || {}).carried; return c && typeof c === "object" && !Array.isArray(c) ? c : {}; };
+/** The record's own key for a carried line's item, or null when it has gone (minutes_record._carried_item): the ref while the record
+    holds it, an ID it holds an item by, the item a draft's "@3" became on approval, or the line kept in the minutes only it was.
+    @param {SheetDoc} doc @param {string} ref @returns {string|null} */
+export function carriedItem(doc, ref) {
+  const all = /** @type {Record<string, any>} */ (doc.items || {}), r = String(ref || "");
+  if (all[r] && typeof all[r] === "object") return r;
+  for (const [k, it] of Object.entries(all)) if (it && typeof it === "object" && r && (it.id === r || `@${it.n}` === r)) return k;
+  for (const s of doc.sections || []) for (const x of /** @type {any[]} */ (s.rows || [])) if (x && x.kept_line && x.was === r) return r;
+  return null;
+}
+/** Whether the shareable version leaves a line out because it is held back with an item that is held (or gone: fail closed).
+    @param {SheetDoc} doc @param {string} section @param {string} text @param {Record<string, string>} [held] */
+export function carriedOut(doc, section, text, held) {
+  const ref = carriedOf(doc)[lineKey(section, text)];
+  if (typeof ref !== "string") return false;
+  const k = carriedItem(doc, ref);
+  return k == null || !!heldBack(doc, k, held) || !!(held && held[ref]);
+}
+/** A held item in a few words, for "held back with …". @param {SheetDoc} doc @param {string} ref */
+export function itemName(doc, ref) {
+  const k = carriedItem(doc, ref) || ref, it = /** @type {any} */ ((doc.items || {})[k]) || {}, v = { ...(it.values || {}), ...(it.changes || {}) };
+  let name = String(v.description || v.decision || v.title || "");
+  for (const s of doc.sections || []) for (const r of /** @type {any[]} */ (s.rows || []))
+    if (!name && r && (r.ref === k || r.was === k)) name = String(Object.values(r.cells || {}).find(c => c && !/^(Risk|Issue|Assumption|Dependency)$/.test(String(c))) || "");
+  name = name || String(ref);
+  return name.length > 80 ? `${name.slice(0, 79).trim()}…` : name;
+}
+
 /** The distributed version as the page shows it. @param {SheetDoc} doc @param {Record<string, string>} [held] @returns {SheetDoc} */
 export function distributedOf(doc, held) {
   const sections = doc.sections.map(s => {
@@ -88,7 +122,7 @@ export function distributedOf(doc, held) {
       return { ...s, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
     }
     if (s.type === "header" || !s.text) return s;
-    const kept = mdLines(s.text).filter(l => !isInternal(doc, s.id, { text: l.text }));
+    const kept = mdLines(s.text).filter(l => !isInternal(doc, s.id, { text: l.text }) && !carriedOut(doc, s.id, l.text, held));
     return { ...s, text: mdUnlines(kept) || "None recorded." };
   });
   return { ...doc, audience: "distributed", sections };
@@ -103,7 +137,7 @@ export function leftOut(doc, held) {
       if (why) out.push(`${s.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
       else if (r.ref && isInternal(doc, s.id, { ref: r.ref, n: /** @type {any} */ (r).n })) out.push(`${s.heading}: ${Object.values(r.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
     }
-    if (s.type !== "table" && s.type !== "header") for (const l of mdLines(s.text || "")) if (isInternal(doc, s.id, { text: l.text })) out.push(`${s.heading}: ${l.text.slice(0, 80)}`);
+    if (s.type !== "table" && s.type !== "header") for (const l of mdLines(s.text || "")) if (isInternal(doc, s.id, { text: l.text }) || carriedOut(doc, s.id, l.text, held)) out.push(`${s.heading}: ${l.text.slice(0, 80)}`);
   }
   return out;
 }

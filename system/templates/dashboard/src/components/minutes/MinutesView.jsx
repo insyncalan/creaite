@@ -29,6 +29,7 @@ import { ItemTable } from "./ItemTable.jsx";
 import { installRowKeys, rowKeysReset } from "./rowKeys.js";
 import { checksOf } from "./minutesDoc.js";
 import { SummaryText, TextLines } from "./TextLines.jsx";
+import { askShare, ShareReview } from "./ShareReview.jsx";
 import { approveLabel, approveProblems, trackCounts, trackedKinds, trackSummary } from "./track.js";
 import { jumpTo, TranscriptPane } from "./TranscriptPane.jsx";
 import { REV } from "../../core/data.js";
@@ -58,10 +59,10 @@ export const mnExports = (/** @type {boolean} */ draft) => {
   const hold = draft ? "Approve the minutes first" : undefined;      // a draft has no Shareable file yet
   return [
   { head: "Shareable: for sending" },
-  { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-  { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-  { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items left out; check the Updates text", disabled: draft, tip: hold },
-  // The email's summary is free text from the Shareable version (minutes_record.py followup_facts), so it has the same #329 gap as the Updates text.
+  { id: "docx:distributed", name: "Word", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+  { id: "pdf:distributed", name: "PDF", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+  { id: "html:distributed", name: "HTML", line: "Shareable. Sensitive items and the lines held back with them left out", disabled: draft, tip: hold },
+  // #329: a line that may describe a Sensitive item is asked about first (minutes_record.describing_lines), for the email too.
   { id: "followup", name: "Draft the follow-up email", line: "Shareable: Sensitive and Internal-only items left out; copied, never sent", tip: draft ? "Draft: check before sending" : undefined },
   { id: "sep", sep: true },
   { head: "Internal: colleagues only" },
@@ -99,10 +100,11 @@ async function mnSaveFirst() {
 async function exportAs(id) {
   if (!(await mnSaveFirst())) return;
   const v = minutesView.value;
-  if (id === "followup") { openMinutesFollowup(v && v.path, "distributed"); return; }          // the default: nothing Internal or Sensitive
+  if (id === "followup") { openMinutesFollowup(v && v.path, "distributed", (/** @type {any[]} */ ls) => askShare(ls, () => { exportAs(id); })); return; }   // the default: nothing Internal or Sensitive; #329: a line that may describe a held item is answered first
   if (id === "followup-internal") { openMinutesFollowup(v && v.path, "internal"); return; }   // a deliberate choice
   const [fmt, ver] = id.split(":");
   const r = await exportMinutes(fmt, ver === "distributed" ? "distributed" : "internal");
+  if (!r.ok && Array.isArray(r.review) && r.review.length) { askShare(r.review, () => { exportAs(id); }); return; }   // #329: nothing made yet
   snack(r.ok ? `Exported${ver === "distributed" ? " (Shareable)" : ""}${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").replace(/^Distributed minutes/, "Shareable minutes").split("\n")[0]);
 }
 
@@ -316,6 +318,7 @@ export function MinutesView() {
       </div>
       <ApprovePopup problems={problems} checks={checks.filter(c => !(c.kind === "owner" && problems.some(p => p.n === c.n)))} files={v.plan ? v.plan.files : []} transcripts={v.plan ? v.plan.transcripts.length : 0}
         busy={approving.value} onApprove={() => approveNow(true)} />
+      <ShareReview />
     </div>
   );
 }
