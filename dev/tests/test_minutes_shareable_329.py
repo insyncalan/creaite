@@ -129,7 +129,31 @@ class Candidates(unittest.TestCase):
     def test_an_internal_only_carried_or_reviewed_line_is_not_listed(self):
         self.assertEqual(self.keys(record(internal=[{"section": "updates", "text": SECRET}])), [])
         self.assertEqual(self.keys(record(carried={KEY: "@8"})), [])
-        self.assertEqual(self.keys(record(reviewed={KEY: mr.text_hash(SECRET)})), [])
+        doc = record()
+        doc["layout"]["reviewed"] = {KEY: mr.kept_value(doc, SECRET)}
+        self.assertEqual(self.keys(doc), [])
+
+    def test_an_older_keep_without_its_refs_is_asked_again_once(self):
+        """A Keep from before Cap's re-check holds the hash alone: it names no held item, so it is asked again (failing towards a
+        warning); kept again, it holds the refs."""
+        doc = record(reviewed={KEY: mr.text_hash(SECRET)})
+        self.assertEqual(self.keys(doc), [KEY])
+        doc["layout"]["reviewed"] = {KEY: mr.kept_value(doc, SECRET)}
+        self.assertEqual(self.keys(doc), [])
+
+    def test_a_kept_line_is_asked_again_when_a_newly_held_item_matches_it(self):
+        """Cap's re-check MEDIUM, his reproducer: a line matching only @8 is kept; later @1 "Book the UAT environment" is flagged
+        Sensitive too. The Keep was a judgement about @8, not @1, so the line is asked about again."""
+        line = "Client data team restructure may affect UAT environment booking"
+        key = mr.line_key("updates", line)
+        doc = record(updates=[line] + ORDINARY)
+        self.assertEqual(self.keys(doc), [key])
+        doc["layout"]["reviewed"] = {key: mr.kept_value(doc, line)}
+        kept = doc["layout"]["reviewed"][key]
+        self.assertEqual(kept, mr.text_hash(line) + "|@8", "hashes and refs only")
+        self.assertEqual(self.keys(doc), [], "kept against @8")
+        doc["items"]["@1"]["flags"] = ["sensitive"]
+        self.assertEqual(self.keys(doc), [key], "@1 is newly held and matches it: asked again")
 
     def test_a_reviewed_line_whose_words_changed_is_listed_again(self):
         changed = SECRET.replace("HR confirms", "HR has confirmed")
@@ -346,6 +370,8 @@ class CapsProbes(unittest.TestCase):
         self.assertEqual(len(listed(probe(action="Restructuring talks went well"))), 0, "one shared word is still not enough")
         self.assertEqual(mr._stem("data"), "data", "four letters stay")
         self.assertEqual(mr._stem("teams"), "team")
+        for a, b in (("process", "processing"), ("access", "accessed"), ("business", "businesses"), ("redundancy", "redundancies")):
+            self.assertEqual(mr._stem(a), mr._stem(b), (a, b))                   # Cap's re-check LOW 1
 
     def test_an_id_in_any_case_is_named(self):
         for line in ("Moved abc-r-004 to next month", "Moved ABC-R-004 to next month", "Moved Abc-R-004 to next month"):
@@ -406,7 +432,7 @@ class RowAnswers(unittest.TestCase):
     def test_a_kept_row_shows_until_its_words_change(self):
         doc = probe()
         text = mr._row_text(doc["sections"][4]["rows"][0])
-        doc["layout"]["reviewed"] = {"row:@1": mr.text_hash(text)}
+        doc["layout"]["reviewed"] = {"row:@1": mr.kept_value(doc, text)}
         self.assertEqual(listed(doc), {})
         self.assertIn(PROBE, shared(doc))
         doc["sections"][4]["rows"][0]["cells"]["owner"] = "Jane Doe"
@@ -433,7 +459,7 @@ class HeadingAnswers(unittest.TestCase):
 
     def test_a_kept_heading_stays(self):
         doc = probe(heading="Client data team restructure", action="Book the meeting rooms")
-        doc["layout"]["reviewed"] = {"heading:updates": mr.text_hash("Client data team restructure")}
+        doc["layout"]["reviewed"] = {"heading:updates": mr.kept_value(doc, "Client data team restructure")}
         self.assertEqual(listed(doc), {})
         self.assertIn("Client data team restructure", shared(doc))
 

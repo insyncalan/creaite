@@ -1522,7 +1522,8 @@ def _without_items(out, gone_refs, version):
 # - layout.carried = {key: [row refs]}: a line or row Alan holds back with the held items it matched (one ref, a string, is read
 #   too). distributed_of drops it while any of them is withheld, and fails closed (dropped) when one is no longer in the record.
 # - layout.plain = {key: "plain"}: a heading or the title shown plain in the shareable version (plain_heading, plain_title).
-# - layout.reviewed = {key: text_hash of its words}: kept as it is in the shareable version; asked again only when its words change.
+# - layout.reviewed = {key: "<text_hash of its words>|<the held refs it matched when kept, comma separated>"}: kept as it is in the
+#   shareable version; asked again when its words change, or when it matches a held item it wasn't kept against (Cap's re-check).
 # - describing_lines(doc): the candidates of the shareable version itself (distributed_of, so what it leaves out is never asked
 #   about and nothing it shows is missed) not yet answered that look like they describe a withheld item. Every path that makes a
 #   shareable copy (the export, the follow-up email) refuses while there are any: REVIEW_WORDS, with the lines.
@@ -1681,8 +1682,11 @@ def _stem(w):
     """A word's simple form: a final "ions", "ion", "ing", "ed", "es" or "s" dropped (twice at most: "restructurings"), else a
     final "e", while 4 letters stay ("restructuring", "restructured" and "restructure" all read "restructur")."""
     cut = False
+    if w.endswith("ies") and len(w) - 3 >= 4:                  # Cap's LOW 1: "redundancies" reads "redundancy"
+        return w[:-3] + "y"
     for _ in range(2):
-        suf = next((x for x in _SUFFIXES if w.endswith(x) and len(w) - len(x) >= 4), None)
+        suf = next((x for x in _SUFFIXES if w.endswith(x) and len(w) - len(x) >= 4
+                    and not (x == "s" and w.endswith("ss"))), None)    # "process", "access", "business" keep their "ss"
         if suf is None:
             break
         w, cut = w[:-len(suf)], True
@@ -1744,14 +1748,28 @@ def describing_lines(doc, held=None):
     items = [(ref, *_held_item(doc, ref)) for ref in held]
     out, seen = [], set()
     for key, kind, text in shown_text(distributed_of(doc, held)):
-        if key in seen or reviewed.get(key) == text_hash(text):
+        if key in seen:
             continue
         seen.add(key)
         hits = _describes(text, items)
-        if hits:
+        if hits and not _kept_for(reviewed.get(key), text, [h["ref"] for h in hits]):
             out.append({"key": key, "kind": kind, "text": text, "ref": hits[0]["ref"], "refs": [h["ref"] for h in hits],
                         "item": hits[0]["item"], "why": hits[0]["why"]})
     return out
+
+
+def kept_value(doc, text):
+    """What a Keep stores: the words' hash and the held refs the text matches now ("<hash>|<ref>,<ref>"): hashes and refs only."""
+    held = withheld(doc)
+    refs = [h["ref"] for h in _describes(text, [(ref, *_held_item(doc, ref)) for ref in held])] if held else []
+    return text_hash(text) + "|" + ",".join(sorted(set(refs)))
+
+
+def _kept_for(value, text, refs):
+    """Whether a Keep (`value`, kept_value's form) still covers `text` matching held `refs`: the same words, and every ref among those
+    it was kept against. An older Keep (the hash alone) names no refs, so it is asked again once (failing towards a warning)."""
+    h, _, kept = str(value or "").partition("|")
+    return bool(value) and h == text_hash(text) and set(refs) <= set(x for x in kept.split(",") if x)
 
 
 def _describes(text, items):
@@ -1810,7 +1828,7 @@ def with_shared_marks(rel, doc):
     return {**doc, "layout": lay}
 
 
-def _write_shared(rel, answers, texts):
+def _write_shared(rel, answers, texts, doc):
     """Filed minutes' answers kept in minutes-shareable.json (written whole, then moved into place): hashes and refs, never words."""
     d = {"version": 1, "records": _shared_records()}
     rec = d["records"].setdefault(rel, {})
@@ -1832,7 +1850,7 @@ def _write_shared(rel, answers, texts):
             plain[h] = "plain"
             reviewed.pop(h, None)
         else:
-            reviewed[h] = text_hash(texts[a["key"]][1])
+            reviewed[h] = kept_value(doc, texts[a["key"]][1])
             released.add(h)          # kept: a hold or plain heading in the record's own layout no longer counts
     d["records"][rel] = {"carried": carried, "reviewed": reviewed, "plain": plain, "released": sorted(released)}
     SHARED_MARKS.parent.mkdir(parents=True, exist_ok=True)
@@ -1901,14 +1919,14 @@ def shareable_answer(path, answers, base_version=None, via="dashboard"):
                 plain[a["key"]] = "plain"
                 reviewed.pop(a["key"], None)
             elif a["answer"] == "keep":
-                reviewed[a["key"]] = text_hash(texts[a["key"]][1])
+                reviewed[a["key"]] = kept_value(doc, texts[a["key"]][1])
         cur["layout"] = {**(cur.get("layout") or {}), "carried": carried, "reviewed": reviewed, "plain": plain}
         r = save_record(rel, cur, "Minutes: lines for the shareable version", base_version=base_version, via=via)
         if r.get("needs_approval"):
             return r
         version = r["version"]
     else:
-        _write_shared(rel, checked, texts)
+        _write_shared(rel, checked, texts, doc)
         version = doc.get("version")
     n = len(checked)
     words = ("The line shows in the shareable version again." if all(a["answer"] == "release" for a in checked) else

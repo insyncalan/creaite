@@ -15,7 +15,7 @@ import { changeMinutes } from "../../stores/minutes.js";
 /** The answers each kind of line takes, as [answer, button label] (minutes_record.ANSWERS_OF; the server checks them again). */
 const ANSWERS = /** @type {Record<string, [string, string][]>} */ ({
   line: [["hold", "Hold back with it"], ["keep", "Keep"]], row: [["hold", "Hold back with it"], ["keep", "Keep"]],
-  heading: [["plain", "Use a plain heading"], ["keep", "Keep"]], title: [["plain", "Use a plain heading"], ["keep", "Keep"]],
+  heading: [["plain", "Use a plain heading"], ["keep", "Keep"]], title: [["plain", "Use a plain title"], ["keep", "Keep"]],
   header: [["keep", "Keep"]] });
 /** What a line is, in words, before it. */
 const WHAT = /** @type {Record<string, string>} */ ({ row: "A row", heading: "A heading", title: "The title", header: "The meeting's details" });
