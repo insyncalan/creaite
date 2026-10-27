@@ -1687,11 +1687,15 @@ def help_sections():
 
 def sweep_due_info():
     """#200: whether the daily sweep is due (sweep.due_info(): the last success before today's sweep.due_from, and now after it),
-    for Today's 'Sweep due since 07:00' banner. {due, due_from, last}; CREAITE_NOW fixes the clock as in sweep.py."""
+    for Today's 'Sweep due since 07:00' banner. {due, due_from, last[, failed: {at, retry}]} (#370); CREAITE_NOW fixes the clock as in sweep.py."""
     try:
         import sweep
         d = sweep.due_info()
-        return {"due": bool(d["due"]), "due_from": d["due_from"], "last": d["last"]}
+        out = {"due": bool(d["due"]), "due_from": d["due_from"], "last": d["last"]}
+        f = sweep.failed_today()      # #370: a check that didn't run today, until one has run since due_from; times only
+        if f:
+            out["failed"] = {"at": f["at"][11:16], "retry": f["retry_at"][11:16] if f["retry_at"] else None}
+        return out
     except Exception as e:      # the banner is a convenience; a failure here never stops the build
         swallowed("sweep_due", e)
         return {"due": False, "due_from": "07:00", "last": None}

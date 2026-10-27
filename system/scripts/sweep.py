@@ -92,6 +92,7 @@ import calendar_gateway  # noqa: E402  (#375 E1: the one read path for the saved
 import invite_clean  # noqa: E402  (#265 review M1, M2: what a saved invite may keep)
 
 LOCK = paths.STAGING / "sweep.lock"
+SWEEP_FAILED = paths.STAGING / "sweep-failed.json"          # #370: {at, retry_at, day} of a missed check (times only); `fail` writes it, `done` clears it
 STALE = timedelta(minutes=30)
 
 
@@ -124,6 +125,20 @@ def due_info():
     due = t >= due_from and (last is None or last < due_from)
     return {"due": due, "now": t.strftime("%Y-%m-%d %H:%M"), "due_from": due_from.strftime("%H:%M"),
             "last": last.strftime("%Y-%m-%d %H:%M") if last else None}
+
+
+def failed_today():
+    """#370: {at, retry_at, day} when a check failed today and no check has passed today's sweep.due_from since, else None.
+    Times only (system/staging/sweep-failed.json, written by `fail`, cleared by `done`); a file from another day is ignored."""
+    try:
+        d = json.loads(SWEEP_FAILED.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(d, dict) or d.get("day") != now().strftime("%Y-%m-%d") or not d.get("at"):
+        return None
+    if not due_info()["due"]:                    # a check has passed due_from since (or it isn't due_from yet): nothing is missed
+        return None
+    return {"at": str(d["at"]), "retry_at": d.get("retry_at") or None, "day": d["day"]}
 
 
 def lookback_cap(s):
@@ -2808,6 +2823,7 @@ def main(argv):
     if a.cmd == "stage":
         return stage(a.spec)
     if a.cmd == "done":
+        SWEEP_FAILED.unlink(missing_ok=True)       # #370: a check ran, so today's missed-check notice goes
         if a.normal:
             paths.SWEEP_STATE.write_text(a.started[:16] + "\n", encoding="utf-8")
         counts, run = take_tally(with_run=True)                 # BL-97: what the ignore rules dropped; #253: the run's counts
@@ -2835,6 +2851,9 @@ def main(argv):
         take_tally()
         log_line(f"sweep FAILED | {a.message}")
         debuglog.error("sweep", f"sweep failed: {debuglog.rule(a.message, 200)}")
+        t = now()                                        # #370: Today and Health say a check didn't run; times only, no retry of its own
+        paths.write_text_atomic(SWEEP_FAILED, json.dumps({"at": t.strftime("%Y-%m-%d %H:%M"), "retry_at": None,
+                                                                "day": t.strftime("%Y-%m-%d")}, indent=1) + "\n")
         print("Failure recorded; the next sweep will cover the gap.")
         return 0
     ap.print_help()

@@ -78,6 +78,7 @@ PLAIN = {
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
     "sweep_lock": ("A mail and Teams check looks stuck", "manual"),   # BL-328: health_fixes builds its Release
+    "sweep_failed": ("A mail and Teams check didn't run", "manual"),   # #370: health_fixes builds its Check now
     "debug_log": ("Errors keep coming back", "manual"),
     "minutes_drafts": ("Minutes waiting in Review have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),
@@ -168,7 +169,7 @@ def home_short(text):
 def built_fix(fix_id, kind=""):
     """A built fix (health_fixes.describe), with the fields every fix has, so the page reads one shape."""
     d = health_fixes.describe(fix_id)
-    return {**d, "kind": kind or fix_id, "would_run": d.get("command") or d.get("url", ""), "waits_for": "", "how": d["does"]}
+    return {**d, "kind": kind or fix_id, "would_run": d.get("command") or d.get("url") or d.get("call", ""), "waits_for": "", "how": d["does"]}
 
 
 def fix_for(kind, problem_id=None, detail=""):

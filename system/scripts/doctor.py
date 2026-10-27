@@ -659,6 +659,17 @@ def sweep_lock():
                   f"Release it (system/scripts/run sweep.py unlock --if-idle)")
 
 
+# ===== #370: a mail and Teams check that didn't run =====
+def sweep_failed():
+    """A check that failed today (sweep.py fail) and none has run since: a warning, with Check now. Words as Alan approved them."""
+    import sweep
+    f = sweep.failed_today()
+    if not f:
+        return True, "no missed check today"
+    retry = f" It tried again at {f['retry_at'][11:16]}." if f["retry_at"] else ""
+    return None, "creaite couldn't reach Microsoft 365 when it started." + retry
+
+
 # ===== BL-323: the weekly restore check and the last Tidy up, from backup.py's state (read only) =====
 def backup_check():
     """The weekly restore check (backup.verify): when it last ran and what it found; a problem says what to do."""
@@ -863,6 +874,7 @@ def run_checks():
     check("Backup restore check", backup_check)            # BL-323
     check("Tidy up of old backups", tidy_up)               # BL-323
     check("Sweep lock", sweep_lock)                           # BL-328
+    check("Missed mail and Teams check", sweep_failed)       # #370
     check("Debug log", debug_log)
     check("Staged minutes have their Word draft", minutes_drafts)   # BL-260
     check("ask creaite's refused commands", refused_commands)     # BL-252 (fix-small-17)

@@ -57583,9 +57583,10 @@ ${pre}**Current state title:** ${title}`);
     const d5 = SDMEM || store.get(SDKEY, null);
     return !!(d5 && d5.day === TODAY && d5.last === sdLast());
   }
+  var sweepFailed = () => !!(D.sweep_due && D.sweep_due.failed);
   function sweepDueShown() {
     const sd2 = D.sweep_due;
-    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && !sweepDueDismissed();
+    return !!(sd2 && sd2.due) && !D.dev && !(setupShown() && !swept()) && (sweepFailed() || !sweepDueDismissed());
   }
   function renderOwnFolders() {
     const box = $("#ownFolders");
@@ -57608,6 +57609,10 @@ ${pre}**Current state title:** ${title}`);
       putHTML(box, html``);
       return;
     }
+    if (sweepFailed()) {
+      putHTML(box, html`<b>Today's mail and Teams check didn't run.</b> <button type="button" class="btn primary sd-run" id="sweepFailedRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span>`);
+      return;
+    }
     putHTML(box, html`<b>Mail and Teams not checked yet today.</b> <span class="sd-last">${D.sweep_due.last ? `Last checked ${fd(String(D.sweep_due.last))}.` : "Not checked yet."}</span> <button type="button" class="btn primary sd-run" id="sweepRun">Check now</button><span class="sd-off">creaite isn't running. Reopen the creaite app, then check now.</span><button type="button" class="ib sd-x" id="sweepX" aria-label="Dismiss until the next check is due" data-tip="Dismiss until the next check is due">${raw(ic("x"))}</button>`);
   }
   document.addEventListener("click", (e4) => {
@@ -57625,6 +57630,20 @@ ${pre}**Current state title:** ${title}`);
         v5.focus();
       }
     }
+  });
+  document.addEventListener("click", async (e4) => {
+    if (!e4.target.closest("#sweepFailedRun")) return;
+    e4.preventDefault();
+    if (!viaServer()) {
+      snack("creaite isn't running");
+      return;
+    }
+    if (shared.BUSY) {
+      snack("ask creaite is busy; try again when it's finished");
+      return;
+    }
+    const r4 = await api("/api/day/catchup", { force: true });
+    snack(oneLine(r4.message) || (r4.ok ? "Checking your mail and Teams" : "The check couldn't start"));
   });
   document.addEventListener("click", (e4) => {
     if (!e4.target.closest("#sweepRun")) return;
@@ -59107,7 +59126,7 @@ ${pre}**Current state title:** ${title}`);
   };
   var CARD_WAITING = "On the approval card, waiting for you";
   async function runHealthFix(f5) {
-    const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
+    const r4 = f5.call ? await api(f5.call, {}) : await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
     if (r4.ok && r4.card) {
       markCardWaiting(f5.id || "");
       snack(CARD_WAITING + ": nothing moves until you approve it.");
