@@ -82,7 +82,7 @@ class TitleCentre(LiveBrowserCase):
                 for n in (1, 4, 8, 12, 16, 20, 24, 30, 40, 60):
                     b.eval("(s=>{ const td=document.querySelector(s), t=[...td.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim()).pop();"
                            " t.textContent=%r; })(%r)" % (("Book the room " * 6)[:n].strip() or "B", sel))
-                    b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,120))))")   # wkPlace runs on the next frame
+                    b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,120))))")   # the page places the ID on the next frame
                     self.assertEqual(b.eval(hit % sel), "", (dens, rid, n))
 
 
