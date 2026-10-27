@@ -112,5 +112,135 @@ class ProcessedInAnEarlierWeek(unittest.TestCase):
         self.assertEqual([r["processed"] for r in rows], [None, None])
 
 
+class ReviewFindings(unittest.TestCase):
+    """Stark's review of 1174b7b1 (27-10-2026): two MEDIUMs and the surviving mutants, with Jarvis's ruling on #232 E1."""
+
+    def test_a_set_aside_twin_is_never_guessed(self):
+        """MEDIUM 1: the day's count includes a meeting set aside (Not needed, Later): the row says how many share its title."""
+        m = model([cal(2, "2026-10-05", "15:00", "Weekly sync", transcript="available", same_title=2)], files=[FILE],
+                  queue=[q(1, "proposed-sync.json")], meta=META)
+        self.assertEqual(m["counts"]["arrived"], 1)
+        self.assertEqual([r["src"] for r in m["meetings"] if r["files"]], ["upload"])
+
+    def test_someone_elses_minutes_never_link(self):
+        """MEDIUM 2, Jarvis's ruling: #232 E1 holds; someone else's minutes never mark the meeting processed, drafted or done."""
+        meta = {"proposed-sync.json": dict(META["proposed-sync.json"], transcript=None, kind="minutes by others")}
+        m = model([cal(2, "2026-10-05", "15:00", "Weekly sync", transcript="available")], queue=[q(1, "proposed-sync.json")], meta=meta)
+        self.assertEqual(m["counts"]["arrived"], 1)
+        done = [{"key": FP, "day": "2026-10-05", "title": "Weekly sync", "path": "projects/ABC Alpha/minutes/x.docx", "p": "ABC"}]
+        m = build_dashboard.intake_review_model({"rows": [cal(2, "2026-10-05", "15:00", "Weekly sync", transcript="available")]}, [], [],
+                                                {}, TODAY, 14, done=done, others={FP})
+        self.assertEqual(m["counts"]["arrived"], 1, "their filing stays its own Done row")
+        self.assertEqual(m["counts"]["approved"], 1)
+
+    def test_an_empty_title_never_links(self):
+        meta = {"proposed-sync.json": dict(META["proposed-sync.json"], mkey="fp:2026-10-05||9f2c1a")}
+        m = model([cal(2, "2026-10-05", "15:00", "[ABC]", transcript="available")], files=[FILE], queue=[q(1, "proposed-sync.json")],
+                  meta=meta)
+        self.assertEqual(m["counts"]["arrived"], 1)
+
+
+class ProcessedLines(unittest.TestCase):
+    """What processed.txt says: comment lines, rejected minutes and someone else's minutes are never a processing of the meeting."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.processed = Path(self.tmp.name) / "processed.txt"
+        for p in (mock.patch.object(paths, "PROCESSED", self.processed),):
+            p.start()
+            self.addCleanup(p.stop)
+
+    def lines(self, *rows):
+        self.processed.write_text("".join(r + "\n" for r in rows), encoding="utf-8")
+
+    def test_a_comment_line_is_not_a_record(self):
+        self.lines("# 2026-09-29 | fp:2026-09-28|weekly sync|9f2c1a | projects/ABC Alpha/minutes/x.docx | 3")
+        self.assertIsNone(minutes.processed_on_meeting("2026-09-28", "Weekly sync"))
+
+    def test_rejected_minutes_are_not_a_processing(self):
+        self.lines("2026-09-29 | fp:2026-09-28|weekly sync|9f2c1a | not filed | 0")
+        self.assertIsNone(minutes.processed_on_meeting("2026-09-28", "Weekly sync"))
+        self.lines("2026-09-29 | fp:2026-09-28|weekly sync|9f2c1a | not filed | 0",
+                   "2026-09-30 | fp:2026-09-28|weekly sync|77aa01 | projects/ABC Alpha/minutes/x.docx | 2")
+        self.assertEqual(minutes.processed_on_meeting("2026-09-28", "Weekly sync"), "2026-09-30")
+
+    def test_someone_elses_minutes_are_skipped(self):
+        self.lines("2026-09-29 | fp:2026-09-28|weekly sync|9f2c1a | projects/ABC Alpha/minutes/theirs.docx | 2")
+        self.assertIsNone(minutes.processed_on_meeting("2026-09-28", "Weekly sync", skip={"fp:2026-09-28|weekly sync|9f2c1a"}))
+
+    def test_the_meetings_own_processing_keeps_its_date(self):
+        """M9: a meeting processed under its own key keeps that date; a file's processing never replaces it."""
+        self.lines("2026-09-29 | calendar:ev-7 | projects/ABC Alpha/minutes/x.docx | 3",
+                   "2026-09-30 | fp:2026-09-28|weekly sync|9f2c1a | projects/ABC Alpha/minutes/y.docx | 1")
+        self.assertEqual(build_dashboard._inbox_done("2026-09-28", "Weekly sync", "ev-7", 1, set()), "2026-09-29")
+
+    def test_a_meeting_without_an_event_id_is_never_marked(self):
+        """M10: without an event ID the meeting can't be picked, so nothing marks it."""
+        self.lines("2026-09-29 | fp:2026-09-28|weekly sync|9f2c1a | projects/ABC Alpha/minutes/x.docx | 3")
+        self.assertIsNone(build_dashboard._inbox_done("2026-09-28", "Weekly sync", None, 1, set()))
+        self.assertEqual(build_dashboard._inbox_done("2026-09-28", "Weekly sync", "ev-7", 1, set()), "2026-09-29")
+
+    def test_the_days_titles_are_counted_as_minutes_matches_them(self):
+        """M14: '[ABC] Weekly sync' and 'Weekly sync' on one day are the same title, so neither is alone."""
+        evs = [{"title": "[ABC] Weekly sync"}, {"title": "Weekly  sync"}, {"title": "Supplier call"}, {}]
+        counts = build_dashboard._title_counts(evs)
+        self.assertEqual((counts["weekly sync"], counts["supplier call"], counts["meeting"]), (2, 1, 1))
+
+
+class InboxMeetingsRows(unittest.TestCase):
+    """inbox_meetings itself, in a temp vault: the count covers the day's set-aside meetings, and someone else's minutes in an
+    applied proposal never mark the calendar meeting processed."""
+    DAY = "2026-10-21"
+
+    def rows(self, events, processed, cleared=(), applied=None):
+        import json
+        import subprocess
+        from test_dashboard import populate
+        from test_tracker import Vault
+        v = Vault()
+        self.addCleanup(v.cleanup)
+        populate(v)
+        st = v.root / "system/staging"
+        (st / "calendar.json").write_text(json.dumps({"fetched": self.DAY + " 07:00", "days": {self.DAY: events}}), encoding="utf-8")
+        (v.root / "system/processed.txt").write_text("".join(r + "\n" for r in processed), encoding="utf-8")
+        if cleared:
+            (st / "intake-cleared.json").write_text(json.dumps({"cleared": list(cleared)}), encoding="utf-8")
+        if applied:
+            (st / "applied").mkdir(parents=True, exist_ok=True)
+            (st / "applied" / "proposed-theirs.json").write_text(json.dumps(applied), encoding="utf-8")
+        code = ("import json\nfrom datetime import date\nimport build_dashboard as bd\n"
+                f"print(json.dumps(bd.inbox_meetings(bd.paths.load_settings(), [], date.fromisoformat({self.DAY!r}))))")
+        r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts')\n" + code], cwd=v.root,
+                           capture_output=True, text=True, check=True)
+        return {m["id"]: m for m in json.loads(r.stdout)["rows"]}
+
+    @staticmethod
+    def ev(eid, start, title="Weekly sync"):
+        return {"id": eid, "start": start, "end": start[:2] + ":45", "title": title, "teams": True, "all_day": False,
+                "private": False, "organiser": False, "sensitivity": "normal"}
+
+    def test_a_twin_set_aside_still_counts(self):
+        fp = f"2026-10-22 | fp:{self.DAY}|weekly sync|9f2c1a | projects/ABC Alpha/minutes/x.docx | 3"
+        rows = self.rows([self.ev("w1", "09:00"), self.ev("w2", "15:00")], [fp],
+                         cleared=[{"key": "w1", "day": self.DAY, "kind": "not", "reason": "Informal chat"}])
+        self.assertEqual(sorted(rows), ["w2"])
+        self.assertEqual(rows["w2"]["same_title"], 2)
+        self.assertIsNone(rows["w2"]["processed"])
+
+    def test_alone_it_is_processed(self):
+        fp = f"2026-10-22 | fp:{self.DAY}|weekly sync|9f2c1a | projects/ABC Alpha/minutes/x.docx | 3"
+        rows = self.rows([self.ev("w2", "15:00")], [fp])
+        self.assertEqual((rows["w2"]["same_title"], rows["w2"]["processed"]), (1, "2026-10-22"))
+
+    def test_someone_elses_minutes_never_mark_it(self):
+        key = f"fp:{self.DAY}|weekly sync|9f2c1a"
+        applied = {"meeting": {"key": key, "kind": "minutes by others", "title": "Weekly sync", "date": self.DAY,
+                               "minutes_decision": "approved", "applied": "a1"}, "items": []}
+        rows = self.rows([self.ev("w2", "15:00")], [f"2026-10-22 | {key} | projects/ABC Alpha/minutes/theirs.docx | 2"],
+                         applied=applied)
+        self.assertIsNone(rows["w2"]["processed"])
+
+
 if __name__ == "__main__":
     unittest.main()
