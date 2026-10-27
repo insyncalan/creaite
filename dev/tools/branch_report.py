@@ -6,11 +6,16 @@ Run, from a clone of insyncalan/creaite:
                                                       whether main already holds its whole diff, the branches that hold all its
                                                       commits or share its tip, its PRs (when gh is signed in) and a suggestion
      python3 dev/tools/branch_report.py --markdown    the same as the Markdown table in dev/proposals/363/BRANCHES.md
+     python3 dev/tools/branch_report.py --worktree-list FILE …   also count as checked out every branch in FILE, the output of
+                                                      `git worktree list --porcelain` saved on another machine's clone (a
+                                                      worktree is per clone: this clone can't see another machine's)
      python3 dev/tools/branch_report.py --worktrees   every worktree of this clone with uncommitted changes, plus any that is
                                                       locked or prunable (its folder is gone): a Markdown table
 
-Run `git fetch --prune origin` first so the remote branches are current. Only remote branches (origin/*) are reported: a local
-branch with no origin counterpart isn't. `git cherry` compares single-parent commits; a merge commit on a branch is never counted
+Run `git fetch --prune origin` first so the remote branches are current. Every branch not merged into origin/main is reported,
+remote (origin/*) and local, and `where` says which: "remote only", "local only" or "local and remote" (a branch on both is judged
+by its origin tip). A branch checked out in any worktree of this clone is never "delete", nor is a local branch with commits that
+aren't on origin (Stark's re-check). `git cherry` compares single-parent commits; a merge commit on a branch is never counted
 as "in main" by it, so a branch with a merge commit of its own is "in main" only by the whole-diff check (Stark's re-check).
 """
 import datetime
@@ -57,11 +62,40 @@ def in_main(base, branch, index):
     return git("apply", "--check", "-R", "--cached", inp=diff, env=env).returncode == 0
 
 
-def facts(pr=None):
-    """One dict per remote branch not merged into origin/main: what git says about it (no judgement)."""
+def branch_refs():
+    """{short name: (ref to judge it by, where)} for every remote and local branch not merged into origin/main (never main): the
+    origin ref when there is one."""
+    remote = {b.split("/", 1)[1] for b in out("branch", "-r", "--no-merged", "origin/main", "--format=%(refname:short)").splitlines()
+              if b.startswith("origin/") and not b.endswith("/HEAD")}
+    local = {b for b in out("branch", "--no-merged", "origin/main", "--format=%(refname:short)").splitlines() if b and b != "main"}
+    where = {**{b: "local only" for b in local}, **{b: "remote only" for b in remote}, **{b: "local and remote" for b in remote & local}}
+    return {b: ("origin/" + b if b in remote else b, w) for b, w in where.items()}
+
+
+def _local_ahead(short, where):
+    """How many commits the local branch has that its origin branch hasn't (0 unless it is on both)."""
+    if where != "local and remote":
+        return 0
+    return int(out("rev-list", "--count", f"origin/{short}..refs/heads/{short}", "--") or 0)
+
+
+def checked_out(lists=()):
+    """{branch name: [worktree path, …]} for every worktree of this clone with a branch checked out, and of each saved
+    `git worktree list --porcelain` in `lists` (another machine's clone; its paths are given as "<file>: <path>")."""
+    found = {}
+    for label, text in [(None, None)] + [(f, open(f, encoding="utf-8").read()) for f in lists]:
+        for w in worktree_entries(text):
+            if w["branch"]:
+                found.setdefault(w["branch"], []).append(w["path"] if label is None else f"{label}: {w['path']}")
+    return found
+
+
+def facts(pr=None, lists=()):
+    """One dict per branch not merged into origin/main, remote or local: what git says about it (no judgement). `lists`: saved
+    worktree lists from other clones (checked_out)."""
     pr = prs() if pr is None else pr
-    names = [b for b in out("branch", "-r", "--no-merged", "origin/main", "--format=%(refname:short)").splitlines()
-             if b.startswith("origin/") and not b.endswith("/HEAD")]
+    refs, held = branch_refs(), checked_out(lists)
+    names = [ref for ref, _ in refs.values()]
     tips = {b: out("rev-parse", b) for b in names}
     rows = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -71,22 +105,34 @@ def facts(pr=None):
             last = out("log", "-1", "--format=%cs|%an|%s", b, "--").split("|", 2) + ["", ""]
             ahead, behind = out("rev-list", "--left-right", "--count", f"{b}...origin/main", "--").split()
             base = out("merge-base", "origin/main", b)
-            short = b.split("/", 1)[1]
-            rows.append({"branch": short, "last": last[0], "author": last[1], "subject": last[2][:90],
+            short = b.split("/", 1)[1] if b.startswith("origin/") else b
+            where = refs[short][1]
+            rows.append({"branch": short, "where": where, "checked_out": held.get(short, []),
+                         "local_ahead": _local_ahead(short, where), "last": last[0], "author": last[1], "subject": last[2][:90],
                          "ahead": int(ahead), "behind": int(behind),
                          "commits_not_in_main": sum(1 for c in out("cherry", "origin/main", b).splitlines() if c.startswith("+")),
                          "merges": len(out("rev-list", "--merges", f"origin/main..{b}", "--").splitlines()),
                          "change_already_in_main": in_main(base, b, index),
                          "files": len(out("diff", "--name-only", base, b, "--").splitlines()),
-                         "held_by": sorted(m.split("/", 1)[1] for m in names if m != b and tips[m] != tips[b]
+                         "held_by": sorted(_short(m) for m in names if m != b and tips[m] != tips[b]
                                            and git("merge-base", "--is-ancestor", tips[b], tips[m]).returncode == 0),
-                         "same_tip_as": sorted(m.split("/", 1)[1] for m in names if m != b and tips[m] == tips[b]),
+                         "same_tip_as": sorted(_short(m) for m in names if m != b and tips[m] == tips[b]),
                          "prs": pr.get(short, [])})
     return rows
 
 
+def _short(ref):
+    """The branch name of a ref as facts() reads them (origin/x or a local x)."""
+    return ref.split("/", 1)[1] if ref.startswith("origin/") else ref
+
+
 def _own_class(r, today):
-    """(class, why) from the branch alone: in main, an open PR, a live line, recent, or the owner's call."""
+    """(class, why) from the branch alone: checked out or with local commits (never delete), in main, an open PR, a live line,
+    recent, or the owner's call."""
+    if r.get("checked_out"):
+        return "keep", "checked out in " + ", ".join(r["checked_out"])
+    if r.get("local_ahead"):
+        return "keep", f"the local branch has {r['local_ahead']} commit(s) not on origin"
     if r["change_already_in_main"]:
         return "delete", "its change is already in main (main holds the whole diff)"
     if r["commits_not_in_main"] == 0 and not r.get("merges"):         # git cherry can't see a merge commit's own content
@@ -136,11 +182,11 @@ ORDER = {"delete": 0, "delete if kept": 1, "owner decides": 2, "keep": 3}
 
 def markdown(rows):
     """The classified rows as BRANCHES.md's table (most deletable first)."""
-    lines = ["| Suggest | Branch | Last commit | Author | Ahead/behind main | Commits not in main | Files | PR | Why |",
-             "|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| Suggest | Branch | Where | Last commit | Author | Ahead/behind main | Commits not in main | Files | PR | Why |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
     for r in sorted(rows, key=lambda r: (ORDER[r["suggest"]], r["branch"])):
         lines.append("| " + " | ".join(cell(x) for x in (
-            r["suggest"], f"`{r['branch']}`", dmy(r["last"]), r["author"], f"{r['ahead']}/{r['behind']}",
+            r["suggest"], f"`{r['branch']}`", r.get("where", ""), dmy(r["last"]), r["author"], f"{r['ahead']}/{r['behind']}",
             r["commits_not_in_main"], r["files"], ", ".join(r["prs"]), r["why"])) + " |")
     return "\n".join(lines)
 
@@ -160,10 +206,10 @@ def _entry_line(cur, line):
             cur[key] = line[len(key) + 1:] or WT_FLAGS[key]
 
 
-def worktree_entries():
-    """[{path, branch, detached, locked, prunable}] from `git worktree list --porcelain`."""
+def worktree_entries(text=None):
+    """[{path, branch, detached, locked, prunable}] from `git worktree list --porcelain` (this clone's, or `text` saved elsewhere)."""
     entries, cur = [], None
-    for line in out("worktree", "list", "--porcelain").splitlines() + [""]:
+    for line in (out("worktree", "list", "--porcelain") if text is None else text).splitlines() + [""]:
         if line.startswith("worktree "):
             cur = {"path": line[len("worktree "):], "branch": "", "detached": False, "locked": None, "prunable": None}
         elif cur is not None and line:
@@ -203,11 +249,17 @@ def worktrees():
     print("\n".join(rows) if rows else "| (none) | | | | |")
 
 
+def _lists(argv):
+    """The FILE after each --worktree-list."""
+    return [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == "--worktree-list"]
+
+
 if __name__ == "__main__":
-    if "--worktrees" in sys.argv[1:]:
+    args = sys.argv[1:]
+    if "--worktrees" in args:
         worktrees()
-    elif "--markdown" in sys.argv[1:]:
-        print(markdown(classify(facts())))
+    elif "--markdown" in args:
+        print(markdown(classify(facts(lists=_lists(args)))))
     else:
-        for row in classify(facts()):
+        for row in classify(facts(lists=_lists(args))):
             print(json.dumps(row))

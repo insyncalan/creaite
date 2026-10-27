@@ -98,6 +98,7 @@ class Fixture(unittest.TestCase):
         commit(o, "a.txt", "ahead\n")
         ahead_pick = run(o, "rev-parse", "HEAD")
         run(o, "checkout", "-q", "main")
+        commit(o, "m2.txt", "main moves on again\n")                               # so the picks are new commits, not the same
         run(o, "cherry-pick", out_pick)
         run(o, "cherry-pick", ahead_pick)
         cls.clone = cls.tmp / "clone"
@@ -174,6 +175,21 @@ class Fixture(unittest.TestCase):
         self.assertEqual(r["checked_out"], [str(self.out_wt.resolve())], r)
         self.assertEqual(r["suggest"], "keep", r)
         self.assertIn("checked out in " + str(self.out_wt.resolve()), r["why"])
+
+    def test_a_branch_checked_out_on_another_machine_is_kept_from_its_saved_list(self):
+        """A worktree is per clone: another machine's `git worktree list --porcelain`, saved to a file, is read too."""
+        saved = self.tmp / "mac-worktrees.txt"
+        saved.write_text("worktree /Users/someone/dev/creaite\nHEAD 0000\nbranch refs/heads/main\n\n"
+                         "worktree /Users/someone/dev/wt-picked\nHEAD 1111\nbranch refs/heads/picked\n\n", encoding="utf-8")
+        cwd = os.getcwd()
+        try:
+            os.chdir(self.clone)
+            rows = {r["branch"]: r for r in B.classify(B.facts(pr={}, lists=[str(saved)]), today=TODAY)}
+        finally:
+            os.chdir(cwd)
+        self.assertEqual(rows["picked"]["checked_out"], [f"{saved}: /Users/someone/dev/wt-picked"])
+        self.assertEqual(rows["picked"]["suggest"], "keep")
+        self.assertEqual(B._lists(["--markdown", "--worktree-list", "a", "--worktree-list", "b"]), ["a", "b"])
 
     def test_a_local_branch_with_commits_not_on_origin_is_kept(self):
         r = self.rows["ahead-local"]
