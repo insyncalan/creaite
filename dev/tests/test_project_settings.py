@@ -69,8 +69,13 @@ class ProjectSettings(LiveBrowserCase):
 
     def open(self, cat="general", code="ABC"):
         cat = {"logos": "rep"}.get(cat, cat)        # #247: the logos are in the Client report and logos section
+        ready = f"VIEW==='psettings' && !!document.querySelector('#psBody [data-pscard]') && document.querySelector('#pscats [aria-current=true]')?.dataset.pscat==={cat!r}"
         self.b.eval(f"go('psettings', {code!r}); psCat.value={cat!r}; navWrite(false)")
-        self.b.wait(f"VIEW==='psettings' && !!document.querySelector('#psBody [data-pscard]') && document.querySelector('#pscats [aria-current=true]')?.dataset.pscat==={cat!r}")
+        try:
+            self.b.wait(ready)
+        except TimeoutError:        # a slow first paint under load: the category is set, the page has not caught up; ask once more
+            self.b.eval(f"psCat.value={cat!r}; navWrite(false)")
+            self.b.wait(ready)
         time.sleep(0.3)          # #247: the page jumps to the address's section a moment after it opens; click after that
 
     def line(self, label):
