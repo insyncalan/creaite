@@ -5,15 +5,18 @@ Alan with the package rather than sending empty diffs.
 
 | Diff | File | sha256 |
 |---|---|---|
-| `client_leak-386s4.diff` (G-c) | `system/scripts/client_leak.py` | `a8c5a3fbacdf2fba9ce6f20bf0259d218c9c03c07dd80b418a8091656ae3cd9f` |
+| `client_leak-386s4.diff` (G-c) | `system/scripts/client_leak.py` | `3b4417aa18bfd26d4073fca637d55c1a255d26a1e9822fe1d88cab0bf67b22cb` |
+
+Rev 2 (27-10-2026): `register_aliases` split so check.py passes with all four diffs applied (rev 1, `a8c5a3fb…cd9f`, gave
+it complexity 16 against the limit of 15). The table read moved into `_table_aliases(con, out)`; behaviour is identical.
 
 Base: v2.6.9 release `0b637e926`. Chain: `GUARDED-386-s4.chain` (not pinned; `dev/tests/guarded_chain.py` is unchanged).
 
-## What G-c does (`client_leak.py`, 13 lines added, 4 changed)
+## What G-c does (`client_leak.py`, 19 lines added, 4 changed)
 
 `register_aliases(con=None)`: the register file is read exactly as before (the same tolerant parse; missing, unreadable or no
 People table still raises `RegisterUnreadable`), and **then** tracker.db's `people` table on the caller's connection, when the
-database has one, adds its names and aliases. `people()` passes its `con`. A people table that can't be read (an SQLite error, or
+database has one, adds its names and aliases (in `_table_aliases`, a small helper, so each stays within check.py's limit). `people()` passes its `con`. A people table that can't be read (an SQLite error, or
 an aliases value that isn't JSON or can't be listed) raises `RegisterUnreadable`: the names check still fails closed (#127).
 
 Why a union and not "the table instead of the file": slice 3 writes the register from the table after every apply, so the two
@@ -66,15 +69,19 @@ The template's `Follow` column is slice 2's to drop (ordinary). `locations.py` :
 
 ## How verified
 
-Throwaway worktrees off the branch (never the branch):
+Throwaway worktrees (never the branch), on slice 3 rev 2b (`schema-386.diff` `2a3aa690…8739`, `tracker-386.diff` `7a295be7…eb45`,
+`reach-386.diff` `2bdd0a4e…0f9f`, from `v2610-386s3b` 866901fb1, merged into this branch):
 
-- `git apply --check` of G-c alone on the base: clean. All 24 orders of the four diffs (schema, tracker, reach, client_leak)
-  applied, then reversed in reverse order: clean, tree back to the base.
-- `dev/tests/test_client_leak_people_386.py` (9 tests; no skips):
-  - none applied (the branch): FAILED (5 failures);
-  - slice 3 only: FAILED (5 failures);
+- `git apply --check` of each of the four diffs alone on `0b637e926`: clean. All 24 orders of the four applied, then reversed in
+  reverse order: clean, tree back to the base.
+- `dev/tools/check.py --no-js` with all four applied: OK (rev 1: "CC register_aliases has 16 complexity; the limit is 15").
+- `dev/tests/test_client_leak_people_386.py` (11 tests; no skips):
+  - none applied (the branch): FAILED (6 failures);
+  - slice 3 only: FAILED (6 failures);
   - G-c only: FAILED (1 failure: `TableFromSchema`);
   - all four: OK.
-- Mutants on G-c (all four applied), 6 run, 6 killed: `people()` not passing `con`; a table error swallowed; the table never read;
-  its aliases not added; only SQLite errors failing closed; a missing register no longer failing closed.
-- Related files with all four applied: see the commit message.
+  - `Complexity` runs check.py's own complexity measure on `register_aliases` and `_table_aliases`: it fails on rev 1 of the diff.
+- Mutants on G-c (all four applied), 7 run, 7 killed: `people()` not passing `con`; the helper skipped; a table error swallowed;
+  the table never read; its aliases not added; only SQLite errors failing closed; a missing register no longer failing closed.
+- With all four applied: test_client_leak, test_client_leak_gate, test_client_leak_place, test_draft_chase, test_guarded_chain,
+  test_people_table_386: OK.

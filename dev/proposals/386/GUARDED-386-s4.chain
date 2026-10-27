@@ -3,6 +3,7 @@
 # Guarded files only: system/scripts/client_leak.py. G-d (live_server.py) and G-e (update.py) need no diff: README-slice4.md.
 #
 # G-c: the client names check reads the people table too, still failing closed
+# rev 2 sha256 3b4417aa18bfd26d4073fca637d55c1a255d26a1e9822fe1d88cab0bf67b22cb (rev 1 a8c5a3fbacdf2fba9ce6f20bf0259d218c9c03c07dd80b418a8091656ae3cd9f: check.py CC 16)
 dev/proposals/386/client_leak-386s4.diff
 #
 # Not guarded (ordinary commits on the branch): system/scripts/drafts.py (people_names reads the table too),

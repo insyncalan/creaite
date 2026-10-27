@@ -1,5 +1,5 @@
 diff --git a/system/scripts/client_leak.py b/system/scripts/client_leak.py
-index 45952ab30..1254d0b8b 100644
+index 45952ab30..c0352b8c2 100644
 --- a/system/scripts/client_leak.py
 +++ b/system/scripts/client_leak.py
 @@ -15,6 +15,7 @@ The names check fails closed: a people register that is missing or can't be read
@@ -25,12 +25,18 @@ index 45952ab30..1254d0b8b 100644
      import propose
      out = {}
      try:
-@@ -473,6 +476,12 @@ def register_aliases():
+@@ -473,6 +476,18 @@ def register_aliases():
          cells = [c.strip() for c in line.strip().strip("|").split("|")]
          if len(cells) >= 3 and cells[0] and not set(cells[0]) <= set("-: ") and cells[0].lower() not in ("name", "full name"):
              out.setdefault(cells[0].lower(), []).extend(a.strip() for a in re.split(r"[;,]", cells[2]) if a.strip())
++    return _table_aliases(con, out) if con is not None else out
++
++
++def _table_aliases(con, out):
++    """`out` with tracker.db's people table's names and aliases added (#386), when the database has the table. Raises
++    RegisterUnreadable when the table can't be read (#127: fails closed)."""
 +    try:
-+        has = con is not None and con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'people'").fetchone()
++        has = con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'people'").fetchone()
 +        for name, listed in con.execute("SELECT name, aliases FROM people").fetchall() if has else ():
 +            out.setdefault(str(name).strip().lower(), []).extend(str(a).strip() for a in json.loads(listed or "[]") if str(a).strip())
 +    except (sqlite3.Error, ValueError, TypeError) as e:
@@ -38,7 +44,7 @@ index 45952ab30..1254d0b8b 100644
      return out
  
  
-@@ -520,7 +529,7 @@ def people(con, code, blocking=None):
+@@ -520,7 +535,7 @@ def people(con, code, blocking=None):
              shown.add(name)
          elif is_open:
              other.add(name)
