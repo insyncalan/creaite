@@ -652,10 +652,12 @@ REVEAL_OK = r"(projects|inbox|system/staging/drafts)/.+"      # #374: where Acti
 
 
 def _reveal_roots():
-    """The three stored places plus each project mapped to its own folder (#385, paths.project_roots: never an archived project's,
-    never the mapped folder's parent). A link is judged by its real target against these."""
+    """The three stored places, each project mapped to its own folder (#385, paths.project_roots), and each mapped project's archive
+    slot (<parent>/99 Archive/<folder>, as the base allowed for any existing projects/ path): never a mapped folder's parent or the
+    rest of its 99 Archive. A link is judged by its real target against these."""
+    slots = [paths.archive_slot(n) for n in paths._mapping()]
     return ([paths.resolve(r).resolve() for r in ("projects", "inbox", "system/staging/drafts")]
-            + [Path(r).resolve() for r in paths.project_roots().values()])
+            + [Path(r).resolve() for r in paths.project_roots().values()] + [s.resolve() for s in slots if s is not None])
 
 
 def reveal_route(handler, req):

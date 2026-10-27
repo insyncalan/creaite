@@ -247,6 +247,14 @@ class MappedProject(MappedCase):
             self.assertEqual(out[rel], {"ok": False, "calls": []}, rel)
         self.assertTrue(out[f"projects/{ABC}/in-link"]["ok"])
 
+    def test_a_mapped_projects_archive_slot_shows_as_before(self):
+        """As on the base (any existing projects/… path): a file in a mapped project's archive slot, <parent>/99 Archive/<folder>,
+        stored as projects/99 Archive/<folder>/…, can still be shown (Alan's click)."""
+        f = self.own.parent / "99 Archive" / ABC / "old.docx"
+        touch(f)
+        out = self.reveal([f"projects/99 Archive/{ABC}/old.docx"])
+        self.assertEqual(out[f"projects/99 Archive/{ABC}/old.docx"], {"ok": True, "calls": [[["open", "-R", str(f.resolve())]]]})
+
     def test_an_unmapped_project_is_unchanged(self):
         f = self.root / DEF / MIN / "m.docx"
         touch(f)
