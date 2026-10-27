@@ -10,3 +10,7 @@
 - files-tooltips-900.png: Files tree: the Portfolio entry's tooltip reads "Portfolio" (headless Chrome draws no native tooltip, so the label is drawn from the entry's real title text). Intake has no tooltip at all (no title attribute), as found earlier.
 
 Taken from the flipped build with headless Chrome (CDP, fictional vault). activity-changed-file-before-900.png (old behaviour) and files-tooltips-900.png are the earlier shots, kept as they were. What Alan should check on the real Mac: Show in Finder selects the file itself.
+
+## Known limit (Banner's LOW on the reveal fix, logged, no change)
+
+A mapped project's archive slot is covered only for the `99 Archive` folder. Files in an older `_Archive` or `zz Archive` folder inside a mapped project are not offered Show in Finder. The button then does not appear; nothing else changes.
