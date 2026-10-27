@@ -691,7 +691,25 @@ def people_names():
                     names.add(a.strip())
     except Exception:  # noqa: BLE001  the register is optional here
         pass
+    names.update(table_people_names())
     return sorted(n for n in names if n and len(n) > 1)
+
+
+def table_people_names():
+    """#386: every name and alias in tracker.db's people table (the register is made from it), so a register edited by hand
+    or not yet written again never narrows the client-wording check; none when there is no table or it can't be read."""
+    from contextlib import closing
+    out = set()
+    try:
+        with closing(tracker.connect_or_raise()) as con:
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'people'").fetchone():
+                for name, listed in con.execute("SELECT name, aliases FROM people"):
+                    out.add(str(name).strip())
+                    listed = json.loads(listed or "[]")
+                    out.update(a.strip() for a in (listed if isinstance(listed, list) else []) if isinstance(a, str))
+    except Exception:  # noqa: BLE001  the people table is optional here, as the register is: what was read so far counts
+        return out
+    return out
 
 
 # ── BL-222: the thinking fields ──────────────────────────────────────────────

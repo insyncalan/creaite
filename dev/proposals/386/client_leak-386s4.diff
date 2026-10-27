@@ -1,0 +1,49 @@
+diff --git a/system/scripts/client_leak.py b/system/scripts/client_leak.py
+index 45952ab30..1254d0b8b 100644
+--- a/system/scripts/client_leak.py
++++ b/system/scripts/client_leak.py
+@@ -15,6 +15,7 @@ The names check fails closed: a people register that is missing or can't be read
+ import functools
+ import json
+ import re
++import sqlite3
+ import sys
+ from pathlib import Path
+ 
+@@ -458,9 +459,11 @@ class RegisterUnreadable(Exception):
+     """The people register is missing, can't be read or has no People table (#127: the names check fails closed)."""
+ 
+ 
+-def register_aliases():
+-    """{full name in lower case: [aliases]} from the people register (the same columns drafts.people_names reads). Raises
+-    RegisterUnreadable when the register is missing, can't be read or has no People table (#127: fails closed, never {})."""
++def register_aliases(con=None):
++    """{full name in lower case: [aliases]} from the people register (the same columns drafts.people_names reads), and (#386)
++    from tracker.db's people table on `con` when it has one, so a register edited by hand or not yet written again never narrows
++    the check. Raises RegisterUnreadable when the register is missing, can't be read or has no People table, or the people table
++    can't be read (#127: fails closed, never {})."""
+     import propose
+     out = {}
+     try:
+@@ -473,6 +476,12 @@ def register_aliases():
+         cells = [c.strip() for c in line.strip().strip("|").split("|")]
+         if len(cells) >= 3 and cells[0] and not set(cells[0]) <= set("-: ") and cells[0].lower() not in ("name", "full name"):
+             out.setdefault(cells[0].lower(), []).extend(a.strip() for a in re.split(r"[;,]", cells[2]) if a.strip())
++    try:
++        has = con is not None and con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'people'").fetchone()
++        for name, listed in con.execute("SELECT name, aliases FROM people").fetchall() if has else ():
++            out.setdefault(str(name).strip().lower(), []).extend(str(a).strip() for a in json.loads(listed or "[]") if str(a).strip())
++    except (sqlite3.Error, ValueError, TypeError) as e:
++        raise RegisterUnreadable(REGISTER_UNREAD) from e
+     return out
+ 
+ 
+@@ -520,7 +529,7 @@ def people(con, code, blocking=None):
+             shown.add(name)
+         elif is_open:
+             other.add(name)
+-    aliases = register_aliases()
++    aliases = register_aliases(con)
+     client = shown | {a for n in shown for a in aliases.get(n.lower(), [])}
+     keep = {x.lower() for x in client | alans_names()}
+     shared = keep | _tokens(client | alans_names())

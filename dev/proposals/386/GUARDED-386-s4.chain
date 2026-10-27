@@ -1,0 +1,9 @@
+# #386 slice 4 guarded chain (nothing is pinned: dev/tests/guarded_chain.py does not know it; a pin is added only on Alan's say).
+# One diff per line, in landing order. Base: the v2.6.9 release commit 0b637e926. Lands with slice 3 (GUARDED-386-s3.chain).
+# Guarded files only: system/scripts/client_leak.py. G-d (live_server.py) and G-e (update.py) need no diff: README-slice4.md.
+#
+# G-c: the client names check reads the people table too, still failing closed
+dev/proposals/386/client_leak-386s4.diff
+#
+# Not guarded (ordinary commits on the branch): system/scripts/drafts.py (people_names reads the table too),
+# dev/tests/test_client_leak_people_386.py
