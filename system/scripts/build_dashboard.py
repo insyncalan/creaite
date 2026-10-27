@@ -3030,7 +3030,8 @@ def split_set_aside(ordered, set_aside, snoozed):
 # sweep) or "other" (cx-edit, reports, weekly updates, file changes). Read only; derived from data built just before it.
 # Shape: dev/proposals/intake-review-232/README.md (the seams for 232-A, 232-B and 232-C).
 IR_MAIL_RUNS = ("cx-sweep",)
-IR_BY_OTHERS = "minutes by others"   # #232 E1: a proposal's meeting.kind for someone else's minutes (minutes.BY_OTHERS); never linked (#389)
+# #232 E1: a proposal's meeting.kind for someone else's minutes (minutes.BY_OTHERS); never linked to a meeting (#389)
+IR_BY_OTHERS = "minutes by others"
 
 
 def proposal_meta():
