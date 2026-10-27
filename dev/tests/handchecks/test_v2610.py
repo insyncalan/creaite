@@ -74,7 +74,7 @@ DRAFT = {
     "open point 1": (30, 31), "open point 2": (29,), "open point 3": (32, 35), "open point 4": (15, 16, 21),
     "open point 5": (25, 27, 28), "open point 6": (35,),
 }
-NOT_CUT = "VERSION is {}: the 2.6.10 release shape is not cut yet"
+NOT_CUT = "VERSION is {}: this is the 2.6.10 release-shape check; it runs only at 2.6.10 (a later release's own test pins its shape)"
 CHAIN = "dev/proposals/GUARDED-2.6.10.chain"
 MARKER = "Guarded 2.6.10 chain:"
 CHAIN_B = "dev/proposals/GUARDED-2.6.10b.chain"                     # the second 2.6.10 chain: #370 slice 3 rev 2, after G3
