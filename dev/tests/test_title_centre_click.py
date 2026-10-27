@@ -67,5 +67,28 @@ class TitleCentre(LiveBrowserCase):
                         self.fail(f"no peek: {(width, dens, rid, at, b.eval('location.hash'))}")
                     self.assertEqual(b.eval("VIEW"), "work", (width, dens, rid))
 
+    def test_work_title_centre_is_never_a_link_whatever_the_title_length(self):
+        """#388: in compact density the ID and project link sit beside the title. With a short title they reached the middle of the
+        cell, so which row failed depended on the day's date strings (they set the column widths). Here each of the first rows gets
+        titles from 1 to 60 characters, in both densities at 1400 px: the middle of the cell is the cell or the title, never a link."""
+        b = self.b
+        b.resize(1400, 900)
+        b.wait("innerWidth===1400")
+        b.eval("go('work')")
+        b.wait("document.querySelectorAll('#workTbl tbody tr[data-row]').length>2")
+        hit = """(s=>{ const td=document.querySelector(s), c=td.getBoundingClientRect(), e=document.elementFromPoint(c.left+c.width/2,c.top+c.height/2);
+                  return e&&e.closest('a,[role=link],button')?e.tagName+'.'+e.className:''; })(%r)"""
+        for dens in ("cmp", "cmf"):
+            b.click(f"#wdens [data-dens={dens}]")
+            ids = b.eval("[...document.querySelectorAll('#workTbl tbody tr[data-row]')].slice(0,4).map(r=>r.dataset.row)")
+            for rid in ids:
+                sel = f'#workTbl tr[data-row="{rid}"] td.title'
+                for n in (1, 4, 8, 12, 16, 20, 24, 30, 40, 60):
+                    b.eval("(s=>{ const td=document.querySelector(s), t=[...td.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim()).pop();"
+                           " t.textContent=%r; })(%r)" % (("Book the room " * 6)[:n].strip() or "B", sel))
+                    b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,120))))")   # wkPlace runs on the next frame
+                    self.assertEqual(b.eval(hit % sel), "", (dens, rid, n))
+
+
 if __name__ == "__main__":
     unittest.main()
