@@ -5,7 +5,7 @@ Run: python3 dev/tests/test_reveal_in_finder_374.py
 No guarded change: the page uses the existing token-checked POST /api/report/reveal (report_server.reveal_route, also used by the
 report export's Show in Finder), whose path rule is widened to projects/, inbox/ and system/staging/drafts/ (REVEAL_OK).
 Two halves:
-  - the page's request (core/finderReveal.js, run by node; skipped without node): with the FINDER_REVEAL switch (off for now) the
+  - the page's request (core/finderReveal.js, run by node; skipped without node): with the FINDER_REVEAL switch (on) the
     file is sent to the reveal route, otherwise its parent folder to /api/open; where no button is offered; a Deleted row (or an
     undone create) offers none;
   - the route itself, in process (a vault subprocess with subprocess.Popen, sys.platform and os.name patched, CREAITE_NO_LAUNCH
@@ -72,8 +72,8 @@ class PageRequest(unittest.TestCase):
     def test_a_deleted_row_or_an_undone_create_offers_no_button(self):
         self.assertEqual(self.out["show"], [True, False, True, True, False, True])
 
-    def test_the_switch_is_still_off(self):
-        self.assertIs(self.out["sw"], False)
+    def test_the_switch_is_on(self):
+        self.assertIs(self.out["sw"], True)
 
     def test_the_default_follows_the_one_switch(self):
         self.assertEqual(self.out["dflt"], self.out["rev"] if self.out["sw"] else self.out["old"])

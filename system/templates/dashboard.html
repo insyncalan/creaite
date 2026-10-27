@@ -74611,7 +74611,7 @@ ${d5.text}`);
   }
 
   // core/finderReveal.js
-  var FINDER_REVEAL = false;
+  var FINDER_REVEAL = true;
   var FINDER_OPEN_OK = /^(projects|inbox|system\/staging\/drafts)\/.+$/;
   var safe = (p6) => FINDER_OPEN_OK.test(p6) && !p6.split("/").includes("..");
   function finderRequest(path, reveal = FINDER_REVEAL) {
