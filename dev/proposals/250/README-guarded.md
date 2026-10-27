@@ -16,7 +16,8 @@ Base: origin/main a62fbb0a. G1 (#382) and G2 (#371) are the 2.6.9 extra diffs on
 
 ## G3: what it does (all inside `class Run`, one block `# ===== #250 ... end #250 =====`, plus four one-line hooks)
 
-- `_start`: `self.fetch = self._fetch_for(kind, sweep)`. `_fetch_for` returns `transcripts.SweepFetch()` for a sweep run (`kind == "sweep"`) that is interactive only (rev 3: a typed sweep, or Close the day's catch-up; never the session-start catch-up in Claude Code or the scheduled run; Alan, 27-10-2026) when `transcripts.fetch_on()` (setting exactly true); else `None`. A construction fault gives `None` (logged by name).
+- `_start`: `self.fetch = self._fetch_for(kind, sweep)`. `_fetch_for` returns `transcripts.SweepFetch()` for a sweep run (`kind == "sweep"`, the catch-up and
+  Close the day, or a typed sweep) when `transcripts.fetch_on()` (setting exactly true); else `None`. A construction fault gives `None` (logged by name).
 - `_on_tool_result`: `self._fetch_observe(part)`. The helper hands `observe(name, input, text, is_error)` only the `read_resource` results (the tool name is
   `transcripts.FETCH_TOOLS[1]`, exact), the text being the server's own copy; a fault is logged by name and the reader goes on.
 - `read()`: after the closure steps and `_finish_job`, before `_done()`: `self._fetch_finish(proc, final)`. `answered` (`Run._answered`, rev 2) = not stopped, not timed out, not failed,
