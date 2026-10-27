@@ -13,12 +13,12 @@ No client output builder reads `calendar.json` today, so tests 2 to 4 (client re
 Engine and local live server only (the report routes, `sweep.py calendar`, `report.py`, `drafts.py`); no browser, no Claude, no network.
 `CREAITE_NOW` is pinned through `test_reports.NOW`; every address is `*.example`, the data is fictional. No kit helper is used.
 
-## Groups already covered by Banner, or pending
+## Groups covered by Banner's tests (now landed)
 
-- Group (1), the held reason absent from logs and exports: Banner's `test_k254_gaps_366.py` (branch `team-banner-366-track`, c4dbb972) already covers it, including the `held_reason_logged` mutant. It was written here first and then dropped as a duplicate.
-- Group (2), the followed-person word in an outside email: pending Cap's answer; may arrive as Banner's `test_email_outside_gaps_366.py` (318851a9). Not written in this slice.
-- Group (3), the 40 hostile `only` values: pending Cap's answer; may arrive as Banner's `test_k254_gaps_366.py`. Not written in this slice.
-- Slice 1 (`test_track_crossed_366.py`) arrives separately.
+- Group (1), the held reason absent from logs and exports: `dev/tests/test_k254_gaps_366.py` (Banner, c4dbb972) covers it, including the `held_reason_logged` mutant. It was written here first and then dropped as a duplicate.
+- Group (2), the followed-person word in an outside email: `dev/tests/test_email_outside_gaps_366.py` (Banner, 318851a9 and 98d66061) covers it, in the reply and in the selected text.
+- Group (3), the 40 hostile `only` values: also in `dev/tests/test_k254_gaps_366.py` (the `POST /api/apply {only}` probes).
+- Slice 1 (`dev/tests/test_track_crossed_366.py`) is landed as well.
 
 ## Python 3.9 floor
 
