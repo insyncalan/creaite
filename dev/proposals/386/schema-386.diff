@@ -1,16 +1,16 @@
 diff --git a/system/scripts/schema.sql b/system/scripts/schema.sql
-index 41ef7dc05..66d290c8e 100644
+index 41ef7dc05..22c714790 100644
 --- a/system/scripts/schema.sql
 +++ b/system/scripts/schema.sql
-@@ -187,6 +187,29 @@ CREATE TABLE IF NOT EXISTS item_labels (
+@@ -187,6 +187,28 @@ CREATE TABLE IF NOT EXISTS item_labels (
    PRIMARY KEY (item_id, label)
  );
  
 +-- People (#386): everyone who is named on an item. tracker.py writes it (item ops on table "people") and exports
-+-- projects/_portfolio/people-register.md from it after each apply. Who Alan follows is never here (BL-288: it stays in
-+-- system/staging/people-private.json). aliases, labels, projects_add and projects_remove are JSON lists of text; a person's
-+-- projects are those of their items, plus projects_add, minus projects_remove (Alan, 27-10-2026). needs_details is 1 while the
-+-- email, organisation or role is missing (kept by tracker.py).
++-- projects/_portfolio/people-register.md from it after each apply. Who Alan follows and who is hidden are never here (BL-288,
++-- Jarvis 27-10-2026: both stay in slice 2's private file, system/staging/people-private.json). aliases, labels, projects_add
++-- and projects_remove are JSON lists of text; a person's projects are those of their items, plus projects_add, minus
++-- projects_remove (Alan, 27-10-2026). needs_details is 1 while the email, organisation or role is missing (kept by tracker.py).
 +CREATE TABLE IF NOT EXISTS people (
 +  id              INTEGER PRIMARY KEY AUTOINCREMENT,
 +  name            TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(name) BETWEEN 1 AND 200 AND name = trim(name)
@@ -20,7 +20,6 @@ index 41ef7dc05..66d290c8e 100644
 +  organisation    TEXT,
 +  role            TEXT,
 +  is_group        INTEGER NOT NULL DEFAULT 0 CHECK (is_group IN (0,1)),
-+  hidden          INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0,1)),
 +  labels          TEXT NOT NULL DEFAULT '[]' CHECK (labels GLOB '[[]*[]]'),
 +  projects_add    TEXT NOT NULL DEFAULT '[]' CHECK (projects_add GLOB '[[]*[]]'),
 +  projects_remove TEXT NOT NULL DEFAULT '[]' CHECK (projects_remove GLOB '[[]*[]]'),

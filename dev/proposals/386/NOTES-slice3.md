@@ -5,6 +5,11 @@
 - Project stakeholders are not added as people when the people register moves into the tracker; the People page still shows them.
 - "A group can't own as a person" is not enforced yet: a group is marked, nothing more.
 - Activity shows a person's changes by their number, not their name.
+- Who you follow and who is hidden are never in the project record or the people register: they stay in the private file on
+  this laptop.
+- The move stops, changing nothing, when the register holds something it can't carry (another column with values, another section,
+  a free note, a row without a name, a label or project you don't have), while a register change waits in Review, and while who you
+  follow or hide is still only in the register. It says what to change first.
 
 ## How the move happens
 
