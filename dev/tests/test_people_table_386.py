@@ -356,26 +356,29 @@ class Migration(Base):
         self.assertEqual([n for n in self.people() if fold(n) == fold("élodie durand")], ["Élodie Durand"])
 
     def test_what_the_move_cannot_carry_stops_it(self):
-        cases = {
-            "a column with values": "# People register\n\n## People\n\n| Full name | Email | Phone |\n|---|---|---|\n"
-                                    "| Jane Doe | jane.doe@client.com | 0100 |\n",
-            "another section": SMALL + "\n## Groups\n\n- Delivery Team: Jane Doe\n",
-            "a free note": SMALL + "\nKeep me: Jane is back on 02-11-2026.\n",
-            "a note before the table": SMALL.replace("## People", "Call Omar first.\n\n## People"),
-            "a second table": SMALL + "\n| Name | Phone |\n|---|---|\n| Jane Doe | 0100 |\n",
-            "no Full name column": SMALL.replace("| Full name |", "| Name |"),
-            "a row without a name": SMALL + "|  | lost@client.com |\n",
-            "a row longer than the header": SMALL + "| Kim Long | kim@client.com | extra |\n",
-            "an unreadable Group value": "# People register\n\n## People\n\n| Full name | Group |\n|---|---|\n| Jane Doe | maybe |\n",
-            "no separator line": SMALL.replace("|---|---|\n", "") + "| Omar Ali | omar@def.example |\n",
+        cases = {                                       # what the register holds: the reason the move gives
+            "a column with values": ("# People register\n\n## People\n\n| Full name | Email | Phone |\n|---|---|---|\n"
+                                     "| Jane Doe | jane.doe@client.com | 0100 |\n", "its Phone column has values"),
+            "another section": (SMALL + "\n## Groups\n\n- Delivery Team: Jane Doe\n", "text outside the People table"),
+            "a free note": (SMALL + "\nKeep me: Jane is back on 02-11-2026.\n", "text outside the People table"),
+            "a note before the table": (SMALL.replace("## People", "Call Omar first.\n\n## People"), "text outside the People table"),
+            "a second table": (SMALL + "\n| Name | Phone |\n|---|---|\n| Jane Doe | 0100 |\n", "text outside the People table"),
+            "no Full name column": (SMALL.replace("| Full name |", "| Name |"), "no Full name column"),
+            "a row without a name": (SMALL + "|  | lost@client.com |\n", "a row has no full name"),
+            "a row longer than the header": (SMALL + "| Kim Long | kim@client.com | extra |\n", "more cells than the header"),
+            "an unreadable Group value": ("# People register\n\n## People\n\n| Full name | Group |\n|---|---|\n| Jane Doe | maybe |\n",
+                                          "Group value"),
+            "no separator line": (SMALL.replace("|---|---|\n", "") + "| Omar Ali | omar@def.example |\n", "no line under the header"),
         }
-        for why, text in cases.items():
+        for why, (text, reason) in cases.items():
             with self.subTest(why):
                 self.write_register(text)
                 before = self.files()
-                self.assert_refused(self.migrate(ok=False), "People not moved", text)
+                r = self.migrate(ok=False)
+                self.assert_refused(r, "People not moved", text)
+                self.assertIn(reason, r.stdout, why)
                 self.assertEqual(self.files(), before, why)                  # not even a backup
-                self.assert_refused(self.migrate("--dry-run", ok=False), "People not moved", text)
+                self.assert_refused(self.migrate("--dry-run", ok=False), reason, text)
 
     def test_an_empty_extra_column_is_dropped(self):                          # nothing in it, nothing lost
         self.write_register("# People register\n\n## People\n\n| Full name | Email | Phone |\n|---|---|---|\n"

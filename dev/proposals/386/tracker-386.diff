@@ -1,5 +1,5 @@
 diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
-index cf9a5f235..94e90fc07 100644
+index cf9a5f235..436a25f94 100644
 --- a/system/scripts/tracker.py
 +++ b/system/scripts/tracker.py
 @@ -15,6 +15,7 @@ Commands (run from anywhere; every location comes from paths.py):
@@ -140,7 +140,7 @@ index cf9a5f235..94e90fc07 100644
      broken = con.execute("PRAGMA foreign_key_check").fetchall()
      if broken:
          raise Invalid(f"the recode would leave {len(broken)} broken link(s) between items")
-@@ -5005,5 +5023,636 @@ def recode_barrier(work):
+@@ -5005,5 +5023,634 @@ def recode_barrier(work):
      return [(p, d)]
  
  
@@ -586,10 +586,8 @@ index cf9a5f235..94e90fc07 100644
 +            why.append("its People table has no Full name column, or two columns with one name")
 +        if head + 1 >= len(lines) or not SEPARATOR.fullmatch(lines[head + 1].strip()):
 +            why.append("its People table has no line under the header")
-+        for i in rows_at:
++        for i in rows_at:                        # a row with anything in it and no name is refused, so rows never become no one
 +            why += _row_loss(cols, propose.split_row(lines[i]), moved)
-+        if rows_at and not propose.people_parse(text):
-+            why.append("no one in its People table can be read")
 +    for i, line in enumerate(lines):
 +        s = line.strip()
 +        if i not in table_at and s and s not in REGISTER_HEADINGS and not s.startswith(REGISTER_GUIDE):

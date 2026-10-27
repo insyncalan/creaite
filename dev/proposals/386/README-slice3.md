@@ -5,7 +5,7 @@ Three guarded patches, NOT applied on any branch. Apply them only after review a
 | Diff | File | sha256 (rev 2) |
 |---|---|---|
 | `schema-386.diff` (G-a) | `system/scripts/schema.sql` | `2a3aa690308cd5e7ca09c957c04934cd79eb69fc1b7855717046fb799e778739` |
-| `tracker-386.diff` (G-b) | `system/scripts/tracker.py` | `b247759831f9e1295cd3c0a10e4e4f4027956deb3cf23bcd6e6d13eb305cf587` |
+| `tracker-386.diff` (G-b) | `system/scripts/tracker.py` | `0ab907f63e9f6f80634f585d22c5ed7ad6dabe1e90a1a707c46b3004717a62b9` |
 | `reach-386.diff` (G-b2, one line) | `system/scripts/reach.py` | `2bdd0a4e387fbe2fda8b1d9239ad4fcd8973f57644b73bca4ec64a97b65b0f9f` (unchanged) |
 
 Base: v2.6.9 release `0b637e926`. Chain: `GUARDED-386-s3.chain` (not pinned; `dev/tests/guarded_chain.py` is unchanged).
@@ -15,7 +15,7 @@ Base: v2.6.9 release `0b637e926`. Chain: `GUARDED-386-s3.chain` (not pinned; `de
 | Diff | rev 1 sha256 | rev 2 sha256 |
 |---|---|---|
 | `schema-386.diff` | `60c4c3e9318fb7c8a946d0d47867b640fb373002052afa1d4db1c41cdee75e85` | `2a3aa690308cd5e7ca09c957c04934cd79eb69fc1b7855717046fb799e778739` |
-| `tracker-386.diff` | `70fc4eacb895b3558779c2ed9f41fcc7862ca4bc6788498b3b33a9dff57affec` | `b247759831f9e1295cd3c0a10e4e4f4027956deb3cf23bcd6e6d13eb305cf587` |
+| `tracker-386.diff` | `70fc4eacb895b3558779c2ed9f41fcc7862ca4bc6788498b3b33a9dff57affec` | `0ab907f63e9f6f80634f585d22c5ed7ad6dabe1e90a1a707c46b3004717a62b9` |
 | `reach-386.diff` | `2bdd0a4e387fbe2fda8b1d9239ad4fcd8973f57644b73bca4ec64a97b65b0f9f` | the same (Jarvis: kept exactly as is) |
 
 What changed, finding by finding:
@@ -39,7 +39,7 @@ What changed, finding by finding:
   Full name column (`| Name |`), two columns with one name or no line under the header, or any text outside the People table but
   the template's own guidance lines (another section such as `## Groups`, another table, a free note). Those guidance lines (the
   "Keep this file at …" line, `Notes:` and its `- **Column:**` bullets, from any template version) are replaced by the export's
-  own note. A register with rows and nobody readable fails. A label or project code the record doesn't know stops it too
+  own note. A row with anything in it and no name is refused, so a register with rows never moves as no one. A label or project code the record doesn't know stops it too
   (LOW below), naming the person.
 - **MEDIUM 3, a pending old-style register write.** While any staged proposal (pending or approved, not applied or rejected) still
   writes the register (`regSave`, `propose.py people`), the move and its dry run refuse: "a change to the people register is still
@@ -154,9 +154,17 @@ Throwaway worktrees off the branch (its guarded files are 0b637e926's), never th
   - schema only: FAILED; tracker and reach only: FAILED; every other partial combination: FAILED;
   - all three: OK;
   - against rev 1 with all three applied: 29 failures (the failing-first run).
-- Mutants for the new tests, each killed (list in the hand-over).
-- With all three applied: the related quick-tier files, and slice 4's `client_leak-386s4.diff` on top with
-  `test_client_leak_people_386.py`.
+- Mutants, 27 run on tracker.py, 27 killed: each refusal of the lossless check (9), the private-column check, Group carried and
+  exported, the pending write and its case-folded path, the check_write fold, fold without NFC, carry by SQLite NOCASE, the first
+  export as a hand edit, the lock message, organisation and role, placeholder names, unknown labels and projects, control
+  characters, `file_ops` left `[]`, a dry run taking a backup, merge dropping the lists join, COMMIT on failure, the tombstone.
+- With all three applied, 21 related files OK: archive_projects, client_leak, client_leak_gate, client_leak_place,
+  guarded_chain, no_real_names, people, people_dashboard, people_display, people_page_v2, people_projects_links_browser (Chrome),
+  people_table_386, plain_words, reach, reach_line_entries, record_commands, spec_fields, tracker, tracker_inode_hold,
+  tracker_words_292, writer_pinned.
+- Slice 4 on top (`v2610-386s4b` with Cap's tests, 395971ca; `client_leak-386s4.diff` a8c5a3fb…): the four diffs apply, and
+  client_leak_people_386, client_leak, client_leak_gate, client_leak_place, draft_chase and guarded_chain are OK.
+- Python 3.9: not on this box; both changed files parse with the 3.9 grammar (`ast`, `feature_version=(3, 9)`).
 - `dev/tools/check.py --no-js`: OK with the three applied and on the branch; `dev/check-baseline.json` untouched.
 - Four ordinary test tweaks, green with and without the diffs: `test_writer_pinned.py` leaves an empty `people` table out of its
   snapshot; `test_archive_projects.py` lists `people` with the other newer tables; `test_spec_fields.py` leaves `people` out of
