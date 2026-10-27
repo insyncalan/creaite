@@ -2,6 +2,11 @@
 # One diff per line, in landing order. Base: the v2.6.9 release commit 0b637e926. All three land together, as one commit.
 # Guarded files only: system/scripts/schema.sql (counted with tracker), system/scripts/tracker.py, system/scripts/reach.py.
 #
+# Landing order: the diffs may land first (with the table empty nothing changes). Nothing runs a live migrate-people until slice 2
+# (the private follow file) and the ordinary half of slice 3 (propose.py people and the page's regSave staging people items) have
+# landed, and slice 1 has Cap's has_table() fix ("has rows"). migrate and update never run migrate-people by themselves: Alan starts
+# it from Health ("Move people into the tracker"), after a dry-run count, with a backup first.
+#
 # G-a: the people table
 dev/proposals/386/schema-386.diff
 # G-b: people ops, rename and merge across the seven name columns, auto-add, the register export, migrate-people
