@@ -67,7 +67,7 @@ class V268(unittest.TestCase):
         self.assertGreaterEqual(tuple(map(int, read("VERSION").strip().split("."))), (2, 6, 8))   # 2.6.9 contains 2.6.8
         for g in ("guide-first-day.html", "guide-how-to.html"):
             t = read(f"system/templates/{g}")
-            self.assertRegex(t, r"creaite 2\.6\.[89] ·")   # 2.6.8 or later (test_v269 pins 2.6.9)
+            self.assertRegex(t, r"creaite 2\.6\.([89]|1\d) ·")   # 2.6.8 or later (test_v2610 pins 2.6.10)
             self.assertNotRegex(t, r"creaite 2\.6\.[0-7] ·")
 
 

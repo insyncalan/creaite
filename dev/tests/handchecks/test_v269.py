@@ -163,6 +163,14 @@ def provider_body(name, html, position):
 APPROVED_GUARDED = ["system/scripts/backup.py", "system/scripts/live_server.py"]   # the approved 2.6.9 chain
 
 
+def approved_guarded():
+    """The 2.6.9 chain's files, plus, from 2.6.10, the files the 2.6.10 chain changes (test_v2610 c15 checks their bytes)."""
+    if vkey(version()) < (2, 6, 10):
+        return APPROVED_GUARDED
+    return sorted(set(APPROVED_GUARDED) | {"system/creaite-rules.md", "system/scripts/permissions.py", "system/scripts/reach.py",
+                                           "system/scripts/tracker.py"})
+
+
 class V269(unittest.TestCase):
     # ---- the release shape (skipped until the cut) --------------------------------------------------------------------------
     def test_c11_version(self):
@@ -213,7 +221,7 @@ class V269(unittest.TestCase):
         if ref is None:
             self.skipTest("neither the tag v2.6.8 nor v268-release exists here")
         d = git("diff", "--name-only", ref, "HEAD", "--", *GUARDED).stdout.split()
-        self.assertEqual(sorted(d), APPROVED_GUARDED, f"guarded files changed since 2.6.8 beyond the approved 2.6.9 chain: {d} (they must travel as diffs under dev/proposals)")
+        self.assertEqual(sorted(d), approved_guarded(), f"guarded files changed since 2.6.8 beyond the approved 2.6.9 chain: {d} (they must travel as diffs under dev/proposals)")
 
     def test_c16_scrub_unchanged(self):
         """2.6.9 intends the scrub changes from v269-scrub (H2/H4, separators, eaters) in invite_clean.py. So this no longer asks for
@@ -237,7 +245,7 @@ class V269(unittest.TestCase):
             self.assertIn(name, new, f"invite_clean.{name} has gone since 2.6.8")
             self.assertEqual(new[name], sig, f"invite_clean.{name} changed its arguments since 2.6.8")
         d = git("diff", "--name-only", ref, "HEAD", "--", *GUARDED).stdout.split()
-        self.assertEqual(sorted(d), APPROVED_GUARDED, f"guarded files changed since 2.6.8 beyond the approved 2.6.9 chain: {d}")
+        self.assertEqual(sorted(d), approved_guarded(), f"guarded files changed since 2.6.8 beyond the approved 2.6.9 chain: {d}")
 
     # ---- the gateway ----------------------------------------------------------------------------------------------------------
     def test_c20_read_never_writes(self):
