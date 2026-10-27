@@ -72780,7 +72780,7 @@ ${d5.text}`);
     });
   }
   var active = () => shared.VIEW === "minutes" && !typing() && !popupOpen();
-  function rowKey2(e4, keyApi) {
+  function onRowKey(e4, keyApi) {
     if (e4.metaKey || e4.ctrlKey || e4.altKey || e4.shiftKey || e4.isComposing || !e4.key || e4.key.length !== 1 || !active()) return false;
     const doc = keyApi.doc();
     if (!doc || doc.state !== "draft") return false;
@@ -72828,7 +72828,7 @@ ${d5.text}`);
     if (installed) return;
     installed = true;
     document.addEventListener("keydown", (e4) => {
-      if (rowKey2(e4, keyApi)) {
+      if (onRowKey(e4, keyApi)) {
         e4.preventDefault();
         e4.stopPropagation();
       }

@@ -1477,26 +1477,45 @@ def distributed_of(doc, held=None):
     the internal record. #329: also without the lines and rows held back with a held item (layout.carried), and with a plain
     heading or title where Alan chose one (layout.plain). Nothing is written."""
     held = withheld(doc) if held is None else held
-    marks = [m for m in (doc.get("layout") or {}).get("internal_only") or [] if isinstance(m, dict)]
     lines, rows = carried_gone(doc, held)
-    marks += [{"section": sid, "text": t} for sid, t in sorted(lines)]     # #329: a line held with its item
+    marks = _distributed_marks(doc, lines)
     plain = _plain_keys(doc)
     out = json.loads(json.dumps(doc))
-    gone_refs = set(held)
-    for s in out.get("sections") or []:     # #329: a row held back with an item goes as a withheld row does (its tags, its item)
-        gone_refs |= {r.get("ref") or r.get("was") for r in s.get("rows") or [] if isinstance(r, dict) and row_key(r) in rows}
+    gone_refs = set(held) | _carried_row_refs(out, rows)
     gone_refs.discard(None)
     for s in out.get("sections") or []:
-        mine = [m for m in marks if m.get("section") == s.get("id")]
-        if s.get("type") == "table":
-            _distributed_table(s, mine, gone_refs)
-        elif s.get("type") != "header":
-            _distributed_text(s, mine)
-        if heading_key(s) in plain:
-            s["heading"] = plain_heading(s)
+        _distributed_section(s, marks, gone_refs, plain)
     if "title" in plain:
         out["title"] = plain_title(doc)
     return _without_items(out, gone_refs, doc.get("version"))
+
+
+def _distributed_marks(doc, lines):
+    """The lines the distributed version leaves out: those marked Internal only, then (#329) each line held with its item."""
+    marks = [m for m in (doc.get("layout") or {}).get("internal_only") or [] if isinstance(m, dict)]
+    marks += [{"section": sid, "text": t} for sid, t in sorted(lines)]     # #329: a line held with its item
+    return marks
+
+
+def _carried_row_refs(out, rows):
+    """The refs of the rows held back with an item (`rows`, their keys): such a row goes as a withheld row does (its tags, its
+    item). None may be among them (the caller discards it)."""
+    refs = set()
+    for s in out.get("sections") or []:     # #329: a row held back with an item goes as a withheld row does (its tags, its item)
+        refs |= {r.get("ref") or r.get("was") for r in s.get("rows") or [] if isinstance(r, dict) and row_key(r) in rows}
+    return refs
+
+
+def _distributed_section(s, marks, gone_refs, plain):
+    """One section of the distributed version, in place: a table without its gone rows, a text section without its marked
+    lines (a header as it is), and its plain heading where Alan chose one."""
+    mine = [m for m in marks if m.get("section") == s.get("id")]
+    if s.get("type") == "table":
+        _distributed_table(s, mine, gone_refs)
+    elif s.get("type") != "header":
+        _distributed_text(s, mine)
+    if heading_key(s) in plain:
+        s["heading"] = plain_heading(s)
 
 
 def _without_items(out, gone_refs, version):
@@ -1600,27 +1619,43 @@ def shown_text(doc):
     """(key, kind, words) for every piece of text the minutes show that can be checked: the title, the project's name and client,
     each shown section's heading (unless it is already the plain one), the header's lines, each prose line and each shown table
     row (a line kept in the minutes only that names no item included). A hidden section shows nothing."""
+    yield from _title_text(doc)
+    for s in doc.get("sections") or []:
+        yield from _section_text(s)
+
+
+def _title_text(doc):
+    """(key, kind, words) for the title (unless it is already the plain one) and the project's name and client."""
     title = str(doc.get("title") or "").strip()
     if title and title != plain_title(doc):
         yield "title", "title", title
     for name in (doc.get("project_name"), doc.get("client")):
         if str(name or "").strip():
             yield line_key("header", str(name).strip()), "header", str(name).strip()
-    for s in doc.get("sections") or []:
-        if not isinstance(s, dict) or s.get("hidden"):
-            continue
-        sid, head = str(s.get("id") or ""), str(s.get("heading") or "").strip()
-        if head and head != plain_heading(s):
-            yield heading_key(s), "heading", head
-        if s.get("type") == "table":
-            for r in s.get("rows") or []:
-                text = _row_text(r) if isinstance(r, dict) and r.get("shown", True) else ""
-                if text and row_key(r):
-                    yield row_key(r), "row", text
-            continue
-        kind = "header" if s.get("type") == "header" else "line"
-        for t in _section_lines(s):
-            yield line_key(sid, t), kind, t
+
+
+def _section_text(s):
+    """(key, kind, words) for one section: its heading (unless it is already the plain one), then each shown table row, or each
+    line of its text (a header's lines as "header"). A hidden section, or one that isn't a mapping, shows nothing."""
+    if not isinstance(s, dict) or s.get("hidden"):
+        return
+    sid, head = str(s.get("id") or ""), str(s.get("heading") or "").strip()
+    if head and head != plain_heading(s):
+        yield heading_key(s), "heading", head
+    if s.get("type") == "table":
+        yield from _row_texts(s)
+        return
+    kind = "header" if s.get("type") == "header" else "line"
+    for t in _section_lines(s):
+        yield line_key(sid, t), kind, t
+
+
+def _row_texts(s):
+    """(key, "row", words) for each shown row of a table section that has words and a key."""
+    for r in s.get("rows") or []:
+        text = _row_text(r) if isinstance(r, dict) and r.get("shown", True) else ""
+        if text and row_key(r):
+            yield row_key(r), "row", text
 
 
 def _marks(doc, name):
@@ -1875,28 +1910,35 @@ def _answers_of(doc, answers):
     use = tracked_of(doc)
     held = withheld(use)
     items = [(ref, *_held_item(use, ref)) for ref in held]
-    out = []
-    for a in answers:
-        a = a if isinstance(a, dict) else {}
-        key, what = str(a.get("key") or ""), a.get("answer")
-        given = [str(x) for x in (a.get("refs") if isinstance(a.get("refs"), list) else [a.get("ref")]) if x]
-        if what not in ANSWERS:
-            raise RecordError("Hold the line back with its item, or keep it in the shareable version.")
-        if key not in texts:
-            raise RecordError("That line is no longer in the minutes.")
-        kind, text = texts[key]
-        if what not in ANSWERS_OF[kind]:
-            raise RecordError(WRONG_ANSWER[kind])
-        refs = []
-        if what == "hold":
-            matched = [h["ref"] for h in _describes(text, items)]
-            if not given or any(ref not in held and _carried_item(use, ref) not in held for ref in given):
-                raise RecordError("That item isn't kept out of the shareable version.")
-            if kind == "row" and any(ref not in matched and _carried_item(use, ref) not in matched for ref in given):
-                raise RecordError("That row doesn't look like it describes that item.")
-            refs = sorted(set(given) | set(matched))
-        out.append({"key": key, "answer": what, "ref": refs[0] if refs else "", "refs": refs})
-    return out, texts
+    return [_answer_of(a, texts, use, held, items) for a in answers], texts
+
+
+def _answer_of(a, texts, use, held, items):
+    """One answer checked against the record's shown text (`texts`) and its held items: {key, answer, ref, refs}. Raises
+    RecordError."""
+    a = a if isinstance(a, dict) else {}
+    key, what = str(a.get("key") or ""), a.get("answer")
+    given = [str(x) for x in (a.get("refs") if isinstance(a.get("refs"), list) else [a.get("ref")]) if x]
+    if what not in ANSWERS:
+        raise RecordError("Hold the line back with its item, or keep it in the shareable version.")
+    if key not in texts:
+        raise RecordError("That line is no longer in the minutes.")
+    kind, text = texts[key]
+    if what not in ANSWERS_OF[kind]:
+        raise RecordError(WRONG_ANSWER[kind])
+    refs = _hold_refs(kind, text, given, use, held, items) if what == "hold" else []
+    return {"key": key, "answer": what, "ref": refs[0] if refs else "", "refs": refs}
+
+
+def _hold_refs(kind, text, given, use, held, items):
+    """The refs a hold records: the held items Alan gave (each must be kept out; for a row, each must be one it matched) and
+    every held item the text matches. Raises RecordError."""
+    matched = [h["ref"] for h in _describes(text, items)]
+    if not given or any(ref not in held and _carried_item(use, ref) not in held for ref in given):
+        raise RecordError("That item isn't kept out of the shareable version.")
+    if kind == "row" and any(ref not in matched and _carried_item(use, ref) not in matched for ref in given):
+        raise RecordError("That row doesn't look like it describes that item.")
+    return sorted(set(given) | set(matched))
 
 
 def shareable_answer(path, answers, base_version=None, via="dashboard"):
