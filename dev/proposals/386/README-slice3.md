@@ -64,13 +64,25 @@ run Alan confirmed (BL-267); `--dry-run` is a read. **A security decision:** it 
    refused: the table is unclassified); tracker alone writes, and `tracker.py read` reads, a table that isn't there; tracker without
    reach leaves `migrate-people` unclassified (test_record_commands fails; ask creaite refuses it). They touch different files and
    apply cleanly in any order (four orders checked, and reversed cleanly).
-2. **Before anyone runs `migrate-people` in a live vault:** slice 2 (the private follow file) and the ordinary half of slice 3
-   (`propose.py people …` and the page's `regSave` staging people items instead of a register write; `people.py` reading the table).
-   Until then the old write paths are refused with a message once the table is in use. With the table empty (every vault until
-   `migrate-people`), behaviour is unchanged.
-3. **`people.has_table()` (slice 1) must mean "has rows":** `init`/`migrate` create the table empty; read as it is today, slice 1's
-   reader would switch to an empty table. One-line ordinary fix in `people.py` (`SELECT 1 FROM people LIMIT 1`), with slice 3's
-   ordinary half.
+2. **Landing order before any live `migrate-people`.** The diffs may land first: with the table empty (every vault until the move),
+   behaviour is unchanged. Nothing runs `migrate-people` in a live vault until all of these have landed:
+   - **slice 2**, the private follow file (so who Alan follows is moved out of the register first);
+   - **the ordinary half of slice 3**: `propose.py people …` and the page's `regSave` stage people items instead of writing the
+     register file, and `people.py` reads the table (until then the old write paths are refused once the table is in use);
+   - **slice 1 with Cap's `has_table()` fix**: it must mean "the table has rows" (`SELECT 1 FROM people LIMIT 1`). `init` and
+     `migrate` create the table empty, and the reader as it is today would switch to an empty table.
+3. **The move is explicit only.** `tracker.py migrate` and an update must NOT run `migrate-people` by themselves. Alan starts it
+   from a Health row, "Move people into the tracker" (ordinary half), which shows the dry-run count first
+   (`migrate-people --dry-run`), and the move takes a database backup before it writes (it does: `backup_db("migrate-people")`).
+   It is one save, so Undo puts the register back.
+
+## Stated limits
+
+These are known and accepted for this slice (also in `NOTES-slice3.md`, for the release notes):
+
+- Project stakeholders (from the project register) are not added as people by the move; the People page still shows them as before.
+- "A group can't own as a person" is not enforced: `is_group` is stored only.
+- Activity shows a person's changes by their row number (the person's id), not their name.
 
 ## How verified
 
@@ -98,8 +110,6 @@ Throwaway worktrees off `0b637e926` (never the branch):
 ## Not in this slice (open)
 
 - The ordinary half: `propose.py people …`, the page's `regSave`, `people.py` on the table, Health showing `hand_edit`, `doctor.py`'s
-  table list, Activity's wording for people rows (keys are row ids).
-- Project stakeholders (the project register) are not backfilled as people; the page still adds them as before.
-- "A group can't own as a person" is not enforced: `is_group` is stored only.
+  table list, the Health row that starts the move, Activity's wording for people rows.
 - A recode does not rewrite the code inside old `change_log` values of people's project lists.
 - G-c, G-d, G-e (client_leak, live_server, update) are slice 4.
