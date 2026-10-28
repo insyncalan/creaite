@@ -63,4 +63,15 @@ Tests: the canary harness above, mutants on the scrub, the helper refusal and th
 The preference order between a login and `apiKeyHelper`; the exact `apiKeySource` values; whether Claude Code logs the key or its ending anywhere under `~/.claude` (the canary grep answers it); `--max-budget-usd` behaviour mid-run; the real shape of a limit event. None needs an API key except the single confirmation run.
 
 ## Decisions for Alan
-1. Go for the stand-in-API canary check (about 1 day, no spend)? 2. Then one real throwaway-key confirmation (cents) with an Anthropic-side spend cap you set? 3. Cap numbers (the plan: 5 a week total, off until set) and whether the unit is dollars. 4. API use off per project until set (default), confirmed.
+1. Go for the stand-in-API canary check (about 1 day, no spend)? 
+   AM: yes
+
+2. Then one real throwaway-key confirmation (cents) with an Anthropic-side spend cap you set? 
+   AM: yes
+
+   3. Cap numbers (the plan: 5 a week total, off until set) and whether the unit is dollars. 
+      AM: yes
+
+      4. API use off per project until set (default), confirmed.
+
+         AM: yes, confirmed
