@@ -686,9 +686,14 @@ class EntryPoints(Hub):
         self.assertNotEqual(r["dot"], "8px")
 
     def test_the_project_settings_open_reporting(self):     # #254: was test_the_projects_reporting_card; the card is gone
-        self.start_at("go('psettings','ABC'); psCat.value='rep'; navWrite(false)", "document.querySelector('#psRepHub')")
+        # The page jumps to the address's section about 60 ms after it opens (renderProjectSettings' psJump). A click measured
+        # before that jump and checked after it finds what has scrolled under the old point (CI, 27-10-2026: "something else is
+        # on top of it", with the button itself at its new centre a moment later). Wait for the jump, as test_project_settings does.
+        self.start_at("go('psettings','ABC'); psCat.value='rep'; navWrite(false)",
+                      "!!document.querySelector('#psRepHub') && document.querySelector('#v-psettings').scrollTop>0")
+        self.b.pump(0.3)
         self.assertEqual(self.q("!!document.querySelector('[data-rpcard]')"), False)
-        self.b.click("#psRepHub")
+        self.b.click("#psRepHub", exact=True)        # exact: wait until the button has stopped moving, then hit it
         # Under load the click can go unregistered: re-click every 10 s while the page has not left
         # the project settings, up to the 60 s limit. Still fails if the button truly does not navigate.
         self.b.wait("""(()=>{const t=Date.now(), w=window.__psRetry||(window.__psRetry={t});
