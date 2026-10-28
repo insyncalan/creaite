@@ -193,6 +193,8 @@ class Snapshots(LiveBrowserCase):
         self.b.call("Emulation.setLocaleOverride", locale="en-GB")
         self.b.call("Emulation.setUserAgentOverride", userAgent=MAC_UA, platform="MacIntel")   # ⌘, not Ctrl, on Linux too
         self.b.call("Page.addScriptToEvaluateOnNewDocument", source=f"localStorage.setItem('creaite-lastvisit', JSON.stringify('{LAST_VISIT}'))")
+        # #158: the first-visit "Press ? for help" line shows once per screen, whenever the render settles: marked seen, so no golden holds it
+        self.b.call("Page.addScriptToEvaluateOnNewDocument", source="localStorage.setItem('creaite-help-line-seen', JSON.stringify(['Today','Work','Review','Projects','People','Notes','Intake','Files']))")
         pin_page_clock(self.b, NOW)                         # reloads the page: MAC and the clock are read as it loads
 
     def capture(self, name):

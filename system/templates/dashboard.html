@@ -1323,6 +1323,8 @@ body.wn-new #helpTabs [data-help="whatsnew"]::after,body.wn-new #v-settings [dat
 .hpn-jobs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px} .hpn-jobs a,.hpn-ref{display:block;padding:8px 10px;border-radius:var(--r-md);color:var(--ink);text-decoration:none;font-size:var(--fs-lg)} .hpn-jobs a:hover,.hpn-ref:hover,.hpn-jobs a:focus-visible,.hpn-ref:focus-visible{background:var(--accent-soft)}
 .hpn-ref{color:var(--accent)} .hpn-f{margin:auto 0 0;padding:12px 20px;color:var(--muted);font-size:var(--fs-sm)}
 .hfoot{margin:28px 0 0;color:var(--muted);font-size:var(--fs-sm)} .hfoot kbd{font:500 var(--fs-sm) var(--font);border:1px solid var(--line-strong);border-radius:var(--r-sm,4px);padding:0 5px;background:var(--surface)}
+.hline{margin:6px 0 10px;padding:3px 0 3px 10px;border-left:3px solid var(--accent);color:var(--muted);font-size:var(--fs-md);animation:hline-in .25s ease-out} .hline kbd{font:500 var(--fs-sm) var(--font);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:0 5px;background:var(--surface)}
+@keyframes hline-in{from{opacity:0}to{opacity:1}}
 .hp-how{margin-left:4px;color:var(--accent);white-space:nowrap}
 /* ===== end Help finding (#158) ===== */
 
@@ -3982,6 +3984,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     KL: () => KL,
     LASTVISIT: () => LASTVISIT,
     LCOLL: () => LCOLL,
+    LINEK: () => LINEK,
     LLF: () => LLF,
     MAC: () => MAC,
     MCHIP: () => MCHIP,
@@ -5065,6 +5068,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     helpFind: () => helpFind,
     helpGo: () => helpGo,
     helpKey: () => helpKey,
+    helpLineSoon: () => helpLineSoon,
     helpNorm: () => helpNorm,
     helpPages: () => helpPages,
     helpPanelClose: () => helpPanelClose,
@@ -5163,6 +5167,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     learnSignal: () => learnSignal,
     learnable: () => learnable,
     lev: () => lev,
+    lineBlocked: () => lineBlocked,
+    lineClear: () => lineClear,
+    lineMaybe: () => lineMaybe,
     linesFrom: () => linesFrom,
     listBody: () => listBody,
     listGroupOf: () => listGroupOf,
@@ -6752,7 +6759,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       document.title = "DEV · " + document.title;
     }
   }
-  var S = Object.assign({ me: "Alan Carter", short: "Alan, AC", defPriority: "Medium", defActionView: "open", defRaidView: "open", autoApply: true, theme: "System", palette: "creaite", remindersOn: true, weeklyDay: "Friday", weeklyTime: "12:00", sweepDue: "07:00", catchupSweep: "start", catchupAfter: 30, lookback: 14, srcInbox: true, srcSent: true, srcChats: true, srcChannels: true, srcCalendar: true, possible: true, staleDays: 7, overdueDays: 7, slipAtRisk: 2, slipOff: 2, urgentOff: 2, dueSoon: 7, dailyBackup: true, port: 8765 }, D.settings);
+  var S = Object.assign({ me: "Alan Carter", short: "Alan, AC", defPriority: "Medium", pressLine: true, defActionView: "open", defRaidView: "open", autoApply: true, theme: "System", palette: "creaite", remindersOn: true, weeklyDay: "Friday", weeklyTime: "12:00", sweepDue: "07:00", catchupSweep: "start", catchupAfter: 30, lookback: 14, srcInbox: true, srcSent: true, srcChats: true, srcChannels: true, srcCalendar: true, possible: true, staleDays: 7, overdueDays: 7, slipAtRisk: 2, slipOff: 2, urgentOff: 2, dueSoon: 7, dailyBackup: true, port: 8765 }, D.settings);
   var saveS = () => {
   };
   var meNames = () => [S.me, ...S.short.split(",").map((x5) => x5.trim()).filter(Boolean)].map((x5) => x5.toLowerCase());
@@ -47169,16 +47176,62 @@ ${pre}**Current state title:** ${title}`);
       }
     }
   }
+  var LINEK = "creaite-help-line-seen";
+  var LINEMEM = /* @__PURE__ */ new Set();
+  var lineSeen = (screen) => LINEMEM.has(screen) || (store.get(LINEK, []) || []).includes(screen);
+  var lineMark = (screen) => {
+    LINEMEM.add(screen);
+    store.set(LINEK, [.../* @__PURE__ */ new Set([...store.get(LINEK, []) || [], screen])]);
+  };
+  var typingNow = () => {
+    const a5 = document.activeElement;
+    return !!a5 && (/^(INPUT|TEXTAREA|SELECT)$/.test(a5.tagName) || /** @type {HTMLElement} */
+    a5.isContentEditable);
+  };
+  function lineBlocked() {
+    return $("#panel").classList.contains("on") || !!document.querySelector("dialog[open]") || $("#chat").classList.contains("on") || helpPanelIsOpen() || !!shared.EDITING || !!shared.LOADING || typingNow();
+  }
+  function lineClear() {
+    $$(".hline").forEach((e4) => e4.remove());
+  }
+  function lineMaybe() {
+    const screen = screenNow();
+    if (!screen || !S.pressLine || lineSeen(screen) || lineBlocked()) return false;
+    const sec = $(".view:not([hidden])");
+    if (!sec || sec.querySelector(".hline")) return false;
+    const h12 = sec.querySelector("h1");
+    if (!h12 || !h12.offsetParent) return false;
+    const anchor = h12.closest(".hhead") || h12, p6 = document.createElement("p");
+    p6.className = "hline";
+    p6.setAttribute("role", "note");
+    putHTML(p6, raw(footHTML(screen)));
+    anchor.insertAdjacentElement("afterend", p6);
+    lineMark(screen);
+    return true;
+  }
   var QUEUED = false;
+  var helpLineSoon = () => queue();
   var queue = () => {
     if (QUEUED) return;
     QUEUED = true;
     requestAnimationFrame(() => {
       QUEUED = false;
       helpDecor();
+      lineMaybe();
     });
   };
   function bootHelpPanel() {
+    for (const ev of ["keydown", "mousedown"]) document.addEventListener(ev, () => lineClear(), true);
+    {
+      const retry = () => queue();
+      const mo2 = new MutationObserver(retry);
+      for (const id2 of ["panel", "chat", "hpanel"]) {
+        const n4 = document.getElementById(id2);
+        if (n4) mo2.observe(n4, { attributes: true, attributeFilter: ["class"] });
+      }
+      document.addEventListener("close", retry, true);
+      document.addEventListener("focusout", retry, true);
+    }
     document.addEventListener("click", (e4) => {
       const t47 = (
         /** @type {Element} */
@@ -65604,6 +65657,7 @@ ${d5.text}`);
     })(v5, arg, opt);
     if (r4 !== false && (v5 === "files" || v5 === "inbox")) filesOpened();
     tabTitle();
+    helpLineSoon();
     if (!shared.LOADING) {
       if (r4 !== false && shared.VIEW !== from && !reduced()) {
         const el2 = $$(".view").find((x5) => !x5.hidden);
@@ -66830,7 +66884,7 @@ ${d5.text}`);
     }, op2.by, opIds(op2));
     return true;
   }
-  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
+  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", listCap: "dashboard.project_list_cap", me: "identity.name", pressLine: "help.press_line", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
   async function writeSettings(changes) {
     let sp2 = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {

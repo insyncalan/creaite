@@ -289,8 +289,9 @@
     "offsite_backup": "_Portfolio/99 System/creaite backups"
   },
   "help": {
-    "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",
-    "start_seen": false
+    "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true. press_line (#158): show the one quiet line \"Press ? for help with <screen>\" once on each of the eight main screens.",
+    "start_seen": false,
+    "press_line": true
   },
   "drafting": {
     "_about": "AI drafts (BL-218 to BL-227): each feature on (true) or off. A draft is a suggestion, never a write: it lands in an unsaved field, a pending proposal or a dialog. Settings › General › AI drafts.",

@@ -54,6 +54,8 @@ ESSENTIAL_ROWS = (
     ("Look and help", "Theme", "Light, dark, or follow your Mac.", ("dashboard.theme",)),
     ("Look and help", "Style", "The look of the whole app.", ("dashboard.palette",)),
     ("Look and help", "Motion", "Follows your Mac's Reduce motion unless you choose.", ("dashboard.motion",)),
+    ("Look and help", "Show the Press ? line on each screen",
+     "One quiet line under the title, once per screen, that says ? opens help for it.", ("help.press_line",)),
     ("Look and help", "AI drafts", "Suggestions you can use, edit or ignore. Never applied by themselves.",
      ("drafting.update", "drafting.client", "drafting.thinking", "drafting.reason", "drafting.agenda", "drafting.email",
       "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape", "drafting.report-section",
@@ -362,6 +364,8 @@ CATALOGUE = {
     # ── Help, AI drafts, logging, close the day
     "help.start_seen": ("Help", "Start here seen", "Whether Help › Start here has been shown once.",
                         "Not yet: a new user sees it on the first visit; Reset shows it again."),
+    "help.press_line": ("Look and help", "Show the Press ? line on each screen", "One quiet line under each main screen's title, once.",
+                        "On: it is how a new person learns that ? opens help; it shows once per screen and never again."),
     "drafting.update": ("Look and help", "AI drafts: updates", "Draft an action's latest update.", "On: drafts only suggest."),
     "drafting.client": ("Look and help", "AI drafts: client messages", "Draft a client-facing message for an item.",
                         "On: drafts only suggest."),

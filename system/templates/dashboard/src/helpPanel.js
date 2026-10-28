@@ -8,6 +8,7 @@
 import { closeChat } from "./ask.js";
 import { $, $$, addHTML, esc, ic, putHTML, raw } from "./core/dom.js";
 import { go } from "./core/nav.js";
+import { S, store } from "./core/page.js";
 import { shared } from "./core/state.js";
 import { HD, helpSearchFocus } from "./help.js";
 
@@ -41,9 +42,29 @@ export function helpDecor(){ for(const [screen,ids] of Object.entries(SCREEN_VIE
     if(sc.ref) $$(".empty,.none",sec).forEach(e=>{ if(e.querySelector(".hp-how")||e.closest(".hp-how")) return; const t=(e.textContent||"").trim();
       if(t.length<8||!OPENS.some(o=>t.startsWith(o))||/matches/.test(t)) return;
       addHTML(e,"beforeend",raw(` <a class="hp-how" href="#help-reference-${esc(sc.ref)}" data-hp-go="reference-${esc(sc.ref)}">How ${esc(screen)} works</a>`)); }); } } }
+/* ---- the first-visit line (#158 part 5): once per screen, under the page title, "Press ? for help with <screen>" ---- */
+export const LINEK="creaite-help-line-seen";
+const LINEMEM=new Set();            /* if storage fails, once per page load */
+const lineSeen=screen=>LINEMEM.has(screen)||(store.get(LINEK,[])||[]).includes(screen);
+const lineMark=screen=>{ LINEMEM.add(screen); store.set(LINEK,[...new Set([...(store.get(LINEK,[])||[]),screen])]); };
+const typingNow=()=>{ const a=document.activeElement; return !!a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||/** @type {HTMLElement} */(a).isContentEditable); };
+/** Something is open that the line waits for: an item, a dialog, ask creaite, the ? panel, an editing session or a field. */
+export function lineBlocked(){ return $("#panel").classList.contains("on")||!!document.querySelector("dialog[open]")||$("#chat").classList.contains("on")
+  ||helpPanelIsOpen()||!!shared.EDITING||!!shared.LOADING||typingNow(); }
+export function lineClear(){ $$(".hline").forEach(e=>e.remove()); }
+export function lineMaybe(){ const screen=screenNow(); if(!screen||!S.pressLine||lineSeen(screen)||lineBlocked()) return false;
+  const sec=$(".view:not([hidden])"); if(!sec||sec.querySelector(".hline")) return false; const h1=sec.querySelector("h1"); if(!h1||!h1.offsetParent) return false;
+  const anchor=h1.closest(".hhead")||h1, p=document.createElement("p"); p.className="hline"; p.setAttribute("role","note"); putHTML(p,raw(footHTML(screen)));
+  anchor.insertAdjacentElement("afterend",p); lineMark(screen); return true; }
 let QUEUED=false;
-const queue=()=>{ if(QUEUED) return; QUEUED=true; requestAnimationFrame(()=>{ QUEUED=false; helpDecor(); }); };
+export const helpLineSoon=()=>queue();
+const queue=()=>{ if(QUEUED) return; QUEUED=true; requestAnimationFrame(()=>{ QUEUED=false; helpDecor(); lineMaybe(); }); };
 export function bootHelpPanel(){
+/* the line clears on any key or click and never swallows it (these listeners only look); ? clears it too, and keys.js opens the panel */
+for(const ev of ["keydown","mousedown"]) document.addEventListener(ev,()=>lineClear(),true);
+/* and it waits for what is open to close: ask creaite, the ? panel, an item, a dialog, a field in use */
+{ const retry=()=>queue(); const mo=new MutationObserver(retry); for(const id of ["panel","chat","hpanel"]){ const n=document.getElementById(id); if(n) mo.observe(n,{attributes:true,attributeFilter:["class"]}); }
+  document.addEventListener("close",retry,true); document.addEventListener("focusout",retry,true); }
 document.addEventListener("click",e=>{ const t=/** @type {Element} */(e.target); const g=t.closest&&t.closest("[data-hp-go]");
   if(g){ e.preventDefault(); helpPanelClose(false); go("help",/** @type {HTMLElement} */(g).dataset.hpGo); return; }
   if(t.closest&&t.closest("[data-hp-close]")){ helpPanelClose(true); return; }

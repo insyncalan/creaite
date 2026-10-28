@@ -14,6 +14,7 @@ import { shared } from "./state.js";
 import { setRailView } from "../stores/rail.js";
 import { filesOpened, renderFiles } from "../files.js";
 import { helpNorm, renderHelp } from "../help.js";
+import { helpLineSoon } from "../helpPanel.js";
 import { renderInbox } from "../intake.js";
 import { meetingRoute } from "../meetings.js";
 import { renderPrep } from "../components/prep/PrepPage.jsx";
@@ -140,7 +141,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),weekly:()=>renderWeekly(arg),clientreport:()=>renderClientReport(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
-  tabTitle();
+  tabTitle(); helpLineSoon();   /* #158: the Press ? line, once per screen */
   if(!shared.LOADING){ if(r!==false&&shared.VIEW!==from&&!reduced()){ const el=$$(".view").find(x=>!x.hidden); if(el) anim(el,[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:200}); mFirst(shared.VIEW); }   /* BL-263: the page fades in */
     const to=mPageOf(shared.VIEW); if(r!==false&&fromPage&&fromPage!==to) mLeave(fromPage);   /* BL-263: last viewed */
     if(v==="review"&&r!==false){ const seen=store.get(SETUPK,{}); if(!seen.review){ seen.review=true; store.set(SETUPK,seen); } } }   /* BL-155 */

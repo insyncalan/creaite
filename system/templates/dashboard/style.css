@@ -1313,6 +1313,8 @@ body.wn-new #helpTabs [data-help="whatsnew"]::after,body.wn-new #v-settings [dat
 .hpn-jobs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px} .hpn-jobs a,.hpn-ref{display:block;padding:8px 10px;border-radius:var(--r-md);color:var(--ink);text-decoration:none;font-size:var(--fs-lg)} .hpn-jobs a:hover,.hpn-ref:hover,.hpn-jobs a:focus-visible,.hpn-ref:focus-visible{background:var(--accent-soft)}
 .hpn-ref{color:var(--accent)} .hpn-f{margin:auto 0 0;padding:12px 20px;color:var(--muted);font-size:var(--fs-sm)}
 .hfoot{margin:28px 0 0;color:var(--muted);font-size:var(--fs-sm)} .hfoot kbd{font:500 var(--fs-sm) var(--font);border:1px solid var(--line-strong);border-radius:var(--r-sm,4px);padding:0 5px;background:var(--surface)}
+.hline{margin:6px 0 10px;padding:3px 0 3px 10px;border-left:3px solid var(--accent);color:var(--muted);font-size:var(--fs-md);animation:hline-in .25s ease-out} .hline kbd{font:500 var(--fs-sm) var(--font);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:0 5px;background:var(--surface)}
+@keyframes hline-in{from{opacity:0}to{opacity:1}}
 .hp-how{margin-left:4px;color:var(--accent);white-space:nowrap}
 /* ===== end Help finding (#158) ===== */
 
