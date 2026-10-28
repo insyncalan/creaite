@@ -35617,7 +35617,7 @@ system/scripts/run launch.py agent ${what}`;
       id: d5.id,
       code: d5.code === "_portfolio" ? "" : d5.code || "",
       chosen: !!d5.code && d5.code !== "_portfolio",
-      how: d5.code && d5.code !== "_portfolio" ? "chosen" : d5.template === "working-session" ? "meeting" : "",
+      how: d5.code && d5.code !== "_portfolio" ? "chosen" : "",
       reason: "",
       title: d5.title || "",
       body: d5.body || "",

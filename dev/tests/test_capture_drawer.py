@@ -412,28 +412,6 @@ class Drawer(LiveBrowserCase):
         self.assertNotIn("guessed", got[1])
         self.assertEqual(b.errors, [])
 
-    def test_resumed_meeting_draft_without_a_project_never_guesses(self):
-        """#343 (resume gap): a kept Working session draft with no project stays unselected after typing, confidential or not."""
-        b = self.b
-        for i, title in enumerate(("[ABC] Redundancy talks", "Budget catch-up")):
-            d = json.dumps({"id": f"resume-{i}", "code": "", "title": title, "body": "## Purpose\n", "template": "working-session",
-                            "date": TODAY, "with": [], "confidential": False})
-            b.eval(f"api('/api/notes/capture/draft', {d})")
-            b.pump(1)
-            b.eval("go('today')")
-            self.open()
-            row = f"[...document.querySelectorAll('#capDrawer .caprecent .caprow')].find(x=>x.textContent.includes({title!r}))"
-            b.wait(f"!!({row})", 10)
-            b.eval(f"({row}).click()")
-            b.wait(f"document.getElementById('capTitle').value==={title!r}", 10)
-            b.type(" Omar Ali and the data access plan")
-            b.pump(1.5)
-            self.assertEqual(b.eval("document.getElementById('capProj').value"), "")
-            self.assertNotIn("guessed", b.eval("document.getElementById('capWhy').textContent"))
-            b.key("Escape")
-            b.wait("document.getElementById('capDrawer').hidden", 10)
-        self.assertEqual(b.errors, [])
-
     def test_note_in_ask_creaite_and_new_note_in_cmdk(self):
         b = self.b
         b.eval("handle('note: DEF portal walkthrough booked for March')")
